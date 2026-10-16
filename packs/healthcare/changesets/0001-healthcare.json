@@ -1,0 +1,4520 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1995ec0645a6e5ded2a9c4cae4357c5fe63ef2ab1d8f1397406389585b84cd94",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Healthcare clinics (X4-T1), outside the clinical record: patients (health data as a special category, masked), providers and locations, appointments, visits, referrals with stages and SLAs, insurance eligibility and pre-authorisation (NPHIES through a connector), care programmes and patient complaints. The medical record stays in the HIS or EMR, linked by id. Roles, report queries and a sidebar.",
+  "format": "attome-changeset/v1",
+  "id": "01a143cf-7a68-7895-b434-c6fa7b5fdff5",
+  "layer": "product",
+  "name": "healthcare",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Clinic Location",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_location",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "hc_location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "hc_location",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "hc_location",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "City",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "city",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "hc_location",
+        "field": "city"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "HIS ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "his_location_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "hc_location",
+        "field": "his_location_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Provider",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_provider",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "hc_provider"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "hc_provider",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "hc_provider",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Specialty",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "specialty",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "hc_provider",
+        "field": "specialty"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Licence Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "licence_number",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "hc_provider",
+        "field": "licence_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Location",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "location_ref",
+          "lookup_entity": "hc_location",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "hc_provider",
+        "field": "location_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "hc_provider",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "HIS ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "his_provider_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "hc_provider",
+        "field": "his_provider_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Patient",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_patient",
+          "primary_name_attribute": "full_name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "hc_patient"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "full_name",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "hc_patient",
+        "field": "full_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "hc_patient",
+        "field": "contact_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "sensitive_special_category",
+          "display_name": "Medical Record Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "mrn",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "hc_patient",
+        "field": "mrn"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "National ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "national_id",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "hc_patient",
+        "field": "national_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Birth Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "birth_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "hc_patient",
+        "field": "birth_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Gender",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "gender",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "female",
+              "male"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "hc_patient",
+        "field": "gender"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Language",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "preferred_language",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "ar",
+              "en"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "hc_patient",
+        "field": "preferred_language"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Insurer",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "insurer",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "hc_patient",
+        "field": "insurer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Member ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "insurance_member_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "hc_patient",
+        "field": "insurance_member_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Outreach Consent",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outreach_consent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "hc_patient",
+        "field": "outreach_consent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "HIS ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "his_patient_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "hc_patient",
+        "field": "his_patient_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Appointment",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_appointment",
+          "primary_name_attribute": "starts_at"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "hc_appointment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Patient",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "patient_ref",
+          "lookup_entity": "hc_patient",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "patient_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Provider",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "provider_ref",
+          "lookup_entity": "hc_provider",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "provider_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Location",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "location_ref",
+          "lookup_entity": "hc_location",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "location_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "starts_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "starts_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ends_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "ends_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Booked Via",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "booked_via",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "portal",
+              "booking_link",
+              "whatsapp",
+              "call_centre",
+              "his"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "booked_via"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reminder Sent",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reminder_sent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "reminder_sent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "booked",
+              "confirmed",
+              "arrived",
+              "completed",
+              "no_show",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "hc_appointment",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Visit",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_visit",
+          "primary_name_attribute": "visit_date"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "hc_visit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Patient",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "patient_ref",
+          "lookup_entity": "hc_patient",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "hc_visit",
+        "field": "patient_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Appointment",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "appointment_ref",
+          "lookup_entity": "hc_appointment",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "hc_visit",
+        "field": "appointment_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Provider",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "provider_ref",
+          "lookup_entity": "hc_provider",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "hc_visit",
+        "field": "provider_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "visit_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "hc_visit",
+        "field": "visit_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "HIS Encounter",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "his_encounter_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "hc_visit",
+        "field": "his_encounter_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Billing Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_reference",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "hc_visit",
+        "field": "billing_reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Referral",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_referral",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "hc_referral"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "hc_referral",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Patient",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "patient_ref",
+          "lookup_entity": "hc_patient",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "hc_referral",
+        "field": "patient_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Direction",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "direction",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "incoming",
+              "outgoing"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "hc_referral",
+        "field": "direction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "From",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "from_party",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "hc_referral",
+        "field": "from_party"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "To Provider",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "to_provider_ref",
+          "lookup_entity": "hc_provider",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "hc_referral",
+        "field": "to_provider_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Specialty",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "specialty",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "hc_referral",
+        "field": "specialty"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Urgency",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "urgency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "routine",
+              "urgent",
+              "emergency"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "hc_referral",
+        "field": "urgency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "sensitive_special_category",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "hc_referral",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Due By",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "due_by",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "hc_referral",
+        "field": "due_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "received",
+              "triage",
+              "accepted",
+              "scheduled",
+              "completed",
+              "rejected",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "hc_referral",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Pre-authorisation",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_preauthorisation",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "hc_preauthorisation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Patient",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "patient_ref",
+          "lookup_entity": "hc_patient",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "patient_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Insurer",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "insurer",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "insurer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "sensitive_special_category",
+          "display_name": "Services",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "service_codes",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "service_codes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Estimated Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "estimated_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "estimated_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "NPHIES Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "nphies_reference",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "nphies_reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Submitted",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "submitted_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "submitted_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "eligibility_checked",
+              "submitted",
+              "approved",
+              "partly_approved",
+              "rejected",
+              "expired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approved Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approved_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "field": "approved_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Care Programme",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_care_programme",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "hc_care_programme"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "hc_care_programme",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "hc_care_programme",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "sensitive_special_category",
+          "display_name": "Condition",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "condition",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "hc_care_programme",
+        "field": "condition"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_active",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "hc_care_programme",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Programme Enrolment",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_programme_enrolment",
+          "primary_name_attribute": "patient_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "hc_programme_enrolment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Programme",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "programme_ref",
+          "lookup_entity": "hc_care_programme",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "hc_programme_enrolment",
+        "field": "programme_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Patient",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "patient_ref",
+          "lookup_entity": "hc_patient",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "hc_programme_enrolment",
+        "field": "patient_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Enrolled",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "enrolled_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "hc_programme_enrolment",
+        "field": "enrolled_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "active",
+              "paused",
+              "completed",
+              "withdrawn"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "hc_programme_enrolment",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Patient Complaint",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hc_patient_complaint",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "hc_patient_complaint"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Patient",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "patient_ref",
+          "lookup_entity": "hc_patient",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "patient_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "category",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "service",
+              "billing",
+              "staff",
+              "waiting_time",
+              "clinical",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "sensitive_special_category",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Received",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "received_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "received_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Regulator Deadline",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "regulator_deadline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "regulator_deadline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "investigating",
+              "resolved",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "hc_patient_complaint",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موقع العيادة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_location",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_location.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_location.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدينة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_location.city",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعرف في نظام المستشفى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_location.his_location_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدم الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التخصص"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.specialty",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم الترخيص المهني"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.licence_number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.location_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستخدم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.user_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعرف في نظام المستشفى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_provider.his_provider_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.full_name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم الملف الطبي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.mrn",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم الهوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.national_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الميلاد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.birth_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الجنس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.gender",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اللغة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.preferred_language",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "شركة التأمين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.insurer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم العضوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.insurance_member_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موافقة التواصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.outreach_consent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعرف في نظام المستشفى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient.his_patient_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموعد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.patient_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدم الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.provider_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.location_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يبدأ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.starts_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينتهي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.ends_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحجز عبر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.booked_via",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تم إرسال التذكير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.reminder_sent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_appointment.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الزيارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit.patient_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموعد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit.appointment_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدم الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit.provider_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التاريخ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit.visit_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الزيارة في نظام المستشفى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit.his_encounter_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرجع الفوترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_visit.billing_reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.patient_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاتجاه"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.direction",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "من"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.from_party",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إلى مقدم الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.to_provider_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التخصص"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.specialty",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأولوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.urgency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المهلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.due_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_referral.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموافقة المسبقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.patient_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "شركة التأمين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.insurer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الخدمات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.service_codes",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ التقديري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.estimated_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرجع نفيس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.nphies_reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وقت الإرسال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.submitted_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ المعتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_preauthorisation.approved_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "برنامج الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_care_programme",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_care_programme.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_care_programme.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة الصحية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_care_programme.condition",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نشط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_care_programme.is_active",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التسجيل في البرنامج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_programme_enrolment",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البرنامج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_programme_enrolment.programme_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_programme_enrolment.patient_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التسجيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_programme_enrolment.enrolled_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_programme_enrolment.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "شكوى المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المريض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.patient_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.category",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوصف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.description",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الاستلام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.received_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المهلة النظامية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.regulator_deadline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "locale": "ar",
+        "object_key": "hc_patient_complaint.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_appointment",
+          "key": "hc_appointment.create",
+          "name": "hc_appointment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "privilege": "hc_appointment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_appointment",
+          "key": "hc_appointment.read",
+          "name": "hc_appointment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "privilege": "hc_appointment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_appointment",
+          "key": "hc_appointment.update",
+          "name": "hc_appointment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "privilege": "hc_appointment.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_care_programme",
+          "key": "hc_care_programme.create",
+          "name": "hc_care_programme.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "privilege": "hc_care_programme.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_care_programme",
+          "key": "hc_care_programme.read",
+          "name": "hc_care_programme.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "privilege": "hc_care_programme.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_care_programme",
+          "key": "hc_care_programme.update",
+          "name": "hc_care_programme.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "privilege": "hc_care_programme.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_location",
+          "key": "hc_location.read",
+          "name": "hc_location.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "privilege": "hc_location.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_patient",
+          "key": "hc_patient.create",
+          "name": "hc_patient.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "privilege": "hc_patient.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_patient",
+          "key": "hc_patient.read",
+          "name": "hc_patient.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "privilege": "hc_patient.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_patient",
+          "key": "hc_patient.update",
+          "name": "hc_patient.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "privilege": "hc_patient.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_patient_complaint",
+          "key": "hc_patient_complaint.create",
+          "name": "hc_patient_complaint.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "privilege": "hc_patient_complaint.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_patient_complaint",
+          "key": "hc_patient_complaint.read",
+          "name": "hc_patient_complaint.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "privilege": "hc_patient_complaint.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_patient_complaint",
+          "key": "hc_patient_complaint.update",
+          "name": "hc_patient_complaint.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "privilege": "hc_patient_complaint.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_preauthorisation",
+          "key": "hc_preauthorisation.create",
+          "name": "hc_preauthorisation.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "privilege": "hc_preauthorisation.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_preauthorisation",
+          "key": "hc_preauthorisation.read",
+          "name": "hc_preauthorisation.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "privilege": "hc_preauthorisation.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_preauthorisation",
+          "key": "hc_preauthorisation.update",
+          "name": "hc_preauthorisation.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "privilege": "hc_preauthorisation.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_programme_enrolment",
+          "key": "hc_programme_enrolment.create",
+          "name": "hc_programme_enrolment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "privilege": "hc_programme_enrolment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_programme_enrolment",
+          "key": "hc_programme_enrolment.read",
+          "name": "hc_programme_enrolment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "privilege": "hc_programme_enrolment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_programme_enrolment",
+          "key": "hc_programme_enrolment.update",
+          "name": "hc_programme_enrolment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "privilege": "hc_programme_enrolment.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_provider",
+          "key": "hc_provider.read",
+          "name": "hc_provider.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "privilege": "hc_provider.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hc_referral",
+          "key": "hc_referral.create",
+          "name": "hc_referral.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "privilege": "hc_referral.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_referral",
+          "key": "hc_referral.read",
+          "name": "hc_referral.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "privilege": "hc_referral.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hc_referral",
+          "key": "hc_referral.update",
+          "name": "hc_referral.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "privilege": "hc_referral.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hc_visit",
+          "key": "hc_visit.read",
+          "name": "hc_visit.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "privilege": "hc_visit.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Books appointments and registers patients.",
+          "is_customized": false,
+          "name": "Patient Access Agent",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "privilege": "hc_patient.read",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 187,
+      "target": {
+        "privilege": "hc_patient.create",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 188,
+      "target": {
+        "privilege": "hc_patient.update",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 189,
+      "target": {
+        "privilege": "hc_appointment.read",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 190,
+      "target": {
+        "privilege": "hc_appointment.create",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 191,
+      "target": {
+        "privilege": "hc_appointment.update",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 192,
+      "target": {
+        "privilege": "hc_provider.read",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 193,
+      "target": {
+        "privilege": "hc_location.read",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 194,
+      "target": {
+        "privilege": "hc_visit.read",
+        "role": "Patient Access Agent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Moves referrals through their stages within SLA.",
+          "is_customized": false,
+          "name": "Referral Coordinator",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 195,
+      "target": {
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 196,
+      "target": {
+        "privilege": "hc_referral.read",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 197,
+      "target": {
+        "privilege": "hc_referral.create",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 198,
+      "target": {
+        "privilege": "hc_referral.update",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 199,
+      "target": {
+        "privilege": "hc_patient.read",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 200,
+      "target": {
+        "privilege": "hc_provider.read",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 201,
+      "target": {
+        "privilege": "hc_appointment.read",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 202,
+      "target": {
+        "privilege": "hc_appointment.create",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 203,
+      "target": {
+        "privilege": "hc_appointment.update",
+        "role": "Referral Coordinator"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Checks eligibility and runs pre-authorisations.",
+          "is_customized": false,
+          "name": "Insurance Coordinator",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 204,
+      "target": {
+        "role": "Insurance Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 205,
+      "target": {
+        "privilege": "hc_preauthorisation.read",
+        "role": "Insurance Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 206,
+      "target": {
+        "privilege": "hc_preauthorisation.create",
+        "role": "Insurance Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 207,
+      "target": {
+        "privilege": "hc_preauthorisation.update",
+        "role": "Insurance Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 208,
+      "target": {
+        "privilege": "hc_patient.read",
+        "role": "Insurance Coordinator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 209,
+      "target": {
+        "privilege": "hc_visit.read",
+        "role": "Insurance Coordinator"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Handles patient complaints.",
+          "is_customized": false,
+          "name": "Patient Relations Officer",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 210,
+      "target": {
+        "role": "Patient Relations Officer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 211,
+      "target": {
+        "privilege": "hc_patient_complaint.read",
+        "role": "Patient Relations Officer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 212,
+      "target": {
+        "privilege": "hc_patient_complaint.create",
+        "role": "Patient Relations Officer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 213,
+      "target": {
+        "privilege": "hc_patient_complaint.update",
+        "role": "Patient Relations Officer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 214,
+      "target": {
+        "privilege": "hc_patient.read",
+        "role": "Patient Relations Officer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Reads every clinic record and runs care programmes.",
+          "is_customized": false,
+          "name": "Clinic Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 215,
+      "target": {
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 216,
+      "target": {
+        "privilege": "hc_location.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 217,
+      "target": {
+        "privilege": "hc_provider.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 218,
+      "target": {
+        "privilege": "hc_patient.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 219,
+      "target": {
+        "privilege": "hc_appointment.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 220,
+      "target": {
+        "privilege": "hc_visit.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 221,
+      "target": {
+        "privilege": "hc_referral.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 222,
+      "target": {
+        "privilege": "hc_preauthorisation.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 223,
+      "target": {
+        "privilege": "hc_care_programme.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 224,
+      "target": {
+        "privilege": "hc_care_programme.create",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 225,
+      "target": {
+        "privilege": "hc_care_programme.update",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 226,
+      "target": {
+        "privilege": "hc_programme_enrolment.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 227,
+      "target": {
+        "privilege": "hc_programme_enrolment.create",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 228,
+      "target": {
+        "privilege": "hc_programme_enrolment.update",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 229,
+      "target": {
+        "privilege": "hc_patient_complaint.read",
+        "role": "Clinic Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "hc_referral",
+          "initial_state": "received",
+          "is_active": true,
+          "name": "Referral",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 230,
+      "target": {
+        "entity": "hc_referral"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "received",
+          "guard_expression": null,
+          "name": "Triage",
+          "required_privilege": null,
+          "to_state": "triage"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 231,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "received->triage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "triage",
+          "guard_expression": null,
+          "name": "Accept",
+          "required_privilege": null,
+          "to_state": "accepted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 232,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "triage->accepted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "triage",
+          "guard_expression": null,
+          "name": "Reject",
+          "required_privilege": null,
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 233,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "triage->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "accepted",
+          "guard_expression": null,
+          "name": "Schedule",
+          "required_privilege": null,
+          "to_state": "scheduled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 234,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "accepted->scheduled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "scheduled",
+          "guard_expression": null,
+          "name": "Complete",
+          "required_privilege": null,
+          "to_state": "completed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 235,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "scheduled->completed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "received",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 236,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "received->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "accepted",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 237,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "accepted->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "scheduled",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 238,
+      "target": {
+        "entity": "hc_referral",
+        "transition": "scheduled->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "hc_appointment",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Healthcare: Appointments by Status This Week",
+          "required_privilege": "hc_appointment.read",
+          "sql": "SELECT status, COUNT(*) AS appointments FROM hc_appointment WHERE (is_active IS NULL OR is_active = true) AND starts_at >= date_trunc('week', NOW()) AND starts_at < date_trunc('week', NOW()) + INTERVAL '7 days' GROUP BY status ORDER BY status",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 239,
+      "target": {
+        "entity": "hc_appointment",
+        "query": "Healthcare: Appointments by Status This Week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "hc_referral",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Healthcare: Referrals Past Due",
+          "required_privilege": "hc_referral.read",
+          "sql": "SELECT id, reference, specialty, urgency, due_by, status FROM hc_referral WHERE (is_active IS NULL OR is_active = true) AND status IN ('received', 'triage', 'accepted') AND due_by < NOW() ORDER BY due_by",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 240,
+      "target": {
+        "entity": "hc_referral",
+        "query": "Healthcare: Referrals Past Due"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "hc_preauthorisation",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Healthcare: Pending Pre-authorisations",
+          "required_privilege": "hc_preauthorisation.read",
+          "sql": "SELECT id, reference, insurer, estimated_amount, submitted_at FROM hc_preauthorisation WHERE (is_active IS NULL OR is_active = true) AND status IN ('draft', 'eligibility_checked', 'submitted') ORDER BY submitted_at",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 241,
+      "target": {
+        "entity": "hc_preauthorisation",
+        "query": "Healthcare: Pending Pre-authorisations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 62,
+          "entity": null,
+          "icon": "la-clinic-medical",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 242,
+      "target": {
+        "path": "Clinics"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-user-injured",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics",
+            "Patients"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/hc_patient/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 243,
+      "target": {
+        "path": "Clinics/Patients"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-calendar-check",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics",
+            "Appointments"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/hc_appointment/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 244,
+      "target": {
+        "path": "Clinics/Appointments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-share-square",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics",
+            "Referrals"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/hc_referral/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 245,
+      "target": {
+        "path": "Clinics/Referrals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-file-medical",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics",
+            "Pre-authorisations"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/hc_preauthorisation/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 246,
+      "target": {
+        "path": "Clinics/Pre-authorisations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-user-md",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics",
+            "Providers"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/hc_provider/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 247,
+      "target": {
+        "path": "Clinics/Providers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 6,
+          "entity": null,
+          "icon": "la-comment-dots",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Clinics",
+            "Complaints"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/hc_patient_complaint/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 248,
+      "target": {
+        "path": "Clinics/Complaints"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "state"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "healthcare",
+  "seq": 1,
+  "title": "Pack: healthcare clinics"
+}
