@@ -7,6 +7,7 @@ pub mod critical_path;
 pub mod engine;
 pub mod model;
 pub mod portfolio_program;
+pub mod risk;
 pub mod seed;
 pub mod summary;
 pub mod timesheet;
