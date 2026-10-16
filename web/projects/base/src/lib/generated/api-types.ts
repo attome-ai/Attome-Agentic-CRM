@@ -8625,6 +8625,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/composite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["composite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/consents/capture": {
         parameters: {
             query?: never;
@@ -11478,6 +11494,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/key/{keyspec}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_record_by_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_record_by_key"];
         trace?: never;
     };
     "/api/v1/{entity}/merges/{merge_id}/undo": {
@@ -15957,6 +15989,46 @@ export interface components {
              *     ignored otherwise.
              */
             to?: string[];
+        };
+        /** @enum {string} */
+        CompositeMethod: "create" | "update" | "delete" | "upsert";
+        /** @description One operation. */
+        CompositeOp: {
+            body?: unknown;
+            entity: string;
+            /** @description The record, for update and delete; may be a `${ref.id}` reference. */
+            id?: string | null;
+            /**
+             * Format: int64
+             * @description The record's `row_version`; required for update.
+             */
+            if_match?: number | null;
+            method: components["schemas"]["CompositeMethod"];
+            /**
+             * @description This operation's name, for later references: lowercase letters,
+             *     digits and `_`, starting with a letter, at most 32 characters.
+             */
+            ref: string;
+        };
+        CompositeRequest: {
+            /** @description Every operation commits or none does. Not available yet (S1-T8). */
+            all_or_none?: boolean;
+            operations: components["schemas"]["CompositeOp"][];
+        };
+        CompositeResponse: {
+            results: components["schemas"]["CompositeResult"][];
+        };
+        /** @description One operation's outcome. */
+        CompositeResult: {
+            body?: unknown;
+            /** @description The error body, as a single request would have answered. */
+            error?: unknown;
+            ref: string;
+            /**
+             * Format: int32
+             * @description The HTTP status the operation would have had on its own.
+             */
+            status: number;
         };
         ComputeMetricBody: {
             /**
@@ -59353,6 +59425,48 @@ export interface operations {
             };
         };
     };
+    composite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompositeRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per operation, in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompositeResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request's own shape is wrong (count, refs, all_or_none) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     capture_consent: {
         parameters: {
             query?: never;
@@ -68406,6 +68520,147 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_record_by_key: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Comma-separated attribute names. `data` carries only these; `id`,
+                 *     `row_version` and the rest of the envelope always come back. A name
+                 *     that is not an attribute the caller may read is a 422.
+                 */
+                select?: string;
+            };
+            header?: never;
+            path: {
+                entity: string;
+                /** @description attr=value pairs joined by `,`, naming a unique key */
+                keyspec: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record, as GET /api/v1/{entity}/{id} returns it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No live record has this key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than one record has this key */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The attributes are not a unique key */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_record_by_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                /** @description attr=value pairs joined by `,`, naming a unique key */
+                keyspec: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The updated record, as PATCH /api/v1/{entity}/{id} returns it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No live record has this key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record changed since If-Match, or more than one record has this key */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The attributes are not a unique key, or If-Match is missing */
             422: {
                 headers: {
                     [name: string]: unknown;

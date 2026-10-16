@@ -44885,6 +44885,69 @@
         ]
       }
     },
+    "/api/v1/composite": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "operationId": "composite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompositeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "One result per operation, in order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request's own shape is wrong (count, refs, all_or_none)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "every operation is written through the generic entity path, which writes its own Entity audit event",
+          "reason": "delegated",
+          "via": "each operation's create/update/delete path"
+        }
+      }
+    },
     "/api/v1/consents/capture": {
       "post": {
         "tags": [
@@ -58780,6 +58843,202 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/{entity}/key/{keyspec}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "operationId": "get_record_by_key",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyspec",
+            "in": "path",
+            "description": "attr=value pairs joined by `,`, naming a unique key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "select",
+            "in": "query",
+            "description": "Comma-separated attribute names. `data` carries only these; `id`,\n`row_version` and the rest of the envelope always come back. A name\nthat is not an attribute the caller may read is a 422.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The record, as GET /api/v1/{entity}/{id} returns it"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live record has this key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "More than one record has this key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The attributes are not a unique key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "entity"
+        ],
+        "operationId": "update_record_by_key",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyspec",
+            "in": "path",
+            "description": "attr=value pairs joined by `,`, naming a unique key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated record, as PATCH /api/v1/{entity}/{id} returns it"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live record has this key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since If-Match, or more than one record has this key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The attributes are not a unique key, or If-Match is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
       }
     },
     "/api/v1/{entity}/merges/{merge_id}/undo": {
@@ -73981,6 +74240,107 @@
               "type": "string"
             },
             "description": "Recipient email addresses. Required, non-empty, for `channel=email`;\nignored otherwise."
+          }
+        }
+      },
+      "CompositeMethod": {
+        "type": "string",
+        "enum": [
+          "create",
+          "update",
+          "delete",
+          "upsert"
+        ]
+      },
+      "CompositeOp": {
+        "type": "object",
+        "description": "One operation.",
+        "required": [
+          "ref",
+          "method",
+          "entity"
+        ],
+        "properties": {
+          "body": {},
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record, for update and delete; may be a `${ref.id}` reference."
+          },
+          "if_match": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The record's `row_version`; required for update."
+          },
+          "method": {
+            "$ref": "#/components/schemas/CompositeMethod"
+          },
+          "ref": {
+            "type": "string",
+            "description": "This operation's name, for later references: lowercase letters,\ndigits and `_`, starting with a letter, at most 32 characters."
+          }
+        }
+      },
+      "CompositeRequest": {
+        "type": "object",
+        "required": [
+          "operations"
+        ],
+        "properties": {
+          "all_or_none": {
+            "type": "boolean",
+            "description": "Every operation commits or none does. Not available yet (S1-T8)."
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompositeOp"
+            }
+          }
+        }
+      },
+      "CompositeResponse": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompositeResult"
+            }
+          }
+        }
+      },
+      "CompositeResult": {
+        "type": "object",
+        "description": "One operation's outcome.",
+        "required": [
+          "ref",
+          "status"
+        ],
+        "properties": {
+          "body": {},
+          "error": {
+            "description": "The error body, as a single request would have answered."
+          },
+          "ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The HTTP status the operation would have had on its own.",
+            "minimum": 0
           }
         }
       },
