@@ -26688,6 +26688,54 @@
         }
       }
     },
+    "/api/v1/admin/sbom": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "get_sbom",
+        "responses": {
+          "200": {
+            "description": "The release's bill of materials and the installed packs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SbomResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/security/access-reviews": {
       "get": {
         "tags": [
@@ -32917,6 +32965,229 @@
             }
           ],
           "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/admin/slo": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "get_slo_overview",
+        "responses": {
+          "200": {
+            "description": "Every SLO class with its status, budget and targets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SloOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/slo/targets/{class_id}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "set_slo_target",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SloTargetBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The class's own targets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SloOverride"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such class",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The override changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Targets out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "clear_slo_target",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The reference targets apply again"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such class, or it has no override",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
         }
       }
     },
@@ -80977,6 +81248,30 @@
           }
         }
       },
+      "InstalledPack": {
+        "type": "object",
+        "description": "One installed configuration pack.",
+        "required": [
+          "name",
+          "version",
+          "layer"
+        ],
+        "properties": {
+          "layer": {
+            "type": "string",
+            "description": "`product`, `project` or `customer`."
+          },
+          "name": {
+            "type": "string",
+            "description": "The pack's scope (`crm`, `sales`, …)."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The highest changeset of the pack applied."
+          }
+        }
+      },
       "InstanceDetail": {
         "type": "object",
         "required": [
@@ -100802,6 +101097,25 @@
           }
         }
       },
+      "SbomResponse": {
+        "type": "object",
+        "required": [
+          "release",
+          "packs"
+        ],
+        "properties": {
+          "packs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstalledPack"
+            }
+          },
+          "release": {
+            "type": "object",
+            "description": "The release's CycloneDX 1.5 bill of materials."
+          }
+        }
+      },
       "ScaffoldBody": {
         "type": "object",
         "required": [
@@ -102242,6 +102556,178 @@
           "ticket_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "SloClassStatus": {
+        "type": "object",
+        "description": "One SLO class as an administrator sees it.",
+        "required": [
+          "id",
+          "name_en",
+          "name_ar",
+          "kind",
+          "status"
+        ],
+        "properties": {
+          "budget_remaining": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The share of the 30-day error budget left (1 = untouched)."
+          },
+          "error_ratio_30d": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "5xx responses over all responses in the last 30 days."
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`http`, `gauge` or `browser`."
+          },
+          "name_ar": {
+            "type": "string"
+          },
+          "name_en": {
+            "type": "string"
+          },
+          "override": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SloOverride",
+                "description": "This deployment's own targets, when set."
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "`ok`, `at_risk` or `exhausted` from the error budget; `unmeasured`\nfor a class without one here."
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SloTargets",
+                "description": "The reference targets for this deployment's profile."
+              }
+            ]
+          }
+        }
+      },
+      "SloOverride": {
+        "type": "object",
+        "description": "A deployment's own targets for a class.",
+        "required": [
+          "p95_ms",
+          "p99_ms",
+          "row_version",
+          "updated_by",
+          "updated_at"
+        ],
+        "properties": {
+          "p95_ms": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "p99_ms": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SloOverview": {
+        "type": "object",
+        "required": [
+          "profile",
+          "classes"
+        ],
+        "properties": {
+          "classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SloClassStatus"
+            }
+          },
+          "profile": {
+            "type": "string",
+            "description": "`solo` or `team`, the profile whose reference targets apply."
+          }
+        }
+      },
+      "SloTargetBody": {
+        "type": "object",
+        "required": [
+          "p95_ms",
+          "p99_ms"
+        ],
+        "properties": {
+          "p95_ms": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "p99_ms": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required to change an existing override (409 when stale)."
+          }
+        }
+      },
+      "SloTargets": {
+        "type": "object",
+        "description": "Reference latency targets, in milliseconds.",
+        "properties": {
+          "p50_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "p95_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "p99_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           }
         }
       },

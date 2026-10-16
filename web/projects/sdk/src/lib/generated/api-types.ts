@@ -5027,6 +5027,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/sbom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sbom"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/access-reviews": {
         parameters: {
             query?: never;
@@ -6167,6 +6183,38 @@ export interface paths {
         put: operations["put_admin_setting"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/slo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_slo_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/slo/targets/{class_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_slo_target"];
+        post?: never;
+        delete: operations["clear_slo_target"];
         options?: never;
         head?: never;
         patch?: never;
@@ -19124,6 +19172,18 @@ export interface components {
              */
             embedding_model?: string | null;
         };
+        /** @description One installed configuration pack. */
+        InstalledPack: {
+            /** @description `product`, `project` or `customer`. */
+            layer: string;
+            /** @description The pack's scope (`crm`, `sales`, …). */
+            name: string;
+            /**
+             * Format: int32
+             * @description The highest changeset of the pack applied.
+             */
+            version: number;
+        };
         InstanceDetail: {
             /** Format: date-time */
             completed_at?: string | null;
@@ -26595,6 +26655,11 @@ export interface components {
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
         };
+        SbomResponse: {
+            packs: components["schemas"]["InstalledPack"][];
+            /** @description The release's CycloneDX 1.5 bill of materials. */
+            release: Record<string, never>;
+        };
         ScaffoldBody: {
             kind: components["schemas"]["ScaffoldKind"];
             /**
@@ -27188,6 +27253,69 @@ export interface components {
             sla_unresolved_reason?: null | components["schemas"]["UnresolvedReason"];
             /** Format: uuid */
             ticket_id: string;
+        };
+        /** @description One SLO class as an administrator sees it. */
+        SloClassStatus: {
+            /**
+             * Format: double
+             * @description The share of the 30-day error budget left (1 = untouched).
+             */
+            budget_remaining?: number | null;
+            /**
+             * Format: double
+             * @description 5xx responses over all responses in the last 30 days.
+             */
+            error_ratio_30d?: number | null;
+            id: string;
+            /** @description `http`, `gauge` or `browser`. */
+            kind: string;
+            name_ar: string;
+            name_en: string;
+            override?: null | components["schemas"]["SloOverride"];
+            /**
+             * @description `ok`, `at_risk` or `exhausted` from the error budget; `unmeasured`
+             *     for a class without one here.
+             */
+            status: string;
+            target?: null | components["schemas"]["SloTargets"];
+        };
+        /** @description A deployment's own targets for a class. */
+        SloOverride: {
+            /** Format: int32 */
+            p95_ms: number;
+            /** Format: int32 */
+            p99_ms: number;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            updated_by: string;
+        };
+        SloOverview: {
+            classes: components["schemas"]["SloClassStatus"][];
+            /** @description `solo` or `team`, the profile whose reference targets apply. */
+            profile: string;
+        };
+        SloTargetBody: {
+            /** Format: int32 */
+            p95_ms: number;
+            /** Format: int32 */
+            p99_ms: number;
+            /**
+             * Format: int64
+             * @description Required to change an existing override (409 when stale).
+             */
+            row_version?: number | null;
+        };
+        /** @description Reference latency targets, in milliseconds. */
+        SloTargets: {
+            /** Format: double */
+            p50_ms?: number | null;
+            /** Format: double */
+            p95_ms?: number | null;
+            /** Format: double */
+            p99_ms?: number | null;
         };
         SnapshotBreakpoint: {
             breakpoint: string;
@@ -46748,6 +46876,44 @@ export interface operations {
             };
         };
     };
+    get_sbom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The release's bill of materials and the installed packs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SbomResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_access_reviews: {
         parameters: {
             query?: {
@@ -50886,6 +51052,162 @@ export interface operations {
             };
             /** @description Validation failed, or the key is boot-time-only */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_slo_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every SLO class with its status, budget and targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SloOverview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_slo_target: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SloTargetBody"];
+            };
+        };
+        responses: {
+            /** @description The class's own targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SloOverride"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such class */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The override changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Targets out of bounds */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clear_slo_target: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reference targets apply again */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such class, or it has no override */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
