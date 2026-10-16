@@ -15,6 +15,7 @@ pub mod dialer;
 pub mod discount_policy;
 pub mod enrichment;
 pub mod flags;
+pub mod forecast;
 pub mod model;
 pub mod orgchart;
 pub mod price_resolution;

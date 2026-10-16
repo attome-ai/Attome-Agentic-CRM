@@ -1,0 +1,101 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1d098f0761b4e9a9f77ea4433dfa53db206e383131cf17de716321d97f5ab242",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "D11-T2: the forecast category a deal counts in, set on the deal or taken from its stage, so the nightly forecast fills each period's cells and rolls them up the position tree.",
+  "format": "attome-changeset/v1",
+  "id": "01a144fa-e05f-7d11-ae58-67d384cfd193",
+  "layer": "product",
+  "name": "sales-forecast-categories",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Forecast Category",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "forecast_category_ref",
+          "lookup_entity": "forecast_category",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity",
+        "field": "forecast_category_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Forecast Category",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "forecast_category_ref",
+          "lookup_entity": "forecast_category",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "forecast_category_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فئة التوقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.forecast_category_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فئة التوقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.forecast_category_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 15,
+  "title": "Pack: forecast categories on deals"
+}

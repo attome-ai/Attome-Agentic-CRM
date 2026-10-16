@@ -76,6 +76,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // A18-T4: bursts of deletion, checked every five minutes.
     crate::jobs::spawn_bin_delete_alert_scheduler(db.clone(), std::time::Duration::from_secs(300));
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // D11-T2: forecast cells and the weekly snapshot, nightly.
+    crate::jobs::spawn_forecast_recompute_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // D19-T1: deal risk scores and reasons, nightly.
     crate::jobs::spawn_deal_risk_scheduler(
         db.clone(),

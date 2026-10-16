@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Forecast cells fill themselves: deals carry a forecast category (on the deal or from its stage, sales
+  pack 0015), and a nightly job sums each open period's deals per owner and category, rolls them up
+  through the position tree, keeps adjusted amounts, and snapshots every cell once a week.
 - Deal risk: every open opportunity is scored nightly from 0 to 100 (quiet for 14 days, close date
   pushed, no decision maker or economic buyer, stalled past 1.5 times its stage's median, close date
   passed), with the reasons on the deal and an "At Risk" deals query (sales pack 0014).
