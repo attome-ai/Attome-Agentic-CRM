@@ -304,9 +304,10 @@ runbook above; two are only built in:
 
 ### ChangesPaused
 
-The deployment is read-only: an operator paused changes, or the disk is nearly full (AB5-T6). Reads
-work; writes answer `503 read_only`. Check `GET /api/v1/admin/ops/overview` and free disk space, then
-lift the pause.
+The deployment is read-only: an operator paused changes, or the database reached
+`deployment.read_only_at_database_bytes` (AB5-T6). Reads work; writes answer `503 read_only`. The
+server log names the reason when the mode turns on. Free space or raise the ceiling, or lift the
+operator's pause.
 
 ### NodeStoppedReporting
 
