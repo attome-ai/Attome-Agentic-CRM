@@ -57172,7 +57172,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MovePreview"
+                  "$ref": "#/components/schemas/WorkflowMovePreview"
                 }
               }
             }
@@ -111048,6 +111048,36 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "WorkflowMovePreview": {
+        "type": "object",
+        "description": "What moving the run would do.",
+        "required": [
+          "from_version_id",
+          "target_version_id",
+          "movable",
+          "waiting"
+        ],
+        "properties": {
+          "from_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "movable": {
+            "type": "boolean",
+            "description": "Every waiting step is found in the target version."
+          },
+          "target_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "waiting": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MoveMapping"
+            }
           }
         }
       },

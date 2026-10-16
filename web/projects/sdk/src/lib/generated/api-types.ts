@@ -30274,6 +30274,16 @@ export interface components {
             status: string;
             target?: string | null;
         };
+        /** @description What moving the run would do. */
+        WorkflowMovePreview: {
+            /** Format: uuid */
+            from_version_id: string;
+            /** @description Every waiting step is found in the target version. */
+            movable: boolean;
+            /** Format: uuid */
+            target_version_id: string;
+            waiting: components["schemas"]["MoveMapping"][];
+        };
         WritePolicy: {
             action_id: string;
             /** Format: date-time */
@@ -67611,7 +67621,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MovePreview"];
+                    "application/json": components["schemas"]["WorkflowMovePreview"];
                 };
             };
             /** @description Missing or invalid credentials */
