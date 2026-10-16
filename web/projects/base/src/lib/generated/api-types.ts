@@ -1277,6 +1277,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/change-feed/consumers/{name}/rewind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Y7-T4: moves a consumer back so it reads the feed again from a sequence
+         *     number or a time, within what the feed still holds. A consumer applies
+         *     each event once, so what it already applied is skipped.
+         */
+        post: operations["rewind_consumer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/changes": {
         parameters: {
             query?: never;
@@ -11083,6 +11104,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflow/instances/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["move_instance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/instances/{id}/move-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["move_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/instances/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pause_instance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/instances/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resume_instance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/instances/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_instance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflow/trigger-dead-letters": {
         parameters: {
             query?: never;
@@ -16102,6 +16203,19 @@ export interface components {
             failures: components["schemas"]["ContrastFailure"][];
             passed: boolean;
         };
+        /** @description A control request: the instance's current `row_version`. */
+        ControlBody: {
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description The instance's state after a control action. */
+        ControlResult: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            status: string;
+        };
         ConversationDetail: {
             conversation: components["schemas"]["ConversationView"];
             governance: components["schemas"]["GovernanceView"];
@@ -20329,6 +20443,20 @@ export interface components {
             licensed: boolean;
             name: string;
         };
+        /** @description Move a run to another version of its flow. */
+        MoveBody: {
+            /** Format: int64 */
+            row_version: number;
+            /** Format: uuid */
+            target_version_id: string;
+        };
+        /** @description One waiting step and where it lands in the target version. */
+        MoveMapping: {
+            /** @description The node exists in the target version with the same type. */
+            found: boolean;
+            node_id: string;
+            node_type: string;
+        };
         MovePageBody: {
             /** Format: uuid */
             parent_page_id?: string | null;
@@ -20498,8 +20626,21 @@ export interface components {
             attempt_count: number;
             /** Format: date-time */
             completed_at?: string | null;
+            /**
+             * @description The node's input and output; absent for a large pair kept in object
+             *     storage (`payload_ref`) or a node that has not run.
+             */
+            input?: unknown;
             last_error?: string | null;
             node_id: string;
+            output?: unknown;
+            /** @description The object-storage key of a large input/output pair. */
+            payload_ref?: string | null;
+            /**
+             * Format: int32
+             * @description M3-T1: the loop round (0 outside a loop).
+             */
+            round: number;
             /** Format: date-time */
             started_at?: string | null;
             status: string;
@@ -26321,6 +26462,19 @@ export interface components {
              *     incident-response tooling that flagged the session as compromised.
              */
             jti: string;
+        };
+        /** @description Y7-T4: where to rewind a consumer to; exactly one of the two. */
+        RewindBody: {
+            /**
+             * Format: int64
+             * @description The first event at or after this sequence number.
+             */
+            to_seq?: number | null;
+            /**
+             * Format: date-time
+             * @description The first event written at or after this time.
+             */
+            to_time?: string | null;
         };
         RewrapTriggered: {
             /**
@@ -34134,6 +34288,67 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rewind_consumer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The consumer's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewindBody"];
+            };
+        };
+        responses: {
+            /** @description The consumer reads again from that point */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such consumer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither or both points given, or the feed no longer holds that point */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -66964,6 +67179,305 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    move_instance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveBody"];
+            };
+        };
+        responses: {
+            /** @description The run now belongs to the target version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The run is not waiting or paused, or changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A waiting step is missing from the target version */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    move_preview: {
+        parameters: {
+            query: {
+                target_version_id: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where each waiting step lands in the target version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovePreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The target is not a published version of the same flow */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pause_instance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControlBody"];
+            };
+        };
+        responses: {
+            /** @description The run is paused; no step runs until it is resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The run is not running or waiting, or changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_instance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControlBody"];
+            };
+        };
+        responses: {
+            /** @description The run continues; a step still waiting keeps waiting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The run is not paused, or changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retry_instance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControlBody"];
+            };
+        };
+        responses: {
+            /** @description The run continues from its failed step, with the inputs it had */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The run is not failed, or changed since it was read */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
