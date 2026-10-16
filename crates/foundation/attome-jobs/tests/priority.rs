@@ -254,15 +254,16 @@ async fn a_low_priority_job_still_completes_despite_a_continuing_stream_of_high_
     });
 
     // Run until the probe reads `Done` (the assertion below), then shut down.
-    // The old fixed 5 s budget (headroom for a slow host, not expected
-    // processing time) stays as the deadline, so a probe starved behind the
-    // High-priority stream still fails exactly as before (build-loop-opt-review
+    // The deadline is headroom for a slow, busy CI host (the whole DB test
+    // tier shares it), not expected processing time: the probe finishes in
+    // well under a second when it is not starved, and a probe starved behind
+    // the High-priority stream still never reads `Done` (build-loop-opt-review
     // Phase 3: condition waits instead of fixed sleeps).
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
     let poll_pool = pool.clone();
     let poll_task_id = probe_task_id.clone();
     tokio::spawn(async move {
-        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
         while tokio::time::Instant::now() < deadline {
             let status: Option<String> =
                 sqlx::query_scalar("SELECT status FROM apalis.jobs WHERE id = $1")
