@@ -83,6 +83,66 @@ pub struct BulkEditSubmitted {
     /// the changed records back. Kept by the caller, like a clone's undo
     /// list.
     pub undo: Vec<UndoItem>,
+    /// B5-T3: set when the edit is above the approval count; it runs once
+    /// that approval is given, and `id` is empty until then.
+    pub approval_request_id: Option<Uuid>,
+}
+
+/// B5-T3: the approval a large bulk edit waits on.
+pub const ACTION_BULK_EDIT: &str = "records.bulk_edit";
+
+/// B5-T3: the setting holding the record count above which a bulk edit
+/// needs an approval (0, the default, never asks).
+pub const BULK_EDIT_APPROVAL_SETTING: &str = "records.bulk_edit_approval_count";
+
+/// One record of a bulk edit waiting on its approval.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BulkEditApprovalItem {
+    pub id: Option<Uuid>,
+    pub expected_row_version: Option<i64>,
+    pub data: Value,
+}
+
+/// A bulk edit as stored in its approval request.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BulkEditApprovalPayload {
+    pub entity: String,
+    pub items: Vec<BulkEditApprovalItem>,
+    pub requested_by: Uuid,
+}
+
+/// The approval count, 0 when unset.
+pub fn approval_count(state: &EngineState) -> usize {
+    let Some(descriptor) = attome_core::setting_registry().get(BULK_EDIT_APPROVAL_SETTING) else {
+        return 0;
+    };
+    let (value, _) = state.settings.load().resolve(descriptor, None, None);
+    value
+        .as_u64()
+        .and_then(|n| usize::try_from(n).ok())
+        .unwrap_or(0)
+}
+
+/// Runs an approved bulk edit as the person who asked for it.
+pub async fn do_apply_bulk_edit(
+    state: &EngineState,
+    payload: &BulkEditApprovalPayload,
+) -> Result<crate::bulk::BulkSubmitted, AppError> {
+    let ctx = state
+        .base
+        .security
+        .resolve_strict(payload.requested_by)
+        .await?;
+    let items = payload
+        .items
+        .iter()
+        .map(|i| BulkItem {
+            id: i.id,
+            expected_row_version: i.expected_row_version,
+            data: i.data.clone(),
+        })
+        .collect();
+    submit_bulk(state, &ctx, &payload.entity, "update", items, false).await
 }
 
 /// B5-T3: one record's values before a bulk edit, and the row version the
@@ -536,6 +596,44 @@ async fn bulk_edit(
                 matched,
                 unchanged,
                 undo: Vec::new(),
+                approval_request_id: None,
+            }),
+        ));
+    }
+    // B5-T3: above the approval count the edit waits on an approval.
+    let threshold = approval_count(&state);
+    if threshold > 0 && items.len() > threshold {
+        let total = i32::try_from(items.len()).unwrap_or(i32::MAX);
+        let payload = BulkEditApprovalPayload {
+            entity: entity.clone(),
+            items: items
+                .iter()
+                .map(|i| BulkEditApprovalItem {
+                    id: i.id,
+                    expected_row_version: i.expected_row_version,
+                    data: i.data.clone(),
+                })
+                .collect(),
+            requested_by: ctx.user_id,
+        };
+        let value = serde_json::to_value(&payload).map_err(AppError::internal)?;
+        let request = attome_audit::approval::gate_regarding_required(
+            &state,
+            ACTION_BULK_EDIT,
+            value,
+            ctx.user_id,
+            None,
+        )
+        .await?;
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(BulkEditSubmitted {
+                id: None,
+                total,
+                matched,
+                unchanged,
+                undo,
+                approval_request_id: Some(request.id),
             }),
         ));
     }
@@ -548,6 +646,7 @@ async fn bulk_edit(
             matched,
             unchanged,
             undo,
+            approval_request_id: None,
         }),
     ))
 }

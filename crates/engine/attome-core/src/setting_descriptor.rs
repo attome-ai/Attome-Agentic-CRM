@@ -329,6 +329,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "omnichannel.web_chat_offline_message" => {
             "الرد التلقائي لزائر محادثة الويب خارج ساعات العمل."
         }
+        "records.bulk_edit_approval_count" => {
+            "التعديل الجماعي الذي يغيّر سجلات أكثر من هذا العدد ينتظر موافقة قبل تنفيذه؛ صفر يعني بلا موافقة."
+        }
         "commission.adjustment_approval_amount" => {
             "تعديلات العمولات اليدوية التي تتجاوز هذا المبلغ (زيادةً أو نقصًا، بعملة النشر الأساسية) لا تُسجَّل إلا بعد الموافقة."
         }

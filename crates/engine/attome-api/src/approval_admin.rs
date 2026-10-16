@@ -112,6 +112,7 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     attome_commission::close::ACTION_PERIOD_CLOSE,
     attome_sales::split_store::ACTION_SPLIT_CHANGE,
     attome_hr::leave::ACTION_LEAVE_DECIDE,
+    attome_records::bulk_edit::ACTION_BULK_EDIT,
     attome_security::admin::ACTION_ROLE_GRANT,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
@@ -1053,6 +1054,13 @@ async fn dispatch_approved(
                 approver_id,
             )
             .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
+        attome_records::bulk_edit::ACTION_BULK_EDIT => {
+            // B5-T3: a large bulk edit, run as its requester once approved.
+            let payload: attome_records::bulk_edit::BulkEditApprovalPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response = attome_records::bulk_edit::do_apply_bulk_edit(state, &payload).await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
         attome_hr::leave::ACTION_LEAVE_DECIDE => {

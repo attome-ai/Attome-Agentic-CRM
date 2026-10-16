@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Bulk edits above the new `records.bulk_edit_approval_count` setting (0, the default, never asks)
+  answer `202` with an `approval_request_id` and run as their requester once approved
+  (`records.bulk_edit`).
 - Marketing list insight: `GET /api/v1/marketing/lists/{id}/count` (estimate or `exact`, and the people
   reachable for a `purpose_key`), `.../sample`, `.../explain/{person_id}` (which step put them in or left
   them out) and `.../members-as-of?at=`, all as the caller and never naming people they cannot read.

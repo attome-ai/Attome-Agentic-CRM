@@ -31,7 +31,21 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(omnichannel_settings());
     all.extend(ops_settings());
     all.extend(commission_settings());
+    all.extend(records_settings());
     all
+}
+
+/// B5-T3: record settings.
+fn records_settings() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "records.bulk_edit_approval_count",
+        "A bulk edit changing more records than this waits on an approval before it runs; \
+         0 never asks.",
+        || json!({"type": "integer", "minimum": 0}),
+        &[SettingScope::Deployment],
+        false,
+        || json!(0),
+    )]
 }
 
 /// F10: commission settings.
