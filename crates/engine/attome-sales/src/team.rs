@@ -129,6 +129,15 @@ async fn check_member_access(
     }
 }
 
+/// After commit, drops the member's cached security context, as the admin
+/// share routes do, so the share counts on their next request.
+pub(crate) async fn invalidate(state: &EngineState, user: Option<Uuid>) -> Result<(), AppError> {
+    if let Some(user) = user {
+        state.base.security.invalidate_sync(user).await?;
+    }
+    Ok(())
+}
+
 fn access_event(actor: Uuid, member: Uuid, operation: AuditOperation) -> SecurityEvent {
     SecurityEvent::new(
         MandatoryCategory::Access,
@@ -339,6 +348,7 @@ pub(crate) async fn post_sales_team_member(
     .await?;
     let created = read_member(&mut tx, opportunity, member).await?;
     attome_db::tx::commit(tx).await?;
+    invalidate(&state, body.user_ref).await?;
     Ok((StatusCode::CREATED, Json(created)))
 }
 
@@ -426,6 +436,7 @@ pub(crate) async fn patch_sales_team_member(
     .await?;
     let changed = read_member(&mut tx, opportunity, member).await?;
     attome_db::tx::commit(tx).await?;
+    invalidate(&state, changed.user_ref).await?;
     Ok(Json(changed))
 }
 
@@ -486,6 +497,7 @@ pub(crate) async fn delete_sales_team_member(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    invalidate(&state, current.user_ref).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

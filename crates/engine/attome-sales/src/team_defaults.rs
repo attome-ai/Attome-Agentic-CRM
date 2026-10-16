@@ -124,16 +124,19 @@ async fn add_missing(
     .fetch_all(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let mut added = 0;
+    let mut added = Vec::new();
     for member in members {
         if member.user.is_some_and(|u| present.contains(&u)) {
             continue;
         }
         crate::team::add_member_in_tx(&mut tx, state, entity, opportunity, *member, actor).await?;
-        added += 1;
+        added.push(member.user);
     }
     attome_db::tx::commit(tx).await?;
-    Ok(added)
+    for user in &added {
+        crate::team::invalidate(state, *user).await?;
+    }
+    Ok(added.len() as u64)
 }
 
 /// Gives every newly created deal its owner's default team; the number of
