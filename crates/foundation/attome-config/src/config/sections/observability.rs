@@ -58,6 +58,14 @@ pub struct ObservabilitySection {
     /// off otherwise (several servers use Prometheus).
     #[serde(default)]
     pub builtin_store: Option<bool>,
+    /// AB10-T2: who hears about a built-in alert firing or resolving, by
+    /// email (sent through the job queue and the `email` section's relay).
+    #[serde(default)]
+    pub alert_emails: Vec<String>,
+    /// AB10-T2: incoming-webhook URLs (Slack, Teams, any service that takes
+    /// `{"text": ...}`) told about a built-in alert firing or resolving.
+    #[serde(default)]
+    pub alert_webhooks: Vec<String>,
     /// P-worker-process-split follow-up (the TODO `crates/server/src/bin/
     /// worker.rs` shipped with) — the dedicated `worker` binary has no HTTP
     /// listener at all today, so a split deployment's compose/k8s healthcheck

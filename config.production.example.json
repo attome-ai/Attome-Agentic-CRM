@@ -150,6 +150,9 @@
     "_otlp_endpoint_comment": "P-observability-completion — required only when enable_distributed_tracing is true; a per-deployment OTLP collector (Tempo/Jaeger/OTel Collector), never a hosted/shared endpoint.",
     "otlp_endpoint": null,
     "profiler_enabled": false,
+    "_alert_comment": "AB10-T2: who hears about a built-in alert (observability/builtin-alerts.json) firing or resolving: email addresses (sent through the email section's relay) and incoming-webhook URLs that take {\"text\": ...} (Slack, Teams).",
+    "alert_emails": [],
+    "alert_webhooks": [],
     "worker_health_port": 9091
   },
   "email": {

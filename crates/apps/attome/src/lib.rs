@@ -9,6 +9,7 @@
 // The modules moved here from v1's `server` crate refer to it by name.
 extern crate self as attome;
 
+pub mod alert_notify;
 pub mod apikey_pepper_registry;
 pub mod auth;
 pub mod backup;

@@ -27,7 +27,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   database pool timeouts, dead-letter jobs, job backlog, audit chain lag, file store down, changes
   paused, a node that stopped reporting) are evaluated every minute on the built-in metrics store;
   state in `ops_alert`, firings and resolutions in `ops_alert_event` (migration `0065`). Stored
-  metric samples now carry a `node` label.
+  metric samples now carry a `node` label. Each firing and resolution goes to
+  `observability.alert_emails` (queued email) and `observability.alert_webhooks` (`{"text": ...}`
+  for Slack or Teams).
 - Log a call in one step from a record's Activities tab: direction, minutes, notes and (when the crm
   pack adds it) outcome, saved as a completed call, with an optional next step created as a task.
 - Kanban views take `sum_field`, `weighted_field`, `state_entered_field`, `stalled_after_days` and
