@@ -115,7 +115,8 @@ struct Loaded {
 
 impl Loaded {
     fn customer(&self) -> bool {
-        self.rule.owner_layer == "customer"
+        attome_model::Layer::from_stored(&self.rule.owner_layer)
+            == Some(attome_model::Layer::Customer)
     }
 
     fn owner(&self) -> RefOwner {
@@ -535,7 +536,9 @@ pub async fn retype_scan(
         if still_valid(&rule, &attrs) {
             continue;
         }
-        if rule.owner_layer == "customer" {
+        if attome_model::Layer::from_stored(&rule.owner_layer)
+            == Some(attome_model::Layer::Customer)
+        {
             out.customer.push((rule.id, rule.name.clone()));
         } else {
             out.blockers.push(Blocker {

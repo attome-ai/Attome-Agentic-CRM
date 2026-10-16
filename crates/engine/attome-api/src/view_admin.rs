@@ -1648,7 +1648,7 @@ fn impact_warnings(
     if scope == "shared" {
         out.push("other people use this shared view".to_owned());
     }
-    if owner_layer == "platform" {
+    if attome_model::Layer::from_stored(owner_layer) == Some(attome_model::Layer::Platform) {
         out.push("this view is built in: a platform upgrade brings its own version".to_owned());
     }
     if dashboards > 0 {

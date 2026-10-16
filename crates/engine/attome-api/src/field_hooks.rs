@@ -84,7 +84,7 @@ pub fn registry() -> &'static FieldHooks {
 }
 
 fn owner_of(owner_layer: &str) -> RefOwner {
-    if owner_layer == "customer" {
+    if attome_model::Layer::from_stored(owner_layer) == Some(attome_model::Layer::Customer) {
         RefOwner::Customer
     } else {
         RefOwner::Ours

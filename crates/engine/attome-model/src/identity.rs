@@ -62,6 +62,47 @@ impl Layer {
             Self::Customer => "customer",
         }
     }
+
+    /// Y11-T1: the layer an `owner_layer` column value names. The changeset
+    /// ledger stores four names (migration 0520's CHECK); `product` is an
+    /// app's and `project` work belongs to the customer.
+    pub fn from_stored(stored: &str) -> Option<Self> {
+        match stored {
+            "platform" => Some(Self::Platform),
+            "product" | "app" => Some(Self::App),
+            "project" | "customer" => Some(Self::Customer),
+            _ => None,
+        }
+    }
+
+    /// Y11-T1: the value a new `owner_layer` row stores, inside 0520's CHECK.
+    pub fn as_stored(self) -> &'static str {
+        match self {
+            Self::Platform => "platform",
+            Self::App => "product",
+            Self::Customer => "customer",
+        }
+    }
+}
+
+#[cfg(test)]
+mod layer_tests {
+    use super::Layer;
+
+    #[test]
+    fn project_maps_to_customer() {
+        assert_eq!(Layer::from_stored("project"), Some(Layer::Customer));
+        assert_eq!(Layer::from_stored("customer"), Some(Layer::Customer));
+        assert_eq!(Layer::Customer.as_stored(), "customer");
+    }
+
+    #[test]
+    fn product_maps_to_app() {
+        assert_eq!(Layer::from_stored("product"), Some(Layer::App));
+        assert_eq!(Layer::App.as_stored(), "product");
+        assert_eq!(Layer::from_stored("platform"), Some(Layer::Platform));
+        assert_eq!(Layer::from_stored("other"), None);
+    }
 }
 
 /// A reference to one object of one kind.
