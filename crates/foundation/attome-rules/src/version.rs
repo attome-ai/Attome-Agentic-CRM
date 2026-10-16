@@ -50,6 +50,8 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     ("round_currency", LanguageVersion::V2),
     ("convert", LanguageVersion::V2),
     ("minor_units", LanguageVersion::V2),
+    // Z11-T6: full-string pattern matching.
+    ("matches", LanguageVersion::V2),
 ];
 
 /// The version a function needs.

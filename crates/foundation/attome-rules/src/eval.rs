@@ -59,8 +59,9 @@ pub(crate) fn eval(
     ctx: &Context,
     budgets: &Budgets,
     schema: &Schema,
+    regexes: &Regexes,
 ) -> Result<Value, RulesError> {
-    run(expr, ctx, budgets, schema, false).map(|(value, _)| value)
+    run(expr, ctx, budgets, schema, regexes, false).map(|(value, _)| value)
 }
 
 /// Evaluates and records the trace — used by the admin "test this rule"
@@ -70,21 +71,27 @@ pub(crate) fn eval_traced(
     ctx: &Context,
     budgets: &Budgets,
     schema: &Schema,
+    regexes: &Regexes,
 ) -> Result<(Value, Trace), RulesError> {
-    run(expr, ctx, budgets, schema, true)
+    run(expr, ctx, budgets, schema, regexes, true)
 }
+
+/// Z11-T6: the compiled `matches` patterns, keyed by pattern text.
+pub(crate) type Regexes = std::collections::HashMap<String, regex::Regex>;
 
 fn run(
     expr: &Expr,
     ctx: &Context,
     budgets: &Budgets,
     schema: &Schema,
+    regexes: &Regexes,
     record_trace: bool,
 ) -> Result<(Value, Trace), RulesError> {
     let mut evaluator = Evaluator {
         ctx,
         budgets,
         schema,
+        regexes,
         steps: 0,
         start: Instant::now(),
         record_trace,
@@ -98,6 +105,7 @@ struct Evaluator<'a> {
     ctx: &'a Context,
     budgets: &'a Budgets,
     schema: &'a Schema,
+    regexes: &'a Regexes,
     steps: usize,
     start: Instant,
     record_trace: bool,
@@ -625,6 +633,25 @@ impl Evaluator<'_> {
                     (other, _, _) => Err(eval_type_err(name, "(number, text, text)", other)),
                 }
             }
+            "matches" => {
+                if args.len() != 2 {
+                    return Err(arity_err(name, "2", args.len()));
+                }
+                let Expr::StringLit(pattern) = &args[1] else {
+                    return Err(RulesError::RegexNotLiteral);
+                };
+                let text = self.eval(&args[0], trace)?;
+                if let Some(e) = null_operand_if_any(name, std::slice::from_ref(&text)) {
+                    return Err(e);
+                }
+                let Value::Text(text) = &text else {
+                    return Err(eval_type_err(name, "text", &text));
+                };
+                let regex = self.regexes.get(pattern).ok_or_else(|| {
+                    RulesError::Eval("matches: the pattern was not compiled".to_owned())
+                })?;
+                Ok(Value::Bool(regex.is_match(text)))
+            }
             "minor_units" => {
                 let v = self.eval_only(args, 1, name, trace)?;
                 if let Some(e) = null_operand_if_any(name, &v) {
@@ -1097,7 +1124,7 @@ mod tests {
 
     fn run_with(src: &str, ctx: &Context) -> Result<Value, RulesError> {
         let expr = parse(src).unwrap();
-        eval(&expr, ctx, &Budgets::default(), &schema())
+        eval(&expr, ctx, &Budgets::default(), &schema(), &Regexes::new())
     }
 
     fn run(src: &str) -> Result<Value, RulesError> {

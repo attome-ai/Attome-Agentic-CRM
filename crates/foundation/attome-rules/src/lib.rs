@@ -12,7 +12,9 @@
 //! contains/startswith, date_add, date_diff, today()/now(), round, min/max,
 //! in(...), is_null. Field refs field_name and one-hop lookup_field.target_field.
 //! List literals [a, b, c]. No user-defined functions, no loops, no recursion
-//! into user code, and deliberately **no regex** (ReDoS surface — plan §5/§10).
+//! into user code. Since Z11-T6, V2 has `matches(text, pattern)`: the pattern
+//! must be a text literal, is compiled once at save under a size limit, and
+//! runs on the linear-time `regex` crate, so no pattern can backtrack.
 //!
 //! **Layering.** crates/base/attome-rules has zero xrm-* dependencies (the
 //! layer rule, held by review since D-768) and zero I/O of any kind: parsing, type-checking, and

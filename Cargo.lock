@@ -1467,6 +1467,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "proptest",
+ "regex",
  "thiserror",
  "uuid",
 ]

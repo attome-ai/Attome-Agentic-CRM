@@ -22,6 +22,7 @@
 //! conformance check) and the compile-time null warnings; since BRU-FX1
 //! the internal compile path produces a diagnostic with a byte span.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::ast::Expr;
@@ -49,6 +50,46 @@ pub struct Compiled {
     /// BRU-C2b: field references used by a Null-rejecting operator with no
     /// is_null/coalesce/if(is_null(..)) guard anywhere in the rule.
     warnings: Vec<String>,
+    /// Z11-T6: every `matches` pattern, compiled once here, keyed by the
+    /// pattern text; evaluation never compiles one.
+    regexes: Arc<HashMap<String, regex::Regex>>,
+}
+
+/// Z11-T6: the size limits a pattern compiles under; the regex crate runs in
+/// linear time, so a compiled pattern cannot backtrack catastrophically.
+const REGEX_SIZE_LIMIT: usize = 256 * 1024;
+
+/// Compiles `pattern` as a full-string match (`^(?:pattern)$`).
+pub(crate) fn build_regex(pattern: &str) -> Result<regex::Regex, RulesError> {
+    regex::RegexBuilder::new(&format!("^(?:{pattern})$"))
+        .size_limit(REGEX_SIZE_LIMIT)
+        .dfa_size_limit(REGEX_SIZE_LIMIT)
+        .build()
+        .map_err(|e| RulesError::RegexInvalid(e.to_string()))
+}
+
+fn collect_patterns(
+    expr: &Expr,
+    out: &mut HashMap<String, regex::Regex>,
+) -> Result<(), RulesError> {
+    match expr {
+        Expr::Call { name, args } => {
+            if name == "matches"
+                && let Some(Expr::StringLit(pattern)) = args.get(1)
+                && !out.contains_key(pattern)
+            {
+                out.insert(pattern.clone(), build_regex(pattern)?);
+            }
+            args.iter().try_for_each(|a| collect_patterns(a, out))
+        }
+        Expr::Unary { expr, .. } => collect_patterns(expr, out),
+        Expr::Binary { lhs, rhs, .. } => {
+            collect_patterns(lhs, out)?;
+            collect_patterns(rhs, out)
+        }
+        Expr::ListLit(items) => items.iter().try_for_each(|a| collect_patterns(a, out)),
+        _ => Ok(()),
+    }
 }
 
 /// Parses, bounds, and type-checks src against schema, using
@@ -89,12 +130,15 @@ fn compile_inner(
     crate::version::check(&parsed.expr, version).map_err(RulesDiagnostic::from)?;
     let warnings = typecheck::null_warnings(&parsed.expr);
     let result_type = typecheck::typecheck(&parsed.expr, schema, &parsed.spans)?;
+    let mut regexes = HashMap::new();
+    collect_patterns(&parsed.expr, &mut regexes).map_err(RulesDiagnostic::from)?;
     Ok(Compiled {
         expr: Arc::new(parsed.expr),
         result_type,
         budgets,
         schema: schema.clone(),
         warnings,
+        regexes: Arc::new(regexes),
     })
 }
 
@@ -120,11 +164,11 @@ impl Compiled {
     /// sub-expressions evaluated to what" (plan §3.1's explainability
     /// requirement, e.g. for a validation-rule violation).
     pub fn eval(&self, ctx: &Context) -> Result<Value, RulesError> {
-        eval::eval(&self.expr, ctx, &self.budgets, &self.schema)
+        eval::eval(&self.expr, ctx, &self.budgets, &self.schema, &self.regexes)
     }
 
     pub fn eval_traced(&self, ctx: &Context) -> Result<(Value, Trace), RulesError> {
-        eval::eval_traced(&self.expr, ctx, &self.budgets, &self.schema)
+        eval::eval_traced(&self.expr, ctx, &self.budgets, &self.schema, &self.regexes)
     }
 }
 

@@ -396,6 +396,16 @@ fn typecheck_call(
             require(&arg_types[0], &Type::Text, name)?;
             Ok(Type::Number)
         }
+        // Z11-T6 (V2): the pattern is a literal, compiled at save.
+        "matches" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Text, "matches' text")?;
+            if matches!(args[1], Expr::StringLit(_)) {
+                Ok(Type::Bool)
+            } else {
+                Err(RulesError::RegexNotLiteral)
+            }
+        }
         other => Err(RulesError::UnknownFunction(other.to_owned())),
     };
     result.map_err(RulesDiagnostic::without_span)
@@ -518,6 +528,7 @@ fn rejects_null_call(name: &str) -> bool {
             | "round_currency"
             | "convert"
             | "minor_units"
+            | "matches"
     )
 }
 

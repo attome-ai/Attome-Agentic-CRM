@@ -145,6 +145,15 @@ pub enum RulesError {
     /// Z11-T5: the context carries no rate for this currency.
     #[error("no exchange rate for {0}")]
     NoRate(String),
+
+    /// Z11-T6: `matches` takes its pattern as a string literal only, so every
+    /// pattern is compiled (and size-checked) once, at save.
+    #[error("matches needs its pattern as a text literal")]
+    RegexNotLiteral,
+
+    /// Z11-T6: the pattern does not compile or is over the size limit.
+    #[error("invalid pattern: {0}")]
+    RegexInvalid(String),
 }
 
 impl RulesError {
@@ -170,6 +179,8 @@ impl RulesError {
             Self::UnknownTimezone(_) => "rules.context.unknown_timezone",
             Self::UnknownCurrency(_) => "rules.currency.unknown",
             Self::NoRate(_) => "rules.currency.no_rate",
+            Self::RegexNotLiteral => "rules.regex.not_literal",
+            Self::RegexInvalid(_) => "rules.regex.invalid",
             Self::Budget(kind) => kind.code(),
         }
     }
