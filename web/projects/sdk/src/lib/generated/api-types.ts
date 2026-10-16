@@ -2679,6 +2679,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/env-variables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_env_variables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/env-variables/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_env_variable"];
+        post?: never;
+        delete: operations["clear_env_variable"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/env-variables/{name}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["env_variable_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/events/subscriptions": {
         parameters: {
             query?: never;
@@ -17840,6 +17888,40 @@ export interface components {
             plural_name: string;
             relationships: components["schemas"]["RelationshipSchemaEntry"][];
         };
+        /** @description One variable: its definition and this deployment's value. */
+        EnvVariable: {
+            default: Record<string, never>;
+            description_ar?: string | null;
+            description_en?: string | null;
+            /** @description Whether this deployment set a value. */
+            is_set: boolean;
+            name: string;
+            required: boolean;
+            /** Format: int64 */
+            row_version?: number | null;
+            /** @description `text`, `number`, `boolean`, `url` or `secret`. */
+            type: string;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** Format: uuid */
+            updated_by?: string | null;
+            /** @description This deployment's value; always absent for a secret. */
+            value: Record<string, never>;
+        };
+        /** @description One change to a variable's value. */
+        EnvVariableChange: {
+            /** @description `set` or `cleared`. */
+            change: string;
+            /** Format: date-time */
+            changed_at: string;
+            /** Format: uuid */
+            changed_by: string;
+            /** Format: uuid */
+            id: string;
+            is_secret: boolean;
+            /** @description The value set; absent for a secret. */
+            value: Record<string, never>;
+        };
         ErasureDone: {
             /**
              * Format: uuid
@@ -21989,6 +22071,56 @@ export interface components {
                  *     every other response stays byte-identical.
                  */
                 warnings?: components["schemas"]["RuleWarning"][];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_EnvVariable: {
+            items: {
+                default: Record<string, never>;
+                description_ar?: string | null;
+                description_en?: string | null;
+                /** @description Whether this deployment set a value. */
+                is_set: boolean;
+                name: string;
+                required: boolean;
+                /** Format: int64 */
+                row_version?: number | null;
+                /** @description `text`, `number`, `boolean`, `url` or `secret`. */
+                type: string;
+                /** Format: date-time */
+                updated_at?: string | null;
+                /** Format: uuid */
+                updated_by?: string | null;
+                /** @description This deployment's value; always absent for a secret. */
+                value: Record<string, never>;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_EnvVariableChange: {
+            items: {
+                /** @description `set` or `cleared`. */
+                change: string;
+                /** Format: date-time */
+                changed_at: string;
+                /** Format: uuid */
+                changed_by: string;
+                /** Format: uuid */
+                id: string;
+                is_secret: boolean;
+                /** @description The value set; absent for a secret. */
+                value: Record<string, never>;
             }[];
             /** Format: int64 */
             page: number;
@@ -26935,6 +27067,14 @@ export interface components {
              *     characters (where the hint would be the key).
              */
             secret_last4?: string | null;
+        };
+        SetEnvVariable: {
+            /**
+             * Format: int64
+             * @description Required to change a value already set (409 when stale).
+             */
+            row_version?: number | null;
+            value: Record<string, never>;
         };
         SetFieldProfileFieldBody: {
             can_read: boolean;
@@ -39263,6 +39403,200 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_env_variables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every defined variable with this deployment's value (page 1 holds them all) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_EnvVariable"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_env_variable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEnvVariable"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such variable is defined */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The value changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The value does not fit the variable's type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clear_env_variable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared: the default applies again */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The variable has no value here */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    env_variable_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The variable's changes, newest first (at most 200) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_EnvVariableChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
