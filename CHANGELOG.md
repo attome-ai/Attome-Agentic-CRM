@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Data profiles keep only the shapes (`999-AAA`) of a personal, special-category or masked
+  attribute's sample, minimum and maximum values, never the values.
 - Workflow nodes no longer act as an administrator: a flow runs as its starter (an entity- or
   schedule-triggered run as the version's publisher), or as its own service account with
   `settings.run_as: "flow_identity"` + `run_as_user_id`; record writes need the entity privilege.

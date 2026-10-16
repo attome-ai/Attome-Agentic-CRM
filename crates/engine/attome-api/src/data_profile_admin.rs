@@ -363,6 +363,22 @@ async fn profile_field(
     .await
     .map_err(AppError::internal)?;
 
+    // L6-T1: a personal, special-category or masked attribute keeps only
+    // the shapes of its values, never the values.
+    let labelled = is_labelled(attr);
+    let (min_val, max_val, samples) = if labelled {
+        let mut shapes: Vec<String> = samples.iter().map(|v| shape_of(v)).collect();
+        shapes.sort();
+        shapes.dedup();
+        (
+            min_val.map(|v| shape_of(&v)),
+            max_val.map(|v| shape_of(&v)),
+            shapes,
+        )
+    } else {
+        (min_val, max_val, samples)
+    };
+
     Ok(json!({
         "field": attr.logicalname,
         "null_pct": null_pct,
@@ -370,7 +386,42 @@ async fn profile_field(
         "min": min_val,
         "max": max_val,
         "samples": samples,
+        "masked": labelled,
     }))
+}
+
+/// L6-T1: an attribute whose values a profile must not keep.
+fn is_labelled(attr: &attome_core::AttrInfo) -> bool {
+    attr.is_sensitive || attr.data_classification != attome_core::DataClassification::General
+}
+
+/// L6-T1: a value's shape: digits become `9`, letters `A`, the rest stays
+/// (`+966 50 123 4567` → `+999 99 999 9999`).
+fn shape_of(value: &str) -> String {
+    value
+        .chars()
+        .map(|c| {
+            if c.is_numeric() {
+                '9'
+            } else if c.is_alphabetic() {
+                'A'
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod shape_tests {
+    use super::shape_of;
+
+    #[test]
+    fn shapes_keep_no_value() {
+        assert_eq!(shape_of("+966 50 123 4567"), "+999 99 999 9999");
+        assert_eq!(shape_of("ahmed@x.sa"), "AAAAA@A.AA");
+        assert_eq!(shape_of("محمد ١٢"), "AAAA 99");
+    }
 }
 
 pub fn routes() -> Router<EngineState> {
