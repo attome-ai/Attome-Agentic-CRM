@@ -2275,10 +2275,9 @@ fn user_role_admin_endpoints_end_to_end() {
 
         assert_eq!(
             get_record_as(&app, &target_cookie, &logicalname, &record_id).await,
-            StatusCode::FORBIDDEN,
-            "after revoking the only role held, the target loses the read \
-         privilege entirely (it held no other grant), reverting to \
-         forbidden rather than merely filtered"
+            StatusCode::UNAUTHORIZED,
+            "revoking a role ends the target's sessions (Q8-T7), so its \
+         old session is refused outright"
         );
     })
 }
@@ -5270,7 +5269,11 @@ async fn read_as(
     } else {
         attome_records::entity_crud::read_record(state, &ctx, entity, record_id).await
     };
-    record.expect("read").data().clone()
+    // `data` holds the attributes; the record id travels beside it.
+    let full = serde_json::to_value(record.expect("read")).expect("serialize");
+    let mut data = full["data"].clone();
+    data["id"] = full["id"].clone();
+    data
 }
 
 // ── U1 (basic-units plan B-R1): polymorphic child entities ───────────────────

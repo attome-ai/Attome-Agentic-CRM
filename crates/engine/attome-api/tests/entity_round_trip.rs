@@ -4101,6 +4101,7 @@ fn checked_out_file_refuses_others_until_checked_in() {
         let system = skip_if_no_db!(test_system().await);
         let (alice, _) = seed_admin_with_id(&system).await;
         let (bob, _) = seed_admin_with_id(&system).await;
+        let state = system.state().clone();
         let app = full_app(system);
         let (entity, entity_id) = create_entity(&app, &alice, "chkout").await;
         create_field(
@@ -4117,6 +4118,7 @@ fn checked_out_file_refuses_others_until_checked_in() {
             r#"{"logicalname":"doc","name":"Doc","field_type":"file"}"#,
         )
         .await;
+        sync_registry(&state).await;
         let send = |method: &str,
                     uri: String,
                     cookie: &str,
@@ -9362,8 +9364,12 @@ fn skip_duplicate_check_requires_privilege_and_is_audited() {
         assert_eq!(res.status(), StatusCode::CREATED);
         let id = Uuid::parse_str(body_json(res).await["id"].as_str().unwrap()).unwrap();
         let audited: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM audit_header \
-             WHERE record_id = $1 AND event_name = 'duplicate_check_skipped'",
+            // On either write path: chained, or still in the ingest queue.
+            "SELECT (SELECT COUNT(*) FROM audit_header \
+                     WHERE record_id = $1 AND event_name = 'duplicate_check_skipped') \
+                  + (SELECT COUNT(*) FROM audit_ingest \
+                     WHERE payload->>'record_id' = $1::text \
+                       AND payload->>'event_name' = 'duplicate_check_skipped')",
         )
         .bind(id)
         .fetch_one(&state.base.db)

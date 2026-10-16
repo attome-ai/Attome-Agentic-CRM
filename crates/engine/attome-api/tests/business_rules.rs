@@ -1617,7 +1617,7 @@ fn the_field_hook_follows_rename_delete_and_retype() {
         .await;
         // Our layer: fixture SQL on the throwaway database (the admin route in
         // auto mode only ever writes customer rules).
-        sqlx::query("UPDATE rule SET owner_layer = 'project' WHERE id = $1")
+        sqlx::query("UPDATE rule SET owner_layer = 'product' WHERE id = $1")
             .bind(id_of(&ours))
             .execute(&db)
             .await

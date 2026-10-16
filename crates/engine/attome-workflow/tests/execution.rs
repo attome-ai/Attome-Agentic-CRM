@@ -217,7 +217,7 @@ async fn seed_user(db: &attome_db::DbPool) -> Uuid {
     // uses a plain user.
     sqlx::query(
         "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
-         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'",
+         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'          ON CONFLICT (user_ref, privilege_ref) DO NOTHING",
     )
     .bind(Uuid::now_v7())
     .bind(user_id)
@@ -3587,7 +3587,7 @@ async fn grant_system_admin(db: &sqlx::PgPool, user_id: Uuid) {
     .expect("ensure system.admin");
     sqlx::query(
         "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
-         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'",
+         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'          ON CONFLICT (user_ref, privilege_ref) DO NOTHING",
     )
     .bind(Uuid::now_v7())
     .bind(user_id)

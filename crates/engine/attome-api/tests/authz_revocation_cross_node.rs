@@ -460,13 +460,13 @@ async fn role_removal_via_node_c_is_immediately_rejected_on_nodes_a_and_b() {
 
     assert_eq!(
         admin_privileges_status(app_a.clone(), &subject_cookie).await,
-        StatusCode::FORBIDDEN,
-        "node A must reject the subject immediately after role removal"
+        StatusCode::UNAUTHORIZED,
+        "node A must reject the subject immediately after role removal          (removing a role ends the user's sessions, Q8-T7)"
     );
     assert_eq!(
         admin_privileges_status(app_b.clone(), &subject_cookie).await,
-        StatusCode::FORBIDDEN,
-        "node B must reject the subject immediately after role removal"
+        StatusCode::UNAUTHORIZED,
+        "node B must reject the subject immediately after role removal          (removing a role ends the user's sessions, Q8-T7)"
     );
 }
 
