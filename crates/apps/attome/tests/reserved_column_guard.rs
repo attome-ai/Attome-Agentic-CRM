@@ -175,6 +175,12 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "Recursive CTEs over the hierarchy field to preview a move; reads only.",
     ),
     (
+        "crates/engine/attome-records/src/entity_crud/key_address.rs",
+        "resolve_key",
+        Projection,
+        "S1-T2: a WHERE predicate on the attributes of a declared unique key to find the record a key address names; reads only. The PATCH by key writes through update_one.",
+    ),
+    (
         "crates/engine/attome-records/src/entity_crud/merge.rs",
         "do_merge_core_with_version",
         Projection,

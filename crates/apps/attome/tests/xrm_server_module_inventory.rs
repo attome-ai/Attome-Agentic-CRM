@@ -119,12 +119,18 @@ const BASELINE: &[&str] = &[
     "duplicates_admin",
     "duplicates_match",
     "email_admin",
+    // A30-T1: values of the `environment_variable` model kind, which the
+    // changeset and model admin here define; no engine crate owns kinds.
+    "env_variable_admin",
     "features_admin",
     "field_changes",
     "field_hooks",
     "jobs_admin",
     "license_admin",
     "live",
+    // C4-T1: belongs in attome-notification; kept here until that crate
+    // takes a record-access (attome-security) dependency.
+    "mentions",
     "metadata_label_admin",
     "metrics",
     "migration",
@@ -141,10 +147,16 @@ const BASELINE: &[&str] = &[
     "profiler_admin",
     "quality_admin",
     "quality_score",
+    // Q20-T5: the bans live in attome-server's rate limiter; belongs in
+    // attome-security's admin routes, kept here until it moves.
+    "ratelimit_admin",
     "registry",
     "relationship_admin",
     "reminder_access",
     "rule_admin",
+    // AC7-T11: the bill of materials embedded by this crate's build.rs and
+    // the packs in this crate's changeset ledger.
+    "sbom_admin",
     "schema",
     "seed_support",
     "service_public",
@@ -152,6 +164,9 @@ const BASELINE: &[&str] = &[
     "sidebar",
     "sidebar_seed",
     "signoff",
+    // AA13-T8: the SLO store is attome-server's; an ops surface beside
+    // `metrics` and `system_health`, which no engine owns.
+    "slo_admin",
     "system",
     "system_health",
     "tag_seed",

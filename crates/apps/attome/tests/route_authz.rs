@@ -153,6 +153,16 @@ const MAX_BARE_RECORD_SCOPED: usize = 5;
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "GET",
+        "/api/v1/shared-files/{token}",
+        "K1-T1 external file share: the 32-byte random token, stored only as its SHA-256, is the credential for one stored file. Bypass-listed and rate-limited (portal_status); expiry, revocation, the download limit and a required password are checked inside the handler, and each download is audited.",
+    ),
+    (
+        "POST",
+        "/api/v1/shared-files/{token}",
+        "K1-T1 password-protected share: the token plus an Argon2id-checked password open one stored file. Bypass-listed and rate-limited (password_reset) against guessing; expiry, revocation and the download limit are checked inside the handler.",
+    ),
+    (
+        "GET",
         "/api/v1/branding/asset",
         "A published logo, favicon or font for the sign-in page, before anyone signs in. Bypass-listed; the guidelines PDF is refused, and nothing user-specific is served.",
     ),

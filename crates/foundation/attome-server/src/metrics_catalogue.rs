@@ -892,6 +892,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "الملفات المرفوعة التي تنتظر فحص الفيروسات.",
     },
     MetricInfo {
+        name: "workflow_chain_depth_stops_total",
+        kind: "counter",
+        unit: "runs",
+        en: "Workflow runs not started because a chain of workflows reached its depth limit.",
+        ar: "تشغيلات سير العمل التي لم تبدأ لأن سلسلة سير العمل بلغت حدها الأقصى من العمق.",
+    },
+    MetricInfo {
         name: "workflow_trigger_dead_letters_total",
         kind: "counter",
         unit: "triggers",

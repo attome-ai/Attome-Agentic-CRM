@@ -18,14 +18,14 @@ fn schema() -> Schema {
 
 #[test]
 fn v1_rejects_v2_function() {
-    let err = compile_versioned(
+    let Err(err) = compile_versioned(
         r#"endswith(name, "Ltd")"#,
         &schema(),
         LanguageVersion::V1,
         Budgets::default(),
-    )
-    .err()
-    .expect("V1 does not know endswith");
+    ) else {
+        panic!("V1 does not know endswith");
+    };
     assert!(
         matches!(err, RulesError::UnknownFunction(ref f) if f == "endswith"),
         "{err:?}"

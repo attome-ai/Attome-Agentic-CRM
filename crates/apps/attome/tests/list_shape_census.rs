@@ -46,7 +46,9 @@ use std::path::{Path, PathBuf};
 /// scan now reaches the engines under `crates/engine` that v1 counted from a
 /// different root. The three added are backlog like the rest, not new
 /// handlers. The ratchet still only goes down from here.
-const MAX_BARE_LIST_HANDLERS: usize = 28;
+///
+/// 29 (2026-10-16): the MFA coverage summary, an exemption below.
+const MAX_BARE_LIST_HANDLERS: usize = 29;
 
 /// Handler return-type signatures that are a *deliberate* exception to the
 /// `PaginatedResponse<T>` rule, not backlog — this scan still counts them
@@ -64,9 +66,13 @@ const MAX_BARE_LIST_HANDLERS: usize = 28;
 ///   result in one response" carve-out (the entity ancestors/descendants
 ///   example) applies equally here. The sidebar is admin-curated, bounded by
 ///   how much nav a deployment's operators author, not by record volume.
+/// - `attome-security/src/admin/mfa_coverage.rs::coverage_summary` — an
+///   aggregate, one row per role plus one for users with no role: bounded by
+///   the role count, not by records, and meaningless split across pages.
 const EXEMPT_BARE_LIST_HANDLERS: &[&str] = &[
     "attome-security/src/admin/role_grant_conditions.rs",
     "attome-api/src/sidebar.rs",
+    "attome-security/src/admin/mfa_coverage.rs",
 ];
 
 /// Every non-test, non-target `.rs` file under `crates/`.

@@ -287,6 +287,23 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "feature.content.seo_agent" => {
             "سياسة صياغة الوكيل لعناوين البحث وأوصافه وكتل الأسئلة الشائعة."
         }
+        "feature.marketing.tracking" => {
+            "سياسة تتبع زيارات صفحات الموقع لجهات الاتصال والعملاء المحتملين."
+        }
+        "feature.marketing.tracking_external_sites" => {
+            "سياسة السماح بتتبع المواقع الخارجية غير المستضافة في المنصة."
+        }
+        "feature.marketing.tracking_identify" => {
+            "سياسة ربط الزائر المجهول بجهة اتصال عند تعريفه بنفسه."
+        }
+        "feature.marketing.tracking_company" => "سياسة التعرف على شركة الزائر من عنوان الشبكة.",
+        "feature.marketing.tracking_custom_events" => "سياسة استقبال الأحداث المخصصة من الموقع.",
+        "feature.marketing.tracking_alerts" => "سياسة تنبيه المسؤول عند زيارة صفحة مراقبة.",
+        "feature.sales.opportunity_lines" => "سياسة بنود المنتجات على الفرص البيعية.",
+        "feature.sales.recurring_lines" => "سياسة البنود المتكررة والإيراد السنوي على الفرص.",
+        "feature.sales.schedules" => "سياسة جداول الإيراد والتسليم لبنود الفرص.",
+        "feature.sales.quote_sync" => "سياسة مزامنة بنود الفرصة مع عرض السعر الأساسي.",
+        "feature.sales.product_suggestions" => "سياسة اقتراح المنتجات المرتبطة على الفرص.",
         "feature.scan.continuous_enabled" => "سياسة المسح المتواصل مع عدّاد للرموز المقروءة.",
         "feature.project.gantt_v2_preview" => "سياسة معاينة مخطط جانت الجديد؛ تتطلب وحدة المشاريع.",
         "ai.record_update_field_allowlist" => {

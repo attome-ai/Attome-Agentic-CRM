@@ -46,6 +46,10 @@ const INTERACTIVE: &[(&str, &str)] = &[
         "interactive hierarchy view",
     ),
     (
+        "crates/engine/attome-records/src/entity_crud/expand.rs",
+        "?expand= on a single-record read: at most five lookup targets, one record each",
+    ),
+    (
         "crates/engine/attome-records/src/rule_engine.rs",
         "rule evaluation on a record the caller is writing, not a read surface",
     ),

@@ -54,6 +54,7 @@ pub struct MoveMapping {
 
 /// What moving the run would do.
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = WorkflowMovePreview)]
 pub struct MovePreview {
     pub from_version_id: Uuid,
     pub target_version_id: Uuid,
