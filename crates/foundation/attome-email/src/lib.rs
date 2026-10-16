@@ -45,4 +45,4 @@ pub use health::{
     health_check_with_timeout,
 };
 pub use message::EmailMessage;
-pub use sender::send;
+pub use sender::{catch_all, send};

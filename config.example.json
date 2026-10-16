@@ -169,6 +169,8 @@
     "smtp_password": "${SMTP_PASSWORD}",
     "smtp_from_address": "noreply@attome.local",
     "smtp_from_name": "Attome Dev",
+    "_test_mode_catch_all_comment": "Z8-T6: when set, every email goes to this one address instead of its recipients (an X-Attome-Original-To header names them), so a development or copied deployment never mails a real person.",
+    "test_mode_catch_all": null,
     "_smtp_tls_mode_comment": "BEM-5 - tls_mode is the current spelling: implicit (SMTPS, the default), starttls (upgrade on 587), or none (development only - the loader refuses none outside APP_ENV=debug, and refuses plaintext credentials to a non-loopback host in any mode). smtp_use_tls is deprecated but still parsed when tls_mode is absent: true selects implicit, false selects none.",
     "smtp_use_tls": false,
     "tls_mode": "implicit"

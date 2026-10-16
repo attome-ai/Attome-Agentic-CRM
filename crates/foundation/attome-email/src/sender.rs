@@ -131,7 +131,20 @@ fn transport_for(
 /// Builds (and validates) the RFC 5322 message before any I/O — cheap/local
 /// checks fail before a DB round trip, and it keeps the "malformed address"
 /// cases pure unit tests with no database dependency.
+/// Z8-T6: the address test mode sends everything to, when it is on.
+pub fn catch_all(cfg: &EmailSection) -> Option<&str> {
+    cfg.test_mode_catch_all
+        .as_deref()
+        .map(str::trim)
+        .filter(|a| !a.is_empty())
+}
+
+/// The header that names a test-mode message's real recipients.
+const ORIGINAL_TO: lettre::message::header::HeaderName =
+    lettre::message::header::HeaderName::new_from_ascii_str("X-Attome-Original-To");
+
 fn build_email(cfg: &EmailSection, msg: &EmailMessage) -> Result<Message, SendError> {
+    let to = catch_all(cfg).unwrap_or(&msg.to);
     let from = msg
         .from_override
         .clone()
@@ -141,7 +154,7 @@ fn build_email(cfg: &EmailSection, msg: &EmailMessage) -> Result<Message, SendEr
             .from(from.parse().map_err(|e: lettre::address::AddressError| {
                 SendError::InvalidAddress(e.to_string())
             })?)
-            .to(msg.to.parse().map_err(|e: lettre::address::AddressError| {
+            .to(to.parse().map_err(|e: lettre::address::AddressError| {
                 SendError::InvalidAddress(e.to_string())
             })?)
             .subject(msg.subject.clone())
@@ -149,6 +162,12 @@ fn build_email(cfg: &EmailSection, msg: &EmailMessage) -> Result<Message, SendEr
             // its own Message-ID, `None` (a no-op builder call) for every
             // other producer — see `EmailMessage::message_id`'s doc comment.
             .message_id(msg.message_id.clone());
+    if catch_all(cfg).is_some() {
+        builder = builder.raw_header(lettre::message::header::HeaderValue::new(
+            ORIGINAL_TO,
+            msg.to.clone(),
+        ));
+    }
     if let Some(in_reply_to) = &msg.in_reply_to {
         builder = builder.in_reply_to(in_reply_to.clone());
     }
@@ -444,7 +463,8 @@ async fn send_in_span(
 
     let email = build_email(cfg, &msg)?;
 
-    let recipient = normalize_email(&msg.to);
+    // Z8-T6: in test mode the catch-all is the one recipient.
+    let recipient = normalize_email(catch_all(cfg).unwrap_or(&msg.to));
     if suppression::is_suppressed(db, &recipient)
         .await
         .map_err(|e| SendError::Internal(e.to_string()))?
@@ -488,6 +508,7 @@ mod tests {
             smtp_from_name: "Attome".to_string(),
             smtp_use_tls: None,
             tls_mode: None,
+            test_mode_catch_all: None,
         }
     }
 
@@ -504,6 +525,43 @@ mod tests {
             references: None,
             communication_id: None,
         }
+    }
+
+    /// Z8-T6: in test mode the message goes to the catch-all, and its real
+    /// recipient is only named in a header.
+    #[test]
+    fn test_mode_sends_to_the_catch_all() {
+        let cfg = EmailSection {
+            test_mode_catch_all: Some(" qa@example.com ".to_string()),
+            ..test_cfg()
+        };
+        assert_eq!(catch_all(&cfg), Some("qa@example.com"));
+        let raw = String::from_utf8(
+            build_email(&cfg, &test_message())
+                .expect("build")
+                .formatted(),
+        )
+        .expect("utf-8");
+        assert!(raw.contains("To: qa@example.com"), "{raw}");
+        assert!(
+            raw.contains("X-Attome-Original-To: user@example.com"),
+            "{raw}"
+        );
+        let normal = String::from_utf8(
+            build_email(&test_cfg(), &test_message())
+                .expect("build")
+                .formatted(),
+        )
+        .expect("utf-8");
+        assert!(normal.contains("To: user@example.com"), "{normal}");
+        assert!(!normal.contains("X-Attome-Original-To"), "{normal}");
+        assert_eq!(
+            catch_all(&EmailSection {
+                test_mode_catch_all: Some("  ".into()),
+                ..test_cfg()
+            }),
+            None
+        );
     }
 
     /// `PgPoolOptions::connect_lazy` never actually opens a connection until

@@ -196,6 +196,13 @@ pub fn report_ignored_config_keys(config: &AppConfig, fail_closed: bool) -> Resu
 /// and nothing emitted it (BCF-F17); boot is the right place, because only
 /// the running server knows it is production and which portals it exposes.
 fn warn_if_public_portal_without_captcha(config: &AppConfig) {
+    // Z8-T6: say once that no email reaches its real recipient.
+    if let Some(address) = attome_email::catch_all(&config.email) {
+        tracing::warn!(
+            catch_all = address,
+            "email test mode: every email goes to the catch-all address, not its recipients"
+        );
+    }
     if let Some(message) = public_portal_without_captcha_warning(config) {
         tracing::warn!("{message}");
     }

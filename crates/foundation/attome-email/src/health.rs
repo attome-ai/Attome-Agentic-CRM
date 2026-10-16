@@ -244,6 +244,7 @@ mod tests {
             smtp_use_tls: None,
             // The scripted peer speaks plaintext on loopback.
             tls_mode: Some("none".to_string()),
+            test_mode_catch_all: None,
         }
     }
 

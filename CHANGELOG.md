@@ -23,6 +23,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Email test mode: `email.test_mode_catch_all` sends every email to one address instead of its
+  recipients (an `X-Attome-Original-To` header names them), so a development or copied deployment
+  never mails a real person; the server warns at boot while it is on.
 - Built-in alerting with no Prometheus: the rules in `observability/builtin-alerts.json` (error rate,
   database pool timeouts, dead-letter jobs, job backlog, audit chain lag, file store down, changes
   paused, a node that stopped reporting) are evaluated every minute on the built-in metrics store;

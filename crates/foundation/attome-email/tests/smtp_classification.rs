@@ -150,6 +150,7 @@ fn cfg_for(port: u16, user: &str) -> EmailSection {
         // the one case BEM-D4 permits credentials over an unencrypted link.
         smtp_use_tls: None,
         tls_mode: Some("none".to_string()),
+        test_mode_catch_all: None,
     }
 }
 

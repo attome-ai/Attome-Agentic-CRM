@@ -164,6 +164,8 @@
     "smtp_password": "${SMTP_PASSWORD}",
     "smtp_from_address": "__TODO__: noreply@customer.com",
     "smtp_from_name": "Attome",
+    "_test_mode_catch_all_comment": "Z8-T6: when set, every email goes to this one address instead of its recipients (an X-Attome-Original-To header names them), so a development or copied deployment never mails a real person.",
+    "test_mode_catch_all": null,
     "smtp_use_tls": true,
     "tls_mode": "implicit"
   },

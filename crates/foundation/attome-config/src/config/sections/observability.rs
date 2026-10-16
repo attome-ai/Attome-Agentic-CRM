@@ -102,6 +102,12 @@ pub struct EmailSection {
     pub smtp_password: Secret,
     pub smtp_from_address: String,
     pub smtp_from_name: String,
+    /// Z8-T6: test mode. When set, every email goes to this one address
+    /// instead of its recipients (named in an `X-Attome-Original-To`
+    /// header), so a development or copied deployment never mails a real
+    /// person.
+    #[serde(default)]
+    pub test_mode_catch_all: Option<String>,
     /// **Deprecated** (BEM-5): `true` = implicit TLS, `false` = plaintext.
     /// Superseded by [`Self::tls_mode`], which wins when both are set; kept
     /// deserializable for one release so an existing `config.json` keeps
