@@ -545,6 +545,10 @@ async fn dispatch_approved(
             struct RoleGrantPayload {
                 user_id: Uuid,
                 role_id: Uuid,
+                #[serde(default)]
+                valid_until: Option<chrono::DateTime<chrono::Utc>>,
+                #[serde(default)]
+                reason: Option<String>,
             }
             let payload: RoleGrantPayload =
                 serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
@@ -552,6 +556,8 @@ async fn dispatch_approved(
                 state,
                 payload.user_id,
                 payload.role_id,
+                payload.valid_until,
+                payload.reason.as_deref(),
                 attome_security::admin::role_grant_event(approver_id)
                     .comment(format!("approval request {}", request.id)),
             )

@@ -7,6 +7,7 @@ pub mod context;
 pub mod db;
 pub mod entity_privileges;
 pub mod field_gate;
+pub mod grant_expiry;
 pub mod mfa;
 pub mod mfa_policy;
 pub mod model;

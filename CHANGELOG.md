@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Role grants can end: `POST /api/v1/admin/security/users/{id}/roles` takes `valid_until` (in the
+  future) and `reason` (migration `0098`); an hourly job removes grants past their end exactly as an
+  administrator removing the role would, with its audit event and the user's sessions ended.
 - Nurture programmes with tracks move people to the best-fitting track (stage, then interest, then
   language) when those change, keeping what they have already seen; acquisition-only programmes let
   go of anyone who becomes a customer.

@@ -438,6 +438,8 @@ pub enum EngineJob {
     /// The five-minute marketing pass: overdue hand-offs (E9-T7) and nurture
     /// track moves (E9-T4). Bare unit variant.
     MarketingSweep,
+    /// Q10-T6: removes role grants past their end date. Bare unit variant.
+    RoleGrantExpiry,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -888,6 +890,7 @@ impl EngineJob {
             | Self::MarketingNightly
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
+            | Self::RoleGrantExpiry
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -985,6 +988,7 @@ impl EngineJob {
             EngineJob::MarketingNightly => "MarketingNightly",
             EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
             EngineJob::MarketingSweep => "MarketingSweep",
+            EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1094,6 +1098,7 @@ impl EngineJob {
             | Self::MarketingNightly
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
+            | Self::RoleGrantExpiry
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1215,6 +1220,7 @@ impl EngineJob {
             | Self::MarketingNightly
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
+            | Self::RoleGrantExpiry
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1553,6 +1559,7 @@ mod tests {
         assert_round_trips(EngineJob::MarketingNightly);
         assert_round_trips(EngineJob::SegmentRefreshDue);
         assert_round_trips(EngineJob::MarketingSweep);
+        assert_round_trips(EngineJob::RoleGrantExpiry);
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),
         });

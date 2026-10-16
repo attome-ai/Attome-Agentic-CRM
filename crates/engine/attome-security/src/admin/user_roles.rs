@@ -44,6 +44,13 @@ impl std::fmt::Debug for UserRoleItem {
 #[derive(Deserialize, ToSchema)]
 pub(super) struct AssignUserRoleBody {
     role_id: Uuid,
+    /// Q10-T6: when the grant ends (it is removed then, ending the user's
+    /// sessions); absent means it does not end. Must be in the future.
+    #[serde(default)]
+    valid_until: Option<chrono::DateTime<chrono::Utc>>,
+    /// Q10-T6: why the role was given.
+    #[serde(default)]
+    reason: Option<String>,
 }
 
 /// D-195/P-four-eyes-approval §5 step 9 — the `action_type` string for direct
@@ -145,8 +152,11 @@ pub async fn do_assign_user_role(
     state: &EngineState,
     user_id: Uuid,
     role_id: Uuid,
+    valid_until: Option<chrono::DateTime<chrono::Utc>>,
+    reason: Option<&str>,
     event: SecurityEvent,
 ) -> Result<UserRoleItem, AppError> {
+    crate::grant_expiry::valid_end(valid_until, chrono::Utc::now())?;
     let user_exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_account WHERE id = $1)")
             .bind(user_id)
@@ -168,13 +178,17 @@ pub async fn do_assign_user_role(
 
     let mut tx = SecurityTx::begin(state, event).await?;
     let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3) \
-         ON CONFLICT (user_ref, role_ref) DO UPDATE SET is_deleted = false, updated_at = NOW() \
+        "INSERT INTO user_account_mm_role (id, user_ref, role_ref, valid_until, grant_reason) \
+         VALUES ($1, $2, $3, $4, $5) \
+         ON CONFLICT (user_ref, role_ref) DO UPDATE SET is_deleted = false, updated_at = NOW(), \
+             valid_until = EXCLUDED.valid_until, grant_reason = EXCLUDED.grant_reason \
          RETURNING id",
     )
     .bind(Uuid::now_v7())
     .bind(user_id)
     .bind(role_id)
+    .bind(valid_until)
+    .bind(reason.map(str::trim).filter(|r| !r.is_empty()))
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -236,7 +250,13 @@ pub(super) async fn assign_user_role(
     Path(user_id): Path<Uuid>,
     Json(body): Json<AssignUserRoleBody>,
 ) -> Result<(StatusCode, Json<AssignUserRoleResponse>), AppError> {
-    let payload = serde_json::json!({ "user_id": user_id, "role_id": body.role_id });
+    crate::grant_expiry::valid_end(body.valid_until, chrono::Utc::now())?;
+    let payload = serde_json::json!({
+        "user_id": user_id,
+        "role_id": body.role_id,
+        "valid_until": body.valid_until,
+        "reason": body.reason,
+    });
     if let Some(request) =
         attome_audit::approval::gate(&state, ACTION_ROLE_GRANT, payload, ctx.user_id).await?
     {
@@ -253,8 +273,15 @@ pub(super) async fn assign_user_role(
         ));
     }
 
-    let item =
-        do_assign_user_role(&state, user_id, body.role_id, role_grant_event(ctx.user_id)).await?;
+    let item = do_assign_user_role(
+        &state,
+        user_id,
+        body.role_id,
+        body.valid_until,
+        body.reason.as_deref(),
+        role_grant_event(ctx.user_id),
+    )
+    .await?;
     Ok((
         StatusCode::CREATED,
         Json(AssignUserRoleResponse {
