@@ -28,6 +28,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The change-event outbox carries what changed: `changed_attributes`, `before` / `after` values
+  (a sensitive field as `{"ref": true}`) and a global `seq`, written by create, update, delete and
+  restore. Workflows can start on `delete`, `restore` and `merge`, and an `update` trigger may list
+  `attributes` so it starts only when one of them changed.
 - Workflow step payloads are cleared `jobs.workflow_payload_retention_days` (default 30) after the
   step finished, by the daily prune; the step summary stays. Erasing a record clears the inline
   step payloads that mention it.

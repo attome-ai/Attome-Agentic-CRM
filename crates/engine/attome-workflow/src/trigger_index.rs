@@ -79,17 +79,28 @@ pub async fn rebuild_entry_rows(
 /// carries neither.
 pub fn entry_condition(config: &Value) -> Option<Value> {
     let condition = config.get("condition").filter(|c| !c.is_null()).cloned();
-    let Some(expression) = config.get("expression").and_then(Value::as_str) else {
+    let expression = config.get("expression").and_then(Value::as_str);
+    // M1-T1: an update trigger's `attributes` filter rides in the same column.
+    let attributes = config
+        .get("attributes")
+        .and_then(Value::as_array)
+        .filter(|a| !a.is_empty());
+    if expression.is_none() && attributes.is_none() {
         return condition;
-    };
+    }
     let mut merged = match condition {
         Some(Value::Object(map)) => map,
         _ => serde_json::Map::new(),
     };
-    merged.insert(
-        "expression".to_owned(),
-        Value::String(expression.to_owned()),
-    );
+    if let Some(expression) = expression {
+        merged.insert(
+            "expression".to_owned(),
+            Value::String(expression.to_owned()),
+        );
+    }
+    if let Some(attributes) = attributes {
+        merged.insert("attributes".to_owned(), Value::Array(attributes.clone()));
+    }
     Some(Value::Object(merged))
 }
 

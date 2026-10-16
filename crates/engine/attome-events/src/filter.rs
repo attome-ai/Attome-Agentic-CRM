@@ -167,6 +167,7 @@ mod tests {
             operation: operation.to_string(),
             event_name: None,
             created_at: Utc::now(),
+            changed_attributes: Vec::new(),
         }
     }
 

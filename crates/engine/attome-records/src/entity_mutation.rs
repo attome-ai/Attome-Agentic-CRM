@@ -2042,11 +2042,12 @@ pub async fn create_one_as(
         .and_then(|s| Uuid::parse_str(s).ok())
         .ok_or_else(|| AppError::internal("created entity row did not contain a UUID id"))?;
 
-    write_entity_change_event(
+    write_entity_change_event_with(
         tx,
         entity_name,
         record_id,
         attome_core::ChangeOperation::Create,
+        &change_payload(attrs, None, Some(&row)),
     )
     .await?;
 
@@ -2112,6 +2113,69 @@ pub async fn write_entity_change_event(
     operation: attome_core::ChangeOperation,
 ) -> Result<(), AppError> {
     attome_core::change_feed::emit_tx(tx, entity_name, record_id, operation).await
+}
+
+/// Y7-T2: [`write_entity_change_event`] with what the write changed.
+pub async fn write_entity_change_event_with(
+    tx: &mut Transaction<'_, Postgres>,
+    entity_name: &str,
+    record_id: Uuid,
+    operation: attome_core::ChangeOperation,
+    payload: &attome_core::change_feed::ChangePayload,
+) -> Result<(), AppError> {
+    attome_core::change_feed::emit_with(tx, entity_name, record_id, operation, None, payload).await
+}
+
+/// Y7-T2: what changed between `old` and `new` (a created record has no
+/// `old`), over the entity's own attributes. A sensitive attribute (masked,
+/// or special-category personal data) is named but its values are
+/// `{"ref": true}`.
+pub fn change_payload(
+    attrs: &[AttrInfo],
+    old: Option<&Value>,
+    new: Option<&Value>,
+) -> attome_core::change_feed::ChangePayload {
+    let mut names = Vec::new();
+    let mut before = serde_json::Map::new();
+    let mut after = serde_json::Map::new();
+    for attr in attrs {
+        let name = attr.logicalname.as_str();
+        let was = old.and_then(|o| o.get(name)).unwrap_or(&Value::Null);
+        let now = new.and_then(|n| n.get(name)).unwrap_or(&Value::Null);
+        // A field the new row does not carry was not written.
+        if new.is_some_and(|n| n.get(name).is_none()) || was == now {
+            continue;
+        }
+        names.push(name.to_owned());
+        let withheld = attr.is_sensitive
+            || attr.data_classification
+                == attome_core::DataClassification::SensitiveSpecialCategory;
+        let shown = |v: &Value| {
+            if withheld && !v.is_null() {
+                serde_json::json!({ "ref": true })
+            } else {
+                v.clone()
+            }
+        };
+        if old.is_some() {
+            before.insert(name.to_owned(), shown(was));
+        }
+        after.insert(name.to_owned(), shown(now));
+    }
+    attome_core::change_feed::ChangePayload {
+        changed_attributes: names,
+        before: old.map(|_| Value::Object(before)),
+        after: Some(Value::Object(after)),
+    }
+}
+
+/// Y7-T2: a delete or restore changes `is_active` and nothing else.
+fn active_flag_payload(now_active: bool) -> attome_core::change_feed::ChangePayload {
+    attome_core::change_feed::ChangePayload {
+        changed_attributes: vec!["is_active".to_owned()],
+        before: Some(serde_json::json!({ "is_active": !now_active })),
+        after: Some(serde_json::json!({ "is_active": now_active })),
+    }
 }
 
 /// Solution 7 Phase 2 (D-787 rule 7, design §1 "Write a reference record",
@@ -2986,11 +3050,12 @@ pub async fn update_one_as(
         None => return Err(AppError::NotFound),
     };
 
-    write_entity_change_event(
+    write_entity_change_event_with(
         tx,
         entity_name,
         record_id,
         attome_core::ChangeOperation::Update,
+        &change_payload(attrs, old_row.as_ref(), Some(&new_row)),
     )
     .await?;
 
@@ -3372,11 +3437,12 @@ pub(crate) async fn apply_dependents_on_delete(
     // emit site in this module was reached only by create/update, so a deleted
     // record stayed in every derived copy — a search index would keep
     // returning it, which is a disclosure defect, not just a staleness one.
-    attome_core::change_feed::emit_tx(
+    write_entity_change_event_with(
         tx,
         target_entity_name,
         record_id,
         attome_core::ChangeOperation::Delete,
+        &active_flag_payload(false),
     )
     .await?;
 
@@ -3959,11 +4025,12 @@ pub async fn restore_one(
     // dependents get theirs inside `reactivate_dependents_on_restore` below;
     // without this one the record the caller actually restored is the only
     // one a derived copy never hears about.
-    attome_core::change_feed::emit_tx(
+    write_entity_change_event_with(
         tx,
         entity_name,
         record_id,
         attome_core::ChangeOperation::Restore,
+        &active_flag_payload(true),
     )
     .await?;
 
@@ -4107,6 +4174,35 @@ pub async fn hard_delete_one(
 mod insert_bind_tests {
     use super::*;
     use attome_core::meta_registry::{DataClassification, OnTargetDelete};
+
+    /// Y7-T2: only changed attributes are named; a sensitive one's values
+    /// are withheld; a create has no `before`.
+    #[test]
+    fn change_payload_names_changes_and_withholds_sensitive_values() {
+        let mut secret = attr("salary", 1);
+        secret.is_sensitive = true;
+        let attrs = vec![attr("name", 1), attr("city", 1), secret];
+        let old = serde_json::json!({"name": "A", "city": "Riyadh", "salary": 10});
+        let new = serde_json::json!({"name": "B", "city": "Riyadh", "salary": 12});
+        let p = change_payload(&attrs, Some(&old), Some(&new));
+        assert_eq!(p.changed_attributes, vec!["name", "salary"]);
+        assert_eq!(
+            p.before,
+            Some(serde_json::json!({"name": "A", "salary": {"ref": true}}))
+        );
+        assert_eq!(
+            p.after,
+            Some(serde_json::json!({"name": "B", "salary": {"ref": true}}))
+        );
+
+        let created = change_payload(
+            &attrs,
+            None,
+            Some(&serde_json::json!({"name": "C", "city": null})),
+        );
+        assert_eq!(created.changed_attributes, vec!["name"]);
+        assert_eq!(created.before, None);
+    }
 
     fn attr(logicalname: &str, field_type_int: i32) -> AttrInfo {
         AttrInfo {

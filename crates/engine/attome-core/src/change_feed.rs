@@ -103,6 +103,51 @@ pub struct ChangeEvent {
     /// `attome_events::filter::SubscriptionFilter`) can match on it.
     pub event_name: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Y7-T1: the attributes the write changed (empty for a row written
+    /// before the outbox carried them, or by a path that does not know).
+    pub changed_attributes: Vec<String>,
+}
+
+/// M1-T1: the event name on a merge survivor's change event, which a
+/// workflow `merge` trigger matches.
+pub const MERGED_EVENT: &str = "record.merged";
+
+/// Y7-T2: what a write changed, for its outbox row.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ChangePayload {
+    pub changed_attributes: Vec<String>,
+    /// The changed attributes' values before and after, by name; a sensitive
+    /// attribute's value is `{"ref": true}`.
+    pub before: Option<serde_json::Value>,
+    pub after: Option<serde_json::Value>,
+}
+
+/// Y7-T2: [`emit`] with what changed, and optionally an event name (a merge
+/// survivor's `record.merged`), in the caller's transaction.
+pub async fn emit_with(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    operation: ChangeOperation,
+    event_name: Option<&str>,
+    payload: &ChangePayload,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO entity_change_event \
+             (entity_logicalname, record_id, operation, event_name, changed_attributes, before, after) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    )
+    .bind(entity_logicalname)
+    .bind(record_id)
+    .bind(operation.as_str())
+    .bind(event_name)
+    .bind(&payload.changed_attributes)
+    .bind(&payload.before)
+    .bind(&payload.after)
+    .execute(conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
 }
 
 impl ChangeEvent {
@@ -280,8 +325,10 @@ pub async fn read_batch(
         String,
         Option<String>,
         chrono::DateTime<chrono::Utc>,
+        Vec<String>,
     )> = sqlx::query_as(
-        "SELECT id, entity_logicalname, record_id, operation, event_name, created_at \
+        "SELECT id, entity_logicalname, record_id, operation, event_name, created_at, \
+                changed_attributes \
          FROM entity_change_event \
          WHERE commit_xid > $1::text::xid8 \
            AND commit_xid < pg_snapshot_xmin(pg_current_snapshot()) \
@@ -297,13 +344,22 @@ pub async fn read_batch(
     Ok(rows
         .into_iter()
         .map(
-            |(id, entity_logicalname, record_id, operation, event_name, created_at)| ChangeEvent {
+            |(
                 id,
                 entity_logicalname,
                 record_id,
                 operation,
                 event_name,
                 created_at,
+                changed_attributes,
+            )| ChangeEvent {
+                id,
+                entity_logicalname,
+                record_id,
+                operation,
+                event_name,
+                created_at,
+                changed_attributes,
             },
         )
         .collect())

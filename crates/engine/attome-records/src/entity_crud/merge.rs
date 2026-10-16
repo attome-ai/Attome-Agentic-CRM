@@ -30,6 +30,7 @@ use super::resolve::resolve_entity;
 use super::response::{EntityRecordResponse, build_response, resolve_lookup_meta};
 use super::row_version::optional_expected_row_version;
 use super::survivorship::{apply_picks, compute_fill, load_survivorship_rules, picks_of};
+use attome_core::change_feed::MERGED_EVENT;
 use attome_types::ErrorResponse;
 
 /// D-432 / M13 — a synthetic, fully-privileged context for a merge performed
@@ -742,6 +743,16 @@ pub async fn do_merge_core_with_version(
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    // M1-T1: the survivor's own event, named, so a flow can start on a merge.
+    attome_core::change_feed::emit_with(
+        &mut tx,
+        &entity_name,
+        canonical_id,
+        attome_core::ChangeOperation::Update,
+        Some(MERGED_EVENT),
+        &attome_core::change_feed::ChangePayload::default(),
+    )
+    .await?;
     if keep_merged {
         sqlx::query(
             "INSERT INTO record_redirect (entity_logicalname, from_id, to_id, merge_log_id) \

@@ -4078,3 +4078,97 @@ async fn old_step_payloads_are_cleared() {
     assert!(rows[1].1.is_none(), "an old step loses its payload");
     assert_eq!(rows[1].2, "succeeded", "and keeps its summary");
 }
+
+/// M1-T1: one entry trigger of `trigger` on a fresh entity, its config
+/// extended with `extra`.
+async fn publish_entity_trigger(
+    state: &EngineState,
+    trigger: &str,
+    extra: serde_json::Value,
+) -> String {
+    let entity = format!("wf_kind_{}", Uuid::now_v7().simple());
+    let mut config = json!({"trigger_type": trigger, "entity_logicalname": entity});
+    if let (Some(config), Some(extra)) = (config.as_object_mut(), extra.as_object()) {
+        config.extend(extra.clone());
+    }
+    let graph = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": config},
+            {"id": "w", "type": "wait", "config": {"delay_seconds": 3600}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "w", "to_port": "in"}]
+    });
+    publish_workflow(&state.base.db, &format!("{trigger}-trigger-test"), graph).await;
+    entity
+}
+
+async fn insert_event(
+    state: &EngineState,
+    entity: &str,
+    operation: &str,
+    event_name: Option<&str>,
+    changed: &[&str],
+) -> Uuid {
+    let record_id = Uuid::now_v7();
+    let changed: Vec<String> = changed.iter().map(|s| (*s).to_owned()).collect();
+    sqlx::query(
+        "INSERT INTO entity_change_event \
+             (entity_logicalname, record_id, operation, event_name, changed_attributes) \
+         VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(entity)
+    .bind(record_id)
+    .bind(operation)
+    .bind(event_name)
+    .bind(&changed)
+    .execute(&state.base.db)
+    .await
+    .expect("insert event");
+    record_id
+}
+
+/// Dispatches a few times; for asserting that nothing starts.
+async fn dispatch_a_few(state: &EngineState) {
+    for _ in 0..5 {
+        attome_workflow::entity_trigger::dispatch_pending(state)
+            .await
+            .expect("dispatch pending events");
+    }
+}
+
+/// M1-T1: deleting a record starts a delete-triggered flow; a merge starts
+/// a merge-triggered one.
+#[tokio::test]
+async fn delete_and_merge_triggers_start_flows() {
+    let state = skip_if_no_db!(test_state().await);
+    let entity = publish_entity_trigger(&state, "delete", json!({})).await;
+    let deleted = insert_event(&state, &entity, "delete", None, &["is_active"]).await;
+    assert_eq!(dispatch_until_started(&state, deleted).await, 1);
+
+    let entity = publish_entity_trigger(&state, "merge", json!({})).await;
+    let plain_update = insert_event(&state, &entity, "update", None, &["name"]).await;
+    let merged = insert_event(&state, &entity, "update", Some("record.merged"), &[]).await;
+    assert_eq!(dispatch_until_started(&state, merged).await, 1);
+    assert_eq!(
+        instances_for_record(&state, plain_update).await,
+        0,
+        "an ordinary update does not start a merge trigger"
+    );
+}
+
+/// M1-T1: an update trigger with an attribute filter starts only when the
+/// write changed one of its attributes.
+#[tokio::test]
+async fn an_attribute_filtered_update_trigger_starts_only_on_those_attributes() {
+    let state = skip_if_no_db!(test_state().await);
+    let entity = publish_entity_trigger(&state, "update", json!({"attributes": ["stage"]})).await;
+    let other = insert_event(&state, &entity, "update", None, &["name"]).await;
+    let stage = insert_event(&state, &entity, "update", None, &["name", "stage"]).await;
+    assert_eq!(dispatch_until_started(&state, stage).await, 1);
+    dispatch_a_few(&state).await;
+    assert_eq!(
+        instances_for_record(&state, other).await,
+        0,
+        "a write that did not change `stage` starts nothing"
+    );
+}

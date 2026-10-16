@@ -180,6 +180,7 @@ pub async fn replay(
         operation: row.operation,
         event_name: None,
         created_at: row.first_failed_at,
+        changed_attributes: Vec::new(),
     };
     let what = format!(
         "{} {} {}",

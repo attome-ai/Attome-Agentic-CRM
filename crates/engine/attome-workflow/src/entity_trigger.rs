@@ -51,6 +51,7 @@ use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::trigger_index::EntryMatch;
+use attome_core::change_feed::MERGED_EVENT;
 
 const DISPATCH_BATCH_SIZE: i64 = 200;
 
@@ -371,10 +372,18 @@ pub(crate) async fn start_entry_instances(
     system_user_id: Uuid,
 ) -> Result<u64, AppError> {
     let mut count = 0u64;
+    // M1-T1: a merge survivor's named event starts `merge` triggers only
+    // (its ordinary update has its own event); every other event matches
+    // its operation (`create`, `update`, `delete`, `restore`).
+    let trigger_type = if event.event_name.as_deref() == Some(MERGED_EVENT) {
+        "merge"
+    } else {
+        event.operation.as_str()
+    };
     let entry_matches = crate::trigger_index::match_entry_triggers(
         &state.base.db,
         &event.entity_logicalname,
-        &event.operation,
+        trigger_type,
     )
     .await
     .map_err(AppError::internal)?;
@@ -389,7 +398,8 @@ pub(crate) async fn start_entry_instances(
         let context = json!({
             "entity_logicalname": event.entity_logicalname,
             "record_id": event.record_id,
-            "operation": event.operation,
+            "operation": trigger_type,
+            "changed_attributes": event.changed_attributes,
         });
         let started = crate::instance_admin::start_instance_for_event(
             state,
@@ -452,6 +462,11 @@ async fn entry_condition_passes(
         event.record_id,
         &event.operation,
     ) {
+        return Ok(false);
+    }
+    // M1-T1: an update trigger may name attributes; it starts only when the
+    // write changed one of them.
+    if !attributes_match(condition, &event.changed_attributes) {
         return Ok(false);
     }
     let Some(expression) = condition
@@ -649,6 +664,22 @@ pub async fn validate_entry_expressions(
 /// `update`, matching the outbox row's own `operation` column). Either or
 /// both absent matches unconditionally. Entry triggers apply the same filter
 /// before their attome-rules `expression` ([`entry_condition_passes`]).
+/// M1-T1: the trigger's `attributes` filter against the event's changed
+/// attributes. No filter (or an empty one) matches every event.
+fn attributes_match(condition: Option<&Value>, changed: &[String]) -> bool {
+    let Some(wanted) = condition
+        .and_then(|c| c.get("attributes"))
+        .and_then(Value::as_array)
+        .filter(|a| !a.is_empty())
+    else {
+        return true;
+    };
+    wanted
+        .iter()
+        .filter_map(Value::as_str)
+        .any(|w| changed.iter().any(|c| c == w))
+}
+
 fn wait_condition_matches(
     condition: Option<&serde_json::Value>,
     record_id: Uuid,
