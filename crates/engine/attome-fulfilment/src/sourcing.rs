@@ -139,7 +139,7 @@ pub fn source(rule: Rule, lines: &[Line], locations: &[Location]) -> Plan {
                     .map(|loc| {
                         let covered = remaining
                             .iter()
-                            .filter(|l| free(*loc, l.product, &used) >= l.quantity)
+                            .filter(|l| free(loc, l.product, &used) >= l.quantity)
                             .count();
                         (loc, covered)
                     })
@@ -152,7 +152,7 @@ pub fn source(rule: Rule, lines: &[Line], locations: &[Location]) -> Plan {
                     break;
                 };
                 remaining.retain(|line| {
-                    if free(*loc, line.product, &used) >= line.quantity {
+                    if free(loc, line.product, &used) >= line.quantity {
                         plan.allocations.push(Allocation {
                             line: line.id,
                             location: loc.id,

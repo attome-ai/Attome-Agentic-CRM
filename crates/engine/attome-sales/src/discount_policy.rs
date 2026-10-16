@@ -80,7 +80,7 @@ pub fn evaluate(thresholds: &[Threshold], lines: &[QuoteLine], role: &str) -> Po
 }
 
 #[cfg(test)]
-mod discount_policy {
+mod tests {
     use super::*;
     use std::str::FromStr;
 

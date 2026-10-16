@@ -1241,7 +1241,7 @@ pub(crate) async fn do_update_attribute_recorded(
         attome_field::strict_required(new_req, new_options.as_ref()),
     );
     let constraints_changed = (
-        attome_field::number_range(&current_ft, cur.options.as_ref()),
+        attome_field::number_range(current_ft, cur.options.as_ref()),
         attome_field::strict_required(cur.required.unwrap_or(false), cur.options.as_ref()),
     ) != new_constraints;
     if unique_changed && new_unique {
