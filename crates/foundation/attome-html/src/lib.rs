@@ -31,6 +31,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+pub mod main_content;
 mod template;
 pub use template::{escape_html, merge_placeholders};
 

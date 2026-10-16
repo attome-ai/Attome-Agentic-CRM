@@ -12,6 +12,7 @@ publish.workspace      = true
 
 [dependencies]
 ammonia.workspace = true
+scraper.workspace = true
 
 [lints]
 workspace = true
