@@ -419,6 +419,9 @@ pub enum EngineJob {
     ForecastRecompute,
     /// F3-T10: stores today's recurring-revenue snapshot. Bare unit variant.
     MrrSnapshot,
+    /// K6-T3: queues a crawl for every website source due on its schedule.
+    /// Bare unit variant.
+    WebcrawlRecrawlDue,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -863,6 +866,7 @@ impl EngineJob {
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
             | Self::MrrSnapshot
+            | Self::WebcrawlRecrawlDue
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -954,6 +958,7 @@ impl EngineJob {
             EngineJob::DealRiskEvaluation => "DealRiskEvaluation",
             EngineJob::ForecastRecompute => "ForecastRecompute",
             EngineJob::MrrSnapshot => "MrrSnapshot",
+            EngineJob::WebcrawlRecrawlDue => "WebcrawlRecrawlDue",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1057,6 +1062,7 @@ impl EngineJob {
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
             | Self::MrrSnapshot
+            | Self::WebcrawlRecrawlDue
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1173,6 +1179,7 @@ impl EngineJob {
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
             | Self::MrrSnapshot
+            | Self::WebcrawlRecrawlDue
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1505,6 +1512,7 @@ mod tests {
         assert_round_trips(EngineJob::DealRiskEvaluation);
         assert_round_trips(EngineJob::ForecastRecompute);
         assert_round_trips(EngineJob::MrrSnapshot);
+        assert_round_trips(EngineJob::WebcrawlRecrawlDue);
     }
 
     #[test]

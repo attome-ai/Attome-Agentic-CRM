@@ -14,6 +14,7 @@ publish.workspace      = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-html.workspace     = true
+attome-jobs.workspace     = true
 attome-metadata.workspace = true
 attome-server.workspace   = true
 attome-types.workspace    = true

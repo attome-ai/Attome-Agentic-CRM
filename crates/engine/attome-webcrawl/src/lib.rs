@@ -16,6 +16,7 @@
 pub mod crawl;
 pub mod model;
 pub mod safety;
+pub mod schedule;
 
 /// D-351 — this crate's advisory-lock namespace (`"webcrawl/…"` keys),
 /// registered in `crates/server/tests/advisory_lock_namespaces.rs`. Locked

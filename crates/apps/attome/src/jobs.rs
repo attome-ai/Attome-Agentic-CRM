@@ -930,6 +930,14 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // K6-T3: scheduled recrawls, hourly.
+        EngineJob::WebcrawlRecrawlDue => {
+            let queued =
+                attome_webcrawl::schedule::enqueue_due(&attome_state, chrono::Utc::now()).await?;
+            if queued > 0 {
+                tracing::info!(queued, "webcrawl: scheduled recrawls queued");
+            }
+        }
         // F3-T10: the recurring-revenue snapshot, nightly.
         EngineJob::MrrSnapshot => {
             let rows =
@@ -2031,6 +2039,7 @@ const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
 const DEDUP_KEY_MRR_SNAPSHOT: &str = "mrr-snapshot";
+const DEDUP_KEY_WEBCRAWL_RECRAWL_DUE: &str = "webcrawl-recrawl-due";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2091,6 +2100,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::DealRiskEvaluation => DEDUP_KEY_DEAL_RISK,
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
         EngineJob::MrrSnapshot => DEDUP_KEY_MRR_SNAPSHOT,
+        EngineJob::WebcrawlRecrawlDue => DEDUP_KEY_WEBCRAWL_RECRAWL_DUE,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2404,6 +2414,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// K6-T3: every hour, the website sources due for a recrawl.
+pub fn spawn_webcrawl_recrawl_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::WebcrawlRecrawlDue,
+        DEDUP_KEY_WEBCRAWL_RECRAWL_DUE,
+        "webcrawl recrawl due",
     );
 }
 

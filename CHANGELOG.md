@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Website sources on a `daily` or `weekly` schedule recrawl by themselves: an hourly job queues one
+  crawl per due source, never one already queued or running, and nothing while webcrawl is off.
 - Recurring revenue: a nightly snapshot of each account's MRR per currency (migration `0091`) and
   `GET /api/v1/billing/metrics/recurring?as_of=&period_days=` (privilege `subscription_metrics.read`)
   with MRR, ARR, new, expansion, contraction, churn and net retention per currency.
