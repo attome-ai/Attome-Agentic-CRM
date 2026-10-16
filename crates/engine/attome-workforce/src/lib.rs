@@ -5,6 +5,7 @@
 //! tasks add it. Gated on the `workforce` module.
 
 pub mod model;
+pub mod rules;
 pub mod staffing;
 
 pub use model::WorkforceModel;
