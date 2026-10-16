@@ -62,6 +62,16 @@
 //! | 29 | `attome-s2s/`           | `attome_s2s::ADVISORY_LOCK_NAMESPACE`            |
 //! | 30 | `attome-model/`         | `attome_model::ADVISORY_LOCK_NAMESPACE`          |
 //! | 31 | `attome-records/`       | `attome_records::ADVISORY_LOCK_NAMESPACE`        |
+//! | 32 | `attome-sales/`         | `attome_sales::ADVISORY_LOCK_NAMESPACE`          |
+//! | 33 | `attome-callintel/`  | `attome_callintel::ADVISORY_LOCK_NAMESPACE` |
+//! | 34 | `attome-marketing/`  | `attome_marketing::ADVISORY_LOCK_NAMESPACE` |
+//! | 35 | `attome-billing/`    | `attome_billing::ADVISORY_LOCK_NAMESPACE` |
+//! | 36 | `attome-commission/` | `attome_commission::ADVISORY_LOCK_NAMESPACE` |
+//! | 37 | `attome-partner/`    | `attome_partner::ADVISORY_LOCK_NAMESPACE` |
+//! | 38 | `attome-fulfilment/` | `attome_fulfilment::ADVISORY_LOCK_NAMESPACE` |
+//! | 39 | `attome-workforce/`  | `attome_workforce::ADVISORY_LOCK_NAMESPACE` |
+//! | 40 | `attome-contract/`   | `attome_contract::ADVISORY_LOCK_NAMESPACE` |
+//! | 41 | `attome-offline/`    | `attome_offline::ADVISORY_LOCK_NAMESPACE` |
 //!
 //! A key's prefix decides its namespace, not the crate the SQL is written in:
 //! `attome-api`'s rewrap handler locks `"attome-auth/rewrap:{domain}"` under
@@ -135,6 +145,31 @@ const NAMESPACES: &[(i32, &str)] = &[
     (attome_s2s::ADVISORY_LOCK_NAMESPACE, "attome-s2s/"),
     (attome_model::ADVISORY_LOCK_NAMESPACE, "attome-model/"),
     (attome_records::ADVISORY_LOCK_NAMESPACE, "attome-records/"),
+    (attome_sales::ADVISORY_LOCK_NAMESPACE, "attome-sales/"),
+    (
+        attome_callintel::ADVISORY_LOCK_NAMESPACE,
+        "attome-callintel/",
+    ),
+    (
+        attome_marketing::ADVISORY_LOCK_NAMESPACE,
+        "attome-marketing/",
+    ),
+    (attome_billing::ADVISORY_LOCK_NAMESPACE, "attome-billing/"),
+    (
+        attome_commission::ADVISORY_LOCK_NAMESPACE,
+        "attome-commission/",
+    ),
+    (attome_partner::ADVISORY_LOCK_NAMESPACE, "attome-partner/"),
+    (
+        attome_fulfilment::ADVISORY_LOCK_NAMESPACE,
+        "attome-fulfilment/",
+    ),
+    (
+        attome_workforce::ADVISORY_LOCK_NAMESPACE,
+        "attome-workforce/",
+    ),
+    (attome_contract::ADVISORY_LOCK_NAMESPACE, "attome-contract/"),
+    (attome_offline::ADVISORY_LOCK_NAMESPACE, "attome-offline/"),
 ];
 
 /// The whole point of the registry: two subsystems sharing an id would put
@@ -162,8 +197,8 @@ fn every_namespace_id_is_distinct() {
 fn registry_covers_every_declared_namespace() {
     assert_eq!(
         NAMESPACES.len(),
-        31,
-        "NAMESPACES no longer lists 31 entries — update the registry table in this \
+        41,
+        "NAMESPACES no longer lists 41 entries — update the registry table in this \
          file's header and this count together, so the documented table and the \
          collision-checked list cannot drift apart."
     );

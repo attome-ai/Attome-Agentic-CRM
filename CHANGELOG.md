@@ -28,6 +28,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Engine crates for the business modules, each behind its own module switch: `attome-sales`
+  (dialer, org charts, enrichment, competitors), `attome-callintel`, `attome-marketing`,
+  `attome-billing`, `attome-commission`, `attome-partner`, `attome-fulfilment`,
+  `attome-workforce`, `attome-contract` and `attome-offline`; modules `sales` … `offline` (ids 32-41).
 - Events monitor (`/admin/events-monitor`): every change-feed consumer with unread events, how far
   behind it is and when it last read; the built-in `ChangeFeedConsumerLagging` alert fires past
   five minutes.

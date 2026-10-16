@@ -1,0 +1,28 @@
+//! `EngineModel` registration for the sales engine: mounted only when the
+//! `sales` module is on.
+use attome_core::{EngineModel, EngineState};
+use attome_modules::{MODULE_SALES, ModuleId};
+use axum::Router;
+
+/// Registered in `attome::boot::register_engines`.
+#[derive(Debug)]
+pub struct SalesModel;
+
+impl EngineModel for SalesModel {
+    fn name(&self) -> &'static str {
+        "attome-sales"
+    }
+
+    fn module_id(&self) -> ModuleId {
+        MODULE_SALES
+    }
+
+    /// The sales records are the pack's metadata, not this crate's seed.
+    fn owned_entities(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    fn routes(&self) -> Router<EngineState> {
+        Router::new()
+    }
+}

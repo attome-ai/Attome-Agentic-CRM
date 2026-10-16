@@ -35,6 +35,16 @@ members = [
     "crates/engine/attome-project",
     "crates/engine/attome-service",
     "crates/engine/attome-metric",
+    "crates/engine/attome-sales",
+    "crates/engine/attome-callintel",
+    "crates/engine/attome-marketing",
+    "crates/engine/attome-billing",
+    "crates/engine/attome-commission",
+    "crates/engine/attome-partner",
+    "crates/engine/attome-fulfilment",
+    "crates/engine/attome-workforce",
+    "crates/engine/attome-contract",
+    "crates/engine/attome-offline",
     "crates/engine/attome-dashboard",
     "crates/engine/attome-webcrawl",
     "crates/engine/attome-content",
@@ -104,6 +114,16 @@ attome-workflow  = { path = "crates/engine/attome-workflow" }
 attome-project   = { path = "crates/engine/attome-project" }
 attome-service   = { path = "crates/engine/attome-service" }
 attome-metric    = { path = "crates/engine/attome-metric" }
+attome-sales     = { path = "crates/engine/attome-sales" }
+attome-callintel = { path = "crates/engine/attome-callintel" }
+attome-marketing = { path = "crates/engine/attome-marketing" }
+attome-billing   = { path = "crates/engine/attome-billing" }
+attome-commission = { path = "crates/engine/attome-commission" }
+attome-partner   = { path = "crates/engine/attome-partner" }
+attome-fulfilment = { path = "crates/engine/attome-fulfilment" }
+attome-workforce = { path = "crates/engine/attome-workforce" }
+attome-contract  = { path = "crates/engine/attome-contract" }
+attome-offline   = { path = "crates/engine/attome-offline" }
 attome-dashboard = { path = "crates/engine/attome-dashboard" }
 attome-webcrawl  = { path = "crates/engine/attome-webcrawl" }
 attome-content   = { path = "crates/engine/attome-content" }

@@ -1,0 +1,19 @@
+//! The billing engine (roadmap F4-T1).
+//!
+//! Billing: invoices, tax determination, payments and subscriptions (F3, F4, F5). The records are
+//! metadata from the matching pack; this crate holds the engine code that acts on them as later
+//! tasks add it. Gated on the `billing` module.
+
+pub mod model;
+
+pub use model::BillingModel;
+
+/// This crate's advisory-lock namespace (`"attome-billing/…"` keys), registered in
+/// `crates/apps/attome/tests/advisory_lock_namespaces.rs`.
+pub const ADVISORY_LOCK_NAMESPACE: i32 = 35;
+
+/// This crate's slice of the workspace OpenAPI document, merged in by
+/// `attome::openapi::document()`. Empty until the first route lands.
+pub fn openapi() -> utoipa::openapi::OpenApi {
+    utoipa::openapi::OpenApiBuilder::new().build()
+}

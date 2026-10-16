@@ -1,0 +1,20 @@
+[package]
+name         = "attome-workforce"
+description  = "Attome's workforce management engine."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-core.workspace = true
+attome-modules.workspace = true
+axum.workspace = true
+utoipa.workspace = true
+
+[lints]
+workspace = true

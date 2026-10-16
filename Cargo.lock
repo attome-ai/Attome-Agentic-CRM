@@ -262,10 +262,14 @@ dependencies = [
  "attome-approval",
  "attome-audit",
  "attome-auth",
+ "attome-billing",
  "attome-cache",
+ "attome-callintel",
+ "attome-commission",
  "attome-compliance",
  "attome-config",
  "attome-content",
+ "attome-contract",
  "attome-core",
  "attome-dashboard",
  "attome-db",
@@ -274,14 +278,18 @@ dependencies = [
  "attome-email",
  "attome-events",
  "attome-fleet",
+ "attome-fulfilment",
  "attome-grc",
  "attome-integration",
  "attome-jobs",
+ "attome-marketing",
  "attome-metadata",
  "attome-metric",
  "attome-model",
  "attome-modules",
  "attome-notification",
+ "attome-offline",
+ "attome-partner",
  "attome-portal",
  "attome-predict",
  "attome-process",
@@ -291,6 +299,7 @@ dependencies = [
  "attome-release",
  "attome-report",
  "attome-s2s",
+ "attome-sales",
  "attome-search",
  "attome-security",
  "attome-server",
@@ -301,6 +310,7 @@ dependencies = [
  "attome-types",
  "attome-webcrawl",
  "attome-workflow",
+ "attome-workforce",
  "axum",
  "base64 0.23.1",
  "chrono",
@@ -540,6 +550,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "attome-billing"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
+]
+
+[[package]]
 name = "attome-cache"
 version = "0.1.0"
 dependencies = [
@@ -567,6 +587,26 @@ dependencies = [
  "chrono-tz",
  "proptest",
  "serde",
+]
+
+[[package]]
+name = "attome-callintel"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
+]
+
+[[package]]
+name = "attome-commission"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
 ]
 
 [[package]]
@@ -639,6 +679,16 @@ dependencies = [
  "tracing",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "attome-contract"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
 ]
 
 [[package]]
@@ -904,6 +954,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "attome-fulfilment"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
+]
+
+[[package]]
 name = "attome-grc"
 version = "0.1.0"
 dependencies = [
@@ -1007,6 +1067,16 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "uuid",
+]
+
+[[package]]
+name = "attome-marketing"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
 ]
 
 [[package]]
@@ -1120,6 +1190,26 @@ dependencies = [
  "tracing",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "attome-offline"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
+]
+
+[[package]]
+name = "attome-partner"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
 ]
 
 [[package]]
@@ -1394,6 +1484,16 @@ dependencies = [
 [[package]]
 name = "attome-sdk"
 version = "0.1.0"
+
+[[package]]
+name = "attome-sales"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
+]
 
 [[package]]
 name = "attome-search"
@@ -1693,6 +1793,16 @@ dependencies = [
  "tracing",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "attome-workforce"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
 ]
 
 [[package]]

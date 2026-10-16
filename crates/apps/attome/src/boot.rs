@@ -1560,6 +1560,26 @@ pub fn register_engines(
         // comment), already covered by the `attome-dashboard` registration
         // immediately above, same shape as `ComplianceModel` below.
         .register(attome_metric::MetricModel)
+        // D6-T1: the sales engine, gated on the `sales` module.
+        .register(attome_sales::SalesModel)
+        // D22-T1: gated on the `callintel` module.
+        .register(attome_callintel::CallintelModel)
+        // E6-T1: gated on the `marketing` module.
+        .register(attome_marketing::MarketingModel)
+        // F4-T1: gated on the `billing` module.
+        .register(attome_billing::BillingModel)
+        // F10-T1: gated on the `commission` module.
+        .register(attome_commission::CommissionModel)
+        // F9-T1: gated on the `partner` module.
+        .register(attome_partner::PartnerModel)
+        // F6-T1: gated on the `fulfilment` module.
+        .register(attome_fulfilment::FulfilmentModel)
+        // G17-T1: gated on the `workforce` module.
+        .register(attome_workforce::WorkforceModel)
+        // W1-T1: gated on the `contract` module.
+        .register(attome_contract::ContractModel)
+        // B18-T1: gated on the `offline` module.
+        .register(attome_offline::OfflineModel)
         // Route-mounting/license-gating only (D-383) — attome-compliance's own
         // seeds (`consent_seed`, `legal_matter_seed`) also run from inside
         // `.build()`, same shape as attome-project/attome-service/attome-grc/

@@ -154,6 +154,26 @@ pub const MODULE_DOCGEN: ModuleId = ModuleId::new(27);
 pub const MODULE_PREDICT: ModuleId = ModuleId::new(28);
 pub const MODULE_OMNICHANNEL: ModuleId = ModuleId::new(29);
 pub const MODULE_PORTAL: ModuleId = ModuleId::new(31);
+/// Sales: the engines behind the sales pack (D6, D21-D25).
+pub const MODULE_SALES: ModuleId = ModuleId::new(32);
+/// Call intelligence: transcripts, talk-time and topic analysis of sales calls (D22).
+pub const MODULE_CALLINTEL: ModuleId = ModuleId::new(33);
+/// Marketing: campaigns, email marketing, segments, journeys, forms and pages (E1-E31).
+pub const MODULE_MARKETING: ModuleId = ModuleId::new(34);
+/// Billing: invoicing, tax determination, payments and subscriptions (F3-F5).
+pub const MODULE_BILLING: ModuleId = ModuleId::new(35);
+/// Sales commissions and incentives (F10, V2-D409).
+pub const MODULE_COMMISSION: ModuleId = ModuleId::new(36);
+/// Partner relationship management (F9, V2-D400).
+pub const MODULE_PARTNER: ModuleId = ModuleId::new(37);
+/// Fulfilment: fulfilment orders, shipments and delivery (F6).
+pub const MODULE_FULFILMENT: ModuleId = ModuleId::new(38);
+/// G17 workforce management: planning groups, shifts, schedules, adherence.
+pub const MODULE_WORKFORCE: ModuleId = ModuleId::new(39);
+/// Contract lifecycle management engine (W1, V2-D298, V2-D313).
+pub const MODULE_CONTRACT: ModuleId = ModuleId::new(40);
+/// Offline: records on the device, sync and conflict resolution for the mobile app (B18).
+pub const MODULE_OFFLINE: ModuleId = ModuleId::new(41);
 
 /// Every module by its configuration name.
 pub const MODULE_MAP: &[(&str, ModuleId)] = &[
@@ -183,6 +203,16 @@ pub const MODULE_MAP: &[(&str, ModuleId)] = &[
     ("predict", MODULE_PREDICT),
     ("omnichannel", MODULE_OMNICHANNEL),
     ("portal", MODULE_PORTAL),
+    ("sales", MODULE_SALES),
+    ("callintel", MODULE_CALLINTEL),
+    ("marketing", MODULE_MARKETING),
+    ("billing", MODULE_BILLING),
+    ("commission", MODULE_COMMISSION),
+    ("partner", MODULE_PARTNER),
+    ("fulfilment", MODULE_FULFILMENT),
+    ("workforce", MODULE_WORKFORCE),
+    ("contract", MODULE_CONTRACT),
+    ("offline", MODULE_OFFLINE),
 ];
 
 /// The module named `name` in [`MODULE_MAP`].
