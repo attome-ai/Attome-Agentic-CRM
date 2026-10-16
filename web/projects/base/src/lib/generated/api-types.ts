@@ -10532,6 +10532,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/opportunities/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_quote_sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/opportunities/{id}/team": {
         parameters: {
             query?: never;
@@ -28188,6 +28204,21 @@ export interface components {
             opportunity_id: string;
             splits: components["schemas"]["StoredSplit"][];
         };
+        SalesSyncBody: {
+            direction: components["schemas"]["SyncDirection"];
+            /** @description Overwrite even when both sides changed. */
+            force?: boolean;
+        };
+        SalesSyncResult: {
+            /** @description Both line sets, when both changed. */
+            deal_lines?: components["schemas"]["SyncLine"][] | null;
+            lines_synced_hash?: string | null;
+            /** Format: uuid */
+            opportunity_id: string;
+            quote_lines?: components["schemas"]["SyncLine"][] | null;
+            /** @description `synced`, `in_sync` or `sync_both_changed`. */
+            status: string;
+        };
         SalesTeamChange: {
             /** Format: int64 */
             added: number;
@@ -29651,6 +29682,19 @@ export interface components {
             reason?: string | null;
             scope_key: string;
             scope_kind: string;
+        };
+        /**
+         * @description Which way to sync.
+         * @enum {string}
+         */
+        SyncDirection: "from_quote" | "to_quote";
+        /** @description One line as the hash sees it. */
+        SyncLine: {
+            discount: string;
+            line_total: string;
+            /** Format: uuid */
+            product_ref?: string | null;
+            quantity: string;
         };
         /**
          * @description The result of one [`sync`] call. `approval_pending` mirrors
@@ -66750,6 +66794,78 @@ export interface operations {
                 };
             };
             /** @description The splits break a rule (a revenue type must total 100%, members must be on the team), or a won deal's change has no reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_quote_sync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesSyncBody"];
+            };
+        };
+        responses: {
+            /** @description Synced, or already in sync */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSyncResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity, no primary quote, or quote sync is switched off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Both the deal and the quote changed since the last sync (`sync_both_changed`, with both line sets), or the deal is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSyncResult"];
+                };
+            };
+            /** @description to_quote: quotes are changed through CPQ */
             422: {
                 headers: {
                     [name: string]: unknown;

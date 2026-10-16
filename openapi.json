@@ -54154,6 +54154,115 @@
         }
       }
     },
+    "/api/v1/sales/opportunities/{id}/sync": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_quote_sync",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesSyncBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Synced, or already in sync",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSyncResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity, no primary quote, or quote sync is switched off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Both the deal and the quote changed since the last sync (`sync_both_changed`, with both line sets), or the deal is being changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSyncResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "to_quote: quotes are changed through CPQ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/sales/opportunities/{id}/team": {
       "post": {
         "tags": [
@@ -107962,6 +108071,63 @@
           }
         }
       },
+      "SalesSyncBody": {
+        "type": "object",
+        "required": [
+          "direction"
+        ],
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/SyncDirection"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Overwrite even when both sides changed."
+          }
+        }
+      },
+      "SalesSyncResult": {
+        "type": "object",
+        "required": [
+          "opportunity_id",
+          "status"
+        ],
+        "properties": {
+          "deal_lines": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SyncLine"
+            },
+            "description": "Both line sets, when both changed."
+          },
+          "lines_synced_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quote_lines": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SyncLine"
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "`synced`, `in_sync` or `sync_both_changed`."
+          }
+        }
+      },
       "SalesTeamChange": {
         "type": "object",
         "required": [
@@ -111754,6 +111920,41 @@
             "type": "string"
           },
           "scope_kind": {
+            "type": "string"
+          }
+        }
+      },
+      "SyncDirection": {
+        "type": "string",
+        "description": "Which way to sync.",
+        "enum": [
+          "from_quote",
+          "to_quote"
+        ]
+      },
+      "SyncLine": {
+        "type": "object",
+        "description": "One line as the hash sees it.",
+        "required": [
+          "quantity",
+          "line_total",
+          "discount"
+        ],
+        "properties": {
+          "discount": {
+            "type": "string"
+          },
+          "line_total": {
+            "type": "string"
+          },
+          "product_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
             "type": "string"
           }
         }
