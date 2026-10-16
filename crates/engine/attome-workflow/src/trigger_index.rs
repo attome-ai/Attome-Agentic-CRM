@@ -85,7 +85,9 @@ pub fn entry_condition(config: &Value) -> Option<Value> {
         .get("attributes")
         .and_then(Value::as_array)
         .filter(|a| !a.is_empty());
-    if expression.is_none() && attributes.is_none() {
+    // M1-T2: a schedule trigger's slots, kept with the entry row.
+    let schedule = config.get("schedule").filter(|s| s.is_object());
+    if expression.is_none() && attributes.is_none() && schedule.is_none() {
         return condition;
     }
     let mut merged = match condition {
@@ -100,6 +102,9 @@ pub fn entry_condition(config: &Value) -> Option<Value> {
     }
     if let Some(attributes) = attributes {
         merged.insert("attributes".to_owned(), Value::Array(attributes.clone()));
+    }
+    if let Some(schedule) = schedule {
+        merged.insert("schedule".to_owned(), schedule.clone());
     }
     Some(Value::Object(merged))
 }

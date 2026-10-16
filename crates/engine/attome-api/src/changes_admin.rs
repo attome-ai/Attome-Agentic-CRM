@@ -112,6 +112,7 @@ use axum::{
 use base64::Engine as _;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::postgres::PgRow;
 use std::cmp::Ordering;
 use utoipa::{IntoParams, ToSchema};
@@ -943,7 +944,7 @@ pub struct RewindBody {
     tag = "admin",
     params(("name" = String, Path, description = "The consumer's name")),
     request_body = RewindBody,
-    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 204, description = "The consumer reads again from that point"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

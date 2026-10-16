@@ -187,10 +187,13 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
         { value: 'manual',   label: 'Manual / API start' },
         { value: 'create',   label: 'Entity created' },
         { value: 'update',   label: 'Entity updated' },
+        { value: 'delete',   label: 'Entity deleted' },
+        { value: 'restore',  label: 'Entity restored' },
+        { value: 'merge',    label: 'Records merged' },
         { value: 'schedule', label: 'Schedule' },
       ] },
     { key: 'entity_logicalname', label: 'Entity', kind: 'entity',
-      showIf: { key: 'trigger_type', in: ['create', 'update'] },
+      showIf: { key: 'trigger_type', in: ['create', 'update', 'delete', 'restore', 'merge'] },
       hint: 'Logical name of the entity whose writes start this workflow.' },
     // Both keys are folded into workflow_trigger_index.condition by
     // `trigger_index::entry_condition` and enforced at dispatch
@@ -206,6 +209,15 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
       hint: 'Optional rules expression evaluated against the record (e.g. amount > 1000). '
           + 'Only a true result starts the workflow; publishing rejects an expression '
           + 'that does not compile or is not true/false.' },
+    // M1-T1: an update trigger starts only when one of these attributes changed.
+    { key: 'attributes', label: 'Only when these change', kind: 'json',
+      showIf: { key: 'trigger_type', in: ['update'] },
+      hint: 'Optional JSON array of attribute names, e.g. ["stage", "amount"].' },
+    // M1-T2: `schedule_trigger` starts the flow once per slot.
+    { key: 'schedule', label: 'Schedule', kind: 'json',
+      showIf: { key: 'trigger_type', in: ['schedule'] },
+      hint: '{"every_minutes": 15}, {"daily_at": "09:00", "weekdays": [1,2,3,4,5]} or '
+          + '{"cron": "0 9 * * 1-5"}, in the deployment time zone.' },
   ],
   // scheduler::eval_condition
   condition: [

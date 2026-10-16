@@ -24,6 +24,7 @@ attome-notification.workspace = true
 attome-records.workspace      = true
 attome-security.workspace     = true
 attome-server.workspace       = true
+attome-storage.workspace  = true
 attome-types.workspace        = true
 axum.workspace                = true
 chrono.workspace              = true
@@ -40,7 +41,6 @@ uuid.workspace                = true
 [dev-dependencies]
 attome-cache.workspace    = true
 attome-metadata.workspace = true
-attome-storage.workspace  = true
 attome-testkit.workspace  = true
 tokio                     = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
