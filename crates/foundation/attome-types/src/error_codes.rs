@@ -40,6 +40,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "limit_exceeded",
+        "The request is past a limit; `limit`, `value` and `next` say which and what to do.",
+        false,
+    ),
+    code(
         "conflict",
         "The request conflicts with the current state.",
         false,

@@ -421,10 +421,12 @@ fn validate_request_shape(body: &BulkRequestBody) -> Result<(), AppError> {
         return Err(AppError::Validation("records must not be empty".into()));
     }
     if body.records.len() > MAX_BULK_RECORDS {
-        return Err(AppError::Validation(format!(
-            "at most {MAX_BULK_RECORDS} records per bulk request, got {}",
-            body.records.len()
-        )));
+        // AA9-T4: named, with the way forward.
+        return Err(AppError::LimitExceeded {
+            limit: "bulk.max_records",
+            value: MAX_BULK_RECORDS as i64,
+            next: attome_types::error::NextStep::Split,
+        });
     }
     for (index, record) in body.records.iter().enumerate() {
         validate_record_envelope(&body.operation, record)

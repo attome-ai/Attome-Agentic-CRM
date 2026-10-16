@@ -652,7 +652,8 @@ async fn create_rejects_when_it_would_exceed_the_per_user_storage_quota() {
         r#"{"filename":"a.txt","content_type":"text/plain","declared_size_bytes":50}"#,
     )
     .await;
-    assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    // Z6-T7: 413 naming the quota.
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
 }
 
 /// Same remediation, the deployment-wide half: `max_deployment_storage_bytes`
@@ -679,7 +680,7 @@ async fn create_rejects_when_it_would_exceed_the_deployment_storage_quota() {
         r#"{"filename":"a.txt","content_type":"text/plain","declared_size_bytes":50}"#,
     )
     .await;
-    assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
 }
 
 /// Negative-only coverage above would miss a quota configured so generously

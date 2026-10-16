@@ -701,8 +701,8 @@ async fn enqueue_rejects_empty_and_oversized_record_batches() {
         .unwrap();
     assert_eq!(
         res.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "501 records must exceed MAX_BULK_RECORDS"
+        StatusCode::PAYLOAD_TOO_LARGE,
+        "501 records must exceed MAX_BULK_RECORDS (AA9-T4: limit_exceeded)"
     );
 }
 

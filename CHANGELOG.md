@@ -552,6 +552,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- A request past a limit answers `limit_exceeded` naming the `limit`, its `value` and the `next` step
+  (`split`, `run_as_job`, `export`, `retry_after` with `Retry-After`, `contact_admin`): a bulk request
+  of more than 500 records and an upload past a storage quota are now `413 limit_exceeded` instead of
+  `422 validation_error`.
 - A write that sets an attribute the caller may not write (no field-security write grant, a field
   locked to integrations, or a new `options.create_only: true` field on update) answers
   `403 attribute_not_writable` with the attribute in `field`, instead of `403 forbidden` or, for

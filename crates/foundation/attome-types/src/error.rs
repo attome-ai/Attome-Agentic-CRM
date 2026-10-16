@@ -21,6 +21,16 @@ pub enum AppError {
     #[error("forbidden")]
     Forbidden,
 
+    /// AA9-T4: the request is past a limit; `limit` names it, `value` is the
+    /// limit's value and `next` what the caller can do instead. `429` when
+    /// the next step is to retry later, `413` otherwise; `limit_exceeded`.
+    #[error("{limit} is limited to {value}")]
+    LimitExceeded {
+        limit: &'static str,
+        value: i64,
+        next: NextStep,
+    },
+
     /// Q15-T4: the write sets an attribute the caller may not write (no
     /// field-security write grant, or a create-only attribute after create).
     /// Refused, never silently dropped. Carries the attribute's logical name.
@@ -296,6 +306,22 @@ fn field_locked_message(locks: &[crate::types::LockedField], required: bool) -> 
     }
 }
 
+/// AA9-T4: what a caller can do when a request is past a limit.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, utoipa::ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum NextStep {
+    /// Start the same work as a background job at this route.
+    RunAsJob { start_url: String },
+    /// Get the result as an export from this route instead.
+    Export { export_url: String },
+    /// Send the request again after this many seconds.
+    RetryAfter { seconds: u64 },
+    /// Send the work in smaller requests.
+    Split,
+    /// Ask an administrator to raise the limit or free capacity.
+    ContactAdmin,
+}
+
 impl AppError {
     /// Convenience constructor for the masked 500. The detail is masked from
     /// the client but must still be diagnosable, so it is emitted at `error`
@@ -321,6 +347,14 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "forbidden"),
             AppError::AttributeNotWritable(_) => (StatusCode::FORBIDDEN, "attribute_not_writable"),
+            AppError::LimitExceeded { next, .. } => (
+                if matches!(next, NextStep::RetryAfter { .. }) {
+                    StatusCode::TOO_MANY_REQUESTS
+                } else {
+                    StatusCode::PAYLOAD_TOO_LARGE
+                },
+                "limit_exceeded",
+            ),
             AppError::Conflict(_) => (StatusCode::CONFLICT, "conflict"),
             AppError::VersionConflict => (StatusCode::CONFLICT, "version_conflict"),
             AppError::VersionConflictAt { .. } => (StatusCode::CONFLICT, "version_conflict"),
@@ -401,6 +435,11 @@ impl IntoResponse for AppError {
         if let AppError::AttributeNotWritable(field) = &self {
             body["field"] = json!(field);
         }
+        if let AppError::LimitExceeded { limit, value, next } = &self {
+            body["limit"] = json!(limit);
+            body["value"] = json!(value);
+            body["next"] = json!(next);
+        }
         if let AppError::FieldLocked { locks, .. } = &self {
             if let Some(first) = locks.first() {
                 body["field"] = json!(first.field);
@@ -442,6 +481,11 @@ impl IntoResponse for AppError {
             // AB5-T3: a dependency outage is worth retrying after a probe
             // round or two.
             AppError::CapabilityUnavailable(_) => Some(CAPABILITY_RETRY_AFTER_SECS),
+            // AA9-T4: a limit that resets.
+            AppError::LimitExceeded {
+                next: NextStep::RetryAfter { seconds },
+                ..
+            } => Some(*seconds),
             _ => None,
         };
         if let Some(secs) = retry_after {
@@ -1234,7 +1278,37 @@ mod tests {
             AppError::ReadOnly => 26,
             AppError::DuplicateDetected { .. } => 27,
             AppError::AttributeNotWritable(_) => 28,
+            AppError::LimitExceeded { .. } => 29,
         }
+    }
+
+    /// AA9-T4: the body names the limit, its value and the next step; a
+    /// retry-later limit is a 429 with `Retry-After`.
+    #[tokio::test]
+    async fn limit_exceeded_body_has_limit_value_and_next() {
+        let resp = AppError::LimitExceeded {
+            limit: "bulk.max_records",
+            value: 500,
+            next: NextStep::Split,
+        }
+        .into_response();
+        assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("body");
+        let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(body["error"], "limit_exceeded");
+        assert_eq!(body["limit"], "bulk.max_records");
+        assert_eq!(body["value"], 500);
+        assert_eq!(body["next"]["kind"], "split");
+        let resp = AppError::LimitExceeded {
+            limit: "export.per_hour",
+            value: 10,
+            next: NextStep::RetryAfter { seconds: 60 },
+        }
+        .into_response();
+        assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(resp.headers()["retry-after"], "60");
     }
 
     /// Z14-T2: every code a variant answers with is in the catalogue.
@@ -1303,6 +1377,11 @@ mod tests {
             },
             AppError::MethodNotAllowed,
             AppError::AttributeNotWritable("x".to_string()),
+            AppError::LimitExceeded {
+                limit: "bulk.max_records",
+                value: 500,
+                next: NextStep::Split,
+            },
             AppError::FieldLocked {
                 locks: vec![crate::types::LockedField {
                     field: "x".to_string(),
@@ -1358,7 +1437,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=28).collect::<Vec<_>>(),
+            (0..=29).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

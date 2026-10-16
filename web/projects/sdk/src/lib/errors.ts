@@ -9,6 +9,8 @@ export type ApiErrorKind =
   // Q15-T4: the write set an attribute the caller may not write; the
   // message names it.
   | 'attribute_not_writable'
+  // AA9-T4: past a limit; the body carries `limit`, `value` and `next`.
+  | 'limit_exceeded'
   | 'conflict'
   | 'version_conflict'
   // A15-T4: the save matches existing records under a blocking duplicate
@@ -52,6 +54,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<ApiErrorKind>([
   'unauthorized',
   'forbidden',
   'attribute_not_writable',
+  'limit_exceeded',
   'conflict',
   'version_conflict',
   'duplicate_detected',

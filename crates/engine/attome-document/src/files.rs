@@ -468,9 +468,12 @@ async fn check_storage_quota(
             .map_err(AppError::internal)?;
 
         if (used.max(0) as u64).saturating_add(new_bytes) > max_user_bytes {
-            return Err(AppError::Validation(format!(
-                "this upload would exceed your storage quota ({max_user_bytes} bytes)"
-            )));
+            // Z6-T7 / AA9-T4: the quota, named.
+            return Err(AppError::LimitExceeded {
+                limit: "storage.max_user_storage_bytes",
+                value: i64::try_from(max_user_bytes).unwrap_or(i64::MAX),
+                next: attome_types::error::NextStep::ContactAdmin,
+            });
         }
     }
 
@@ -497,9 +500,11 @@ async fn check_storage_quota(
         .map_err(AppError::internal)?;
 
         if (used.max(0) as u64).saturating_add(new_bytes) > max_deployment_bytes {
-            return Err(AppError::Validation(format!(
-                "this upload would exceed the deployment's storage quota ({max_deployment_bytes} bytes)"
-            )));
+            return Err(AppError::LimitExceeded {
+                limit: "storage.max_deployment_storage_bytes",
+                value: i64::try_from(max_deployment_bytes).unwrap_or(i64::MAX),
+                next: attome_types::error::NextStep::ContactAdmin,
+            });
         }
     }
 

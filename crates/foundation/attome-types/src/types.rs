@@ -131,7 +131,7 @@ pub enum ErrorDetails {
 )]
 pub struct ErrorResponse {
     /// Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
-    /// `attribute_not_writable`,
+    /// `attribute_not_writable`, `limit_exceeded`,
     /// `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
     /// `validation_error`, `feature_unavailable`, `feature_hidden`,
     /// `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
