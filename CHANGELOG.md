@@ -25,6 +25,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The OpenAPI document carries an `ErrorCode` enum: every `error` code the API answers with, each
+  described and marked when a retry may succeed (`attome_types::error_codes`).
 - `GET /api/v1/admin/security/mfa/coverage` (with `role_id` and `missing_only`) lists each active
   account's second factors and flags administrators without a phishing-resistant factor;
   `…/coverage/summary` counts per role.

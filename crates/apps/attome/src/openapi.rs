@@ -74,6 +74,14 @@ fn build() -> utoipa::openapi::OpenApi {
     attome_server::middleware::deprecation::apply_to_openapi(&mut doc);
     // S2-T8: the document names the release it describes.
     doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
+    // Z14-T2: every error code, as one enum the SDK can generate.
+    doc.components
+        .get_or_insert_with(Default::default)
+        .schemas
+        .insert(
+            "ErrorCode".to_owned(),
+            attome_types::error_codes::openapi_schema(),
+        );
     doc
 }
 

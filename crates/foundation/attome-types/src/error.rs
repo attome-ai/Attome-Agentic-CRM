@@ -1237,6 +1237,23 @@ mod tests {
         }
     }
 
+    /// Z14-T2: every code a variant answers with is in the catalogue.
+    #[tokio::test]
+    async fn every_variant_code_is_catalogued() {
+        for e in one_of_each_variant() {
+            let resp = e.into_response();
+            let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+                .await
+                .expect("body");
+            let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+            let code = body["error"].as_str().expect("error code").to_owned();
+            assert!(
+                crate::error_codes::lookup(&code).is_some(),
+                "{code} is not in error_codes::ERROR_CODES"
+            );
+        }
+    }
+
     fn one_of_each_variant() -> Vec<AppError> {
         vec![
             AppError::NotFound,

@@ -27,6 +27,7 @@
 //! oversight to "fix" by pulling infrastructure error types down here.
 
 pub mod error;
+pub mod error_codes;
 pub mod request_scope;
 pub mod text;
 pub mod types;
