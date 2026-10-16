@@ -484,11 +484,15 @@ pub(super) async fn create_record(
     // `upsert_record` when a changeset is in play (`Op::UpsertRecord`, in
     // `entity_mutation::record_reference_write`); every other write is
     // unchanged (the ambient recording is read only for reference data).
+    let skip_duplicates = duplicate_bypass(&ctx, &headers)?;
     let (_, response) = reference::scope(
         Arc::new(recording.0),
-        attome_core::match_rule::with_duplicate_reason(
-            duplicate_reason_header(&headers),
-            create_record_for(&state, &ctx, claims.sub, &entity_input, body),
+        attome_core::match_rule::with_duplicate_skip(
+            skip_duplicates,
+            attome_core::match_rule::with_duplicate_reason(
+                duplicate_reason_header(&headers),
+                create_record_for(&state, &ctx, claims.sub, &entity_input, body),
+            ),
         ),
     )
     .await?;
@@ -701,6 +705,14 @@ pub async fn create_record_for(
         .ok_or_else(|| AppError::internal("create mutation returned no row"))?;
     let warnings = std::mem::take(&mut mutation.warnings);
 
+    audit_duplicate_skip(
+        &mut tx,
+        &state,
+        acting_user_id,
+        &entity_name,
+        mutation.record_id,
+    )
+    .await?;
     let mut audit = MutationAudit::new();
     audit.changed_fields = field_changes_from_obj(&mut tx, &state, &attrs, obj, None).await;
     if !duplicates.is_empty() || hidden_duplicates > 0 {
@@ -925,6 +937,7 @@ pub async fn update_record_for_outcome(
         .ok_or_else(|| AppError::internal("update mutation returned no row"))?;
     let approval = mutation.approval.clone();
     let warnings = std::mem::take(&mut mutation.warnings);
+    audit_duplicate_skip(&mut tx, &state, acting_user_id, &entity_name, record_id).await?;
 
     let mut audit = MutationAudit::new();
     // M07 Phase F: the entity event of a write parked pending approval names
@@ -1180,19 +1193,23 @@ pub(super) async fn update_record(
     // differently). Header parsing is the one thing that non-HTTP-caller
     // version cannot do for itself, so that is all this handler still does.
     let expected_version = expected_row_version(&headers)?;
+    let skip_duplicates = duplicate_bypass(&ctx, &headers)?;
     // D-787 rule 7: see `create_record` (reference data only).
     let response = match reference::scope(
         Arc::new(recording.0),
-        attome_core::match_rule::with_duplicate_reason(
-            duplicate_reason_header(&headers),
-            update_record_for(
-                &state,
-                &ctx,
-                claims.sub,
-                &entity_input,
-                record_id,
-                expected_version,
-                body,
+        attome_core::match_rule::with_duplicate_skip(
+            skip_duplicates,
+            attome_core::match_rule::with_duplicate_reason(
+                duplicate_reason_header(&headers),
+                update_record_for(
+                    &state,
+                    &ctx,
+                    claims.sub,
+                    &entity_input,
+                    record_id,
+                    expected_version,
+                    body,
+                ),
             ),
         ),
     )
@@ -1861,6 +1878,55 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+/// S1-T14: whether the request asks to skip the write-time duplicate check
+/// (`Attome-Duplicate-Check: skip`).
+pub fn duplicate_check_skipped(headers: &axum::http::HeaderMap) -> bool {
+    headers
+        .get("attome-duplicate-check")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.trim().eq_ignore_ascii_case("skip"))
+}
+
+/// S1-T14: the skip header needs the `duplicate.bypass` privilege; without
+/// it the request is refused rather than silently checked.
+fn duplicate_bypass(
+    ctx: &attome_server::security::SecurityContext,
+    headers: &axum::http::HeaderMap,
+) -> Result<bool, AppError> {
+    if !duplicate_check_skipped(headers) {
+        return Ok(false);
+    }
+    ctx.require("duplicate", "bypass")?;
+    Ok(true)
+}
+
+/// S1-T14: the security event that says a write skipped the duplicate
+/// check, in the write's own transaction.
+async fn audit_duplicate_skip(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    state: &EngineState,
+    acting_user_id: Uuid,
+    entity_name: &str,
+    record_id: Uuid,
+) -> Result<(), AppError> {
+    if !crate::duplicate_check::skipped() {
+        return Ok(());
+    }
+    attome_audit::security::write_security_event(
+        tx,
+        &attome_audit::audit_service(state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Access,
+            attome_audit::AuditOperation::Update,
+            acting_user_id,
+            entity_name,
+            Some(record_id),
+        )
+        .named("duplicate_check_skipped"),
+    )
+    .await
 }
 
 /// A15-T4: the reason a request gives for saving a likely duplicate.

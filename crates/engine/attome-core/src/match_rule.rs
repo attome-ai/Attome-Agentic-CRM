@@ -193,6 +193,22 @@ pub async fn with_duplicate_reason<F: Future>(reason: Option<String>, f: F) -> F
     DUPLICATE_REASON.scope(reason, f).await
 }
 
+tokio::task_local! {
+    /// S1-T14: the request skips the write-time duplicate check.
+    static DUPLICATE_SKIP: bool;
+}
+
+/// S1-T14: runs `f` with the write-time duplicate check skipped when `skip`
+/// (the caller has checked the `duplicate.bypass` privilege).
+pub async fn with_duplicate_skip<F: Future>(skip: bool, f: F) -> F::Output {
+    DUPLICATE_SKIP.scope(skip, f).await
+}
+
+/// S1-T14: whether the write in scope skips the duplicate check.
+pub fn duplicate_check_skipped() -> bool {
+    DUPLICATE_SKIP.try_with(|skip| *skip).unwrap_or(false)
+}
+
 /// A15-T4: the reason in scope, if a request gave one.
 pub fn duplicate_reason() -> Option<String> {
     DUPLICATE_REASON

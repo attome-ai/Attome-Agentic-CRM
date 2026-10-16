@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- A create or update with `Attome-Duplicate-Check: skip` bypasses the write-time duplicate
+  check; it needs the new `duplicate.bypass` privilege (403 without) and leaves a
+  `duplicate_check_skipped` audit event in the write's transaction.
 - Workflows cannot loop: a flow started by another flow's write carries a chain depth, and a
   chain stops at depth 8 (`workflow_chain_depth_stops_total`). A flow's graph may set
   `settings.max_concurrent_runs`; extra runs wait as `queued` and start as runs finish.

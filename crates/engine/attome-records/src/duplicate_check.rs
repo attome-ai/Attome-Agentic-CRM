@@ -91,6 +91,9 @@ pub async fn check(
     record_id: Option<Uuid>,
     values: &Map<String, Value>,
 ) -> Result<DuplicateOutcome, AppError> {
+    if skipped() {
+        return Ok(DuplicateOutcome::default());
+    }
     find(state, ctx, entity_id, entity_name, record_id, values, true).await
 }
 
@@ -218,6 +221,13 @@ async fn find(
         }
     }
     Ok(outcome)
+}
+
+/// S1-T14: the outcome of a write whose request skipped the check
+/// (`Attome-Duplicate-Check: skip`, privilege `duplicate.bypass`): nothing
+/// matched. The write path audits the skip in its own transaction.
+pub fn skipped() -> bool {
+    attome_core::match_rule::duplicate_check_skipped()
 }
 
 /// Applies the outcome to the save: `Err(409 duplicate_detected)` when a

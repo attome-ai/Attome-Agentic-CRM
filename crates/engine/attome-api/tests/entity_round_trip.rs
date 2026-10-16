@@ -9278,3 +9278,97 @@ fn restore_refuses_a_record_whose_lookup_target_is_no_longer_live() {
         );
     })
 }
+
+/// S1-T14: `Attome-Duplicate-Check: skip` needs `duplicate.bypass`; with it a
+/// save a `block` rule would refuse goes through and the skip is audited.
+#[test]
+fn skip_duplicate_check_requires_privilege_and_is_audited() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let (_, user_cookie, user_email) = seed_bulk_user(&system, "dupskip").await;
+        let app = full_app(system);
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "dupskip").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"phone","name":"Phone","field_type":"text"}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+        grant_bulk_privilege(
+            &app,
+            &admin_cookie,
+            &user_email,
+            &format!("{logicalname}.create"),
+        )
+        .await;
+
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/v1/admin/data/match-rules")
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(format!(
+                r#"{{"entity":"{logicalname}","name":"same phone","threshold":1.0,"on_save":"block",
+                    "fields":[{{"field":"phone","comparator":"phone","weight":1.0,"default_country":"SA"}}]}}"#
+            )))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("rule");
+        assert_eq!(res.status(), StatusCode::CREATED);
+
+        let create = |cookie: &str, skip: bool| {
+            let mut req = Request::builder()
+                .method("POST")
+                .uri(format!("/api/v1/{logicalname}"))
+                .header("cookie", cookie)
+                .header("content-type", "application/json");
+            if skip {
+                req = req.header("attome-duplicate-check", "skip");
+            }
+            req.body(Body::from(r#"{"phone":"0501234567"}"#)).unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(create(&user_cookie, false))
+            .await
+            .expect("first");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let res = app
+            .clone()
+            .oneshot(create(&user_cookie, false))
+            .await
+            .expect("blocked");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        let res = app
+            .clone()
+            .oneshot(create(&user_cookie, true))
+            .await
+            .expect("no privilege");
+        assert_eq!(
+            res.status(),
+            StatusCode::FORBIDDEN,
+            "the skip header needs duplicate.bypass"
+        );
+
+        grant_bulk_privilege(&app, &admin_cookie, &user_email, "duplicate.bypass").await;
+        let res = app
+            .clone()
+            .oneshot(create(&user_cookie, true))
+            .await
+            .expect("skipped");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let id = Uuid::parse_str(body_json(res).await["id"].as_str().unwrap()).unwrap();
+        let audited: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM audit_header \
+             WHERE record_id = $1 AND event_name = 'duplicate_check_skipped'",
+        )
+        .bind(id)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("count audit rows");
+        assert_eq!(audited, 1, "the skip leaves one audit row");
+    })
+}
