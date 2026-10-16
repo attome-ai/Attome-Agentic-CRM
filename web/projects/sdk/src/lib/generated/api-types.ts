@@ -8781,6 +8781,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commission/periods/{id}/recalc/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_recalc_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/commission/periods/{id}/runs": {
         parameters: {
             query?: never;
@@ -8807,6 +8823,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["commission_post_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/plans/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_publish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16322,6 +16354,22 @@ export interface components {
             /** Format: uuid */
             period_id: string;
             status: string;
+        };
+        CommissionPlanPublished: {
+            compiled_hash: string;
+            components: number;
+            /** Format: uuid */
+            plan_id: string;
+            /** Format: uuid */
+            version_id: string;
+        };
+        CommissionRecalcApplied: {
+            /** Format: uuid */
+            period_id: string;
+            /** Format: int64 */
+            previews_applied: number;
+            /** @description One calculation run per plan version. */
+            run_ids: string[];
         };
         CommissionRunBody: {
             /** Format: uuid */
@@ -60872,6 +60920,65 @@ export interface operations {
             };
         };
     };
+    commission_post_recalc_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The commission period */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calculation runs are queued and the previews marked applied */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionRecalcApplied"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_run.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such period */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is approved or locked, or has no pending preview */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     commission_post_run: {
         parameters: {
             query?: never;
@@ -60996,6 +61103,74 @@ export interface operations {
                 };
             };
             /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    commission_post_publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The compensation plan */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The draft version compiled and is published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionPlanPublished"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_plan.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such plan */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The plan has no draft version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A component does not compile (overlapping bands, an unreadable rate table); the message names it */
             422: {
                 headers: {
                     [name: string]: unknown;

@@ -45662,6 +45662,95 @@
         }
       }
     },
+    "/api/v1/commission/periods/{id}/recalc/apply": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_recalc_apply",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The commission period",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Calculation runs are queued and the previews marked applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionRecalcApplied"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_run.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The period is approved or locked, or has no pending preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/commission/periods/{id}/runs": {
       "post": {
         "tags": [
@@ -45866,6 +45955,105 @@
             }
           ],
           "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/commission/plans/{id}/publish": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_publish",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The compensation plan",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The draft version compiled and is published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionPlanPublished"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_plan.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The plan has no draft version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A component does not compile (overlapping bands, an unreadable rate table); the message names it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
         }
       }
     },
@@ -76365,6 +76553,59 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "CommissionPlanPublished": {
+        "type": "object",
+        "required": [
+          "plan_id",
+          "version_id",
+          "compiled_hash",
+          "components"
+        ],
+        "properties": {
+          "compiled_hash": {
+            "type": "string"
+          },
+          "components": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "plan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionRecalcApplied": {
+        "type": "object",
+        "required": [
+          "period_id",
+          "run_ids",
+          "previews_applied"
+        ],
+        "properties": {
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previews_applied": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "run_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "One calculation run per plan version."
           }
         }
       },
