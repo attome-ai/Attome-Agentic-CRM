@@ -435,9 +435,9 @@ pub enum EngineJob {
     /// E7-T4: refreshes the scheduled marketing lists that are due. Bare
     /// unit variant.
     SegmentRefreshDue,
-    /// E9-T7: marks overdue marketing hand-offs and tells the managers.
-    /// Bare unit variant.
-    MarketingHandoffSla,
+    /// The five-minute marketing pass: overdue hand-offs (E9-T7) and nurture
+    /// track moves (E9-T4). Bare unit variant.
+    MarketingSweep,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -887,7 +887,7 @@ impl EngineJob {
             | Self::TimerSweep
             | Self::MarketingNightly
             | Self::SegmentRefreshDue
-            | Self::MarketingHandoffSla
+            | Self::MarketingSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -984,7 +984,7 @@ impl EngineJob {
             EngineJob::TimerFire { .. } => "TimerFire",
             EngineJob::MarketingNightly => "MarketingNightly",
             EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
-            EngineJob::MarketingHandoffSla => "MarketingHandoffSla",
+            EngineJob::MarketingSweep => "MarketingSweep",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1093,7 +1093,7 @@ impl EngineJob {
             | Self::TimerSweep
             | Self::MarketingNightly
             | Self::SegmentRefreshDue
-            | Self::MarketingHandoffSla
+            | Self::MarketingSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1214,7 +1214,7 @@ impl EngineJob {
             | Self::TimerSweep
             | Self::MarketingNightly
             | Self::SegmentRefreshDue
-            | Self::MarketingHandoffSla
+            | Self::MarketingSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1552,7 +1552,7 @@ mod tests {
         assert_round_trips(EngineJob::TimerSweep);
         assert_round_trips(EngineJob::MarketingNightly);
         assert_round_trips(EngineJob::SegmentRefreshDue);
-        assert_round_trips(EngineJob::MarketingHandoffSla);
+        assert_round_trips(EngineJob::MarketingSweep);
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),
         });

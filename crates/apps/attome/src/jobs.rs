@@ -931,7 +931,7 @@ async fn dispatch_platform_job(
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
         // E9-T7: overdue marketing hand-offs, every five minutes.
-        EngineJob::MarketingHandoffSla => {
+        EngineJob::MarketingSweep => {
             let overdue = attome_marketing::handoff_sla::sweep_overdue(
                 &db,
                 &config.notification,
@@ -940,6 +940,11 @@ async fn dispatch_platform_job(
             .await?;
             if overdue > 0 {
                 tracing::info!(overdue, "marketing hand-offs: overdue ones escalated");
+            }
+            // E9-T4: people move between nurture tracks as they change.
+            let moved = attome_marketing::nurture_tracks::run(&db).await?;
+            if moved > 0 {
+                tracing::info!(moved, "nurture: people moved between tracks");
             }
         }
         // E7-T4: scheduled segment refreshes, hourly.
@@ -2107,7 +2112,7 @@ const DEDUP_KEY_WEBCRAWL_RECRAWL_DUE: &str = "webcrawl-recrawl-due";
 const DEDUP_KEY_TIMER_SWEEP: &str = "timer-sweep";
 const DEDUP_KEY_MARKETING_NIGHTLY: &str = "marketing-nightly";
 const DEDUP_KEY_SEGMENT_REFRESH_DUE: &str = "segment-refresh-due";
-const DEDUP_KEY_MARKETING_HANDOFF_SLA: &str = "marketing-handoff-sla";
+const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2172,7 +2177,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::TimerSweep => DEDUP_KEY_TIMER_SWEEP,
         EngineJob::MarketingNightly => DEDUP_KEY_MARKETING_NIGHTLY,
         EngineJob::SegmentRefreshDue => DEDUP_KEY_SEGMENT_REFRESH_DUE,
-        EngineJob::MarketingHandoffSla => DEDUP_KEY_MARKETING_HANDOFF_SLA,
+        EngineJob::MarketingSweep => DEDUP_KEY_MARKETING_SWEEP,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2490,13 +2495,13 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
 }
 
 /// E9-T7: every five minutes, the overdue marketing hand-offs.
-pub fn spawn_marketing_handoff_sla_scheduler(db: DbPool, interval: std::time::Duration) {
+pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
     spawn_dedup_scheduler(
         db,
         interval,
-        EngineJob::MarketingHandoffSla,
-        DEDUP_KEY_MARKETING_HANDOFF_SLA,
-        "marketing hand-off sla",
+        EngineJob::MarketingSweep,
+        DEDUP_KEY_MARKETING_SWEEP,
+        "marketing sweep",
     );
 }
 

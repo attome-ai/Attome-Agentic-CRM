@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Nurture programmes with tracks move people to the best-fitting track (stage, then interest, then
+  language) when those change, keeping what they have already seen; acquisition-only programmes let
+  go of anyone who becomes a customer.
 - The marketing-to-sales hand-off SLA: a hand-off is due after the programme's business hours (8 by
   default, Sunday to Thursday 09:00 to 17:00 Riyadh time); every five minutes the overdue ones are
   marked and the assignee's manager notified once, for programmes with the SLA on.
