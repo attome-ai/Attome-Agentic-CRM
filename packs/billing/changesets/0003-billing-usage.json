@@ -1,0 +1,38 @@
+{
+  "author": "packs",
+  "checksum": "sha256:d87ba60620e95ea771c2df76c8a0e82b47df52d10d85ccb0d828862a9af66493",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "F3-T7: the subscription_usage.write privilege that lets a role or a server-to-server client send metered usage to POST /api/v1/billing/usage.",
+  "format": "attome-changeset/v1",
+  "id": "01a144b7-2a7c-70bf-bd21-58d2e3f8cb80",
+  "layer": "product",
+  "name": "billing-usage",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Sends metered usage for subscription lines.",
+          "key": "subscription_usage.write",
+          "name": "Send Usage"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "subscription_usage.write"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 3,
+  "title": "Pack: metered usage privilege"
+}

@@ -8,6 +8,7 @@ pub mod model;
 pub mod payment;
 pub mod subscription;
 pub mod tax;
+pub mod usage;
 
 pub use model::BillingModel;
 
@@ -16,7 +17,7 @@ pub use model::BillingModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 35;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <usage::ApiDocFragment as utoipa::OpenApi>::openapi()
 }

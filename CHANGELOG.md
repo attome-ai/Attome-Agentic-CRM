@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Metered usage: `POST /api/v1/billing/usage` takes up to 1000 usage records per call with an
+  idempotency key each; a repeated key is counted as a duplicate and not stored again
+  (privilege `subscription_usage.write`, migration 0088).
 - Website crawl sources take settings: include and exclude path patterns, languages, audience,
   import mode, schedule, sitemap URL, watch-only and one allowed intranet host, on
   `POST /api/v1/webcrawl/targets` and in every target read; pages keep their ETag, last-modified

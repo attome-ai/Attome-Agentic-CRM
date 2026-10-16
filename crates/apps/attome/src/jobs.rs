@@ -1917,7 +1917,11 @@ const PROCESS_PARTITIONED_TABLES: &[(&str, &str)] = &[("process_event", "ts_star
 
 /// E14-T2 — `marketing_web_event` (migrations/0085_marketing_web_events.sql),
 /// RANGE-partitioned by month on `occurred_at` and append-only.
-const MARKETING_PARTITIONED_TABLES: &[(&str, &str)] = &[("marketing_web_event", "occurred_at")];
+const MARKETING_PARTITIONED_TABLES: &[(&str, &str)] = &[
+    ("marketing_web_event", "occurred_at"),
+    // F3-T7 — `billing_usage_record` (migrations/0088_billing_usage.sql).
+    ("billing_usage_record", "occurred_at"),
+];
 
 /// Detached `tokio::spawn` loop, same shape as
 /// `attome_api::spawn_chainer_lag_refresh` — periodically enqueues
