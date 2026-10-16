@@ -5,6 +5,7 @@
 //! on the `fulfilment` module.
 
 pub mod model;
+pub mod sourcing;
 
 pub use model::FulfilmentModel;
 

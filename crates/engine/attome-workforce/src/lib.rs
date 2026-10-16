@@ -6,6 +6,7 @@
 
 pub mod model;
 pub mod rules;
+pub mod solver;
 pub mod staffing;
 
 pub use model::WorkforceModel;
