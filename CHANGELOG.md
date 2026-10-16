@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission into payroll: locking a period emits `commission.period_accrued`;
+  `POST /api/v1/hr/payroll-handoff` returns the payroll CSV and moves its approved commission payouts to
+  `exported`; `POST /api/v1/hr/payroll-handoff/confirm` marks them `paid` with `commission.payout_paid`.
 - Human resources engine `attome-hr`: `POST /api/v1/hr/leave-requests/{id}/submit` counts the working days
   on the default calendar, checks the balance and opens the approval (`hr.leave_decide`), which moves
   the days to taken; `GET /api/v1/hr/availability` lists a user's days on approved leave; and

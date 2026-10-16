@@ -225,6 +225,16 @@ pub async fn do_close_period(
     .await
     .map_err(AppError::internal)?
     .rows_affected();
+    // F10-T11: finance posts the accrual from this event (the totals are
+    // the period's approved payouts).
+    attome_core::change_feed::emit_named(
+        &mut tx,
+        "comp_period",
+        period,
+        attome_core::change_feed::ChangeOperation::Update,
+        "commission.period_accrued",
+    )
+    .await?;
     attome_audit::write_business_event_in_tx(
         &mut tx,
         &attome_audit::audit_service(state),

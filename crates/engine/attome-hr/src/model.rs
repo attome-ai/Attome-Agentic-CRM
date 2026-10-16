@@ -39,5 +39,13 @@ impl EngineModel for HrModel {
                 "/api/v1/hr/payroll-export",
                 get(crate::payroll_export::get_hr_payroll_export),
             )
+            .route(
+                "/api/v1/hr/payroll-handoff",
+                post(crate::payroll_export::post_hr_payroll_handoff),
+            )
+            .route(
+                "/api/v1/hr/payroll-handoff/confirm",
+                post(crate::payroll_export::post_hr_payroll_confirm),
+            )
     }
 }

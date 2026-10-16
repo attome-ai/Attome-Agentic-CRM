@@ -18,14 +18,15 @@ use attome_core::EngineState;
 use attome_server::authz::{Authorized, Privilege};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
+    Json,
     extract::{Query, State},
     http::header,
     response::{IntoResponse, Response},
 };
 use chrono::NaiveDate;
 use rust_decimal::{Decimal, RoundingStrategy};
-use serde::Deserialize;
-use utoipa::IntoParams;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::leave::EmployeeRead;
@@ -267,21 +268,190 @@ pub(crate) async fn get_hr_payroll_export(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok((
+    Ok(csv_response(q.from, q.to, csv))
+}
+
+fn csv_response(from: NaiveDate, to: NaiveDate, csv: String) -> Response {
+    (
         [
             (header::CONTENT_TYPE, "text/csv; charset=utf-8".to_owned()),
             (
                 header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"payroll-{}-{}.csv\"", q.from, q.to),
+                format!("attachment; filename=\"payroll-{from}-{to}.csv\""),
             ),
         ],
         csv,
     )
-        .into_response())
+        .into_response()
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct HrPayrollHandoffBody {
+    pub from: NaiveDate,
+    pub to: NaiveDate,
+    /// `generic` (default) or `wps`.
+    #[serde(default)]
+    #[schema(value_type = Option<String>)]
+    pub template: Option<PayrollTemplate>,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/hr/payroll-handoff",
+    tag = "hr",
+    request_body = HrPayrollHandoffBody,
+    responses(
+        (status = 200, description = "The period's payroll CSV; the approved commission payouts in it are now `exported`", content_type = "text/csv", body = String),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks employee.read, or the salary or national id field grant", body = ErrorResponse),
+        (status = 422, description = "The period is reversed or over a year", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+)]
+pub(crate) async fn post_hr_payroll_handoff(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<EmployeeRead>>,
+    Json(body): Json<HrPayrollHandoffBody>,
+) -> Result<Response, AppError> {
+    // F10-T11: the same file as the export, and the commission it carries
+    // leaves `approved` for `exported` so it is never handed over twice.
+    let response = get_hr_payroll_export(
+        State(state.clone()),
+        ctx,
+        Query(PayrollExportQuery {
+            from: body.from,
+            to: body.to,
+            template: body.template,
+        }),
+    )
+    .await?;
+    mark_payouts(&state, body.from, body.to, "approved", "exported", None).await?;
+    Ok(response)
+}
+
+/// Moves the period's commission payouts from one status to the next; how
+/// many. With `event`, each moved payout's change event carries that name.
+async fn mark_payouts(
+    state: &EngineState,
+    from: NaiveDate,
+    to: NaiveDate,
+    status: &str,
+    next: &str,
+    event: Option<&str>,
+) -> Result<u64, AppError> {
+    let has_commission: bool = sqlx::query_scalar("SELECT to_regclass('comp_payout') IS NOT NULL")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    if !has_commission {
+        return Ok(0);
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let moved: Vec<Uuid> = sqlx::query_scalar(
+        "UPDATE comp_payout p SET status = $4, modified_at = now(), \
+             row_version = p.row_version + 1 \
+         FROM comp_run r, comp_period cp \
+         WHERE r.id = p.run_ref AND cp.id = r.period_ref AND p.status = $3 \
+           AND cp.ends_on::date BETWEEN $1 AND $2 \
+           AND (p.is_active IS NULL OR p.is_active = true) \
+         RETURNING p.id",
+    )
+    .bind(from)
+    .bind(to)
+    .bind(status)
+    .bind(next)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some(name) = event {
+        for id in &moved {
+            attome_core::change_feed::emit_named(
+                &mut tx,
+                "comp_payout",
+                *id,
+                attome_core::change_feed::ChangeOperation::Update,
+                name,
+            )
+            .await?;
+        }
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(moved.len() as u64)
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct HrPayrollConfirmBody {
+    pub from: NaiveDate,
+    pub to: NaiveDate,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+pub struct HrPayrollConfirmed {
+    pub payouts_paid: u64,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/hr/payroll-handoff/confirm",
+    tag = "hr",
+    request_body = HrPayrollConfirmBody,
+    responses(
+        (status = 200, description = "Payroll ran: the period's exported commission payouts are `paid` (event `commission.payout_paid`)", body = HrPayrollConfirmed),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks employee.read", body = ErrorResponse),
+        (status = 422, description = "The period is reversed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+)]
+pub(crate) async fn post_hr_payroll_confirm(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<EmployeeRead>>,
+    Json(body): Json<HrPayrollConfirmBody>,
+) -> Result<Json<HrPayrollConfirmed>, AppError> {
+    if body.to < body.from {
+        return Err(AppError::Validation("to is before from".into()));
+    }
+    let paid = mark_payouts(
+        &state,
+        body.from,
+        body.to,
+        "exported",
+        "paid",
+        Some("commission.payout_paid"),
+    )
+    .await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        attome_audit::BusinessEvent::new(
+            "employee",
+            Uuid::nil(),
+            AuditOperation::Update,
+            "hr.payroll_confirmed",
+            ctx.user_id,
+        )
+        .comment(format!(
+            "{} to {}: {paid} commission payouts paid",
+            body.from, body.to
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(HrPayrollConfirmed { payouts_paid: paid }))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_hr_payroll_export))]
+#[openapi(
+    paths(
+        get_hr_payroll_export,
+        post_hr_payroll_handoff,
+        post_hr_payroll_confirm
+    ),
+    components(schemas(HrPayrollHandoffBody, HrPayrollConfirmBody, HrPayrollConfirmed))
+)]
 pub(crate) struct ApiDocFragment;
 
 #[cfg(test)]
