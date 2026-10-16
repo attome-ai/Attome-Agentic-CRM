@@ -14,3 +14,4 @@ export { OpsMetricsComponent } from './metrics/metrics.component';
 export { OpsOverviewComponent } from './ops-overview/ops-overview.component';
 export { DeploysComponent } from './deploys/deploys.component';
 export { LabelWorkbenchComponent } from './label-workbench/label-workbench.component';
+export { EnvVariablesComponent } from './env-variables/env-variables.component';

@@ -429,6 +429,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.LabelWorkbenchComponent),
           },
           {
+            // A30-T3: this deployment's environment variable values.
+            path: 'env-variables',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.EnvVariablesComponent),
+          },
+          {
             // U4-T4: nodes by health and a page of charts per area.
             path: 'ops',
             canActivate: [authGuard],

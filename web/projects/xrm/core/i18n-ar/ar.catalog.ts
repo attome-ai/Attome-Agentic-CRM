@@ -191,6 +191,18 @@ export const xrmAr = {
       email: 'البريد', models: 'نماذج الذكاء الاصطناعي', other: 'أخرى',
     },
   },
+  envVariablesPage: {
+    title: 'متغيرات البيئة',
+    intro: 'إعدادات تختلف قيمتها من بيئة لأخرى. التعريفات تأتي مع الإعدادات، وكل نشر يحدد قيمه هنا.',
+    none: 'لم يُعرَّف أي متغير بيئة بعد.',
+    name: 'الاسم', type: 'النوع', value: 'القيمة', updated: 'آخر تحديث', actions: 'الإجراءات',
+    required: 'مطلوب', default: 'افتراضي', missing: 'هذه القيمة مطلوبة هنا.',
+    secretSet: 'محددة (مخفية)', notSet: 'غير محددة', yes: 'نعم', no: 'لا',
+    set: 'تحديد', replace: 'استبدال', save: 'حفظ', cancel: 'إلغاء', clear: 'مسح', history: 'السجل',
+    noHistory: 'لا توجد تغييرات بعد.',
+    types: { text: 'نص', number: 'رقم', boolean: 'نعم/لا', url: 'عنوان', secret: 'سري' },
+    changes: { set: 'حُددت', cleared: 'مُسحت' },
+  },
   deploysPage: {
     title: 'عمليات النشر الأخيرة', none: 'لم يُسجَّل أي تشغيل أو إيقاف بعد.',
     node: 'العقدة', version: 'الإصدار', kind: 'الخطوة', startedAt: 'البدء', duration: 'المدة',

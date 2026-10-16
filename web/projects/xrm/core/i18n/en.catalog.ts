@@ -211,6 +211,18 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  envVariablesPage: {
+    title: 'Environment variables',
+    intro: 'Settings whose value differs per environment. Definitions come with the configuration; each deployment sets its own values here.',
+    none: 'No environment variable is defined yet.',
+    name: 'Name', type: 'Type', value: 'Value', updated: 'Updated', actions: 'Actions',
+    required: 'required', default: 'default', missing: 'A value is required here.',
+    secretSet: 'Set (hidden)', notSet: 'Not set', yes: 'Yes', no: 'No',
+    set: 'Set', replace: 'Replace', save: 'Save', cancel: 'Cancel', clear: 'Clear', history: 'History',
+    noHistory: 'No changes yet.',
+    types: { text: 'Text', number: 'Number', boolean: 'Yes/No', url: 'Address', secret: 'Secret' },
+    changes: { set: 'set', cleared: 'cleared' },
+  },
   deploysPage: {
     title: 'Recent deploys', none: 'No start or drain recorded yet.',
     node: 'Node', version: 'Version', kind: 'Step', startedAt: 'Started', duration: 'Took',
