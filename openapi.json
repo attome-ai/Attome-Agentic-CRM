@@ -1215,6 +1215,85 @@
         ]
       }
     },
+    "/api/v1/admin/ai/follow-up-rules/{id}/run": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "run_followup_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The follow-up rule",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The rule's scan is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiFollowupRunQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such active rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "execute"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/ai/model-comparison": {
       "get": {
         "tags": [
@@ -14685,6 +14764,76 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/health": {
+      "get": {
+        "tags": [
+          "admin-entities"
+        ],
+        "operationId": "get_entity_health",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entity table's health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableHealth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -34504,6 +34653,76 @@
         }
       }
     },
+    "/api/v1/admin/table-health": {
+      "get": {
+        "tags": [
+          "admin-entities"
+        ],
+        "operationId": "get_table_health",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every entity table's health, largest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TableHealth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/tag-groups": {
       "get": {
         "tags": [
@@ -39835,6 +40054,157 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/ai/follow-ups": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "list_my_followups",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's open follow-ups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AiFollowupItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/follow-ups/{id}/dismiss": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "dismiss_followup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The follow-up",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The follow-up's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Dismissed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such follow-up of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version, or already closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
         }
       }
     },
@@ -72849,6 +73219,68 @@
           }
         }
       },
+      "AiFollowupItem": {
+        "type": "object",
+        "description": "One follow-up the caller owns.",
+        "required": [
+          "id",
+          "rule_id",
+          "entity",
+          "record_id",
+          "reason",
+          "status",
+          "window_start",
+          "created_at",
+          "row_version"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "AiFollowupRunQueued": {
+        "type": "object",
+        "required": [
+          "rule_id"
+        ],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "AiStatus": {
         "type": "object",
         "required": [
@@ -93013,6 +93445,83 @@
           }
         }
       },
+      "PaginatedResponse_AiFollowupItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One follow-up the caller owns.",
+              "required": [
+                "id",
+                "rule_id",
+                "entity",
+                "record_id",
+                "reason",
+                "status",
+                "window_start",
+                "created_at",
+                "row_version"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "rule_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "window_start": {
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_ApiKeyMeta": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -101912,6 +102421,97 @@
                 "updated_at": {
                   "type": "string",
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_TableHealth": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One entity table's health.",
+              "required": [
+                "entity",
+                "total_bytes",
+                "live_rows",
+                "dead_rows",
+                "dead_ratio",
+                "unused_indexes",
+                "lookups_without_index"
+              ],
+              "properties": {
+                "dead_ratio": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "Dead rows over all rows; 0 for an empty table."
+                },
+                "dead_rows": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "growth_rows_7d": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64",
+                  "description": "Live rows added over the last seven days, when a sample exists."
+                },
+                "last_autovacuum": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "live_rows": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "lookups_without_index": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Lookup fields no index leads on."
+                },
+                "total_bytes": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "unused_indexes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Indexes never scanned since statistics were reset (unique and primary\nkeys excepted: they enforce rules even unscanned)."
                 }
               }
             }
@@ -113927,6 +114527,70 @@
               "null"
             ],
             "description": "AB5-T6: `operator`, `disk` or `recovery` while read-only mode is on."
+          }
+        }
+      },
+      "TableHealth": {
+        "type": "object",
+        "description": "One entity table's health.",
+        "required": [
+          "entity",
+          "total_bytes",
+          "live_rows",
+          "dead_rows",
+          "dead_ratio",
+          "unused_indexes",
+          "lookups_without_index"
+        ],
+        "properties": {
+          "dead_ratio": {
+            "type": "number",
+            "format": "double",
+            "description": "Dead rows over all rows; 0 for an empty table."
+          },
+          "dead_rows": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "growth_rows_7d": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Live rows added over the last seven days, when a sample exists."
+          },
+          "last_autovacuum": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "live_rows": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lookups_without_index": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lookup fields no index leads on."
+          },
+          "total_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unused_indexes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Indexes never scanned since statistics were reset (unique and primary\nkeys excepted: they enforce rules even unscanned)."
           }
         }
       },

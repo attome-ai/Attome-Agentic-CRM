@@ -302,6 +302,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/follow-up-rules/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["run_followup_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/model-comparison": {
         parameters: {
             query?: never;
@@ -2635,6 +2651,22 @@ export interface paths {
          *     exists at all.
          */
         get: operations["attribute_schema_change_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entities/{entity_id}/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_entity_health"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6417,6 +6449,22 @@ export interface paths {
         patch: operations["update_transition"];
         trace?: never;
     };
+    "/api/v1/admin/table-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_table_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/tag-groups": {
         parameters: {
             query?: never;
@@ -7235,6 +7283,38 @@ export interface paths {
          *     Repeating the request is harmless.
          */
         post: operations["cancel_turn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/follow-ups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_my_followups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/follow-ups/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["dismiss_followup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14232,6 +14312,28 @@ export interface components {
              *     not that the count happens to equal the cap.
              */
             truncated: boolean;
+        };
+        /** @description One follow-up the caller owns. */
+        AiFollowupItem: {
+            /** Format: date-time */
+            created_at: string;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            reason: string;
+            /** Format: uuid */
+            record_id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: uuid */
+            rule_id: string;
+            status: string;
+            /** Format: date */
+            window_start: string;
+        };
+        AiFollowupRunQueued: {
+            /** Format: uuid */
+            rule_id: string;
         };
         AiStatus: {
             /** @description `inference.generation.model`; empty when none is configured. */
@@ -22321,6 +22423,32 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_AiFollowupItem: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                entity: string;
+                /** Format: uuid */
+                id: string;
+                reason: string;
+                /** Format: uuid */
+                record_id: string;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: uuid */
+                rule_id: string;
+                status: string;
+                /** Format: date */
+                window_start: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_ApiKeyMeta: {
             items: {
                 /** Format: date-time */
@@ -25419,6 +25547,43 @@ export interface components {
                 strategy: string;
                 /** Format: date-time */
                 updated_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TableHealth: {
+            items: {
+                /**
+                 * Format: double
+                 * @description Dead rows over all rows; 0 for an empty table.
+                 */
+                dead_ratio: number;
+                /** Format: int64 */
+                dead_rows: number;
+                entity: string;
+                /**
+                 * Format: int64
+                 * @description Live rows added over the last seven days, when a sample exists.
+                 */
+                growth_rows_7d?: number | null;
+                /** Format: date-time */
+                last_autovacuum?: string | null;
+                /** Format: int64 */
+                live_rows: number;
+                /** @description Lookup fields no index leads on. */
+                lookups_without_index: string[];
+                /** Format: int64 */
+                total_bytes: number;
+                /**
+                 * @description Indexes never scanned since statistics were reset (unique and primary
+                 *     keys excepted: they enforce rules even unscanned).
+                 */
+                unused_indexes: string[];
             }[];
             /** Format: int64 */
             page: number;
@@ -30145,6 +30310,35 @@ export interface components {
             /** @description AB5-T6: `operator`, `disk` or `recovery` while read-only mode is on. */
             read_only_reason?: string | null;
         };
+        /** @description One entity table's health. */
+        TableHealth: {
+            /**
+             * Format: double
+             * @description Dead rows over all rows; 0 for an empty table.
+             */
+            dead_ratio: number;
+            /** Format: int64 */
+            dead_rows: number;
+            entity: string;
+            /**
+             * Format: int64
+             * @description Live rows added over the last seven days, when a sample exists.
+             */
+            growth_rows_7d?: number | null;
+            /** Format: date-time */
+            last_autovacuum?: string | null;
+            /** Format: int64 */
+            live_rows: number;
+            /** @description Lookup fields no index leads on. */
+            lookups_without_index: string[];
+            /** Format: int64 */
+            total_bytes: number;
+            /**
+             * @description Indexes never scanned since statistics were reset (unique and primary
+             *     keys excepted: they enforce rules even unscanned).
+             */
+            unused_indexes: string[];
+        };
         TagGroup: {
             colour?: string | null;
             create_policy: string;
@@ -32620,6 +32814,56 @@ export interface operations {
             };
             /** @description Unknown kind, or a period that ends before it starts */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    run_followup_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The follow-up rule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rule's scan is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiFollowupRunQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active rule */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -41221,6 +41465,56 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_entity_health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity table's health */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableHealth"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -54293,6 +54587,55 @@ export interface operations {
             };
         };
     };
+    get_table_health: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every entity table's health, largest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TableHealth"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_tag_groups: {
         parameters: {
             query?: never;
@@ -57781,6 +58124,106 @@ export interface operations {
             };
             /** @description No such conversation for this caller, or no such turn in it */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_my_followups: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open follow-ups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AiFollowupItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dismiss_followup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The follow-up's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The follow-up */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such follow-up of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or already closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
