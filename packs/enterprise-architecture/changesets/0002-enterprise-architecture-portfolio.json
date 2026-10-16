@@ -1,0 +1,3391 @@
+{
+  "author": "packs",
+  "checksum": "sha256:18bf71affcd5718cfedab98497042edb23c1961380991c2e841d1a345c906189",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Enterprise architecture (X11-T1) on today's four entities: application portfolio fields (the ITSM application CI it describes, vendor, hosting, annual cost, business and technical fit, TIME decision with rationale and savings), technology standards, owner assessments, interfaces and data flows between applications, architecture reviews from intake to decision, and target-state roadmap items tied to projects. Roles, report queries, and sidebar routes fixed to the generic entity list.",
+  "format": "attome-changeset/v1",
+  "id": "01a143d2-531f-7898-b939-3b74b4963bec",
+  "layer": "product",
+  "name": "enterprise-architecture-portfolio",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Application Assessment",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "ea_assessment",
+          "primary_name_attribute": "period_label"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ea_assessment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Application",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "application_ref",
+          "lookup_entity": "ea_application",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "application_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_label",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "period_label"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Assessor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "assessor_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "assessor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Business Fit",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "business_fit",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "poor",
+              "fair",
+              "good",
+              "excellent"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "business_fit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Technical Fit",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "technical_fit",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "poor",
+              "fair",
+              "good",
+              "excellent"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "technical_fit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Answers",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "answers",
+          "lookup_entity": null,
+          "max_length": 20000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "answers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Submitted",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "submitted_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "ea_assessment",
+        "field": "submitted_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Interface",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "ea_interface",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "ea_interface"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "ea_interface",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "From Application",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_ref",
+          "lookup_entity": "ea_application",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "ea_interface",
+        "field": "source_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "To Application",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "target_ref",
+          "lookup_entity": "ea_application",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "ea_interface",
+        "field": "target_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Protocol",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "protocol",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "rest",
+              "soap",
+              "file",
+              "database",
+              "message_queue",
+              "event",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "ea_interface",
+        "field": "protocol"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Frequency",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "frequency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "real_time",
+              "hourly",
+              "daily",
+              "weekly",
+              "on_demand"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "ea_interface",
+        "field": "frequency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Data Carried",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "data_carried",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "ea_interface",
+        "field": "data_carried"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Personal Data",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "carries_personal_data",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "ea_interface",
+        "field": "carries_personal_data"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Architecture Review",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "ea_review",
+          "primary_name_attribute": "title"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "ea_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "title",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "ea_review",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Requested By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "requested_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "ea_review",
+        "field": "requested_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Application",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "application_ref",
+          "lookup_entity": "ea_application",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "ea_review",
+        "field": "application_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Proposal",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "proposal",
+          "lookup_entity": null,
+          "max_length": 20000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "ea_review",
+        "field": "proposal"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Options Considered",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "options_considered",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "ea_review",
+        "field": "options_considered"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decision",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decision",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "ea_review",
+        "field": "decision"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "ea_review",
+        "field": "decided_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "intake",
+              "in_review",
+              "approved",
+              "approved_with_conditions",
+              "rejected",
+              "withdrawn"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "ea_review",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Roadmap Item",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "ea_roadmap_item",
+          "primary_name_attribute": "title"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "ea_roadmap_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "title",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Capability",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "capability_ref",
+          "lookup_entity": "ea_capability",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "capability_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Application",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "application_ref",
+          "lookup_entity": "ea_application",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "application_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Change",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "change_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "introduce",
+              "upgrade",
+              "replace",
+              "retire"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "change_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Target Quarter",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "target_quarter",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "target_quarter"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "project_ref",
+          "lookup_entity": "attome_project",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "project_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "proposed",
+              "planned",
+              "in_progress",
+              "done",
+              "dropped"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "ea_roadmap_item",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Application CI",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ci_ref",
+          "lookup_entity": "configuration_item",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "ea_application",
+        "field": "ci_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Vendor",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vendor",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "ea_application",
+        "field": "vendor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Hosting",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "hosting",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "on_premises",
+              "private_cloud",
+              "public_cloud",
+              "saas",
+              "hybrid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "ea_application",
+        "field": "hosting"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Annual Cost",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "annual_cost",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "ea_application",
+        "field": "annual_cost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Users",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "user_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "ea_application",
+        "field": "user_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Business Fit",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "business_fit",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "poor",
+              "fair",
+              "good",
+              "excellent"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "ea_application",
+        "field": "business_fit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Technical Fit",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "technical_fit",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "poor",
+              "fair",
+              "good",
+              "excellent"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "ea_application",
+        "field": "technical_fit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "TIME Decision",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "time_decision",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "tolerate",
+              "invest",
+              "migrate",
+              "eliminate"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "ea_application",
+        "field": "time_decision"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rationale",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "time_rationale",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "ea_application",
+        "field": "time_rationale"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Estimated Savings",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "estimated_savings",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "ea_application",
+        "field": "estimated_savings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Retirement Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "retirement_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "ea_application",
+        "field": "retirement_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Standard",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "standard_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "preferred",
+              "allowed",
+              "contain",
+              "retire",
+              "forbidden"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "ea_technology",
+        "field": "standard_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "End of Life",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "end_of_life",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "ea_technology",
+        "field": "end_of_life"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Maturity",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "maturity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "initial",
+              "developing",
+              "defined",
+              "managed",
+              "optimised"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "ea_capability",
+        "field": "maturity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Strategic Importance",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "strategic_importance",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "ea_capability",
+        "field": "strategic_importance"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تقييم التطبيق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التطبيق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.application_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.period_label",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المقيم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.assessor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الملاءمة للأعمال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.business_fit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الملاءمة التقنية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.technical_fit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإجابات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.answers",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التقديم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_assessment.submitted_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الواجهة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "من التطبيق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.source_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إلى التطبيق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.target_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البروتوكول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.protocol",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التكرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.frequency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البيانات المنقولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.data_carried",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بيانات شخصية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_interface.carries_personal_data",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مراجعة البنية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.title",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلبه"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.requested_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التطبيق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.application_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المقترح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.proposal",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البدائل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.options_considered",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.decision",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.decided_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_review.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند خارطة الطريق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.title",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القدرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.capability_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التطبيق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.application_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التغيير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.change_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الربع المستهدف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.target_quarter",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشروع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.project_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_roadmap_item.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عنصر التهيئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.ci_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المورد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.vendor",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاستضافة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.hosting",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التكلفة السنوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.annual_cost",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستخدمون"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.user_count",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الملاءمة للأعمال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.business_fit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الملاءمة التقنية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.technical_fit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قرار TIME"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.time_decision",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبرر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.time_rationale",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوفر التقديري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.estimated_savings",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الإيقاف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_application.retirement_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حالة المعيار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_technology.standard_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نهاية العمر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_technology.end_of_life",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النضج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_capability.maturity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأهمية الاستراتيجية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "ea_capability.strategic_importance",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_application",
+          "key": "ea_application.create",
+          "name": "ea_application.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "privilege": "ea_application.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_application",
+          "key": "ea_application.read",
+          "name": "ea_application.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "privilege": "ea_application.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_application",
+          "key": "ea_application.update",
+          "name": "ea_application.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "privilege": "ea_application.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_assessment",
+          "key": "ea_assessment.create",
+          "name": "ea_assessment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "privilege": "ea_assessment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_assessment",
+          "key": "ea_assessment.read",
+          "name": "ea_assessment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "privilege": "ea_assessment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_assessment",
+          "key": "ea_assessment.update",
+          "name": "ea_assessment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "privilege": "ea_assessment.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_capability",
+          "key": "ea_capability.create",
+          "name": "ea_capability.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "privilege": "ea_capability.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_capability",
+          "key": "ea_capability.read",
+          "name": "ea_capability.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "privilege": "ea_capability.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_capability",
+          "key": "ea_capability.update",
+          "name": "ea_capability.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "privilege": "ea_capability.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_interface",
+          "key": "ea_interface.create",
+          "name": "ea_interface.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "privilege": "ea_interface.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_interface",
+          "key": "ea_interface.read",
+          "name": "ea_interface.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "privilege": "ea_interface.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_interface",
+          "key": "ea_interface.update",
+          "name": "ea_interface.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "privilege": "ea_interface.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_review",
+          "key": "ea_review.create",
+          "name": "ea_review.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "privilege": "ea_review.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_review",
+          "key": "ea_review.read",
+          "name": "ea_review.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "privilege": "ea_review.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_review",
+          "key": "ea_review.update",
+          "name": "ea_review.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "privilege": "ea_review.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_roadmap_item",
+          "key": "ea_roadmap_item.create",
+          "name": "ea_roadmap_item.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "privilege": "ea_roadmap_item.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_roadmap_item",
+          "key": "ea_roadmap_item.read",
+          "name": "ea_roadmap_item.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "privilege": "ea_roadmap_item.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_roadmap_item",
+          "key": "ea_roadmap_item.update",
+          "name": "ea_roadmap_item.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "privilege": "ea_roadmap_item.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_system",
+          "key": "ea_system.create",
+          "name": "ea_system.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "privilege": "ea_system.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_system",
+          "key": "ea_system.read",
+          "name": "ea_system.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "privilege": "ea_system.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_system",
+          "key": "ea_system.update",
+          "name": "ea_system.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "privilege": "ea_system.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_technology",
+          "key": "ea_technology.create",
+          "name": "ea_technology.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "privilege": "ea_technology.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_technology",
+          "key": "ea_technology.read",
+          "name": "ea_technology.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "privilege": "ea_technology.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_technology",
+          "key": "ea_technology.update",
+          "name": "ea_technology.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "privilege": "ea_technology.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Owns the portfolio, standards, reviews and roadmap.",
+          "is_customized": false,
+          "name": "Enterprise Architect",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "privilege": "ea_application.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "privilege": "ea_application.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "privilege": "ea_application.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "privilege": "ea_capability.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "privilege": "ea_capability.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "privilege": "ea_capability.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "privilege": "ea_system.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "privilege": "ea_system.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "privilege": "ea_system.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "privilege": "ea_technology.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "privilege": "ea_technology.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "privilege": "ea_technology.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "privilege": "ea_assessment.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "privilege": "ea_assessment.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "privilege": "ea_assessment.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "privilege": "ea_interface.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "privilege": "ea_interface.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "privilege": "ea_interface.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "privilege": "ea_review.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "privilege": "ea_review.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "privilege": "ea_review.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "privilege": "ea_roadmap_item.read",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "privilege": "ea_roadmap_item.create",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "privilege": "ea_roadmap_item.update",
+        "role": "Enterprise Architect"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Assesses the applications they own.",
+          "is_customized": false,
+          "name": "Application Owner",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "privilege": "ea_application.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "privilege": "ea_application.update",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "privilege": "ea_assessment.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "privilege": "ea_assessment.create",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "privilege": "ea_assessment.update",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "privilege": "ea_interface.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "privilege": "ea_interface.create",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "privilege": "ea_interface.update",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "privilege": "ea_capability.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "privilege": "ea_technology.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "privilege": "ea_review.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "privilege": "ea_review.create",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "privilege": "ea_roadmap_item.read",
+        "role": "Application Owner"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Decides architecture reviews.",
+          "is_customized": false,
+          "name": "Architecture Board Member",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "privilege": "ea_application.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "privilege": "ea_capability.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "privilege": "ea_system.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "privilege": "ea_technology.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "privilege": "ea_assessment.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "privilege": "ea_interface.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "privilege": "ea_review.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "privilege": "ea_review.update",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "privilege": "ea_roadmap_item.read",
+        "role": "Architecture Board Member"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "ea_review",
+          "initial_state": "intake",
+          "is_active": true,
+          "name": "Architecture Review",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "entity": "ea_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "intake",
+          "guard_expression": null,
+          "name": "Start Review",
+          "required_privilege": null,
+          "to_state": "in_review"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "entity": "ea_review",
+        "transition": "intake->in_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "in_review",
+          "guard_expression": null,
+          "name": "Approve",
+          "required_privilege": null,
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "entity": "ea_review",
+        "transition": "in_review->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "in_review",
+          "guard_expression": null,
+          "name": "Approve with Conditions",
+          "required_privilege": null,
+          "to_state": "approved_with_conditions"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "entity": "ea_review",
+        "transition": "in_review->approved_with_conditions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "in_review",
+          "guard_expression": null,
+          "name": "Reject",
+          "required_privilege": null,
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "entity": "ea_review",
+        "transition": "in_review->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "intake",
+          "guard_expression": null,
+          "name": "Withdraw",
+          "required_privilege": null,
+          "to_state": "withdrawn"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "entity": "ea_review",
+        "transition": "intake->withdrawn"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "in_review",
+          "guard_expression": null,
+          "name": "Withdraw",
+          "required_privilege": null,
+          "to_state": "withdrawn"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "entity": "ea_review",
+        "transition": "in_review->withdrawn"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_application",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Architecture: TIME Portfolio",
+          "required_privilege": "ea_application.read",
+          "sql": "SELECT time_decision, COUNT(*) AS applications, SUM(annual_cost) AS annual_cost, SUM(estimated_savings) AS savings FROM ea_application WHERE (is_active IS NULL OR is_active = true) GROUP BY time_decision ORDER BY time_decision",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "entity": "ea_application",
+        "query": "Architecture: TIME Portfolio"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_technology",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Architecture: Technology Past or Near End of Support",
+          "required_privilege": "ea_technology.read",
+          "sql": "SELECT id, name, vendor, version, end_of_support FROM ea_technology WHERE (is_active IS NULL OR is_active = true) AND end_of_support < NOW() + INTERVAL '180 days' ORDER BY end_of_support",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "entity": "ea_technology",
+        "query": "Architecture: Technology Past or Near End of Support"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_review",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Architecture: Open Reviews",
+          "required_privilege": "ea_review.read",
+          "sql": "SELECT id, title, status, created_at FROM ea_review WHERE (is_active IS NULL OR is_active = true) AND status IN ('intake', 'in_review') ORDER BY created_at",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "entity": "ea_review",
+        "query": "Architecture: Open Reviews"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 150,
+          "entity": null,
+          "icon": "las la-sitemap",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "path": "Enterprise Architecture"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-layer-group",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Capabilities"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_capability/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "path": "Enterprise Architecture/Capabilities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-window-restore",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Applications"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_application/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "path": "Enterprise Architecture/Applications"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-server",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Systems"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_system/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "path": "Enterprise Architecture/Systems"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-microchip",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Technologies"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_technology/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "path": "Enterprise Architecture/Technologies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-exchange-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Interfaces"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_interface/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "path": "Enterprise Architecture/Interfaces"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 6,
+          "entity": null,
+          "icon": "la-tasks",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Assessments"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_assessment/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "path": "Enterprise Architecture/Assessments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 7,
+          "entity": null,
+          "icon": "la-clipboard-check",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Reviews"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_review/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 187,
+      "target": {
+        "path": "Enterprise Architecture/Reviews"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 8,
+          "entity": null,
+          "icon": "la-road",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Roadmap"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_roadmap_item/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 188,
+      "target": {
+        "path": "Enterprise Architecture/Roadmap"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "state"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "enterprise-architecture",
+  "seq": 2,
+  "title": "Pack: enterprise architecture portfolio, assessments and reviews"
+}
