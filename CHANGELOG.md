@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Referrals (migration `0096`): each contact gets a readable referral code; a lead arriving with it is
+  attributed once (self-referrals by the same email or phone are refused), and when the lead converts
+  the referrer earns 500 loyalty points, once.
 - Loyalty points (migration `0095`): an insert-only ledger per member; a fulfilled order earns a point
   per whole unit of its total once, valid 12 months; redemption checks the balance; due points expire
   first in, first out; tiers come from the points earned in the last year.

@@ -935,7 +935,14 @@ async fn dispatch_platform_job(
             let now = chrono::Utc::now();
             let orders = attome_marketing::loyalty::earn_from_orders(&db, now).await?;
             let expired = attome_marketing::loyalty::expire_due(&db, now).await?;
-            tracing::info!(orders, expired, "loyalty: points earned and expired");
+            // E31-T1: converted referrals earn their referrer points.
+            let referrals = attome_marketing::referral::reward_converted(&db, now).await?;
+            tracing::info!(
+                orders,
+                expired,
+                referrals,
+                "loyalty: points earned and expired"
+            );
         }
         // M10-T1: due timers become one job each.
         EngineJob::TimerSweep => {
