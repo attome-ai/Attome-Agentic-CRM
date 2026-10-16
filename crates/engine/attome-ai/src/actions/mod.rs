@@ -31,6 +31,7 @@ pub mod knowledge_answer;
 pub mod memory;
 pub mod model_edit;
 pub mod nl_query;
+pub mod ops_slo;
 pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
@@ -71,6 +72,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(crate::mcp_client::descriptors());
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
+    all.push(ops_slo::descriptor());
     all.push(bin::descriptor());
     all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
@@ -114,6 +116,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(crate::mcp_client::executors());
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
+    all.push(Box::new(ops_slo::OpsSloHealth));
     all.push(Box::new(bin::RecordDeleted));
     all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());

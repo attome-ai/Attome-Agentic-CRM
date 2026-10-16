@@ -30,6 +30,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   any target the deployment set. `PUT /api/v1/admin/slo/targets/{class_id}` sets the deployment's own
   p95/p99 within half to three times the reference (row-version checked); `DELETE` goes back to the
   reference. Both audited (migration `0066`).
+- The `ops.slo_health` agent action (administrators): each SLO class's status and budget left.
 - Email test mode: `email.test_mode_catch_all` sends every email to one address instead of its
   recipients (an `X-Attome-Original-To` header names them), so a development or copied deployment
   never mails a real person; the server warns at boot while it is on.

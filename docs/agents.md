@@ -67,6 +67,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Outages: `system.status` lists the services (object storage, email, the job queues) and which are
   down. A call refused because one is down names it under `degraded` with `retryable`: `true` for a
   short outage, `false` once it has lasted five minutes, so the agent stops and tells the person.
+- Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
+  of its 30-day error budget left, from the server's own metrics store.
 
 ## Delegating to a specialist
 

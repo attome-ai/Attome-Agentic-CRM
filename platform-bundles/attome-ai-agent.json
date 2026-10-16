@@ -36,7 +36,7 @@
               "model.prompt_override.describe", "model.prompt_override.edit", "model.prompt_override.list",
               "model.relationship.describe", "model.reply_template.describe", "model.reply_template.edit",
               "model.reply_template.list", "model.rule.describe", "model.state_model.describe",
-              "query.execute", "query.plan", "record.ai_field", "record.assign", "record.bulk.delete",
+              "ops.slo_health", "query.execute", "query.plan", "record.ai_field", "record.assign", "record.bulk.delete",
               "record.bulk.preview", "record.bulk.status", "record.bulk.update", "record.classify",
               "record.create", "record.delete", "record.deleted", "record.get", "record.restore", "record.schema",
               "record.summarize", "record.transition", "record.transitions", "record.update",
