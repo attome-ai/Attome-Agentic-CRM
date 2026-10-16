@@ -8820,6 +8820,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contract/counterparty-match/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contract/counterparty-proposals/{id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/duplicates/check": {
         parameters: {
             query?: never;
@@ -17365,6 +17397,18 @@ export interface components {
             executed?: unknown;
             /** Format: uuid */
             id: string;
+            status: string;
+        };
+        /**
+         * @description A proposal's decision.
+         * @enum {string}
+         */
+        Decision: "confirm" | "dismiss";
+        DecisionResult: {
+            /** Format: uuid */
+            contract_id: string;
+            /** Format: uuid */
+            proposal_id: string;
             status: string;
         };
         DefinitionDetail: {
@@ -27283,6 +27327,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             status: string;
+        };
+        RunQueued: {
+            /** @description False when a run was already queued. */
+            queued: boolean;
         };
         RunReportBody: {
             /**
@@ -60125,6 +60173,107 @@ export interface operations {
             };
             /** @description Too many votes for this page from this address */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The matching job is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The proposal */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideBody"];
+            };
+        };
+        responses: {
+            /** @description The proposal was confirmed (the contract's account is set) or dismissed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks contract.counterparty_confirm */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such proposal or contract */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The proposal was already decided */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

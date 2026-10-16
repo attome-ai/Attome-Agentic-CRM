@@ -45494,6 +45494,162 @@
         }
       }
     },
+    "/api/v1/contract/counterparty-match/run": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "operationId": "post_run",
+        "responses": {
+          "202": {
+            "description": "The matching job is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/contract/counterparty-proposals/{id}/decide": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "operationId": "post_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The proposal",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The proposal was confirmed (the contract's account is set) or dismissed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks contract.counterparty_confirm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such proposal or contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The proposal was already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/data/duplicates/check": {
       "post": {
         "tags": [
@@ -77940,6 +78096,35 @@
           }
         }
       },
+      "Decision": {
+        "type": "string",
+        "description": "A proposal's decision.",
+        "enum": [
+          "confirm",
+          "dismiss"
+        ]
+      },
+      "DecisionResult": {
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "contract_id",
+          "status"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "DefinitionDetail": {
         "type": "object",
         "required": [
@@ -103519,6 +103704,18 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "RunQueued": {
+        "type": "object",
+        "required": [
+          "queued"
+        ],
+        "properties": {
+          "queued": {
+            "type": "boolean",
+            "description": "False when a run was already queued."
           }
         }
       },
