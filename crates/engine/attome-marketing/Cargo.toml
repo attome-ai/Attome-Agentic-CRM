@@ -14,7 +14,10 @@ publish.workspace      = true
 attome-core.workspace = true
 attome-modules.workspace = true
 axum.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
 utoipa.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true

@@ -1,0 +1,29 @@
+# Disposable and temporary mailbox domains (roadmap E6-T6), one per line,
+# lower case. Shipped with each release; a deployment adds its own through
+# configuration. Lines starting with # are comments.
+10minutemail.com
+burnermail.io
+discard.email
+dispostable.com
+emailondeck.com
+fakeinbox.com
+getnada.com
+guerrillamail.com
+guerrillamail.net
+inboxkitten.com
+mailcatch.com
+maildrop.cc
+mailinator.com
+mailnesia.com
+mintemail.com
+mohmal.com
+mytemp.email
+sharklasers.com
+spamgourmet.com
+temp-mail.org
+tempail.com
+tempmail.dev
+tempr.email
+throwawaymail.com
+trashmail.com
+yopmail.com

@@ -6,6 +6,7 @@
 //! schedules, D23-D25 forecasting and territories). Gated on the `sales`
 //! module.
 
+pub mod attainment;
 pub mod competitors;
 pub mod dialer;
 pub mod enrichment;
@@ -13,6 +14,8 @@ pub mod flags;
 pub mod model;
 pub mod orgchart;
 pub mod pricing;
+pub mod scoring;
+pub mod splits;
 
 pub use model::SalesModel;
 

@@ -4,7 +4,12 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `marketing` module.
 
+pub mod ab_test;
+pub mod address_check;
+pub mod attribution;
+pub mod deliverability;
 pub mod model;
+pub mod send_time;
 pub mod tracking;
 
 pub use model::MarketingModel;
