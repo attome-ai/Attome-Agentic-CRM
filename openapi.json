@@ -58877,6 +58877,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Comma-separated lookup attributes (at most 5); each target comes back\nunder `expanded.<attribute>` when the caller may read it.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -59688,6 +59697,15 @@
             "name": "select",
             "in": "query",
             "description": "Comma-separated attribute names. `data` carries only these; `id`,\n`row_version` and the rest of the envelope always come back. A name\nthat is not an attribute the caller may read is a 422.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Comma-separated lookup attributes (at most 5); each target comes back\nunder `expanded.<attribute>` when the caller may read it.",
             "required": false,
             "schema": {
               "type": "string"
@@ -62376,6 +62394,102 @@
             {
               "category": "entity",
               "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/{entity}/{id}/mentions": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "operationId": "notify_record_mentions",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MentionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Who was notified, and how many were not because they may not read the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MentionOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Too many mentions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
             }
           ],
           "policy": "entity_policy"
@@ -68725,43 +68839,51 @@
         }
       },
       "ApprovalStep": {
-        "type": "object",
-        "description": "One step of an [`ApprovalPlan`]. Parallel = a step with `mode: all`;\nsequential = multiple steps — `decide_step` only advances to `steps[n+1]`\nonce `steps[n]` itself is satisfied.",
-        "required": [
-          "mode",
-          "approvers"
-        ],
-        "properties": {
-          "approvers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Opaque tokens this crate never parses — e.g. `\"user:<uuid>\"`,\n`\"role:<uuid>\"`. See the module-level doc comment above."
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StepExtras",
+            "description": "Z10-T2: conditions, grouping, evidence and reminders. Flattened, so\nthe JSON keys sit on the step itself and a plan stored before them\nreads with every default."
           },
-          "mode": {
-            "$ref": "#/components/schemas/StepMode"
-          },
-          "on_timeout": {
-            "$ref": "#/components/schemas/OnTimeout"
-          },
-          "sla_minutes": {
-            "type": [
-              "integer",
-              "null"
+          {
+            "type": "object",
+            "required": [
+              "mode",
+              "approvers"
             ],
-            "format": "int64",
-            "description": "`None` means this step never times out on its own — it waits\nindefinitely for a human decision (still subject to the request's\noverall backstop `expires_at`/`sweep_expired`, see\n`submit_with_plan`'s doc comment)."
-          },
-          "threshold": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32",
-            "description": "Required only when `mode == NofM` — how many of this step's *named*\napprovers (not counting any delegate standing in for one of them,\nsee `ApprovalStep::required_count`'s doc comment) must decide before\nthe step closes. Ignored for `Any`/`All`."
+            "properties": {
+              "approvers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Opaque tokens this crate never parses — e.g. `\"user:<uuid>\"`,\n`\"role:<uuid>\"`. See the module-level doc comment above."
+              },
+              "mode": {
+                "$ref": "#/components/schemas/StepMode"
+              },
+              "on_timeout": {
+                "$ref": "#/components/schemas/OnTimeout"
+              },
+              "sla_minutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64",
+                "description": "`None` means this step never times out on its own — it waits\nindefinitely for a human decision (still subject to the request's\noverall backstop `expires_at`/`sweep_expired`, see\n`submit_with_plan`'s doc comment)."
+              },
+              "threshold": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int32",
+                "description": "Required only when `mode == NofM` — how many of this step's *named*\napprovers (not counting any delegate standing in for one of them,\nsee `ApprovalStep::required_count`'s doc comment) must decide before\nthe step closes. Ignored for `Any`/`All`."
+              }
+            }
           }
-        }
+        ],
+        "description": "One step of an [`ApprovalPlan`]. Parallel = a step with `mode: all`;\nsequential = multiple steps — `decide_step` only advances to `steps[n+1]`\nonce `steps[n]` itself is satisfied."
       },
       "ApproveBody": {
         "type": "object",
@@ -79474,6 +79596,17 @@
             "type": "string",
             "format": "uuid"
           },
+          "expanded": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "S1-T4: with `?expand=`, the records the named lookups point at, keyed\nby lookup attribute; a target the caller may not read is absent.",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
           "hidden_duplicates": {
             "type": "integer",
             "format": "int64",
@@ -84258,6 +84391,37 @@
           "max",
           "median"
         ]
+      },
+      "MentionBody": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The text that mentions people, with `@[user:<id>]` / `@[team:<id>]`."
+          }
+        }
+      },
+      "MentionOutcome": {
+        "type": "object",
+        "required": [
+          "notified",
+          "skipped"
+        ],
+        "properties": {
+          "notified": {
+            "type": "integer",
+            "description": "People notified.",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "People mentioned (directly or through a team) who may not read the\nrecord, or are inactive, and were not notified.",
+            "minimum": 0
+          }
+        }
       },
       "MenuItemOpened": {
         "type": "object",
@@ -90396,6 +90560,17 @@
                 "entity_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "expanded": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "S1-T4: with `?expand=`, the records the named lookups point at, keyed\nby lookup attribute; a target the caller may not read is absent.",
+                  "additionalProperties": {},
+                  "propertyNames": {
+                    "type": "string"
+                  }
                 },
                 "hidden_duplicates": {
                   "type": "integer",
@@ -105609,6 +105784,59 @@
         "properties": {
           "enrolled": {
             "type": "boolean"
+          }
+        }
+      },
+      "StepExtras": {
+        "type": "object",
+        "description": "Z10-T2: what a step may add to who decides it and how.",
+        "properties": {
+          "business_hours": {
+            "type": "boolean",
+            "description": "SLA and reminder minutes count business hours only."
+          },
+          "escalate_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Who an escalation goes to (an approver token)."
+          },
+          "group": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Consecutive steps with the same group run together, in parallel.",
+            "minimum": 0
+          },
+          "reminder_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Remind the approvers this long after the step started waiting."
+          },
+          "requires_human": {
+            "type": "boolean",
+            "description": "A person decides, never an agent."
+          },
+          "requires_signature": {
+            "type": "boolean",
+            "description": "The decision is signed."
+          },
+          "requires_step_up": {
+            "type": "boolean",
+            "description": "The decider confirms with a fresh sign-in or second factor."
+          },
+          "skip_unless": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A rules expression; the step runs only when it is true."
           }
         }
       },

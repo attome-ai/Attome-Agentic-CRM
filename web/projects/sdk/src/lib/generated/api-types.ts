@@ -12073,6 +12073,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/mentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["notify_record_mentions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/merge": {
         parameters: {
             query?: never;
@@ -13753,7 +13769,7 @@ export interface components {
          *     sequential = multiple steps — `decide_step` only advances to `steps[n+1]`
          *     once `steps[n]` itself is satisfied.
          */
-        ApprovalStep: {
+        ApprovalStep: components["schemas"]["StepExtras"] & {
             /**
              * @description Opaque tokens this crate never parses — e.g. `"user:<uuid>"`,
              *     `"role:<uuid>"`. See the module-level doc comment above.
@@ -18055,6 +18071,13 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
             /**
+             * @description S1-T4: with `?expand=`, the records the named lookups point at, keyed
+             *     by lookup attribute; a target the caller may not read is absent.
+             */
+            expanded?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * Format: int64
              * @description A15-T4: how many more matches the caller may not read. Omitted when 0.
              */
@@ -20098,6 +20121,19 @@ export interface components {
         };
         /** @enum {string} */
         MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median";
+        MentionBody: {
+            /** @description The text that mentions people, with `@[user:<id>]` / `@[team:<id>]`. */
+            text: string;
+        };
+        MentionOutcome: {
+            /** @description People notified. */
+            notified: number;
+            /**
+             * @description People mentioned (directly or through a team) who may not read the
+             *     record, or are inactive, and were not notified.
+             */
+            skipped: number;
+        };
         /** @description `POST /api/v1/model/navigation/{id}/opened`. */
         MenuItemOpened: {
             /** @description The item, as `<group label>/<item label>`. */
@@ -22351,6 +22387,13 @@ export interface components {
                 duplicate_warnings?: components["schemas"]["DuplicateMatch"][];
                 /** Format: uuid */
                 entity_id: string;
+                /**
+                 * @description S1-T4: with `?expand=`, the records the named lookups point at, keyed
+                 *     by lookup attribute; a target the caller may not read is absent.
+                 */
+                expanded?: {
+                    [key: string]: unknown;
+                } | null;
                 /**
                  * Format: int64
                  * @description A15-T4: how many more matches the caller may not read. Omitted when 0.
@@ -28159,6 +28202,31 @@ export interface components {
         };
         StatusResponseBody: {
             enrolled: boolean;
+        };
+        /** @description Z10-T2: what a step may add to who decides it and how. */
+        StepExtras: {
+            /** @description SLA and reminder minutes count business hours only. */
+            business_hours?: boolean;
+            /** @description Who an escalation goes to (an approver token). */
+            escalate_to?: string | null;
+            /**
+             * Format: int32
+             * @description Consecutive steps with the same group run together, in parallel.
+             */
+            group?: number | null;
+            /**
+             * Format: int64
+             * @description Remind the approvers this long after the step started waiting.
+             */
+            reminder_minutes?: number | null;
+            /** @description A person decides, never an agent. */
+            requires_human?: boolean;
+            /** @description The decision is signed. */
+            requires_signature?: boolean;
+            /** @description The decider confirms with a fresh sign-in or second factor. */
+            requires_step_up?: boolean;
+            /** @description A rules expression; the step runs only when it is true. */
+            skip_unless?: string | null;
         };
         /** @enum {string} */
         StepMode: "any" | "all" | "nof_m";
@@ -68539,6 +68607,11 @@ export interface operations {
                  *     that is not an attribute the caller may read is a 422.
                  */
                 select?: string;
+                /**
+                 * @description Comma-separated lookup attributes (at most 5); each target comes back
+                 *     under `expanded.<attribute>` when the caller may read it.
+                 */
+                expand?: string;
             };
             header?: never;
             path: {
@@ -69060,6 +69133,11 @@ export interface operations {
                  *     that is not an attribute the caller may read is a 422.
                  */
                 select?: string;
+                /**
+                 * @description Comma-separated lookup attributes (at most 5); each target comes back
+                 *     under `expanded.<attribute>` when the caller may read it.
+                 */
+                expand?: string;
             };
             header?: never;
             path: {
@@ -70646,6 +70724,60 @@ export interface operations {
                 };
             };
             /** @description No If-Match, both or neither of audit_id and group_id, a withheld value, or the restored values fail validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    notify_record_mentions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MentionBody"];
+            };
+        };
+        responses: {
+            /** @description Who was notified, and how many were not because they may not read the record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MentionOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many mentions */
             422: {
                 headers: {
                     [name: string]: unknown;
