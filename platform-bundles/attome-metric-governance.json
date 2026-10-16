@@ -1,0 +1,642 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "privileges": [
+    {
+      "key": "attome_metric.create",
+      "name": "Create Metrics",
+      "description": "Defines new metrics and changes their definitions."
+    },
+    {
+      "key": "attome_metric.set_target",
+      "name": "Set Metric Targets",
+      "description": "Sets and cascades targets for a metric."
+    },
+    {
+      "key": "attome_metric.enter_value",
+      "name": "Enter Metric Values",
+      "description": "Enters manual values for a metric period."
+    },
+    {
+      "key": "attome_metric.certify",
+      "name": "Certify Metrics",
+      "description": "Certifies a metric definition as the trusted one."
+    }
+  ],
+  "entities": [
+    {
+      "category": "Other",
+      "display_name": "Metric Scorecard",
+      "is_append_only": false,
+      "is_audited": true,
+      "is_customized": false,
+      "logicalname": "metric_scorecard",
+      "primary_name_attribute": "name",
+      "attributes": [
+        {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "owner_user",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      ]
+    },
+    {
+      "category": "Other",
+      "display_name": "Scorecard Metric",
+      "is_append_only": false,
+      "is_audited": true,
+      "is_customized": false,
+      "logicalname": "metric_scorecard_item",
+      "primary_name_attribute": "metric_ref",
+      "attributes": [
+        {
+          "data_classification": "general",
+          "display_name": "Scorecard",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "scorecard_ref",
+          "lookup_entity": "metric_scorecard",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Metric",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "metric_ref",
+          "lookup_entity": "dashboard_metric_definition",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "sort_order",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      ]
+    },
+    {
+      "category": "Other",
+      "display_name": "Metric Comment",
+      "is_append_only": false,
+      "is_audited": true,
+      "is_customized": false,
+      "logicalname": "metric_comment",
+      "primary_name_attribute": "body",
+      "attributes": [
+        {
+          "data_classification": "general",
+          "display_name": "Metric",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "metric_ref",
+          "lookup_entity": "dashboard_metric_definition",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Period",
+          "field_type": "date",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "period_start",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Dimension Value",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "dimension_value",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Comment",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "body",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Author",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "author_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      ]
+    }
+  ],
+  "attribute_patches": [
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Entity",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "entity_logicalname",
+        "lookup_entity": null,
+        "max_length": 100,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Aggregate",
+        "field_type": "choice",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "aggregate",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": {
+          "choices": [
+            "count",
+            "sum",
+            "avg",
+            "distinct_count",
+            "median"
+          ],
+          "multi": false
+        }
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Measure",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "measure_attribute",
+        "lookup_entity": null,
+        "max_length": 100,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Date Field",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "date_attribute",
+        "lookup_entity": null,
+        "max_length": 100,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Filter",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "filter_expression",
+        "lookup_entity": null,
+        "max_length": 2000,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Dimensions",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "dimension_attributes",
+        "lookup_entity": null,
+        "max_length": 1000,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Calendar",
+        "field_type": "choice",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "calendar_kind",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": {
+          "choices": [
+            "gregorian",
+            "fiscal",
+            "hijri"
+          ],
+          "multi": false
+        }
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Week Starts",
+        "field_type": "choice",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "week_start",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": {
+          "choices": [
+            "sat",
+            "sun",
+            "mon"
+          ],
+          "multi": false
+        }
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Definition Version",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "definition_version",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Visible To Roles",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "visible_role_keys",
+        "lookup_entity": null,
+        "max_length": 1000,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Steward",
+        "field_type": "lookup",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "steward_ref",
+        "lookup_entity": "user_account",
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Certified",
+        "field_type": "bool",
+        "is_customized": false,
+        "is_filterable": true,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "certified",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Certified At",
+        "field_type": "date",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "certified_at",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Review Due",
+        "field_type": "date",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "review_due",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Glossary Term",
+        "field_type": "lookup",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "glossary_term_ref",
+        "lookup_entity": "glossary_term",
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Backfill",
+        "field_type": "bool",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "backfill_enabled",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_target",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Dimension",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "dimension_attribute",
+        "lookup_entity": null,
+        "max_length": 100,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_target",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Dimension Value",
+        "field_type": "text",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "dimension_value",
+        "lookup_entity": null,
+        "max_length": 200,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_target",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Parent Target",
+        "field_type": "lookup",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "parent_target_ref",
+        "lookup_entity": "dashboard_metric_target",
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_metric_target",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Spread",
+        "field_type": "choice",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "spread_method",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": {
+          "choices": [
+            "manual",
+            "share",
+            "last_year"
+          ],
+          "multi": false
+        }
+      }
+    },
+    {
+      "entity": "dashboard_metric_target",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "At-Risk Tolerance",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "at_risk_tolerance",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    }
+  ]
+}

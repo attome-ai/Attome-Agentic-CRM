@@ -28,7 +28,14 @@ impl EngineModel for MetricModel {
     /// entity, so it carries no `entity_info` row for this list to
     /// name.
     fn owned_entities(&self) -> &'static [&'static str] {
-        &["dashboard_metric_definition", "dashboard_metric_target"]
+        &[
+            "dashboard_metric_definition",
+            "dashboard_metric_target",
+            // P9-T1: `platform-bundles/attome-metric-governance.json`.
+            "metric_scorecard",
+            "metric_scorecard_item",
+            "metric_comment",
+        ]
     }
 
     // `engine_managed_fields` is left at the trait's default (`&[]`, R-03) —

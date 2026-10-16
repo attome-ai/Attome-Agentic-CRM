@@ -1080,6 +1080,9 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-contract",
         // D22-T2: the call-analysis entities.
         "attome-callintel",
+        // P9-T1: metric scorecards, commentary, certification, dimensions and
+        // cascading targets, on top of `attome-metric` (applied in build()).
+        "attome-metric-governance",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

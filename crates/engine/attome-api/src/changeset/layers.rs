@@ -211,6 +211,10 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-metric.json"),
     ),
     (
+        "attome-metric-governance",
+        include_str!("../../../../../platform-bundles/attome-metric-governance.json"),
+    ),
+    (
         "attome-notification",
         include_str!("../../../../../platform-bundles/attome-notification.json"),
     ),

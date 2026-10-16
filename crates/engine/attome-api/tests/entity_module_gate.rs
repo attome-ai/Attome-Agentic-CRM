@@ -303,7 +303,13 @@ fn production_map() -> EntityModuleMap {
     // M27 Phase 1 (KPI & Metrics, D-407) — split out of attome-dashboard into
     // its own `attome-metric` crate/`MetricModel` (D-480, M26 R-14); still
     // gated on `MODULE_DASHBOARD`, same bit as attome-dashboard itself.
-    for entity in ["dashboard_metric_definition", "dashboard_metric_target"] {
+    for entity in [
+        "dashboard_metric_definition",
+        "dashboard_metric_target",
+        "metric_scorecard",
+        "metric_scorecard_item",
+        "metric_comment",
+    ] {
         map.claim(entity, owner("attome-metric", MODULE_DASHBOARD));
     }
     // M59 Phase 1 — shares MODULE_INTEGRATION with attome-events' admin
