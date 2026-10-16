@@ -8,6 +8,7 @@
 
 pub mod attainment;
 pub mod catalogue;
+pub mod competitor_mentions;
 pub mod competitors;
 pub mod cpq;
 pub mod cpq_pricing;

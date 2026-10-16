@@ -84,6 +84,7 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_ai_followup_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // D25-T3: win/loss reviews for big closes, every minute.
     crate::jobs::spawn_sales_deal_close_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    crate::jobs::spawn_sales_mention_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // C2-T1: follower notifications, every minute.
     crate::jobs::spawn_notification_follow_scheduler(
         db.clone(),

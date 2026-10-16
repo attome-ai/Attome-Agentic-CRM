@@ -477,6 +477,9 @@ pub enum EngineJob {
     AiFollowupScan,
     /// Y2-T8: the daily table-health sample. Bare unit variant.
     TableHealthSample,
+    /// D25-T4: competitor mentions in new emails and notes, off the change
+    /// feed. Bare unit variant.
+    SalesMentionScan,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -941,6 +944,7 @@ impl EngineJob {
             | Self::SalesDealCloseSweep
             | Self::AiFollowupScan
             | Self::TableHealthSample
+            | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1052,6 +1056,7 @@ impl EngineJob {
             EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
             EngineJob::AiFollowupScan => "AiFollowupScan",
             EngineJob::TableHealthSample => "TableHealthSample",
+            EngineJob::SalesMentionScan => "SalesMentionScan",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1169,6 +1174,7 @@ impl EngineJob {
             | Self::SalesDealCloseSweep
             | Self::AiFollowupScan
             | Self::TableHealthSample
+            | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1304,6 +1310,7 @@ impl EngineJob {
             | Self::SalesDealCloseSweep
             | Self::AiFollowupScan
             | Self::TableHealthSample
+            | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1656,6 +1663,7 @@ mod tests {
         assert_round_trips(EngineJob::SalesDealCloseSweep);
         assert_round_trips(EngineJob::AiFollowupScan);
         assert_round_trips(EngineJob::TableHealthSample);
+        assert_round_trips(EngineJob::SalesMentionScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
         });

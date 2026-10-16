@@ -980,6 +980,13 @@ async fn dispatch_platform_job(
                 tracing::info!(found, "follow-up scan: new stalls recorded");
             }
         }
+        // D25-T4: competitor mentions proposed from new emails and notes.
+        EngineJob::SalesMentionScan => {
+            let proposed = attome_sales::competitor_mentions::sweep_mentions(&attome_state).await?;
+            if proposed > 0 {
+                tracing::info!(proposed, "competitor mentions: proposals written");
+            }
+        }
         // D25-T3: win/loss reviews for big closes.
         EngineJob::SalesDealCloseSweep => {
             let created = attome_sales::win_loss::sweep_closes(&attome_state).await?;
@@ -2217,6 +2224,7 @@ const DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP: &str = "notification-follow-sweep";
 const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
 const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_TABLE_HEALTH_SAMPLE: &str = "table-health-sample";
+const DEDUP_KEY_SALES_MENTION_SCAN: &str = "sales-mention-scan";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2290,6 +2298,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SalesDealCloseSweep => DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP,
         EngineJob::AiFollowupScan => DEDUP_KEY_AI_FOLLOWUP_SCAN,
         EngineJob::TableHealthSample => DEDUP_KEY_TABLE_HEALTH_SAMPLE,
+        EngineJob::SalesMentionScan => DEDUP_KEY_SALES_MENTION_SCAN,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2636,6 +2645,17 @@ pub fn spawn_ai_followup_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::AiFollowupScan,
         DEDUP_KEY_AI_FOLLOWUP_SCAN,
         "ai follow-up scan",
+    );
+}
+
+/// D25-T4: every minute, competitor mentions in new emails and notes.
+pub fn spawn_sales_mention_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::SalesMentionScan,
+        DEDUP_KEY_SALES_MENTION_SCAN,
+        "sales mention scan",
     );
 }
 

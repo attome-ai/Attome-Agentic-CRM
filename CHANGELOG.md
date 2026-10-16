@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Competitor mentions: a minute job reads new emails and notes about a deal (or its account)
+  and proposes each tracked competitor they name as a `competitor_mention` (status `proposed`),
+  matched as a whole word after Arabic normalisation, written as the deal owner only when the
+  owner can read the source; nothing is linked until a person confirms.
 - `POST /api/v1/hr/offers/{id}/hire` (`employee.create`): an accepted job offer becomes an
   employee (name, start date, salary, posting title), linked to the user account with the
   candidate's email when one exists; a second hire of the same offer is refused.
