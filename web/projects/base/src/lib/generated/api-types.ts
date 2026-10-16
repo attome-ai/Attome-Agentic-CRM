@@ -8549,6 +8549,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/metrics/recurring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_recurring"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/usage": {
         parameters: {
             query?: never;
@@ -10206,6 +10222,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["portal_trusted_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/call-lists/{id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_claim"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15695,6 +15727,19 @@ export interface components {
             ticket_id?: string | null;
             ticket_number?: string | null;
         };
+        /** @description The answer to a claim. */
+        ClaimResult: {
+            member?: null | components["schemas"]["ClaimedMember"];
+            skipped: components["schemas"]["SkippedMember"][];
+        };
+        /** @description The member a caller got. */
+        ClaimedMember: {
+            entity_name: string;
+            /** Format: uuid */
+            member_id: string;
+            phone?: string | null;
+            record_id: string;
+        };
         ClassificationBreakdown: {
             /** Format: int64 */
             general: number;
@@ -20742,6 +20787,19 @@ export interface components {
              *     record or under it) or `too_deep` (the tree would pass the depth cap).
              */
             refusal?: string | null;
+        };
+        /** @description How the recurring revenue moved between two days, in one currency. */
+        Movements: {
+            arr: string;
+            churn: string;
+            contraction: string;
+            currency: string;
+            expansion: string;
+            mrr: string;
+            /** @description Percent; `None` without starting revenue. */
+            net_retention?: string | null;
+            new: string;
+            start_mrr: string;
         };
         /**
          * @description One authoritative action a caller may take on a [`MyWorkItem`] — never
@@ -26334,6 +26392,14 @@ export interface components {
         RecoveryCodesBody: {
             recovery_codes: string[];
         };
+        RecurringMeasures: {
+            /** Format: date */
+            as_of: string;
+            /** @description One set of measures per currency. */
+            currencies: components["schemas"]["Movements"][];
+            /** Format: date */
+            from: string;
+        };
         ReferenceView: {
             /** Format: date-time */
             created_at: string;
@@ -27987,6 +28053,17 @@ export interface components {
              */
             status: string;
             trace: components["schemas"]["SimulateNodeTrace"][];
+        };
+        /**
+         * @description Why a member was passed over.
+         * @enum {string}
+         */
+        SkipReason: "hours" | "do_not_contact" | "no_consent" | "max_attempts";
+        /** @description A member passed over on the way, with its reason. */
+        SkippedMember: {
+            /** Format: uuid */
+            member_id: string;
+            reason: components["schemas"]["SkipReason"];
         };
         /**
          * @description `service_ticket.sla_calculation_status` (D-517).
@@ -59604,6 +59681,58 @@ export interface operations {
             };
         };
     };
+    get_recurring: {
+        parameters: {
+            query?: {
+                /** @description The day to read (`YYYY-MM-DD`); today when absent. */
+                as_of?: string;
+                /** @description Days back for the movements; 30 when absent. */
+                period_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description MRR, ARR and their movements per currency, from the stored snapshots */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringMeasures"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks subscription_metrics.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description period_days is 0 or above 366 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_usage: {
         parameters: {
             query?: never;
@@ -64511,6 +64640,47 @@ export interface operations {
             };
             /** @description Malformed body (e.g. client_ip is not an address) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_claim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The next callable member, or null when none is left; members passed over are listed with their reasons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks call_list.call */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

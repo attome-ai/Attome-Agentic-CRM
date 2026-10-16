@@ -44652,6 +44652,87 @@
         }
       }
     },
+    "/api/v1/billing/metrics/recurring": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_recurring",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "description": "The day to read (`YYYY-MM-DD`); today when absent.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "period_days",
+            "in": "query",
+            "description": "Days back for the movements; 30 when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MRR, ARR and their movements per currency, from the stored snapshots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringMeasures"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks subscription_metrics.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "period_days is 0 or above 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/billing/usage": {
       "post": {
         "tags": [
@@ -52066,6 +52147,75 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/sales/call-lists/{id}/claim": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_claim",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The call list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The next callable member, or null when none is left; members passed over are listed with their reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks call_list.call",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
         }
       }
     },
@@ -73817,6 +73967,59 @@
           }
         }
       },
+      "ClaimResult": {
+        "type": "object",
+        "description": "The answer to a claim.",
+        "required": [
+          "skipped"
+        ],
+        "properties": {
+          "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ClaimedMember",
+                "description": "`None` when no callable member is left."
+              }
+            ]
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkippedMember"
+            }
+          }
+        }
+      },
+      "ClaimedMember": {
+        "type": "object",
+        "description": "The member a caller got.",
+        "required": [
+          "member_id",
+          "entity_name",
+          "record_id"
+        ],
+        "properties": {
+          "entity_name": {
+            "type": "string"
+          },
+          "member_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_id": {
+            "type": "string"
+          }
+        }
+      },
       "ClassificationBreakdown": {
         "type": "object",
         "required": [
@@ -86275,6 +86478,53 @@
               "null"
             ],
             "description": "Why not, when it would be refused: `cycle` (the new parent is the\nrecord or under it) or `too_deep` (the tree would pass the depth cap)."
+          }
+        }
+      },
+      "Movements": {
+        "type": "object",
+        "description": "How the recurring revenue moved between two days, in one currency.",
+        "required": [
+          "currency",
+          "start_mrr",
+          "mrr",
+          "arr",
+          "new",
+          "expansion",
+          "contraction",
+          "churn"
+        ],
+        "properties": {
+          "arr": {
+            "type": "string"
+          },
+          "churn": {
+            "type": "string"
+          },
+          "contraction": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "expansion": {
+            "type": "string"
+          },
+          "mrr": {
+            "type": "string"
+          },
+          "net_retention": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Percent; `None` without starting revenue."
+          },
+          "new": {
+            "type": "string"
+          },
+          "start_mrr": {
+            "type": "string"
           }
         }
       },
@@ -101379,6 +101629,31 @@
           }
         }
       },
+      "RecurringMeasures": {
+        "type": "object",
+        "required": [
+          "as_of",
+          "from",
+          "currencies"
+        ],
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date"
+          },
+          "currencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Movements"
+            },
+            "description": "One set of measures per currency."
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "ReferenceView": {
         "type": "object",
         "required": [
@@ -105361,6 +105636,33 @@
             "items": {
               "$ref": "#/components/schemas/SimulateNodeTrace"
             }
+          }
+        }
+      },
+      "SkipReason": {
+        "type": "string",
+        "description": "Why a member was passed over.",
+        "enum": [
+          "hours",
+          "do_not_contact",
+          "no_consent",
+          "max_attempts"
+        ]
+      },
+      "SkippedMember": {
+        "type": "object",
+        "description": "A member passed over on the way, with its reason.",
+        "required": [
+          "member_id",
+          "reason"
+        ],
+        "properties": {
+          "member_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SkipReason"
           }
         }
       },
