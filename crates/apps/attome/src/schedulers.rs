@@ -76,6 +76,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // A18-T4: bursts of deletion, checked every five minutes.
     crate::jobs::spawn_bin_delete_alert_scheduler(db.clone(), std::time::Duration::from_secs(300));
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // E30-T1: loyalty points earned and expired, nightly.
+    crate::jobs::spawn_loyalty_scheduler(db.clone(), std::time::Duration::from_secs(24 * 60 * 60));
     // M10-T1: due timers, every 15 seconds.
     crate::jobs::spawn_timer_sweep_scheduler(db.clone(), std::time::Duration::from_secs(15));
     // K6-T3: website sources on a daily or weekly schedule, checked hourly.

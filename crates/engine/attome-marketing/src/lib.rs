@@ -8,6 +8,7 @@ pub mod ab_test;
 pub mod address_check;
 pub mod attribution;
 pub mod deliverability;
+pub mod loyalty;
 pub mod model;
 pub mod send_time;
 pub mod tracking;

@@ -1117,10 +1117,13 @@ name = "attome-marketing"
 version = "0.1.0"
 dependencies = [
  "attome-core",
+ "attome-db",
  "attome-modules",
+ "attome-types",
  "axum",
  "chrono",
  "chrono-tz",
+ "sqlx",
  "utoipa",
  "uuid",
 ]

@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Loyalty points (migration `0095`): an insert-only ledger per member; a fulfilled order earns a point
+  per whole unit of its total once, valid 12 months; redemption checks the balance; due points expire
+  first in, first out; tiers come from the points earned in the last year.
 - Timers (migration `0094`): one `timer` table for every point in time the platform waits for, with a
   sweep every 15 seconds that claims due timers once (`SKIP LOCKED`) and runs each as its own job.
 - Consent ledger (migration `0093`): every marketing consent grant and withdrawal is an insert-only

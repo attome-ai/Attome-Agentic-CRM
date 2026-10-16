@@ -428,6 +428,9 @@ pub enum EngineJob {
     /// M10-T1: runs one fired timer's action. Pure pointer; the handler
     /// reads the timer row.
     TimerFire { timer_id: Uuid },
+    /// E30-T1: earns loyalty points for fulfilled orders and expires due
+    /// points. Bare unit variant.
+    LoyaltyNightly,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -875,6 +878,7 @@ impl EngineJob {
             | Self::MrrSnapshot
             | Self::WebcrawlRecrawlDue
             | Self::TimerSweep
+            | Self::LoyaltyNightly
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -969,6 +973,7 @@ impl EngineJob {
             EngineJob::WebcrawlRecrawlDue => "WebcrawlRecrawlDue",
             EngineJob::TimerSweep => "TimerSweep",
             EngineJob::TimerFire { .. } => "TimerFire",
+            EngineJob::LoyaltyNightly => "LoyaltyNightly",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1075,6 +1080,7 @@ impl EngineJob {
             | Self::MrrSnapshot
             | Self::WebcrawlRecrawlDue
             | Self::TimerSweep
+            | Self::LoyaltyNightly
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1193,6 +1199,7 @@ impl EngineJob {
             | Self::MrrSnapshot
             | Self::WebcrawlRecrawlDue
             | Self::TimerSweep
+            | Self::LoyaltyNightly
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1528,6 +1535,7 @@ mod tests {
         assert_round_trips(EngineJob::MrrSnapshot);
         assert_round_trips(EngineJob::WebcrawlRecrawlDue);
         assert_round_trips(EngineJob::TimerSweep);
+        assert_round_trips(EngineJob::LoyaltyNightly);
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),
         });
