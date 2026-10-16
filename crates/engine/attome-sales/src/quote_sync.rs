@@ -154,6 +154,8 @@ pub struct SalesSyncResult {
     /// Both line sets, when both changed.
     pub deal_lines: Option<Vec<SyncLine>>,
     pub quote_lines: Option<Vec<SyncLine>>,
+    /// D6-T8: the snapshot that undoes the sync (30 minutes).
+    pub snapshot_id: Option<Uuid>,
 }
 
 #[utoipa::path(
@@ -224,6 +226,7 @@ pub(crate) async fn post_sales_quote_sync(
                 lines_synced_hash: synced,
                 deal_lines: None,
                 quote_lines: None,
+                snapshot_id: None,
             })
             .into_response());
         }
@@ -236,12 +239,14 @@ pub(crate) async fn post_sales_quote_sync(
                     lines_synced_hash: synced,
                     deal_lines: Some(ours),
                     quote_lines: Some(theirs),
+                    snapshot_id: None,
                 }),
             )
                 .into_response());
         }
         SyncDecision::Proceed => {}
     }
+    let before = crate::undo::capture_lines(&mut tx, deal).await?;
     sqlx::query(
         "UPDATE opportunity_line SET is_active = false, modified_at = now(), \
              row_version = row_version + 1 \
@@ -276,6 +281,7 @@ pub(crate) async fn post_sales_quote_sync(
     .await
     .map_err(AppError::internal)?;
     crate::opportunity_lines::reprice_in_tx(&mut tx, deal).await?;
+    let snapshot = crate::undo::record_in_tx(&mut tx, deal, before, ctx.user_id).await?;
     let now_hash = lines_hash(&deal_lines(&mut tx, deal).await?);
     sqlx::query("UPDATE opportunity SET lines_synced_hash = $2 WHERE id = $1")
         .bind(deal)
@@ -303,6 +309,7 @@ pub(crate) async fn post_sales_quote_sync(
         lines_synced_hash: Some(now_hash),
         deal_lines: None,
         quote_lines: None,
+        snapshot_id: Some(snapshot),
     })
     .into_response())
 }

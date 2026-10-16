@@ -31,6 +31,7 @@ pub mod split_store;
 pub mod splits;
 pub mod team;
 pub mod team_defaults;
+pub mod undo;
 
 pub use model::SalesModel;
 
@@ -50,5 +51,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<catalogue::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<schedules::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

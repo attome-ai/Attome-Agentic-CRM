@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Undo of bulk line changes: a deal discount or quote sync answers with a `snapshot_id`;
+  `POST /api/v1/sales/undo/{snapshot_id}` restores the lines and reprices, for its author within
+  30 minutes and only while the lines are untouched since (migration `0100`). Snapshots are removed
+  after a day.
 - Agent actions `sales.team.add`, `sales.team.remove` and `sales.splits.propose` (confirmed writes through
   the team and split routes' own functions; a won deal's split change opens its approval) and
   `sales.team.suggest` (people on won deals with the same account, as a draft).

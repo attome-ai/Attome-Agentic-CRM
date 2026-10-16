@@ -423,6 +423,9 @@ pub struct SalesLinesChanged {
     pub recurring_annual: Decimal,
     #[schema(value_type = String)]
     pub total_contract_value: Decimal,
+    /// D6-T8: for a deal discount, the snapshot that undoes it
+    /// (`POST /api/v1/sales/undo/{snapshot_id}`, 30 minutes).
+    pub snapshot_id: Option<Uuid>,
 }
 
 fn changed(opportunity: Uuid, line: Option<Uuid>, t: crate::pricing::Totals) -> SalesLinesChanged {
@@ -432,6 +435,7 @@ fn changed(opportunity: Uuid, line: Option<Uuid>, t: crate::pricing::Totals) -> 
         one_time_total: t.one_time_total,
         recurring_annual: t.recurring_annual,
         total_contract_value: t.total_contract_value,
+        snapshot_id: None,
     }
 }
 
@@ -793,6 +797,7 @@ pub(crate) async fn post_sales_deal_discount(
     }
     require(&state, &ctx, opportunity, RecordAction::Update).await?;
     let (mut tx, _, _) = begin_change(&state, opportunity, expected).await?;
+    let before = crate::undo::capture_lines(&mut tx, opportunity).await?;
     sqlx::query("UPDATE opportunity SET deal_discount_percent = $2::numeric WHERE id = $1")
         .bind(opportunity)
         .bind(percent.map(|p| p.to_string()))
@@ -800,6 +805,7 @@ pub(crate) async fn post_sales_deal_discount(
         .await
         .map_err(AppError::internal)?;
     let totals = reprice_in_tx(&mut tx, opportunity).await?;
+    let snapshot = crate::undo::record_in_tx(&mut tx, opportunity, before, ctx.user_id).await?;
     attome_audit::write_business_event_in_tx(
         &mut tx,
         &attome_audit::audit_service(&state),
@@ -813,7 +819,10 @@ pub(crate) async fn post_sales_deal_discount(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok(Json(changed(opportunity, None, totals)))
+    Ok(Json(SalesLinesChanged {
+        snapshot_id: Some(snapshot),
+        ..changed(opportunity, None, totals)
+    }))
 }
 
 #[derive(utoipa::OpenApi)]
