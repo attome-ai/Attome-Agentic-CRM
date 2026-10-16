@@ -76,8 +76,13 @@ pub(super) async fn reset_user_mfa(
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;
+    // Q8-T7: an MFA reset ends the user's sessions everywhere, in this same
+    // transaction, so a session that passed the old factor cannot go on.
+    attome_auth::refresh::revoke_all_for_user_in_tx(tx.tx(), user_id).await?;
+    attome_auth::epoch::bump_in_tx(tx.tx(), user_id).await?;
 
     tx.commit().await?;
+    attome_auth::epoch::invalidate_cache(&state.base.redis_coordination, user_id).await;
 
     tracing::info!(user_id = %user_id, admin_id = %ctx.user_id, "admin reset a user's mfa enrollment");
     Ok(StatusCode::NO_CONTENT)

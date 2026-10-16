@@ -489,3 +489,98 @@ fn a_disabled_users_already_issued_session_token_is_rejected() {
         );
     })
 }
+
+/// Q8-T7: removing a role from a user ends that user's sessions everywhere,
+/// in the same call: live refresh tokens revoked and the auth epoch bumped.
+#[test]
+fn role_removal_ends_sessions() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin_cookie) = seed_admin(&system).await;
+        let (target_id, _) = seed_target_with_api_key(&system).await;
+        let db = system.state().base.db.clone();
+        let role_id = Uuid::now_v7();
+        sqlx::query("INSERT INTO role (id, name, owner_layer) VALUES ($1, $2, 'customer')")
+            .bind(role_id)
+            .bind(format!("q8-t7-role-{role_id}"))
+            .execute(&db)
+            .await
+            .expect("insert throwaway role");
+        sqlx::query("INSERT INTO user_account_mm_role (user_ref, role_ref) VALUES ($1, $2)")
+            .bind(target_id)
+            .bind(role_id)
+            .execute(&db)
+            .await
+            .expect("assign throwaway role");
+        let token_id = seed_refresh_token(&db, target_id).await;
+        let epoch_before = fetch_epoch(&db, target_id).await;
+        let app = full_app(system);
+
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!(
+                "/api/v1/admin/security/users/{target_id}/roles/{role_id}"
+            ))
+            .header("cookie", &admin_cookie)
+            .header("origin", "http://localhost:4200")
+            .header("sec-fetch-site", "same-origin")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        assert!(
+            fetch_refresh_revoked(&db, token_id).await,
+            "losing a role must revoke the user's refresh tokens"
+        );
+        assert_eq!(
+            fetch_epoch(&db, target_id).await,
+            epoch_before + 1,
+            "losing a role must bump the auth epoch once"
+        );
+    })
+}
+
+/// Q8-T7: an MFA reset ends the user's sessions everywhere, in the same call.
+#[test]
+fn mfa_reset_ends_sessions() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin_cookie) = seed_admin(&system).await;
+        let (target_id, _) = seed_target_with_api_key(&system).await;
+        let db = system.state().base.db.clone();
+        sqlx::query(
+            "INSERT INTO user_mfa (user_ref, secret_encrypted, confirmed_at) VALUES ($1, 'x', NOW())",
+        )
+        .bind(target_id)
+        .execute(&db)
+        .await
+        .expect("insert throwaway mfa enrollment");
+        let token_id = seed_refresh_token(&db, target_id).await;
+        let epoch_before = fetch_epoch(&db, target_id).await;
+        let app = full_app(system);
+
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!(
+                "/api/v1/admin/security/users/{target_id}/mfa/reset"
+            ))
+            .header("cookie", &admin_cookie)
+            .header("origin", "http://localhost:4200")
+            .header("sec-fetch-site", "same-origin")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        assert!(
+            fetch_refresh_revoked(&db, token_id).await,
+            "an MFA reset must revoke the user's refresh tokens"
+        );
+        assert_eq!(
+            fetch_epoch(&db, target_id).await,
+            epoch_before + 1,
+            "an MFA reset must bump the auth epoch once"
+        );
+    })
+}

@@ -13,6 +13,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   a password reset may not reuse the current password or any of the last five (migration `0040`).
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 - A password reset with an already used token answers `409` whatever password it carries.
+- Removing a role from a user, or resetting their MFA, now ends the user's sessions everywhere at once
+  (refresh tokens revoked and the auth epoch bumped in the same transaction), like disabling them.
 - A caller (a user, or an address when anonymous) that trips a rate limit in five separate windows
   within an hour is refused outright for 15 minutes (`429` with `Retry-After`). Rate-limited
   responses also carry the IETF `RateLimit-Policy` and `RateLimit` headers.

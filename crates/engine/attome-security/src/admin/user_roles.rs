@@ -312,9 +312,15 @@ pub(super) async fn remove_user_role(
     .map_err(AppError::internal)?;
     tx.event_mut()
         .set_record_id(removed.ok_or(AppError::NotFound)?);
+    // Q8-T7: losing a role ends the user's sessions everywhere, in this same
+    // transaction: refresh families revoked and the auth epoch bumped, so a
+    // live access token is refused at its next request.
+    attome_auth::refresh::revoke_all_for_user_in_tx(tx.tx(), user_id).await?;
+    attome_auth::epoch::bump_in_tx(tx.tx(), user_id).await?;
     tx.commit().await?;
 
     state.base.security.invalidate_sync(user_id).await?;
+    attome_auth::epoch::invalidate_cache(&state.base.redis_coordination, user_id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
