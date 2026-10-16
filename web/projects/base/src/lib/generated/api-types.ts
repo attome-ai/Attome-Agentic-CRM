@@ -9263,6 +9263,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hr/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_hr_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/leave-requests/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_hr_leave_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/payroll-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_hr_payroll_export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/payroll-handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_hr_payroll_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/payroll-handoff/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_hr_payroll_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/i18n/overrides": {
         parameters: {
             query?: never;
@@ -10382,6 +10462,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["portal_trusted_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/call-list-members/{id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_call_outcome"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20192,6 +20288,43 @@ export interface components {
              */
             owner_layer: string;
         };
+        HrAvailability: {
+            /** @description The days the user is away on approved leave. */
+            away: string[];
+            /** Format: uuid */
+            user_id: string;
+        };
+        HrLeaveDecided: {
+            /** Format: uuid */
+            leave_request_id: string;
+            status: string;
+        };
+        HrLeaveSubmitted: {
+            /** Format: uuid */
+            approval_request_id: string;
+            /** Format: int32 */
+            days: number;
+            /** Format: uuid */
+            leave_request_id: string;
+        };
+        HrPayrollConfirmBody: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        HrPayrollConfirmed: {
+            /** Format: int64 */
+            payouts_paid: number;
+        };
+        HrPayrollHandoffBody: {
+            /** Format: date */
+            from: string;
+            /** @description `generic` (default) or `wps`. */
+            template?: string | null;
+            /** Format: date */
+            to: string;
+        };
         /**
          * @description P-federation-linking-policy §4.3(a) UI support — `GET
          *     /api/v1/auth/identity-links`'s response shape; see `identity_links`. One
@@ -28069,6 +28202,22 @@ export interface components {
         };
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
+        };
+        SalesCallOutcomeBody: {
+            activity_id?: string | null;
+            /** Format: int32 */
+            duration_seconds?: number | null;
+            outcome: string;
+            /** @description The script's answers, as JSON text. */
+            script_answers?: string | null;
+            voicemail_dropped?: boolean;
+        };
+        SalesCallOutcomeSaved: {
+            /** Format: uuid */
+            attempt_id: string;
+            /** Format: int64 */
+            attempt_number: number;
+            member_status: string;
         };
         SalesChangeOwnerBody: {
             /** @description Move the old owner's splits to the new owner (else they stay). */
@@ -62639,6 +62788,281 @@ export interface operations {
             };
         };
     };
+    get_hr_availability: {
+        parameters: {
+            query: {
+                user_id: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The days the user is away on approved leave */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HrAvailability"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks employee.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The range is reversed or over a year */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_hr_leave_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The leave request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description In manager review; an approval regarding the request is open */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HrLeaveSubmitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this request */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such leave request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request is not in `requested` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Dates missing or reversed, no working day in the span, or not enough balance */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_hr_payroll_export: {
+        parameters: {
+            query: {
+                /** @description The period's first day. */
+                from: string;
+                /** @description The period's last day. */
+                to: string;
+                /** @description `generic` (default) or `wps`. */
+                template?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The period's payroll inputs as CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks employee.read, or the salary or national id field grant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is reversed or over a year */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_hr_payroll_handoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HrPayrollHandoffBody"];
+            };
+        };
+        responses: {
+            /** @description The period's payroll CSV; the approved commission payouts in it are now `exported` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks employee.read, or the salary or national id field grant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is reversed or over a year */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_hr_payroll_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HrPayrollConfirmBody"];
+            };
+        };
+        responses: {
+            /** @description Payroll ran: the period's exported commission payouts are `paid` (event `commission.payout_paid`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HrPayrollConfirmed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks employee.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is reversed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     ui_text_overrides: {
         parameters: {
             query: {
@@ -66148,6 +66572,69 @@ export interface operations {
                 };
             };
             /** @description Malformed body (e.g. client_ip is not an address) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_call_outcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call list member */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesCallOutcomeBody"];
+            };
+        };
+        responses: {
+            /** @description The attempt is saved and the list's outcome rules are queued */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesCallOutcomeSaved"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The member is not claimed by the caller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown outcome */
             422: {
                 headers: {
                     [name: string]: unknown;

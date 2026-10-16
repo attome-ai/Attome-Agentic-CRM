@@ -47822,6 +47822,435 @@
         ]
       }
     },
+    "/api/v1/hr/availability": {
+      "get": {
+        "tags": [
+          "hr"
+        ],
+        "operationId": "get_hr_availability",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The days the user is away on approved leave",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrAvailability"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks employee.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The range is reversed or over a year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/leave-requests/{id}/submit": {
+      "post": {
+        "tags": [
+          "hr"
+        ],
+        "operationId": "post_hr_leave_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The leave request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "In manager review; an approval regarding the request is open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrLeaveSubmitted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such leave request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request is not in `requested`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dates missing or reversed, no working day in the span, or not enough balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/hr/payroll-export": {
+      "get": {
+        "tags": [
+          "hr"
+        ],
+        "operationId": "get_hr_payroll_export",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The period's first day.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The period's last day.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "template",
+            "in": "query",
+            "description": "`generic` (default) or `wps`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The period's payroll inputs as CSV",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks employee.read, or the salary or national id field grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The period is reversed or over a year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/payroll-handoff": {
+      "post": {
+        "tags": [
+          "hr"
+        ],
+        "operationId": "post_hr_payroll_handoff",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrPayrollHandoffBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The period's payroll CSV; the approved commission payouts in it are now `exported`",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks employee.read, or the salary or national id field grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The period is reversed or over a year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/hr/payroll-handoff/confirm": {
+      "post": {
+        "tags": [
+          "hr"
+        ],
+        "operationId": "post_hr_payroll_confirm",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrPayrollConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payroll ran: the period's exported commission payouts are `paid` (event `commission.payout_paid`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrPayrollConfirmed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks employee.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The period is reversed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/i18n/overrides": {
       "get": {
         "tags": [
@@ -53092,6 +53521,105 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/sales/call-list-members/{id}/outcome": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_call_outcome",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The call list member",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesCallOutcomeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The attempt is saved and the list's outcome rules are queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesCallOutcomeSaved"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The member is not claimed by the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
         }
       }
     },
@@ -86677,6 +87205,120 @@
           }
         }
       },
+      "HrAvailability": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "away"
+        ],
+        "properties": {
+          "away": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "The days the user is away on approved leave."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "HrLeaveDecided": {
+        "type": "object",
+        "required": [
+          "leave_request_id",
+          "status"
+        ],
+        "properties": {
+          "leave_request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "HrLeaveSubmitted": {
+        "type": "object",
+        "required": [
+          "leave_request_id",
+          "days",
+          "approval_request_id"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "leave_request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "HrPayrollConfirmBody": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "HrPayrollConfirmed": {
+        "type": "object",
+        "required": [
+          "payouts_paid"
+        ],
+        "properties": {
+          "payouts_paid": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "HrPayrollHandoffBody": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`generic` (default) or `wps`."
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "IdentityLinkInfo": {
         "type": "object",
         "description": "P-federation-linking-policy §4.3(a) UI support — `GET\n/api/v1/auth/identity-links`'s response shape; see `identity_links`. One\nentry per `user_identity` row linked to the caller, plus (since this\nentry extends §4.3(a) to Google) at most one synthetic `provider_key:\n\"google\"` entry when `user_account.google_sub` is set. Never includes\n`provider_sub` — the IdP-issued subject identifier is an internal\ncorrelation key, not something the UI needs to render a \"linked\" badge.\n`linked_at` is `None` only for that synthetic Google entry — Google has no\nper-link timestamp column (see `list_identities_for_user`'s doc comment).",
@@ -107628,6 +108270,61 @@
             "items": {
               "$ref": "#/components/schemas/SurfaceSwitchView"
             }
+          }
+        }
+      },
+      "SalesCallOutcomeBody": {
+        "type": "object",
+        "required": [
+          "outcome"
+        ],
+        "properties": {
+          "activity_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "duration_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "script_answers": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The script's answers, as JSON text."
+          },
+          "voicemail_dropped": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SalesCallOutcomeSaved": {
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "attempt_number",
+          "member_status"
+        ],
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "member_status": {
+            "type": "string"
           }
         }
       },
