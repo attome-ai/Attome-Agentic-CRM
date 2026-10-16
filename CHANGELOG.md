@@ -30,6 +30,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rate-limit bans screen (`/admin/rate-limit-bans`) on `GET /api/v1/admin/rate-limits/bans` and
+  `DELETE /api/v1/admin/rate-limits/bans/{bucket}` (audited).
 - Security policy schema: per-operation entity access levels and child-unit flags on role grants
   (0076), per-role second-factor policy with grace periods and remembered devices (0077), and
   per-role session limits with device and activity on sessions (0078).

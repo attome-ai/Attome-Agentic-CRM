@@ -162,6 +162,8 @@ impl EngineSystem {
             .merge(crate::slo_admin::routes())
             // C4-T1: mentions in text about a record.
             .merge(crate::mentions::routes())
+            // Q20-T5: rate-limit bans (admin-gated in the handlers).
+            .merge(crate::ratelimit_admin::routes())
             // AC7-T11: what this deployment runs.
             .merge(crate::sbom_admin::routes())
             // A30-T1: environment variable values.

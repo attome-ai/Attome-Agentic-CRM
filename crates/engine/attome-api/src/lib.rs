@@ -54,6 +54,7 @@ pub mod changeset;
 /// A30-T1 — `/api/v1/admin/env-variables`.
 mod env_variable_admin;
 mod mentions;
+mod ratelimit_admin;
 /// AC7-T11 — `/api/v1/admin/sbom`.
 mod sbom_admin;
 /// AA13-T8 — `/api/v1/admin/slo`.

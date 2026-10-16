@@ -4269,6 +4269,24 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "DELETE /api/v1/admin/rate-limits/bans/{bucket}" => {
+            let bucket = format!("ip:198.51.100.{}", Uuid::now_v7().as_u128() % 250);
+            fx.base
+                .redis_coordination
+                .set(
+                    attome_server::middleware::rate_limit::ban_key(&bucket),
+                    "auth",
+                    Some(std::time::Duration::from_secs(600)),
+                )
+                .await
+                .expect("seed ban");
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/rate-limits/bans/{bucket}"),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/admin/change-feed/consumers/{name}/rewind" => {
             // A consumer exists once it first reads; seed one, and an event
             // to rewind to.

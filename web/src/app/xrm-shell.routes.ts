@@ -435,6 +435,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.SloComponent),
           },
           {
+            // Q20-T5: temporary rate-limit bans, and lifting one.
+            path: 'rate-limit-bans',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.RateLimitBansComponent),
+          },
+          {
             // Y7-T6: change-feed consumers and how far behind each is.
             path: 'events-monitor',
             canActivate: [authGuard],

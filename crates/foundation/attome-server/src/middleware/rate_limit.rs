@@ -204,6 +204,54 @@ pub async fn active_ban(redis: &Store, bucket: &str) -> Result<Option<u64>, AppE
         .map(|left| left.max(1) as u64))
 }
 
+/// Q20-T5: one active temporary ban.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, utoipa::ToSchema)]
+pub struct ActiveBan {
+    /// `user:{id}` or `ip:{address}`.
+    pub bucket: String,
+    /// The limit category that tripped last.
+    pub category: Option<String>,
+    pub seconds_left: u64,
+}
+
+/// Q20-T5: every ban still in force; members whose ban ran out are dropped
+/// from the set as they are found.
+pub async fn list_bans(redis: &Store) -> Result<Vec<ActiveBan>, AppError> {
+    let mut out = Vec::new();
+    let mut members: Vec<String> = redis.smembers(BANNED_SET).await?.into_iter().collect();
+    members.sort();
+    for bucket in members {
+        match active_ban(redis, &bucket).await? {
+            Some(seconds_left) => {
+                let category = redis.get(ban_key(&bucket)).await?;
+                out.push(ActiveBan {
+                    bucket,
+                    category,
+                    seconds_left,
+                });
+            }
+            None => {
+                redis.srem(BANNED_SET, &bucket).await?;
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Q20-T5: lifts `bucket`'s ban and forgets its tripped windows; `false`
+/// when it was not banned.
+pub async fn lift_ban(redis: &Store, bucket: &str) -> Result<bool, AppError> {
+    let was = active_ban(redis, bucket).await?.is_some();
+    redis.del(ban_key(bucket)).await?;
+    redis
+        .del(attome_cache::rate_limit::storage_key(&format!(
+            "base:rl:trips:{bucket}"
+        )))
+        .await?;
+    redis.srem(BANNED_SET, bucket).await?;
+    Ok(was)
+}
+
 /// Counts a refused request toward a ban (see [`BAN_AFTER_TRIPPED_WINDOWS`]).
 /// Best-effort: the refusal itself already happened, so a store failure here
 /// is logged and changes nothing the caller sees.

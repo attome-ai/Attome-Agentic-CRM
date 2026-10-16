@@ -211,6 +211,11 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  rateLimitBans: {
+    title: 'Rate-limit bans',
+    intro: 'Callers that tripped a limit five times in an hour are refused for fifteen minutes. Lift a ban when you know the caller.',
+    left: '{minutes} min left', lift: 'Lift ban', none: 'Nobody is banned.',
+  },
   eventsMonitor: {
     title: 'Events monitor',
     intro: 'Every reader of the change feed: how many events it has not read yet, how old the oldest is, and when it last read. One more than five minutes behind raises an alert.',

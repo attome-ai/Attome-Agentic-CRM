@@ -17,3 +17,4 @@ export { LabelWorkbenchComponent } from './label-workbench/label-workbench.compo
 export { EnvVariablesComponent } from './env-variables/env-variables.component';
 export { SloComponent } from './slo/slo.component';
 export { EventsMonitorComponent } from './events-monitor/events-monitor.component';
+export { RateLimitBansComponent } from './rate-limit-bans/rate-limit-bans.component';
