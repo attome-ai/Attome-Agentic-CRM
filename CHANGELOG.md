@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Security policy schema: per-operation entity access levels and child-unit flags on role grants
+  (0076), per-role second-factor policy with grace periods and remembered devices (0077), and
+  per-role session limits with device and activity on sessions (0078).
 - Rule language versions: `attome_rules::compile_versioned` and `upgrade`; `endswith` is the
   first V2 function (V1 text keeps rejecting it). A QuerySpec JSON model (`attome_records::query_spec`).
 - Mentions: `POST /api/v1/{entity}/{id}/mentions` notifies everyone a text names as
