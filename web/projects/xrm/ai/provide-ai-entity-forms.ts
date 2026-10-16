@@ -6,6 +6,12 @@ import { AiModelFormComponent } from './forms/ai-model-form/ai-model-form.compon
 import { AiPersonalityFormComponent } from './forms/ai-personality-form/ai-personality-form.component';
 import { AiProviderFormComponent } from './forms/ai-provider-form/ai-provider-form.component';
 import { AiToneFormComponent } from './forms/ai-tone-form/ai-tone-form.component';
+import { AiFollowupRuleFormComponent } from './forms/ai-followup-rule-form/ai-followup-rule-form.component';
+import { AiCollectionRuleFormComponent } from './forms/ai-collection-rule-form/ai-collection-rule-form.component';
+import { AiPaymentPromiseFormComponent } from './forms/ai-payment-promise-form/ai-payment-promise-form.component';
+import { AiMeetingBriefFormComponent } from './forms/ai-meeting-brief-form/ai-meeting-brief-form.component';
+import { AiMeetingNotesFormComponent } from './forms/ai-meeting-notes-form/ai-meeting-notes-form.component';
+import { AiWorkMeasureFormComponent } from './forms/ai-work-measure-form/ai-work-measure-form.component';
 
 // Called from `EntityRouteRegistry.ensureLoaded`'s lazy `import()`, not
 // eagerly — see that class's doc comment for why (260KB lazy-chunk cap).
@@ -20,4 +26,10 @@ export function registerAiEntityForms(registry: EntityRouteRegistry): void {
   registry.register('ai_personality', { formComponent: AiPersonalityFormComponent });
   registry.register('ai_provider', { formComponent: AiProviderFormComponent });
   registry.register('ai_tone', { formComponent: AiToneFormComponent });
+  registry.register('ai_followup_rule', { formComponent: AiFollowupRuleFormComponent });
+  registry.register('ai_collection_rule', { formComponent: AiCollectionRuleFormComponent });
+  registry.register('ai_payment_promise', { formComponent: AiPaymentPromiseFormComponent });
+  registry.register('ai_meeting_brief', { formComponent: AiMeetingBriefFormComponent });
+  registry.register('ai_meeting_notes', { formComponent: AiMeetingNotesFormComponent });
+  registry.register('ai_work_measure', { formComponent: AiWorkMeasureFormComponent });
 }

@@ -6,6 +6,15 @@ import { ProductFormComponent } from './forms/product-form/product-form.componen
 import { QuoteFormComponent } from './forms/quote-form/quote-form.component';
 import { QuoteLineFormComponent } from './forms/quote-line-form/quote-line-form.component';
 import { TerritoryFormComponent } from './forms/territory-form/territory-form.component';
+import { CallAnalysisFormComponent } from './forms/call-analysis-form/call-analysis-form.component';
+import { CallTrackerFormComponent } from './forms/call-tracker-form/call-tracker-form.component';
+import { CallFindingFormComponent } from './forms/call-finding-form/call-finding-form.component';
+import { CallScorecardFormComponent } from './forms/call-scorecard-form/call-scorecard-form.component';
+import { CallScorecardAnswerFormComponent } from './forms/call-scorecard-answer-form/call-scorecard-answer-form.component';
+import { CallCommentFormComponent } from './forms/call-comment-form/call-comment-form.component';
+import { CallLibraryFormComponent } from './forms/call-library-form/call-library-form.component';
+import { CallLibraryItemFormComponent } from './forms/call-library-item-form/call-library-item-form.component';
+import { CallDailyAggregateFormComponent } from './forms/call-daily-aggregate-form/call-daily-aggregate-form.component';
 
 // The sales vertical's entity forms (verticals/sales/bundle.json).
 // SYSTEM-CHANGES.md Topic 14: every entity has its own form in code; these are
@@ -23,4 +32,13 @@ export function registerSalesEntityForms(registry: EntityRouteRegistry): void {
   registry.register('quote', { formComponent: QuoteFormComponent });
   registry.register('quote_line', { formComponent: QuoteLineFormComponent });
   registry.register('territory', { formComponent: TerritoryFormComponent });
+  registry.register('call_analysis', { formComponent: CallAnalysisFormComponent });
+  registry.register('call_tracker', { formComponent: CallTrackerFormComponent });
+  registry.register('call_finding', { formComponent: CallFindingFormComponent });
+  registry.register('call_scorecard', { formComponent: CallScorecardFormComponent });
+  registry.register('call_scorecard_answer', { formComponent: CallScorecardAnswerFormComponent });
+  registry.register('call_comment', { formComponent: CallCommentFormComponent });
+  registry.register('call_library', { formComponent: CallLibraryFormComponent });
+  registry.register('call_library_item', { formComponent: CallLibraryItemFormComponent });
+  registry.register('call_daily_aggregate', { formComponent: CallDailyAggregateFormComponent });
 }

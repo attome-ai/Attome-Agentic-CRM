@@ -3,6 +3,10 @@ import { AmendmentFormComponent } from './forms/amendment-form/amendment-form.co
 import { ClauseFormComponent } from './forms/clause-form/clause-form.component';
 import { ContractFormComponent } from './forms/contract-form/contract-form.component';
 import { ObligationFormComponent } from './forms/obligation-form/obligation-form.component';
+import { ContractPlaybookRuleFormComponent } from './forms/contract-playbook-rule-form/contract-playbook-rule-form.component';
+import { ContractVersionFormComponent } from './forms/contract-version-form/contract-version-form.component';
+import { ContractComparisonFormComponent } from './forms/contract-comparison-form/contract-comparison-form.component';
+import { ContractImportFormComponent } from './forms/contract-import-form/contract-import-form.component';
 
 // The contract-management vertical's entity forms (verticals/contract-management/bundle.json).
 // SYSTEM-CHANGES.md Topic 14: every entity has its own form in code; these are
@@ -17,4 +21,8 @@ export function registerContractManagementEntityForms(registry: EntityRouteRegis
   registry.register('clause', { formComponent: ClauseFormComponent });
   registry.register('contract', { formComponent: ContractFormComponent });
   registry.register('obligation', { formComponent: ObligationFormComponent });
+  registry.register('contract_playbook_rule', { formComponent: ContractPlaybookRuleFormComponent });
+  registry.register('contract_version', { formComponent: ContractVersionFormComponent });
+  registry.register('contract_comparison', { formComponent: ContractComparisonFormComponent });
+  registry.register('contract_import', { formComponent: ContractImportFormComponent });
 }

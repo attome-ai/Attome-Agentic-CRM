@@ -152,6 +152,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'dashboard_decision', 'dashboard_decision_option', 'dashboard_decision_dependency',
       'dashboard_scenario', 'dashboard_scenario_assumption', 'dashboard_scenario_metric',
       'dashboard_scenario_result', 'dashboard_metric_definition', 'dashboard_metric_target',
+      'metric_scorecard', 'metric_scorecard_item', 'metric_comment',
     ]],
     [project, [
       'attome_project', 'project_work_item', 'project_deliverable', 'project_issue',
@@ -182,6 +183,8 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     [ai, [
       'ai_agent', 'ai_model', 'ai_personality', 'ai_provider', 'ai_tone',
       'ai_agent_policy', 'ai_capability_pack',
+      'ai_followup_rule', 'ai_collection_rule', 'ai_payment_promise', 'ai_meeting_brief',
+      'ai_meeting_notes', 'ai_work_measure',
     ]],
     [report, ['attome_report', 'report_schedule']],
     [s2s, ['s2s_client', 's2s_permission', 's2s_access_log']],
@@ -193,13 +196,20 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     ]],
     [portal, ['webportal', 'webportal_user']],
     [assetManagement, ['asset', 'location']],
-    [contractManagement, ['amendment', 'clause', 'contract', 'obligation']],
+    [contractManagement, [
+      'amendment', 'clause', 'contract', 'obligation',
+      'contract_playbook_rule', 'contract_version', 'contract_comparison', 'contract_import',
+    ]],
     [crm, ['account', 'activity', 'contact', 'lead', 'opportunity']],
     [customerService, ['customer']],
     [enterpriseArchitecture, ['ea_application', 'ea_capability', 'ea_system', 'ea_technology']],
     [finance, ['budget', 'cost_center', 'expense', 'invoice', 'payment']],
     [humanResources, ['attendance', 'employee', 'leave_request', 'performance_review']],
-    [sales, ['order', 'price_list', 'price_list_item', 'product', 'quote', 'quote_line', 'territory']],
+    [sales, [
+      'order', 'price_list', 'price_list_item', 'product', 'quote', 'quote_line', 'territory',
+      'call_analysis', 'call_tracker', 'call_finding', 'call_scorecard', 'call_scorecard_answer',
+      'call_comment', 'call_library', 'call_library_item', 'call_daily_aggregate',
+    ]],
     [vendorSupplier, ['vendor', 'vendor_compliance_document', 'vendor_evaluation']],
   ];
   for (const [loader, names] of groups) {
