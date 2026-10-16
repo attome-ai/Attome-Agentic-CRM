@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission disputes and adjustments: `POST /api/v1/commission/disputes` (the line's owner),
+  `POST /api/v1/commission/disputes/{id}/decision` (accept, reject or adjust) and
+  `POST /api/v1/commission/adjustments` (reason required); an adjustment above the new
+  `commission.adjustment_approval_amount` setting (default 1000) answers `202` with an approval
+  request and is written only when that approval executes (`commission.adjustment_apply`).
 - Commission statements: `GET /api/v1/commission/statements/me?period_id=` and
   `GET /api/v1/commission/statements?period_id=&participant_id=` list statement lines, adjustments and
   clawbacks under the commission roles' record rules, amounts hidden without the amount field grant;

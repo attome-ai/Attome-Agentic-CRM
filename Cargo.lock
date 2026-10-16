@@ -402,6 +402,7 @@ dependencies = [
  "attome-audit",
  "attome-auth",
  "attome-cache",
+ "attome-commission",
  "attome-compliance",
  "attome-config",
  "attome-content",

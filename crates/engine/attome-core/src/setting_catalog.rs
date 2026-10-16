@@ -30,7 +30,21 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(ai_settings());
     all.extend(omnichannel_settings());
     all.extend(ops_settings());
+    all.extend(commission_settings());
     all
+}
+
+/// F10: commission settings.
+fn commission_settings() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "commission.adjustment_approval_amount",
+        "Manual commission adjustments larger than this (either way, in the \
+         deployment's base currency) are written only after an approval.",
+        || json!({"type": "number", "minimum": 0}),
+        &[SettingScope::Deployment],
+        false,
+        || json!(1000),
+    )]
 }
 
 /// AB5-T6: operating switches.

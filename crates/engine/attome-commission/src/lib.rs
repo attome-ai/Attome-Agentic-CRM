@@ -4,6 +4,7 @@
 //! crate holds the engine code that acts on them as later tasks add it. Gated on the `commission`
 //! module.
 
+pub mod dispute;
 pub mod model;
 pub mod rules;
 pub mod run;
@@ -20,5 +21,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 36;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <run::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<statement::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<dispute::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

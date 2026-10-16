@@ -108,6 +108,7 @@ pub(crate) use attome_dashboard::lifecycle::ACTION_DASHBOARD_PUBLISH;
 /// to `execute_approved`'s match arms so the two can never drift apart.
 pub const KNOWN_ACTION_TYPES: &[&str] = &[
     ACTION_SECURITY_REWRAP,
+    attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
     attome_security::admin::ACTION_ROLE_GRANT,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
@@ -1047,6 +1048,20 @@ async fn dispatch_approved(
                 payload.change_request_id,
                 &payload.to_state,
                 approver_id,
+            )
+            .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
+        attome_commission::dispute::ACTION_ADJUSTMENT_APPLY => {
+            // F10-T8: an adjustment above the approval amount is written only
+            // here, once approved, with the request's id on it.
+            let payload: attome_commission::dispute::AdjustmentPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response = attome_commission::dispute::do_apply_adjustment(
+                state,
+                &payload,
+                approver_id,
+                Some(request.id),
             )
             .await?;
             serde_json::to_value(&response).map_err(AppError::internal)?

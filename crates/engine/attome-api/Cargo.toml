@@ -36,6 +36,7 @@ attome-modules.workspace      = true
 attome-notification.workspace = true
 attome-profiler.workspace     = true
 attome-project.workspace      = true
+attome-commission.workspace = true
 attome-records.workspace      = true
 attome-report.workspace       = true
 attome-rules.workspace        = true
