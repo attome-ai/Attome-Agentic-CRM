@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The marketing-to-sales hand-off SLA: a hand-off is due after the programme's business hours (8 by
+  default, Sunday to Thursday 09:00 to 17:00 Riyadh time); every five minutes the overdue ones are
+  marked and the assignee's manager notified once, for programmes with the SLA on.
 - Marketing lists refresh: a segment's people come from its stored query as the list's owner sees
   them, combinations include, intersect or exclude other lists in order (five deep, cycles refused),
   account lists expand to contacts or decision makers, and each refresh writes the joins and leaves
