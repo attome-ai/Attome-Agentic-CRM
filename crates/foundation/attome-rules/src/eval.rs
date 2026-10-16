@@ -350,6 +350,17 @@ impl Evaluator<'_> {
                     (other, _) => Err(eval_type_err("startswith", "text", other)),
                 }
             }
+            // Z11-T1: the first V2 function.
+            "endswith" => {
+                let v = self.eval_only(args, 2, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1]) {
+                    (Value::Text(a), Value::Text(b)) => Ok(Value::Bool(a.ends_with(b.as_str()))),
+                    (other, _) => Err(eval_type_err("endswith", "text", other)),
+                }
+            }
             "date_add" => {
                 let v = self.eval_only(args, 3, name, trace)?;
                 if let Some(e) = null_operand_if_any(name, &v) {

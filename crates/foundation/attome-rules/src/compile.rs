@@ -64,15 +64,29 @@ pub fn compile_with_budgets(
     schema: &Schema,
     budgets: Budgets,
 ) -> Result<Compiled, RulesError> {
-    compile_inner(src, schema, budgets).map_err(RulesDiagnostic::into_error)
+    compile_versioned(src, schema, crate::LanguageVersion::V1, budgets)
+}
+
+/// Z11-T1: compiles `src` as written in `version`; a function newer than
+/// that version is `UnknownFunction`. [`compile`] and
+/// [`compile_with_budgets`] are V1.
+pub fn compile_versioned(
+    src: &str,
+    schema: &Schema,
+    version: crate::LanguageVersion,
+    budgets: Budgets,
+) -> Result<Compiled, RulesError> {
+    compile_inner(src, schema, version, budgets).map_err(RulesDiagnostic::into_error)
 }
 
 fn compile_inner(
     src: &str,
     schema: &Schema,
+    version: crate::LanguageVersion,
     budgets: Budgets,
 ) -> Result<Compiled, RulesDiagnostic> {
     let parsed = parser::parse_with_spans(src, &budgets)?;
+    crate::version::check(&parsed.expr, version).map_err(RulesDiagnostic::from)?;
     let warnings = typecheck::null_warnings(&parsed.expr);
     let result_type = typecheck::typecheck(&parsed.expr, schema, &parsed.spans)?;
     Ok(Compiled {

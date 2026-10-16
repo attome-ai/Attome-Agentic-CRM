@@ -251,10 +251,10 @@ fn typecheck_call(
                 ))),
             }
         }
-        "startswith" => {
+        "startswith" | "endswith" => {
             arity(name, args.len(), 2, 2)?;
-            require(&arg_types[0], &Type::Text, "startswith")?;
-            require(&arg_types[1], &Type::Text, "startswith")?;
+            require(&arg_types[0], &Type::Text, name)?;
+            require(&arg_types[1], &Type::Text, name)?;
             Ok(Type::Bool)
         }
         "date_add" => {

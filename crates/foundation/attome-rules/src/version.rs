@@ -1,0 +1,79 @@
+//! Language versions (roadmap Z11-T1): a stored expression records the
+//! version it was written in, so it keeps its meaning when the language
+//! grows. A function added after V1 is accepted only from the version that
+//! added it; compiling V1 text rejects it as an unknown function.
+
+use crate::ast::Expr;
+use crate::error::RulesError;
+
+/// A version of the rule language.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum LanguageVersion {
+    V1,
+    V2,
+}
+
+impl LanguageVersion {
+    pub const LATEST: Self = Self::V2;
+
+    /// `v1` or `v2`.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim() {
+            "v1" => Some(Self::V1),
+            "v2" => Some(Self::V2),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::V1 => "v1",
+            Self::V2 => "v2",
+        }
+    }
+}
+
+/// Functions and the version that added them; anything not listed is V1.
+const ADDED: &[(&str, LanguageVersion)] = &[("endswith", LanguageVersion::V2)];
+
+/// The version a function needs.
+pub(crate) fn function_version(name: &str) -> LanguageVersion {
+    ADDED
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or(LanguageVersion::V1, |(_, v)| *v)
+}
+
+/// Refuses any call to a function newer than `version`.
+pub(crate) fn check(expr: &Expr, version: LanguageVersion) -> Result<(), RulesError> {
+    match expr {
+        Expr::Call { name, args } => {
+            if function_version(name) > version {
+                return Err(RulesError::UnknownFunction(name.clone()));
+            }
+            args.iter().try_for_each(|a| check(a, version))
+        }
+        Expr::Unary { expr, .. } => check(expr, version),
+        Expr::Binary { lhs, rhs, .. } => {
+            check(lhs, version)?;
+            check(rhs, version)
+        }
+        Expr::ListLit(items) => items.iter().try_for_each(|a| check(a, version)),
+        _ => Ok(()),
+    }
+}
+
+/// Rewrites `src`, written in `from`, for `to`. No V1 construct changes
+/// meaning in V2, so V1 text is V2 text unchanged once it parses.
+pub fn upgrade(
+    src: &str,
+    from: LanguageVersion,
+    to: LanguageVersion,
+) -> Result<String, RulesError> {
+    let expr = crate::parse(src)?;
+    check(&expr, from)?;
+    if to < from {
+        check(&expr, to)?;
+    }
+    Ok(src.to_owned())
+}

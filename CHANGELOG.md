@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rule language versions: `attome_rules::compile_versioned` and `upgrade`; `endswith` is the
+  first V2 function (V1 text keeps rejecting it). A QuerySpec JSON model (`attome_records::query_spec`).
 - Mentions: `POST /api/v1/{entity}/{id}/mentions` notifies everyone a text names as
   `@[user:<id>]` or `@[team:<id>]` who may read the record; nobody else hears of it.
 - Profiler probes keep a latency histogram; stats carry `p50_ms`/`p95_ms`/`p99_ms`, and

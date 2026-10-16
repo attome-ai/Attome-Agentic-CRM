@@ -106,15 +106,17 @@ mod parser;
 mod trace;
 mod typecheck;
 mod value;
+mod version;
 
 pub use ast::{BinaryOp, Expr, FieldRef, UnaryOp};
 pub use budget::{Budgets, HARD_MAX_DEPTH, HARD_MAX_NODES, HARD_MAX_SOURCE_BYTES};
 pub use chrono_tz::Tz;
-pub use compile::{Compiled, compile, compile_with_budgets};
+pub use compile::{Compiled, compile, compile_versioned, compile_with_budgets};
 pub use context::{Context, Schema};
 pub use error::{BudgetKind, RulesDiagnostic, RulesError, Spans};
 pub use trace::{Trace, TraceEntry};
 pub use value::{Type, Value};
+pub use version::{LanguageVersion, upgrade};
 
 /// Parses src without type-checking or compiling it — exposed for callers
 /// that only need syntax validation (e.g. an admin UI's live-typing
