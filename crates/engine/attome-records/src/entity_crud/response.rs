@@ -71,6 +71,11 @@ pub struct EntityRecordResponse {
     /// records); omitted otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
     merged_into: Option<Uuid>,
+    /// S1-T4: with `?expand=`, the records the named lookups point at, keyed
+    /// by lookup attribute; a target the caller may not read is absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<std::collections::HashMap<String, serde_json::Value>>)]
+    expanded: Option<serde_json::Map<String, Value>>,
 }
 
 fn is_zero(n: &i64) -> bool {
@@ -240,6 +245,17 @@ impl EntityRecordResponse {
     pub(crate) fn with_merged_into(mut self, merged_into: Option<Uuid>) -> Self {
         self.merged_into = merged_into;
         self
+    }
+
+    /// S1-T4: see the `expanded` field.
+    pub(crate) fn with_expanded(mut self, expanded: serde_json::Map<String, Value>) -> Self {
+        self.expanded = Some(expanded);
+        self
+    }
+
+    /// The record's own columns.
+    pub(crate) fn data(&self) -> &Value {
+        &self.data
     }
 
     /// See the `duplicate_warnings` and `hidden_duplicates` fields.
@@ -459,6 +475,7 @@ pub(super) fn build_response(
         duplicate_warnings: Vec::new(),
         hidden_duplicates: 0,
         merged_into: None,
+        expanded: None,
     }
 }
 

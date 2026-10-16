@@ -6,6 +6,7 @@ use axum::{Router, routing::get};
 
 mod access;
 pub mod clone;
+mod expand;
 pub mod favourites;
 mod hierarchy;
 /// U6 (basic-units plan B-R12, D-601): `/{entity}/{id}/history`, the

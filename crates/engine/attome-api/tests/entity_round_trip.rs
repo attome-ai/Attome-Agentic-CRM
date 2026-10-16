@@ -9569,3 +9569,91 @@ fn get_and_patch_by_business_key() {
         assert_eq!(res.status(), StatusCode::OK, "{}", body_json(res).await);
     })
 }
+
+/// S1-T4: `?expand=` returns a lookup's target inline; a non-lookup is 422.
+#[test]
+fn expand_returns_related_record_inline() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (parent, parent_id) = create_entity(&app, &admin_cookie, "xparent").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &parent_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
+        let (child, child_id) = create_entity(&app, &admin_cookie, "xchild").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &child_id,
+            &format!(
+                r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{parent_id}"}}"#
+            ),
+        )
+        .await;
+        sync_registry(&state).await;
+
+        let post = |entity: &str, body: String| {
+            Request::builder()
+                .method("POST")
+                .uri(format!("/api/v1/{entity}"))
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(post(&parent, r#"{"title":"Acme"}"#.to_owned()))
+            .await
+            .expect("parent");
+        let p = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let res = app
+            .clone()
+            .oneshot(post(&child, format!(r#"{{"parent_ref":"{p}"}}"#)))
+            .await
+            .expect("child");
+        let c = body_json(res).await["id"].as_str().unwrap().to_owned();
+
+        let get = |uri: String| {
+            Request::builder()
+                .method("GET")
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .body(Body::empty())
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{child}/{c}?expand=parent_ref")))
+            .await
+            .expect("expand");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        assert_eq!(body["expanded"]["parent_ref"]["id"], p.as_str(), "{body}");
+        assert_eq!(body["expanded"]["parent_ref"]["title"], "Acme", "{body}");
+
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{child}/{c}")))
+            .await
+            .expect("plain");
+        let body = body_json(res).await;
+        assert!(
+            body.get("expanded").is_none(),
+            "no expand, no expanded: {body}"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{parent}/{p}?expand=title")))
+            .await
+            .expect("non-lookup");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}

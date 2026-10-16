@@ -143,6 +143,7 @@ async fn id_for(state: &EngineState, entity_input: &str, keyspec: &str) -> Resul
         ("entity" = String, Path),
         ("keyspec" = String, Path, description = "attr=value pairs joined by `,`, naming a unique key"),
         super::response::SelectParam,
+        super::expand::ExpandParam,
     ),
     responses(
         (status = 200, description = "The record, as GET /api/v1/{entity}/{id} returns it"),
@@ -159,10 +160,19 @@ pub(super) async fn get_by_key(
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, keyspec)): Path<(String, String)>,
     select: Query<super::response::SelectParam>,
+    expand: Query<super::expand::ExpandParam>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
     let id = id_for(&state, &entity_input, &keyspec).await?;
-    super::mutations::get_record(State(state), ctx, Path((entity_input, id)), select, headers).await
+    super::mutations::get_record(
+        State(state),
+        ctx,
+        Path((entity_input, id)),
+        select,
+        expand,
+        headers,
+    )
+    .await
 }
 
 #[utoipa::path(

@@ -186,6 +186,7 @@ pub async fn field_changes_from_obj(
         ("entity" = String, Path),
         ("id" = Uuid, Path),
         super::response::SelectParam,
+        super::expand::ExpandParam,
     ),
     responses(
         (status = 200, description = "Success"),
@@ -202,12 +203,18 @@ pub(super) async fn get_record(
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
     axum::extract::Query(select): axum::extract::Query<super::response::SelectParam>,
+    axum::extract::Query(expand): axum::extract::Query<super::expand::ExpandParam>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
     let select =
         super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
             .await?;
     let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
+    // S1-T4: a bad `expand` refuses the request before anything is read.
+    let lookups = match expand.expand.as_deref() {
+        Some(raw) => super::expand::parse_expand(raw, &attrs)?,
+        None => Vec::new(),
+    };
     // A polymorphic-audit row (`audit_header`/`audit_detail`/
     // `audit_snapshot`) that resolves to a business record is gated
     // solely by the caller's access to *that* record
@@ -291,9 +298,13 @@ pub(super) async fn get_record(
     .fetch_optional(pool)
     .await
     .map_err(AppError::internal)?;
-    let response = response
-        .with_merged_into(merged_into)
-        .selected(select.as_deref());
+    let mut response = response.with_merged_into(merged_into);
+    if !lookups.is_empty() {
+        let expanded =
+            super::expand::expand_record(&state, &ctx, response.data(), &lookups).await?;
+        response = response.with_expanded(expanded);
+    }
+    let response = response.selected(select.as_deref());
     let etag = row_version_etag(response.row_version);
     Ok((
         StatusCode::OK,
