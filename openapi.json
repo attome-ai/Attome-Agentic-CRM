@@ -45654,7 +45654,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DecideBody"
+                "$ref": "#/components/schemas/CounterpartyDecideBody"
               }
             }
           },
@@ -75931,6 +75931,17 @@
           },
           "ticket_number": {
             "type": "string"
+          }
+        }
+      },
+      "CounterpartyDecideBody": {
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/Decision"
           }
         }
       },
@@ -111879,6 +111890,13 @@
           "subject_reference"
         ],
         "properties": {
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "E27-T1: the channel the consent is for (`any` when absent): `email`,\n`sms`, `whatsapp`, `phone` or `ads`."
+          },
           "evidence": {
             "type": [
               "string",

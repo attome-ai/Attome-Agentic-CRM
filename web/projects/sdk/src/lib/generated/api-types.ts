@@ -16546,6 +16546,9 @@ export interface components {
             ticket_id: string;
             ticket_number: string;
         };
+        CounterpartyDecideBody: {
+            decision: components["schemas"]["Decision"];
+        };
         CrawlImportBody: {
             page_ids: string[];
         };
@@ -30470,6 +30473,11 @@ export interface components {
             widget_id: string;
         };
         WithdrawConsentBody: {
+            /**
+             * @description E27-T1: the channel the consent is for (`any` when absent): `email`,
+             *     `sms`, `whatsapp`, `phone` or `ads`.
+             */
+            channel?: string | null;
             evidence?: string | null;
             purpose_key: string;
             regarding_entity?: string | null;
@@ -60361,7 +60369,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DecideBody"];
+                "application/json": components["schemas"]["CounterpartyDecideBody"];
             };
         };
         responses: {
