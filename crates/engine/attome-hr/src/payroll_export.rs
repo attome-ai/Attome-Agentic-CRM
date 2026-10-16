@@ -15,6 +15,7 @@ use std::collections::BTreeMap;
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
+use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
