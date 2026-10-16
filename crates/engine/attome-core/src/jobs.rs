@@ -412,6 +412,8 @@ pub enum EngineJob {
     /// D18-T1: scores every record of every enabled points model. Bare
     /// unit variant.
     PointsScoring,
+    /// D19-T1: scores the risk of every open deal. Bare unit variant.
+    DealRiskEvaluation,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -853,6 +855,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::PointsScoring
+            | Self::DealRiskEvaluation
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -941,6 +944,7 @@ impl EngineJob {
             EngineJob::ContractCounterpartyMatch => "ContractCounterpartyMatch",
             EngineJob::RecurringTaskRoll => "RecurringTaskRoll",
             EngineJob::PointsScoring => "PointsScoring",
+            EngineJob::DealRiskEvaluation => "DealRiskEvaluation",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1041,6 +1045,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::PointsScoring
+            | Self::DealRiskEvaluation
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1154,6 +1159,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::PointsScoring
+            | Self::DealRiskEvaluation
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1483,6 +1489,7 @@ mod tests {
         assert_round_trips(EngineJob::ContractCounterpartyMatch);
         assert_round_trips(EngineJob::RecurringTaskRoll);
         assert_round_trips(EngineJob::PointsScoring);
+        assert_round_trips(EngineJob::DealRiskEvaluation);
     }
 
     #[test]

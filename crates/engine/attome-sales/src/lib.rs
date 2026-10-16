@@ -10,6 +10,7 @@ pub mod attainment;
 pub mod competitors;
 pub mod cpq;
 pub mod cpq_pricing;
+pub mod deal_risk;
 pub mod dialer;
 pub mod discount_policy;
 pub mod enrichment;

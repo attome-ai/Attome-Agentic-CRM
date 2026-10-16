@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Deal risk: every open opportunity is scored nightly from 0 to 100 (quiet for 14 days, close date
+  pushed, no decision maker or economic buyer, stalled past 1.5 times its stage's median, close date
+  passed), with the reasons on the deal and an "At Risk" deals query (sales pack 0014).
 - Points scoring runs: `points_model` and `points_rule` define fit rules (rule-language conditions on
   the lead or contact) and behaviour rules (activities of a type, fading with the model's half-life);
   a nightly job stores each record's score and its reasons in `points_score`.

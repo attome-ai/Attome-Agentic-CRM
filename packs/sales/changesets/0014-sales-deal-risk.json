@@ -1,0 +1,161 @@
+{
+  "author": "packs",
+  "checksum": "sha256:76a69470a8c13d004dba9c1730d60dc23821a60fe0e83876a1f980daaccf06f5",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "D19-T1: the nightly deal risk score (0 to 100), its reasons and when it was evaluated, on each open opportunity, with the at-risk deals query.",
+  "format": "attome-changeset/v1",
+  "id": "01a144f9-08c1-726e-b058-7ab9f462aec5",
+  "layer": "product",
+  "name": "sales-deal-risk",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Risk Score",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "risk_score",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity",
+        "field": "risk_score"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Risk Reasons",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "risk_reasons",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity",
+        "field": "risk_reasons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Risk Evaluated",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "risk_evaluated_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "opportunity",
+        "field": "risk_evaluated_at"
+      }
+    },
+    {
+      "args": {
+        "display_name": "درجة المخاطرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.risk_score",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أسباب المخاطرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.risk_reasons",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ تقييم المخاطرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.risk_evaluated_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Deals: At Risk",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT o.id, o.name, o.stage, o.amount, o.close_date, o.risk_score, o.risk_reasons FROM opportunity o WHERE o.is_active IS NOT FALSE AND o.risk_score >= 50 AND o.stage NOT IN ('closed_won', 'closed_lost') ORDER BY o.risk_score DESC, o.amount DESC NULLS LAST",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "opportunity",
+        "query": "Deals: At Risk"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 14,
+  "title": "Pack: deal risk"
+}
