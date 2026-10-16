@@ -10,6 +10,5 @@ ALTER TABLE entity_change_event ADD COLUMN IF NOT EXISTS before jsonb;
 ALTER TABLE entity_change_event ADD COLUMN IF NOT EXISTS after jsonb;
 ALTER TABLE entity_change_event
     ADD COLUMN IF NOT EXISTS seq bigint NOT NULL DEFAULT nextval('entity_change_event_seq');
-ALTER SEQUENCE entity_change_event_seq OWNED BY entity_change_event.seq;
 
 CREATE INDEX IF NOT EXISTS entity_change_event_seq_idx ON entity_change_event (seq);

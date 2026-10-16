@@ -2973,7 +2973,7 @@ pub async fn update_one_as(
     // becoming issued) is given by the update that meets it, on this
     // transaction.
     for (field, value) in attome_metadata::autovalue::generate_for_update(
-        &mut **tx,
+        &mut *tx,
         &state.base.db,
         entity_name,
         record_id,

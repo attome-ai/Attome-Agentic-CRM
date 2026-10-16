@@ -26,6 +26,10 @@
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
 )]
+#![allow(
+    clippy::disallowed_methods,
+    reason = "the test drives raw pool transactions to race allocations; production code uses attome_db::tx::begin"
+)]
 
 use attome_db::DbPool;
 use attome_metadata::autovalue::{AutoValue, ResetScope};

@@ -138,7 +138,8 @@ mod tests {
     #[test]
     fn allocate_partial_leaves_open() {
         let only = inv(d(1, 1), 100);
-        let a = allocate(Decimal::from(40), "SAR", &[only.clone()], None).expect("allocate");
+        let a = allocate(Decimal::from(40), "SAR", std::slice::from_ref(&only), None)
+            .expect("allocate");
         assert_eq!(a.lines, vec![(only.id, Decimal::from(40))]);
         assert_eq!(a.credit, Decimal::ZERO);
     }
@@ -146,7 +147,8 @@ mod tests {
     #[test]
     fn allocate_overpay_is_credit() {
         let only = inv(d(1, 1), 100);
-        let a = allocate(Decimal::from(130), "SAR", &[only.clone()], None).expect("allocate");
+        let a = allocate(Decimal::from(130), "SAR", std::slice::from_ref(&only), None)
+            .expect("allocate");
         assert_eq!(a.lines, vec![(only.id, Decimal::from(100))]);
         assert_eq!(a.credit, Decimal::from(30));
     }

@@ -72,6 +72,7 @@ pub mod invitation;
 pub mod jwt;
 pub mod mfa;
 pub mod oidc;
+pub mod otp;
 pub mod password;
 /// Q7-T1: breached and reused passwords.
 pub mod password_policy;

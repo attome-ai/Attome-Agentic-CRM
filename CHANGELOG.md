@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- One-time codes (`attome_auth::otp`): six digits, peppered hash, 60 seconds, single use, five
+  tries, Arabic-Indic digits accepted; table `one_time_code` (migration 0075).
 - `GET /api/v1/{entity}/{id}?expand=<lookups>` returns up to five lookups' target records inline
   under `expanded`, each only when the caller may read it.
 - `GET` / `PATCH /api/v1/{entity}/key/{keyspec}` address a record by its business key (or an

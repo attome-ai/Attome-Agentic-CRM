@@ -88,6 +88,7 @@ pub(super) struct UpsertQuery {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create), (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
 )]
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn upsert_record(
     State(state): State<EngineState>,
     // RecordScoped, not Admin: the per-entity checks are resolved from the

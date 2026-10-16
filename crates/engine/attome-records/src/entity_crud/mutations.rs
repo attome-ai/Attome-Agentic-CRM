@@ -464,6 +464,7 @@ async fn read_record_for(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create)])))),
 )]
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn create_record(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Create>>,
@@ -1173,6 +1174,7 @@ pub(crate) async fn sync_file_field_documents(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
 )]
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn update_record(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Update>>,
