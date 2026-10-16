@@ -306,6 +306,7 @@ pub async fn settle_closed_request(
     let (target, verb) = match request.status {
         ApprovalStatus::Rejected => (payload.on_reject_state.clone(), "rejected"),
         ApprovalStatus::Cancelled => (payload.from.clone(), "cancelled"),
+        ApprovalStatus::Recalled => (payload.from.clone(), "recalled"),
         ApprovalStatus::Expired => (payload.from.clone(), "expired"),
         ApprovalStatus::Invalidated => (payload.from.clone(), "invalidated"),
         ApprovalStatus::Pending | ApprovalStatus::Approved | ApprovalStatus::Executing => {
@@ -481,6 +482,7 @@ pub async fn cancel_or_release(
         }
         ApprovalStatus::Rejected
         | ApprovalStatus::Cancelled
+        | ApprovalStatus::Recalled
         | ApprovalStatus::Expired
         | ApprovalStatus::Invalidated => {
             if ctx.user_id != request.requested_by && !ctx.is_admin {

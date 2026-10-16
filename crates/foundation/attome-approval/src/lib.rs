@@ -104,6 +104,11 @@ pub enum ApprovalStatus {
     /// [`EXECUTION_CLAIM_LEASE_MINUTES`] has an unknown outcome and is only
     /// ever taken over explicitly ([`take_over_stale_execution`]).
     Executing,
+    /// Z10-T4: the requester took the request back while it was `Pending`, to
+    /// change it ([`recall_with`]); a corrected request is submitted with
+    /// [`resubmit_regarding_in_tx`], linked to this one. Terminal, and kept,
+    /// so the history shows both rounds.
+    Recalled,
 }
 
 impl ApprovalStatus {
@@ -121,6 +126,7 @@ impl ApprovalStatus {
             Self::Cancelled => "cancelled",
             Self::Invalidated => "invalidated",
             Self::Executing => "executing",
+            Self::Recalled => "recalled",
         }
     }
 
@@ -146,6 +152,7 @@ impl std::str::FromStr for ApprovalStatus {
             "cancelled" => Ok(Self::Cancelled),
             "invalidated" => Ok(Self::Invalidated),
             "executing" => Ok(Self::Executing),
+            "recalled" => Ok(Self::Recalled),
             other => Err(AppError::internal(format!(
                 "corrupt approval_request.status: {other:?}"
             ))),
@@ -627,6 +634,10 @@ pub struct ApprovalRequest {
     /// `xrm_dashboard_decision`'s own `regarding_entity`/`regarding_id`.
     pub regarding_entity: Option<String>,
     pub regarding_id: Option<Uuid>,
+    /// Z10-T4: the recalled request this one resubmits.
+    pub parent_request_id: Option<Uuid>,
+    /// Z10-T4: when the requester recalled it.
+    pub recalled_at: Option<DateTime<Utc>>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -648,6 +659,8 @@ struct ApprovalRequestRow {
     policy_id: Option<Uuid>,
     regarding_entity: Option<String>,
     regarding_id: Option<Uuid>,
+    parent_request_id: Option<Uuid>,
+    recalled_at: Option<DateTime<Utc>>,
 }
 
 impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
@@ -677,13 +690,15 @@ impl TryFrom<ApprovalRequestRow> for ApprovalRequest {
             policy_id: row.policy_id,
             regarding_entity: row.regarding_entity,
             regarding_id: row.regarding_id,
+            parent_request_id: row.parent_request_id,
+            recalled_at: row.recalled_at,
         })
     }
 }
 
 const REQUEST_COLUMNS: &str = "id, action_type, payload, requested_by, requested_at, status, \
      required_approvals, row_version, expires_at, executed_at, plan, step, step_started_at, \
-     escalated_at, policy_id, regarding_entity, regarding_id";
+     escalated_at, policy_id, regarding_entity, regarding_id, parent_request_id, recalled_at";
 
 /// Enqueues a new pending approval request instead of the caller executing
 /// its mutation inline. `required_approvals` lets a future N-of-M policy
@@ -1637,6 +1652,133 @@ pub async fn cancel_with(
     tx.commit().await.map_err(AppError::internal)?;
     log_transition(&request, ApprovalStatus::Pending);
     Ok(request)
+}
+
+/// Z10-T4: the requester takes their own `Pending` request back to change
+/// it. Same lock as `decide()` and [`cancel_with`], so a recall racing a
+/// decision is serialized against it; only the requester may recall
+/// (`Forbidden` otherwise), only while pending (`Conflict` once decided),
+/// and only at `expected_row_version`. The request stays as `recalled` with
+/// its time, and [`resubmit_regarding_in_tx`] links a corrected one to it.
+pub async fn recall_with(
+    pool: &PgPool,
+    request_id: Uuid,
+    requester_id: Uuid,
+    expected_row_version: i64,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
+    let mut tx = attome_db::tx::begin(pool).await?;
+
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-approval/decide:{request_id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Err(AppError::Conflict(
+            "another decision on this approval request is already in progress",
+        ));
+    }
+
+    let row: ApprovalRequestRow = sqlx::query_as(&format!(
+        "SELECT {REQUEST_COLUMNS} FROM approval_request WHERE id = $1 FOR UPDATE"
+    ))
+    .bind(request_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let current: ApprovalRequest = row.try_into()?;
+
+    if current.requested_by != requester_id {
+        return Err(AppError::Forbidden);
+    }
+    if current.status != ApprovalStatus::Pending {
+        return Err(AppError::Conflict(
+            "this approval request has already been decided",
+        ));
+    }
+    if current.row_version != expected_row_version {
+        return Err(AppError::VersionConflict);
+    }
+
+    let row: ApprovalRequestRow = sqlx::query_as(&format!(
+        "UPDATE approval_request \
+            SET status = 'recalled', recalled_at = NOW(), row_version = row_version + 1 \
+         WHERE id = $1 AND row_version = $2 AND status = 'pending' \
+         RETURNING {REQUEST_COLUMNS}"
+    ))
+    .bind(request_id)
+    .bind(expected_row_version)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::VersionConflict)?;
+
+    let request: ApprovalRequest = row.try_into()?;
+    hook.before_commit(&mut tx, &request).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    log_transition(&request, ApprovalStatus::Pending);
+    Ok(request)
+}
+
+/// Z10-T4: submits the corrected request after a recall, inside the
+/// caller's transaction: the same action type, requester and regarding
+/// record as `previous`, the new payload, and `parent_request_id` pointing
+/// at `previous` so both rounds stay in the history. `plan` makes it a
+/// plan-bearing request (validated as on submit); `None` keeps the flat
+/// model with `previous.required_approvals`. `previous` must be `Recalled`.
+pub async fn resubmit_regarding_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    previous: &ApprovalRequest,
+    new_payload: Value,
+    plan: Option<&ApprovalPlan>,
+    ttl: Duration,
+) -> Result<ApprovalRequest, AppError> {
+    if previous.status != ApprovalStatus::Recalled {
+        return Err(AppError::Conflict(
+            "only a recalled approval request can be resubmitted",
+        ));
+    }
+    if let Some(plan) = plan {
+        plan.validate()?;
+    }
+    let expires_at = Utc::now()
+        .checked_add_signed(ttl)
+        .ok_or_else(|| AppError::Validation("ttl is out of range".to_string()))?;
+    let plan_json = plan
+        .map(serde_json::to_value)
+        .transpose()
+        .map_err(AppError::internal)?;
+    let row: ApprovalRequestRow = sqlx::query_as(&format!(
+        "INSERT INTO approval_request \
+             (id, action_type, payload, requested_by, status, required_approvals, row_version, \
+              expires_at, plan, step, step_started_at, policy_id, regarding_entity, regarding_id, \
+              parent_request_id) \
+         VALUES ($1, $2, $3, $4, 'pending', $5, 0, $6, $7, 0, \
+                 CASE WHEN $7::jsonb IS NULL THEN NULL ELSE NOW() END, $8, $9, $10, $11) \
+         RETURNING {REQUEST_COLUMNS}"
+    ))
+    .bind(Uuid::now_v7())
+    .bind(&previous.action_type)
+    .bind(&new_payload)
+    .bind(previous.requested_by)
+    .bind(if plan.is_some() {
+        1
+    } else {
+        previous.required_approvals
+    })
+    .bind(expires_at)
+    .bind(&plan_json)
+    .bind(previous.policy_id)
+    .bind(previous.regarding_entity.as_deref())
+    .bind(previous.regarding_id)
+    .bind(previous.id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    row.try_into()
 }
 
 /// Closes the loop after the caller has actually re-run the approved

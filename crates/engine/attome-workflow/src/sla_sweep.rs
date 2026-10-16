@@ -98,6 +98,8 @@ pub async fn sweep(state: &EngineState) -> Result<u64, AppError> {
             attome_approval::ApprovalStatus::Rejected => Some("rejected"),
             attome_approval::ApprovalStatus::Expired => Some("expired"),
             attome_approval::ApprovalStatus::Cancelled => Some("cancelled"),
+            // Z10-T4: a recalled request is withdrawn like a cancelled one.
+            attome_approval::ApprovalStatus::Recalled => Some("cancelled"),
             // Approved, then refused at execution time because the
             // requester's authorization changed. Terminal: the approved path
             // must not run. `approval_taken_port` routes it to `rejected`.

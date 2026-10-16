@@ -234,6 +234,7 @@ fn status_name(status: ApprovalStatus) -> &'static str {
         ApprovalStatus::Cancelled => "cancelled",
         ApprovalStatus::Invalidated => "invalidated",
         ApprovalStatus::Executing => "executing",
+        ApprovalStatus::Recalled => "recalled",
     }
 }
 

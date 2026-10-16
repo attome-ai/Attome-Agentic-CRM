@@ -265,6 +265,9 @@ pub async fn apply_approval_transition(
         ApprovalStatus::Cancelled => {
             close_pending(conn, request.id, Status::Rejected, Some("cancelled")).await
         }
+        ApprovalStatus::Recalled => {
+            close_pending(conn, request.id, Status::Rejected, Some("recalled")).await
+        }
         ApprovalStatus::Pending => Ok(()),
     }
 }

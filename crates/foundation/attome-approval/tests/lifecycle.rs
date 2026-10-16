@@ -25,8 +25,9 @@ use std::sync::Mutex;
 
 use attome_approval::{
     ApprovalPlan, ApprovalRequest, ApprovalStatus, ApprovalStep, Decision, OnTimeout, StepMode,
-    decide, get, list_pending, mark_executed, mark_invalidated, mark_invalidated_with, submit,
-    submit_regarding_with, submit_with_plan_regarding_with, sweep_expired,
+    decide, get, list_pending, mark_executed, mark_invalidated, mark_invalidated_with, recall_with,
+    resubmit_regarding_in_tx, submit, submit_regarding_with, submit_with_plan_regarding_with,
+    sweep_expired,
 };
 use attome_db::{BeforeCommit, HookFuture, Tx};
 use attome_testkit::migrated_pool_or_skip;
@@ -339,4 +340,103 @@ async fn mark_executed_twice_is_a_version_conflict() {
         after.row_version, executed.row_version,
         "the refused mark changed nothing"
     );
+}
+
+/// Z10-T4: the requester recalls their pending request; it stays, as
+/// `recalled`, with the time.
+#[tokio::test]
+async fn recall_by_requester_sets_recalled() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let request = pending(&pool, "test.lifecycle.recall").await;
+    let recalled = recall_with(
+        &pool,
+        request.id,
+        request.requested_by,
+        request.row_version,
+        &attome_db::NoHook,
+    )
+    .await
+    .expect("the requester may recall");
+    assert_eq!(recalled.status, ApprovalStatus::Recalled);
+    assert!(recalled.recalled_at.is_some());
+    assert_eq!(recalled.row_version, request.row_version + 1);
+    assert_eq!(status(&pool, request.id).await, ApprovalStatus::Recalled);
+}
+
+#[tokio::test]
+async fn recall_by_other_user_is_forbidden() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let request = pending(&pool, "test.lifecycle.recall_other").await;
+    let err = recall_with(
+        &pool,
+        request.id,
+        Uuid::now_v7(),
+        request.row_version,
+        &attome_db::NoHook,
+    )
+    .await
+    .expect_err("only the requester recalls");
+    assert!(matches!(err, AppError::Forbidden), "{err:?}");
+    assert_eq!(status(&pool, request.id).await, ApprovalStatus::Pending);
+}
+
+#[tokio::test]
+async fn recall_after_decision_conflicts() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let request = approved(&pool, "test.lifecycle.recall_decided").await;
+    let err = recall_with(
+        &pool,
+        request.id,
+        request.requested_by,
+        request.row_version,
+        &attome_db::NoHook,
+    )
+    .await
+    .expect_err("a decided request cannot be recalled");
+    assert!(matches!(err, AppError::Conflict(_)), "{err:?}");
+    assert_eq!(status(&pool, request.id).await, ApprovalStatus::Approved);
+}
+
+#[tokio::test]
+async fn resubmit_links_parent_request() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let request = pending(&pool, "test.lifecycle.resubmit").await;
+    let recalled = recall_with(
+        &pool,
+        request.id,
+        request.requested_by,
+        request.row_version,
+        &attome_db::NoHook,
+    )
+    .await
+    .expect("recall");
+    let mut tx = attome_db::tx::begin(&pool).await.expect("begin");
+    let again = resubmit_regarding_in_tx(
+        &mut tx,
+        &recalled,
+        json!({ "corrected": true }),
+        None,
+        Duration::hours(1),
+    )
+    .await
+    .expect("resubmit");
+    tx.commit().await.expect("commit");
+    assert_eq!(again.status, ApprovalStatus::Pending);
+    assert_eq!(again.parent_request_id, Some(request.id));
+    assert_eq!(again.requested_by, request.requested_by);
+    assert_eq!(again.action_type, request.action_type);
+    assert_eq!(again.payload, json!({ "corrected": true }));
+    assert_eq!(
+        status(&pool, request.id).await,
+        ApprovalStatus::Recalled,
+        "the recalled round stays in the history"
+    );
+
+    // A request that was not recalled cannot be resubmitted.
+    let other = pending(&pool, "test.lifecycle.resubmit_pending").await;
+    let mut tx = attome_db::tx::begin(&pool).await.expect("begin");
+    let err = resubmit_regarding_in_tx(&mut tx, &other, json!({}), None, Duration::hours(1))
+        .await
+        .expect_err("only a recalled request");
+    assert!(matches!(err, AppError::Conflict(_)), "{err:?}");
 }
