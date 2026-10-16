@@ -173,6 +173,10 @@ mod profiler_admin;
 /// `openapi.rs`) and `routes` (mounted by `system.rs`); handlers stay
 /// module-private, same shape as `duplicates_admin`.
 pub mod quality_admin;
+/// L2-T6: built-in Arabic data-quality checks (pure).
+pub mod quality_arabic;
+/// L2-T5: data-quality fix transforms (pure).
+pub mod quality_fixes;
 /// M14 Phase 1 (Data Quality) — the scoring sweep
 /// (`EngineJob::DataQualityScoreSweep`'s handler). `pub` only for
 /// `run_sweep`, which `crates/server/src/jobs.rs` calls; everything else
