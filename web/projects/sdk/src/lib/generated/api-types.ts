@@ -10388,6 +10388,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/opportunities/{id}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_team_member"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/team/{member_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_sales_team_member"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_sales_team_member"];
+        trace?: never;
+    };
     "/api/v1/scan/find": {
         parameters: {
             query?: never;
@@ -27764,6 +27796,40 @@ export interface components {
             opportunity_id: string;
             splits: components["schemas"]["StoredSplit"][];
         };
+        SalesTeamMember: {
+            access_level?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            opportunity_id: string;
+            /** Format: uuid */
+            partner_contact_ref?: string | null;
+            share_id?: string | null;
+            /** Format: uuid */
+            team_role_ref?: string | null;
+            /** Format: uuid */
+            user_ref?: string | null;
+        };
+        SalesTeamMemberBody: {
+            access_level: components["schemas"]["TeamAccess"];
+            /**
+             * Format: uuid
+             * @description A partner contact on the team.
+             */
+            partner_contact_ref?: string | null;
+            /** Format: uuid */
+            team_role_ref: string;
+            /**
+             * Format: uuid
+             * @description A user on the team; give this or `partner_contact_ref`.
+             */
+            user_ref?: string | null;
+        };
+        SalesTeamMemberPatch: {
+            access_level?: null | components["schemas"]["TeamAccess"];
+            /** Format: uuid */
+            team_role_ref?: string | null;
+        };
         SbomResponse: {
             packs: components["schemas"]["InstalledPack"][];
             /** @description The release's CycloneDX 1.5 bill of materials. */
@@ -29312,6 +29378,11 @@ export interface components {
             /** @description K6-T1: watch for changes and report them, import nothing. */
             watch_only: boolean;
         };
+        /**
+         * @description The access a member gets to the deal.
+         * @enum {string}
+         */
+        TeamAccess: "read" | "edit";
         TeamItem: {
             description?: string | null;
             /** Format: uuid */
@@ -65583,6 +65654,211 @@ export interface operations {
                 };
             };
             /** @description The splits break a rule (a revenue type must total 100%, members must be on the team), or a won deal's change has no reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_team_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesTeamMemberBody"];
+            };
+        };
+        responses: {
+            /** @description The member is on the team, with their share of the deal */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesTeamMember"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The team is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither or both of user_ref and partner_contact_ref, or access above the member's roles (access_above_role) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_sales_team_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+                /** @description The team member */
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member and their share are gone */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such member on this opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The member is the deal's owner, or the team is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_sales_team_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+                /** @description The team member */
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesTeamMemberPatch"];
+            };
+        };
+        responses: {
+            /** @description The member is changed, and their share with them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesTeamMember"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such member on this opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The team is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Access above the member's roles (access_above_role) */
             422: {
                 headers: {
                     [name: string]: unknown;

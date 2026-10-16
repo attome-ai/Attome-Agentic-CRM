@@ -53095,6 +53095,324 @@
         }
       }
     },
+    "/api/v1/sales/opportunities/{id}/team": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_team_member",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesTeamMemberBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The member is on the team, with their share of the deal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesTeamMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The team is being changed by another request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Neither or both of user_ref and partner_contact_ref, or access above the member's roles (access_above_role)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "grant"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/sales/opportunities/{id}/team/{member_id}": {
+      "delete": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "delete_sales_team_member",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "member_id",
+            "in": "path",
+            "description": "The team member",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The member and their share are gone"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such member on this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The member is the deal's owner, or the team is being changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      },
+      "patch": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "patch_sales_team_member",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "member_id",
+            "in": "path",
+            "description": "The team member",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesTeamMemberPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The member is changed, and their share with them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesTeamMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such member on this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The team is being changed by another request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Access above the member's roles (access_above_role)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/scan/find": {
       "get": {
         "tags": [
@@ -105511,6 +105829,110 @@
           }
         }
       },
+      "SalesTeamMember": {
+        "type": "object",
+        "required": [
+          "id",
+          "opportunity_id"
+        ],
+        "properties": {
+          "access_level": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partner_contact_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "share_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team_role_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "SalesTeamMemberBody": {
+        "type": "object",
+        "required": [
+          "team_role_ref",
+          "access_level"
+        ],
+        "properties": {
+          "access_level": {
+            "$ref": "#/components/schemas/TeamAccess"
+          },
+          "partner_contact_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A partner contact on the team."
+          },
+          "team_role_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A user on the team; give this or `partner_contact_ref`."
+          }
+        }
+      },
+      "SalesTeamMemberPatch": {
+        "type": "object",
+        "properties": {
+          "access_level": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TeamAccess"
+              }
+            ]
+          },
+          "team_role_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "SbomResponse": {
         "type": "object",
         "required": [
@@ -109530,6 +109952,14 @@
             "description": "K6-T1: watch for changes and report them, import nothing."
           }
         }
+      },
+      "TeamAccess": {
+        "type": "string",
+        "description": "The access a member gets to the deal.",
+        "enum": [
+          "read",
+          "edit"
+        ]
       },
       "TeamItem": {
         "type": "object",
