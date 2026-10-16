@@ -1,0 +1,287 @@
+{
+  "author": "packs",
+  "checksum": "sha256:9011c5db46544da571400a9f2cca2c1761df6a3f22176974f9ed236abffd0b74",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Product mix (D6-T9): Pipeline by Product and Won by Product Family reports; unit cost and margin on opportunity lines; price-list cost, line cost and margin masked behind the Sales Cost and Margin field profile, which no role holds until an administrator grants it.",
+  "format": "attome-changeset/v1",
+  "id": "01a143dd-63d3-70a0-86b1-2570ce7e9df2",
+  "layer": "product",
+  "name": "sales-product-mix",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit Cost",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "unit_cost",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "unit_cost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Margin",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "margin_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "margin_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Margin %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "margin_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "margin_percent"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تكلفة الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.unit_cost",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الهامش"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.margin_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة الهامش"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.margin_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Pipeline by Product",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT l.product_ref, COUNT(DISTINCT o.id) AS opportunities, SUM(l.line_total) AS pipeline FROM opportunity o JOIN opportunity_line l ON l.opportunity_ref = o.id WHERE (o.is_active IS NULL OR o.is_active = true) AND (l.is_active IS NULL OR l.is_active = true) AND o.stage NOT IN ('closed_won', 'closed_lost') GROUP BY l.product_ref ORDER BY pipeline DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "opportunity",
+        "query": "Sales: Pipeline by Product"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Won by Product Family",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT p.family_ref, COUNT(DISTINCT o.id) AS opportunities, SUM(l.line_total) AS won FROM opportunity o JOIN opportunity_line l ON l.opportunity_ref = o.id JOIN product p ON p.id = l.product_ref WHERE (o.is_active IS NULL OR o.is_active = true) AND (l.is_active IS NULL OR l.is_active = true) AND o.stage = 'closed_won' GROUP BY p.family_ref ORDER BY won DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "opportunity",
+        "query": "Sales: Won by Product Family"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cost",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "cost",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "price_list_item",
+        "field": "cost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Reads and writes product cost and line margin. Held by no role until granted.",
+          "is_customized": false,
+          "name": "Sales Cost and Margin"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "profile": "Sales Cost and Margin"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "price_list_item",
+        "field": "cost",
+        "profile": "Sales Cost and Margin"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "unit_cost",
+        "profile": "Sales Cost and Margin"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "margin_amount",
+        "profile": "Sales Cost and Margin"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "margin_percent",
+        "profile": "Sales Cost and Margin"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 12,
+  "title": "Pack: product mix reports and masked cost and margin"
+}
