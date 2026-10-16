@@ -328,6 +328,14 @@ export const xrmEn = {
     loading: 'Loading activities…', empty: 'No activities on this record yet.',
     loadFailed: 'Could not load activities.', saveFailed: 'Could not save the activity.',
     status: { open: 'Open', completed: 'Completed', cancelled: 'Cancelled' },
+    logCall: 'Log a call', callSubject: 'Call', outcome: 'Outcome', minutes: 'Minutes',
+    notes: 'Notes', nextStep: 'Next step (creates a task)', nextDue: 'Next step due',
+    logSave: 'Save call', cancel: 'Cancel',
+    outcomes: {
+      connected: 'Connected', no_answer: 'No answer', left_message: 'Left a message',
+      interested: 'Interested', not_interested: 'Not interested', meeting_booked: 'Meeting booked',
+      completed: 'Completed', rescheduled: 'Rescheduled',
+    },
   },
   // The AI Provider form's two non-schema panels. Neither can be an ordinary
   // field: the API key is never an entity column (it would be selectable by

@@ -129,3 +129,33 @@
 @media (prefers-reduced-motion: reduce) {
   .act-row { animation: none; }
 }
+
+/* D14-T2: the quick call log. */
+.act-quick {
+  margin-block-end: 0.75rem;
+}
+
+.act-log {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-alt);
+}
+
+.act-minutes {
+  inline-size: 6rem;
+}
+
+.act-notes {
+  flex-basis: 100%;
+  resize: vertical;
+}
+
+.act-log-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}

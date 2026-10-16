@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntityService } from '../services/entity.service';
 import {
-  ActivitiesPanelComponent, ActivityRow, isOverdue, sortActivities,
+  ActivitiesPanelComponent, ActivityRow, CallLog, callBody, isOverdue, nextStepBody, sortActivities,
 } from './activities-panel.component';
 
 const PAST = '2020-01-01T09:00:00Z';
@@ -34,6 +34,33 @@ describe('sortActivities / isOverdue', () => {
     expect(isOverdue(row({ id: 'b', due_at: FUTURE }))).toBe(false);
     expect(isOverdue(row({ id: 'c' }))).toBe(false);
     expect(isOverdue(row({ id: 'd', due_at: PAST, status: 'completed' }))).toBe(false);
+  });
+});
+
+describe('callBody / nextStepBody (D14-T2)', () => {
+  const log: CallLog = {
+    subject: 'Discovery call', direction: 'inbound', minutes: 12, notes: '  budget agreed ',
+    outcome: 'interested', nextSubject: 'Send proposal', nextDue: '2026-11-02T10:00',
+  };
+
+  it('builds a phone call on the record with only the given extras', () => {
+    expect(callBody(log, 'account', 'r-1')).toEqual({
+      subject: 'Discovery call', activity_type: 'phone_call', direction: 'inbound',
+      entity_name: 'account', record_id: 'r-1', duration_minutes: 12,
+      description: 'budget agreed', outcome: 'interested',
+    });
+    const bare = callBody({ ...log, minutes: null, notes: ' ', outcome: '' }, 'account', 'r-1');
+    expect(bare).not.toHaveProperty('duration_minutes');
+    expect(bare).not.toHaveProperty('description');
+    expect(bare).not.toHaveProperty('outcome');
+  });
+
+  it('makes a next-step task only when one is named', () => {
+    const task = nextStepBody(log, 'account', 'r-1')!;
+    expect(task['activity_type']).toBe('task');
+    expect(task['subject']).toBe('Send proposal');
+    expect(typeof task['due_at']).toBe('string');
+    expect(nextStepBody({ ...log, nextSubject: ' ' }, 'account', 'r-1')).toBeNull();
   });
 });
 

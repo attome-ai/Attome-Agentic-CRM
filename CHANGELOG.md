@@ -23,6 +23,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Log a call in one step from a record's Activities tab: direction, minutes, notes and (when the crm
+  pack adds it) outcome, saved as a completed call, with an optional next step created as a task.
 - Kanban views take `sum_field`, `weighted_field`, `state_entered_field`, `stalled_after_days` and
   `flag_field`: columns show totals, cards past their state's day limit are marked stalled, and a
   positive flag field shows on the card. The sales pack's `Sales Pipeline` board uses them (amount

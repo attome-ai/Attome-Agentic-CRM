@@ -30,6 +30,56 @@
     </button>
   </form>
 
+  <div class="act-quick">
+    @if (!logOpen()) {
+      <button type="button" class="act-btn" (click)="openLog()" data-testid="activities-log-call">
+        <i class="las la-phone" aria-hidden="true"></i>
+        {{ 'activitiesPanel.logCall' | translate }}
+      </button>
+    } @else {
+      <form class="act-log" (ngSubmit)="logCall()" data-testid="activities-log-form">
+        <input class="act-input act-subject" name="logSubject" [(ngModel)]="log.subject"
+               [attr.aria-label]="'activitiesPanel.subject' | translate"
+               [placeholder]="'activitiesPanel.callSubject' | translate" />
+        <select class="act-input" name="logDirection" [(ngModel)]="log.direction"
+                [attr.aria-label]="'activitiesPanel.direction' | translate">
+          <option value="outbound">{{ 'activitiesPanel.outbound' | translate }}</option>
+          <option value="inbound">{{ 'activitiesPanel.inbound' | translate }}</option>
+        </select>
+        @if (outcomes().length > 0) {
+          <select class="act-input" name="logOutcome" [(ngModel)]="log.outcome"
+                  [attr.aria-label]="'activitiesPanel.outcome' | translate" data-testid="activities-log-outcome">
+            <option value="">{{ 'activitiesPanel.outcome' | translate }}</option>
+            @for (o of outcomes(); track o) {
+              <option [value]="o">{{ ('activitiesPanel.outcomes.' + o) | translate }}</option>
+            }
+          </select>
+        }
+        <input class="act-input act-minutes" type="number" min="0" name="logMinutes" [(ngModel)]="log.minutes"
+               [attr.aria-label]="'activitiesPanel.minutes' | translate"
+               [placeholder]="'activitiesPanel.minutes' | translate" />
+        <textarea class="act-input act-notes" name="logNotes" rows="2" [(ngModel)]="log.notes"
+                  [attr.aria-label]="'activitiesPanel.notes' | translate"
+                  [placeholder]="'activitiesPanel.notes' | translate"></textarea>
+        <input class="act-input act-subject" name="nextSubject" [(ngModel)]="log.nextSubject"
+               [attr.aria-label]="'activitiesPanel.nextStep' | translate"
+               [placeholder]="'activitiesPanel.nextStep' | translate" data-testid="activities-next-step" />
+        <input class="act-input" type="datetime-local" name="nextDue" [(ngModel)]="log.nextDue"
+               [attr.aria-label]="'activitiesPanel.nextDue' | translate" />
+        <span class="act-log-actions">
+          <button type="submit" class="act-btn act-btn-primary" [disabled]="saving()"
+                  data-testid="activities-log-save">
+            <i class="las la-check" aria-hidden="true"></i>
+            {{ 'activitiesPanel.logSave' | translate }}
+          </button>
+          <button type="button" class="act-btn" (click)="closeLog()">
+            {{ 'activitiesPanel.cancel' | translate }}
+          </button>
+        </span>
+      </form>
+    }
+  </div>
+
   @if (errorMessage(); as msg) {
     <p class="act-error" role="alert">{{ msg }}</p>
   }

@@ -296,6 +296,14 @@ export const xrmAr = {
     loading: 'جارٍ تحميل الأنشطة…', empty: 'لا توجد أنشطة على هذا السجل بعد.',
     loadFailed: 'تعذّر تحميل الأنشطة.', saveFailed: 'تعذّر حفظ النشاط.',
     status: { open: 'مفتوح', completed: 'مكتمل', cancelled: 'ملغى' },
+    logCall: 'تسجيل مكالمة', callSubject: 'مكالمة', outcome: 'النتيجة', minutes: 'الدقائق',
+    notes: 'ملاحظات', nextStep: 'الخطوة التالية (تُنشئ مهمة)', nextDue: 'موعد الخطوة التالية',
+    logSave: 'حفظ المكالمة', cancel: 'إلغاء',
+    outcomes: {
+      connected: 'تم التواصل', no_answer: 'لا رد', left_message: 'تُركت رسالة',
+      interested: 'مهتم', not_interested: 'غير مهتم', meeting_booked: 'حُجز اجتماع',
+      completed: 'مكتملة', rescheduled: 'أُعيدت جدولتها',
+    },
   },
   // نموذج مزود الذكاء الاصطناعي — راجع التعليق في en.catalog.ts.
   // U3 (D-601) — انظر en.catalog.ts

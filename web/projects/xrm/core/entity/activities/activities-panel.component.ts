@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { concatMap, of } from 'rxjs';
 import { LangService, TranslatePipe } from '@attome/base';
 import { EntityService } from '../services/entity.service';
 
@@ -42,6 +43,47 @@ export function sortActivities(rows: readonly ActivityRow[]): ActivityRow[] {
     const bc = time(b.completed_at);
     return (Number.isNaN(bc) ? 0 : bc) - (Number.isNaN(ac) ? 0 : ac);
   });
+}
+
+/** D14-T2: what the quick call log asks for. */
+export interface CallLog {
+  subject: string;
+  direction: 'inbound' | 'outbound';
+  minutes: number | null;
+  notes: string;
+  outcome: string;
+  nextSubject: string;
+  /** A `datetime-local` value, or empty. */
+  nextDue: string;
+}
+
+/** The body that creates the logged call on `entity`/`record`. Pure. */
+export function callBody(log: CallLog, entity: string, record: string): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    subject: log.subject,
+    activity_type: 'phone_call',
+    direction: log.direction,
+    entity_name: entity,
+    record_id: record,
+  };
+  if (log.minutes !== null && log.minutes > 0) body['duration_minutes'] = log.minutes;
+  if (log.notes.trim()) body['description'] = log.notes.trim();
+  if (log.outcome) body['outcome'] = log.outcome;
+  return body;
+}
+
+/** The next-step task to create after the call, or `null` when none. Pure. */
+export function nextStepBody(log: CallLog, entity: string, record: string): Record<string, unknown> | null {
+  const subject = log.nextSubject.trim();
+  if (!subject) return null;
+  const body: Record<string, unknown> = {
+    subject, activity_type: 'task', entity_name: entity, record_id: record,
+  };
+  if (log.nextDue) {
+    const due = new Date(log.nextDue);
+    if (!Number.isNaN(due.getTime())) body['due_at'] = due.toISOString();
+  }
+  return body;
 }
 
 /** An open activity whose due time has passed. */
@@ -88,6 +130,12 @@ export class ActivitiesPanelComponent {
   newDueAt = '';
   newDirection: 'inbound' | 'outbound' = 'outbound';
 
+  /** D14-T2: the quick call log. */
+  readonly logOpen = signal(false);
+  /** The activity entity's `outcome` choices, when a pack adds that field. */
+  readonly outcomes = signal<string[]>([]);
+  log: CallLog = this.emptyLog();
+
   constructor() {
     effect(() => {
       const e = this.entityName();
@@ -129,6 +177,70 @@ export class ActivitiesPanelComponent {
         this.rows.set([]);
         this.loading.set(false);
         this.errorMessage.set(err?.message || this.lang.translate('activitiesPanel.loadFailed'));
+      },
+    });
+  }
+
+  private emptyLog(): CallLog {
+    return {
+      subject: '', direction: 'outbound', minutes: null, notes: '', outcome: '',
+      nextSubject: '', nextDue: '',
+    };
+  }
+
+  openLog(): void {
+    this.log = this.emptyLog();
+    this.logOpen.set(true);
+    if (this.outcomes().length > 0) return;
+    this.entityService.getSchema(ACTIVITY_ENTITY).subscribe({
+      next: schema => {
+        const field = schema.fields.find(f => f.name === 'outcome' && f.field_type === 'choice');
+        const choices = (field?.options as unknown as { choices?: string[] } | null | undefined)?.choices;
+        this.outcomes.set(Array.isArray(choices) ? choices : []);
+      },
+      // Without the schema the log still works, just without an outcome.
+      error: () => this.outcomes.set([]),
+    });
+  }
+
+  closeLog(): void {
+    this.logOpen.set(false);
+  }
+
+  /**
+   * D14-T2: logs a call that already happened in one step — created, then
+   * completed through the state model like any other activity — and, when
+   * a next step is named, adds it as a task.
+   */
+  logCall(): void {
+    if (this.saving()) return;
+    const log: CallLog = {
+      ...this.log,
+      subject: this.log.subject.trim() || this.lang.translate('activitiesPanel.callSubject'),
+    };
+    const entity = this.entityName();
+    const record = this.recordId();
+    const next = nextStepBody(log, entity, record);
+    this.saving.set(true);
+    this.errorMessage.set(null);
+    this.entityService.create(ACTIVITY_ENTITY, callBody(log, entity, record)).pipe(
+      concatMap(call => this.entityService.update(
+        ACTIVITY_ENTITY,
+        call.id,
+        { status: 'completed', completed_at: new Date().toISOString() },
+        call.row_version,
+      )),
+      concatMap(() => (next ? this.entityService.create(ACTIVITY_ENTITY, next) : of(null))),
+    ).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.logOpen.set(false);
+        this.load();
+      },
+      error: err => {
+        this.saving.set(false);
+        this.errorMessage.set(err?.message || this.lang.translate('activitiesPanel.saveFailed'));
+        this.load();
       },
     });
   }
