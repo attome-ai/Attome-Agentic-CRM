@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- A/B variants for feature flags: a subject's variant comes from a stable hash of the flag and the
+  subject, split by the variants' weights, and outcomes are recorded per variant for comparison
+  (migration `0099`).
 - Role grants can end: `POST /api/v1/admin/security/users/{id}/roles` takes `valid_until` (in the
   future) and `reason` (migration `0098`); an hourly job removes grants past their end exactly as an
   administrator removing the role would, with its audit event and the user's sessions ended.
