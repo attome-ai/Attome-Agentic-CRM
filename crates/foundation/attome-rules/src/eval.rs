@@ -1249,7 +1249,7 @@ mod tests {
             max_eval_steps: 2,
             ..Budgets::default()
         };
-        let err = eval(&expr, &ctx(), &tiny, &schema()).unwrap_err();
+        let err = eval(&expr, &ctx(), &tiny, &schema(), &Regexes::new()).unwrap_err();
         assert_eq!(err, RulesError::Budget(BudgetKind::EvalSteps));
     }
 
@@ -1260,14 +1260,21 @@ mod tests {
             max_string_len: 3,
             ..Budgets::default()
         };
-        let err = eval(&expr, &ctx(), &tiny, &schema()).unwrap_err();
+        let err = eval(&expr, &ctx(), &tiny, &schema(), &Regexes::new()).unwrap_err();
         assert_eq!(err, RulesError::Budget(BudgetKind::StringLength));
     }
 
     #[test]
     fn trace_records_visited_subexpressions_only() {
         let expr = parse("if(active, 1, 1 / 0)").unwrap();
-        let (_, trace) = eval_traced(&expr, &ctx(), &Budgets::default(), &schema()).unwrap();
+        let (_, trace) = eval_traced(
+            &expr,
+            &ctx(),
+            &Budgets::default(),
+            &schema(),
+            &Regexes::new(),
+        )
+        .unwrap();
         let texts: Vec<_> = trace.entries().iter().map(|e| e.expr.clone()).collect();
         assert!(texts.contains(&"active".to_owned()));
         assert!(texts.contains(&"1".to_owned()));
@@ -1292,8 +1299,22 @@ mod tests {
             "coalesce(null, amount)",
         ] {
             let expr = parse(src).unwrap();
-            let plain = eval(&expr, &ctx(), &Budgets::default(), &schema()).unwrap();
-            let (traced, _) = eval_traced(&expr, &ctx(), &Budgets::default(), &schema()).unwrap();
+            let plain = eval(
+                &expr,
+                &ctx(),
+                &Budgets::default(),
+                &schema(),
+                &Regexes::new(),
+            )
+            .unwrap();
+            let (traced, _) = eval_traced(
+                &expr,
+                &ctx(),
+                &Budgets::default(),
+                &schema(),
+                &Regexes::new(),
+            )
+            .unwrap();
             assert_eq!(plain, traced, "{src}");
         }
     }
