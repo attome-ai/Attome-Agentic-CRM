@@ -76691,6 +76691,52 @@
           "url"
         ],
         "properties": {
+          "allow_host": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "audience": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "credential_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exclude_patterns": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "import_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "include_patterns": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "K6-T1 source settings; each one omitted keeps its default (or, on a\nre-submitted URL, the value the target already has)."
+          },
+          "languages": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
           "max_depth": {
             "type": [
               "integer",
@@ -76699,8 +76745,26 @@
             "format": "int32",
             "description": "Defaults to `config.webcrawl.max_depth` (6) when omitted; clamped to\n`MIN_DEPTH..=MAX_DEPTH` regardless of what's requested."
           },
+          "schedule": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sitemap_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "url": {
             "type": "string"
+          },
+          "watch_only": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         }
       },
@@ -96529,16 +96593,58 @@
                 "max_depth",
                 "pages_found",
                 "pages_imported",
-                "created_at"
+                "created_at",
+                "include_patterns",
+                "exclude_patterns",
+                "languages",
+                "audience",
+                "import_mode",
+                "schedule",
+                "watch_only",
+                "allow_host"
               ],
               "properties": {
+                "allow_host": {
+                  "type": "string",
+                  "description": "K6-T1: the one intranet host this source may reach (K6-T8); empty\nkeeps every private address refused."
+                },
+                "audience": {
+                  "type": "string",
+                  "description": "K6-T1: `internal | partner | customer` — who may read what it imports."
+                },
                 "created_at": {
                   "type": "string",
                   "format": "date-time"
                 },
+                "credential_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "K6-T1: reference to the credential the crawl signs in with."
+                },
+                "exclude_patterns": {
+                  "type": "string",
+                  "description": "K6-T1: path patterns to skip, one glob per line."
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "import_mode": {
+                  "type": "string",
+                  "description": "K6-T1: `review` (a person selects pages) or `automatic`."
+                },
+                "include_patterns": {
+                  "type": "string",
+                  "description": "K6-T1: path patterns to crawl, one glob per line (empty: everything)."
+                },
+                "languages": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "K6-T1: `ar` and/or `en`; empty keeps every language."
                 },
                 "last_crawled_at": {
                   "type": [
@@ -96565,12 +96671,26 @@
                   "type": "integer",
                   "format": "int32"
                 },
+                "schedule": {
+                  "type": "string",
+                  "description": "K6-T1: `manual | daily | weekly`."
+                },
+                "sitemap_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "status": {
                   "type": "string",
                   "description": "`pending | crawling | completed | failed`."
                 },
                 "url": {
                   "type": "string"
+                },
+                "watch_only": {
+                  "type": "boolean",
+                  "description": "K6-T1: watch for changes and report them, import nothing."
                 }
               }
             }
@@ -107344,16 +107464,58 @@
           "max_depth",
           "pages_found",
           "pages_imported",
-          "created_at"
+          "created_at",
+          "include_patterns",
+          "exclude_patterns",
+          "languages",
+          "audience",
+          "import_mode",
+          "schedule",
+          "watch_only",
+          "allow_host"
         ],
         "properties": {
+          "allow_host": {
+            "type": "string",
+            "description": "K6-T1: the one intranet host this source may reach (K6-T8); empty\nkeeps every private address refused."
+          },
+          "audience": {
+            "type": "string",
+            "description": "K6-T1: `internal | partner | customer` — who may read what it imports."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
           },
+          "credential_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "K6-T1: reference to the credential the crawl signs in with."
+          },
+          "exclude_patterns": {
+            "type": "string",
+            "description": "K6-T1: path patterns to skip, one glob per line."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "import_mode": {
+            "type": "string",
+            "description": "K6-T1: `review` (a person selects pages) or `automatic`."
+          },
+          "include_patterns": {
+            "type": "string",
+            "description": "K6-T1: path patterns to crawl, one glob per line (empty: everything)."
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "K6-T1: `ar` and/or `en`; empty keeps every language."
           },
           "last_crawled_at": {
             "type": [
@@ -107380,12 +107542,26 @@
             "type": "integer",
             "format": "int32"
           },
+          "schedule": {
+            "type": "string",
+            "description": "K6-T1: `manual | daily | weekly`."
+          },
+          "sitemap_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "status": {
             "type": "string",
             "description": "`pending | crawling | completed | failed`."
           },
           "url": {
             "type": "string"
+          },
+          "watch_only": {
+            "type": "boolean",
+            "description": "K6-T1: watch for changes and report them, import nothing."
           }
         }
       },

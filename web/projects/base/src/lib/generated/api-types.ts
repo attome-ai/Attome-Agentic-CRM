@@ -16887,13 +16887,27 @@ export interface components {
             service_principal_ref: string;
         };
         CreateTargetBody: {
+            allow_host?: string | null;
+            audience?: string | null;
+            credential_ref?: string | null;
+            exclude_patterns?: string | null;
+            import_mode?: string | null;
+            /**
+             * @description K6-T1 source settings; each one omitted keeps its default (or, on a
+             *     re-submitted URL, the value the target already has).
+             */
+            include_patterns?: string | null;
+            languages?: string[] | null;
             /**
              * Format: int32
              * @description Defaults to `config.webcrawl.max_depth` (6) when omitted; clamped to
              *     `MIN_DEPTH..=MAX_DEPTH` regardless of what's requested.
              */
             max_depth?: number | null;
+            schedule?: string | null;
+            sitemap_url?: string | null;
             url: string;
+            watch_only?: boolean | null;
         };
         CreateTeamBody: {
             description?: string | null;
@@ -24410,10 +24424,27 @@ export interface components {
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_TargetListItem: {
             items: {
+                /**
+                 * @description K6-T1: the one intranet host this source may reach (K6-T8); empty
+                 *     keeps every private address refused.
+                 */
+                allow_host: string;
+                /** @description K6-T1: `internal | partner | customer` — who may read what it imports. */
+                audience: string;
                 /** Format: date-time */
                 created_at: string;
+                /** @description K6-T1: reference to the credential the crawl signs in with. */
+                credential_ref?: string | null;
+                /** @description K6-T1: path patterns to skip, one glob per line. */
+                exclude_patterns: string;
                 /** Format: uuid */
                 id: string;
+                /** @description K6-T1: `review` (a person selects pages) or `automatic`. */
+                import_mode: string;
+                /** @description K6-T1: path patterns to crawl, one glob per line (empty: everything). */
+                include_patterns: string;
+                /** @description K6-T1: `ar` and/or `en`; empty keeps every language. */
+                languages: string[];
                 /** Format: date-time */
                 last_crawled_at?: string | null;
                 last_error?: string | null;
@@ -24423,9 +24454,14 @@ export interface components {
                 pages_found: number;
                 /** Format: int32 */
                 pages_imported: number;
+                /** @description K6-T1: `manual | daily | weekly`. */
+                schedule: string;
+                sitemap_url?: string | null;
                 /** @description `pending | crawling | completed | failed`. */
                 status: string;
                 url: string;
+                /** @description K6-T1: watch for changes and report them, import nothing. */
+                watch_only: boolean;
             }[];
             /** Format: int64 */
             page: number;
@@ -28760,10 +28796,27 @@ export interface components {
             record_id: string;
         };
         TargetListItem: {
+            /**
+             * @description K6-T1: the one intranet host this source may reach (K6-T8); empty
+             *     keeps every private address refused.
+             */
+            allow_host: string;
+            /** @description K6-T1: `internal | partner | customer` — who may read what it imports. */
+            audience: string;
             /** Format: date-time */
             created_at: string;
+            /** @description K6-T1: reference to the credential the crawl signs in with. */
+            credential_ref?: string | null;
+            /** @description K6-T1: path patterns to skip, one glob per line. */
+            exclude_patterns: string;
             /** Format: uuid */
             id: string;
+            /** @description K6-T1: `review` (a person selects pages) or `automatic`. */
+            import_mode: string;
+            /** @description K6-T1: path patterns to crawl, one glob per line (empty: everything). */
+            include_patterns: string;
+            /** @description K6-T1: `ar` and/or `en`; empty keeps every language. */
+            languages: string[];
             /** Format: date-time */
             last_crawled_at?: string | null;
             last_error?: string | null;
@@ -28773,9 +28826,14 @@ export interface components {
             pages_found: number;
             /** Format: int32 */
             pages_imported: number;
+            /** @description K6-T1: `manual | daily | weekly`. */
+            schedule: string;
+            sitemap_url?: string | null;
             /** @description `pending | crawling | completed | failed`. */
             status: string;
             url: string;
+            /** @description K6-T1: watch for changes and report them, import nothing. */
+            watch_only: boolean;
         };
         TeamItem: {
             description?: string | null;
