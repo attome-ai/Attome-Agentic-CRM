@@ -321,6 +321,10 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
     let max_bytes = config.app.max_body_size_bytes;
     let request_meta_config = std::sync::Arc::new(config.clone());
     let trace_context_config = request_meta_config.clone();
+    // Q21-T4: wraps the router itself, so it runs inside every layer below
+    // (the body it reads is already bounded by the body limit) and before
+    // the auth and handler layers `apply_inner_layers` put on the router.
+    let router = router.layer(middleware::from_fn(json_shape::reject_oversized_json_shape));
     let router = router.layer(
         ServiceBuilder::new()
             .layer(middleware::from_fn(drop_unsafe_request_id))
@@ -349,9 +353,6 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
                 body_limit::reject_declared_oversized_body(max_bytes, req, next)
             }))
             .layer(RequestBodyLimitLayer::new(max_bytes))
-            // Q21-T4: inside the body limit, so the bytes it reads are
-            // bounded; before every auth and handler layer.
-            .layer(middleware::from_fn(json_shape::reject_oversized_json_shape))
             .layer(HandleErrorLayer::new(timeout_response))
             .layer(TimeoutLayer::new(config.request_timeout()))
             .layer(compression_layer()),
