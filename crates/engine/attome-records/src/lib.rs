@@ -37,6 +37,7 @@ pub mod bulk;
 pub mod bulk_edit;
 mod bulk_graph;
 pub mod business_rules;
+pub mod composite;
 pub mod data_mapping;
 pub mod duplicate_check;
 pub mod entity_crud;

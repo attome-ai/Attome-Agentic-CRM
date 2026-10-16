@@ -30,6 +30,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         // This crate's own route bundles, in `core_routes()` order.
         attome_records::query_exec::openapi_fragment(),
         attome_records::query_admin::openapi_fragment(),
+        attome_records::composite::openapi_fragment(),
         crate::view_admin::openapi_fragment(),
         crate::model_admin::openapi_fragment(),
         crate::model_health::openapi_fragment(),

@@ -9372,3 +9372,109 @@ fn skip_duplicate_check_requires_privilege_and_is_audited() {
         assert_eq!(audited, 1, "the skip leaves one audit row");
     })
 }
+
+/// S1-T7: a composite request creates a parent, then a child pointing at it
+/// through `${parent.id}`; a failing operation is reported and the rest run;
+/// each operation needs its own privilege.
+#[test]
+fn composite_create_then_update_by_reference() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let (_, user_cookie, user_email) = seed_bulk_user(&system, "composite").await;
+        let app = full_app(system);
+        let (parent, parent_id) = create_entity(&app, &admin_cookie, "cparent").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &parent_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
+        let (child, child_id) = create_entity(&app, &admin_cookie, "cchild").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &child_id,
+            &format!(
+                r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{parent_id}"}}"#
+            ),
+        )
+        .await;
+        sync_registry(&state).await;
+
+        let send = |cookie: &str, body: serde_json::Value| {
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/composite")
+                .header("cookie", cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(send(
+                &admin_cookie,
+                serde_json::json!({"operations": [
+                    {"ref": "p", "method": "create", "entity": parent, "body": {"title": "Acme"}},
+                    {"ref": "c", "method": "create", "entity": child, "body": {"parent_ref": "${p.id}"}},
+                    {"ref": "u", "method": "update", "entity": parent, "id": "${p.id}",
+                     "if_match": 999, "body": {"title": "stale"}},
+                    {"ref": "x", "method": "create", "entity": parent, "body": {"title": "after"}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        let results = body["results"].as_array().expect("results");
+        assert_eq!(results[0]["status"], 201, "{body}");
+        assert_eq!(results[1]["status"], 201, "{body}");
+        assert_eq!(
+            results[1]["body"]["data"]["parent_ref"], results[0]["body"]["id"],
+            "the child points at the parent created first: {body}"
+        );
+        assert_eq!(
+            results[2]["status"], 409,
+            "a stale version fails alone: {body}"
+        );
+        assert_eq!(
+            results[3]["status"], 201,
+            "later operations still run: {body}"
+        );
+
+        // Each operation is checked on its own: a user who may create the
+        // parent but not the child gets one success and one 403.
+        grant_bulk_privilege(
+            &app,
+            &admin_cookie,
+            &user_email,
+            &format!("{parent}.create"),
+        )
+        .await;
+        let res = app
+            .clone()
+            .oneshot(send(
+                &user_cookie,
+                serde_json::json!({"operations": [
+                    {"ref": "p", "method": "create", "entity": parent, "body": {"title": "Mine"}},
+                    {"ref": "c", "method": "create", "entity": child, "body": {"parent_ref": "${p.id}"}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        assert_eq!(body["results"][0]["status"], 201, "{body}");
+        assert_eq!(body["results"][1]["status"], 403, "{body}");
+
+        let res = app
+            .clone()
+            .oneshot(send(&admin_cookie, serde_json::json!({"operations": []})))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}

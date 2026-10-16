@@ -28,6 +28,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/composite`: up to 25 record creates, updates and deletes in one request, each on
+  its own (a failure is reported, the rest run), later ones using earlier results through
+  `${ref.field}`. Entities can no longer be named `composite`, `query`, `search`, `graph` or
+  `schema`.
 - `POST /api/v1/query/execute` takes `select`: the attributes to return, in order (`id` always);
   a name the caller may not read is the same 422 as one that does not exist.
 - Billing and sales logic, pure and tested: subscription segments read as of a date, charge models

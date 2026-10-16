@@ -242,6 +242,9 @@ pub(super) async fn list_entities(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// S1-T7: logical names that clash with fixed `/api/v1/<name>` routes.
+const RESERVED_ENTITY_NAMES: &[&str] = &["composite", "query", "search", "graph", "schema"];
+
 #[utoipa::path(
     post,
     path = "/api/v1/admin/entities",
@@ -268,6 +271,11 @@ pub(super) async fn create_entity(
             "logicalname must be lowercase letters, digits, or underscores, max {} chars",
             provision::MAX_IDENTIFIER_LEN
         )));
+    }
+    // S1-T7: names a fixed `/api/v1/<name>` route already answers would
+    // make the entity's own record routes unreachable.
+    if RESERVED_ENTITY_NAMES.contains(&logicalname.as_str()) {
+        return Err(AppError::Validation("logicalname is reserved".into()));
     }
     let display_name = body.name.trim().to_owned();
     if display_name.is_empty() {

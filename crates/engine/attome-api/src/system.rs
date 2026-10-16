@@ -141,6 +141,8 @@ impl EngineSystem {
         // clones) and keeps each merge call self-contained.
         let authed = model_routes
             .merge(attome_records::query_exec::routes())
+            // S1-T7: several record operations in one request.
+            .merge(attome_records::composite::routes())
             .merge(attome_records::query_admin::routes())
             .merge(crate::view_admin::routes())
             // Y1-T9: the metadata model's admin API (admin-gated in each handler).
