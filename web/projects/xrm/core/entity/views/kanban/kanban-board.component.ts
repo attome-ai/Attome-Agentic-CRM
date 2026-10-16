@@ -12,6 +12,10 @@ interface KanbanCard {
   id:     string;
   state:  string;
   fields: { label: string; value: string }[];
+  /** D5-T2: days in this state, set only when past the state's limit. */
+  stalledDays: number | null;
+  /** D5-T2: the flag field's value when positive (e.g. close date pushes). */
+  flag: number | null;
 }
 
 interface KanbanColumn {
@@ -21,6 +25,26 @@ interface KanbanColumn {
    * drop, it just renders the count/limit in a warning style). */
   wipLimit:  number | null;
   cards:     KanbanCard[];
+  /** D5-T2: the column's total of `sum_field`, when configured. */
+  total:     number | null;
+  /** D5-T2: the column's total of `weighted_field`, when configured. */
+  weighted:  number | null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A record value as a number, or `null` when it is not one. */
+function asNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Whole days from `value` (a date) to `now`, or `null`. */
+export function daysSince(value: unknown, now: number): number | null {
+  if (typeof value !== 'string' || !value) return null;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : Math.floor((now - at) / DAY_MS);
 }
 
 /**
@@ -117,25 +141,41 @@ export class KanbanBoardComponent {
         }).subscribe({
           next: res => {
             const wipLimits = meta.wip_limits ?? {};
+            const stalledAfter = meta.stalled_after_days ?? {};
+            const now = Date.now();
             const byState = new Map<string, KanbanCard[]>();
+            const totals = new Map<string, { total: number; weighted: number }>();
             for (const value of choices) byState.set(value, []);
             for (const record of res.data.records) {
               const state = String(record[stateField] ?? '');
+              const limit = stalledAfter[state] ?? null;
+              const days = meta.state_entered_field
+                ? daysSince(record[meta.state_entered_field], now)
+                : null;
+              const flag = meta.flag_field ? asNumber(record[meta.flag_field]) : null;
               const card: KanbanCard = {
                 id: String(record['id'] ?? ''),
                 state,
                 fields: res.data.columns
                   .filter(c => c.is_visible && c.name !== stateField)
                   .map(c => ({ label: c.display_name, value: this.formatValue(record[c.name]) })),
+                stalledDays: limit !== null && days !== null && days > limit ? days : null,
+                flag: flag !== null && flag > 0 ? flag : null,
               };
               const bucket = byState.get(state);
               if (bucket) { bucket.push(card); } else { byState.set(state, [card]); }
+              const sum = totals.get(state) ?? { total: 0, weighted: 0 };
+              if (meta.sum_field) sum.total += asNumber(record[meta.sum_field]) ?? 0;
+              if (meta.weighted_field) sum.weighted += asNumber(record[meta.weighted_field]) ?? 0;
+              totals.set(state, sum);
             }
             this.columns.set(
               [...byState.entries()].map(([value, cards]) => ({
                 value,
                 wipLimit: wipLimits[value] ?? null,
                 cards,
+                total: meta.sum_field ? totals.get(value)?.total ?? 0 : null,
+                weighted: meta.weighted_field ? totals.get(value)?.weighted ?? 0 : null,
               })),
             );
             this.loading.set(false);
@@ -151,6 +191,11 @@ export class KanbanBoardComponent {
     if (value === null || value === undefined) return '';
     if (Array.isArray(value)) return value.join(', ');
     return String(value);
+  }
+
+  /** A column total in the reader's own number format. */
+  formatTotal(value: number): string {
+    return new Intl.NumberFormat(this.lang.intlLocale(), { maximumFractionDigits: 0 }).format(value);
   }
 
   isOverWip(col: KanbanColumn): boolean {

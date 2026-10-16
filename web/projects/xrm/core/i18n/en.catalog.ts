@@ -1028,6 +1028,10 @@ export const xrmEn = {
       empty: 'No records in this column.',
       noView: 'No kanban view is configured for this entity.',
       noStateField: 'This kanban view has no state field configured.',
+      total: 'Total',
+      weighted: 'Weighted',
+      stalled: 'Stalled {days} days',
+      flagged: 'Pushed {count}×',
     },
     calendar: {
       loading: 'Loading calendar…',

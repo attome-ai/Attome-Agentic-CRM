@@ -23,6 +23,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Kanban views take `sum_field`, `weighted_field`, `state_entered_field`, `stalled_after_days` and
+  `flag_field`: columns show totals, cards past their state's day limit are marked stalled, and a
+  positive flag field shows on the card. The sales pack's `Sales Pipeline` board uses them (amount
+  and weighted totals, stalled deals, pushed close dates; changeset `0004-sales-board`).
+- A date field can hold when another field last changed: `options.stamps_changes: {"field": ...}`
+  (a deal's `stage_entered_at`).
 - File check-out: `POST /api/v1/{entity}/{id}/files/{field}/checkout` locks a record's file for the
   caller; while it is held nobody else may upload or store a new version of it (409). `DELETE` checks
   it in; an administrator breaks someone else's lock with `?force=true`. All audited (migration

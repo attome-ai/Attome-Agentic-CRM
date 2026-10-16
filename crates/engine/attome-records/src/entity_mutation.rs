@@ -1501,6 +1501,34 @@ fn entity_has_active_state_model(state: &EngineState, entity_name: &str) -> bool
 /// D-789: the live row `record_id` of `entity_name` (every column, sensitive
 /// ones included — it builds evaluation contexts and lock comparisons only,
 /// never a response), or `None` when there is no live row.
+/// D5-T2: for each change-stamp attribute whose watched field this write
+/// sets (on create, `stored` is `None`) or changes (on update), now.
+fn change_stamp_values(
+    attrs: &[AttrInfo],
+    stored: Option<&serde_json::Map<String, Value>>,
+    body: &serde_json::Map<String, Value>,
+) -> Vec<(String, Value)> {
+    let now = chrono::Utc::now().to_rfc3339();
+    attrs
+        .iter()
+        .filter_map(|attr| {
+            let watched = attome_field::change_stamp(attr.options.as_ref())?;
+            let new = body.get(watched).filter(|v| !v.is_null())?;
+            let changed = match stored {
+                None => true,
+                Some(stored) => {
+                    attome_field::counts_as_change(
+                        stored.get(watched),
+                        Some(new),
+                        attome_field::CountedChange::Any,
+                    ) || stored.get(watched).is_none_or(Value::is_null)
+                }
+            };
+            changed.then(|| (attr.logicalname.clone(), Value::String(now.clone())))
+        })
+        .collect()
+}
+
 /// D5-T1: for each change-counter attribute whose watched field this write
 /// changes the way it counts, its stored count plus one.
 fn change_counter_values(
@@ -1895,6 +1923,8 @@ pub async fn create_one_as(
     if let (Some(pipeline), Some(fired)) = (&rules, &fired) {
         computed.extend(pipeline.always_values(fired, &m1).await?);
     }
+    // D5-T2: a change stamp starts when its watched field is first given.
+    computed.extend(change_stamp_values(attrs, None, obj));
     let m2 = overlay(&m1, &computed);
     let warnings = match rules.as_mut() {
         Some(pipeline) => {
@@ -2763,9 +2793,10 @@ pub async fn update_one_as(
     // ones (partial-update semantics).
     let mut rules =
         crate::business_rules::WritePipeline::new(state, entity_name, attrs, &principal);
-    let has_change_counter = attrs
-        .iter()
-        .any(|a| attome_field::change_counter(a.options.as_ref()).is_some());
+    let has_change_counter = attrs.iter().any(|a| {
+        attome_field::change_counter(a.options.as_ref()).is_some()
+            || attome_field::change_stamp(a.options.as_ref()).is_some()
+    });
     let stored = if rules.is_some()
         || attrs.iter().any(AttrInfo::is_formula)
         || has_change_counter
@@ -2856,6 +2887,7 @@ pub async fn update_one_as(
     // D5-T1: change counters see this write's change to their watched field.
     if has_change_counter && let Some(stored) = &stored {
         computed.extend(change_counter_values(attrs, stored, obj));
+        computed.extend(change_stamp_values(attrs, Some(stored), obj));
     }
     let warnings = match rules.as_mut() {
         Some(pipeline) => {

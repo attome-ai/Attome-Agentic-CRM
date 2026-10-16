@@ -179,6 +179,37 @@ fn validate_view_kind_metadata(kind: &str, metadata: &Value) -> Result<(), AppEr
                     }
                 }
             }
+            // D5-T2: optional board totals, stalled markers and a flag; each
+            // names a field (a string) or is null.
+            for key in [
+                "sum_field",
+                "weighted_field",
+                "state_entered_field",
+                "flag_field",
+            ] {
+                if let Some(field) = obj.get(key)
+                    && !field.is_null()
+                    && !field.as_str().is_some_and(|s| !s.trim().is_empty())
+                {
+                    return Err(AppError::Validation(format!(
+                        "kanban view_metadata.{key} must be a field name or null"
+                    )));
+                }
+            }
+            if let Some(days) = obj.get("stalled_after_days") {
+                let days = days.as_object().ok_or_else(|| {
+                    AppError::Validation(
+                        "kanban view_metadata.stalled_after_days must be an object".into(),
+                    )
+                })?;
+                for (state, limit) in days {
+                    if !limit.is_null() && !limit.is_u64() {
+                        return Err(AppError::Validation(format!(
+                            "kanban view_metadata.stalled_after_days.{state} must be a non-negative integer or null"
+                        )));
+                    }
+                }
+            }
         }
         "calendar" | "timeline" => {
             non_empty_string("start_field")?;

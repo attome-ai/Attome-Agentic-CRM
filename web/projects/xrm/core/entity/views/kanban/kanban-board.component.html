@@ -30,9 +30,24 @@
         <span class="kanban-wip">{{ col.cards.length }}</span>
         }
       </div>
+      @if (col.total !== null || col.weighted !== null) {
+      <div class="kanban-column-totals">
+        @if (col.total !== null) {
+        <span class="kanban-total">
+          {{ 'entityViews.kanban.total' | translate }} <bdi>{{ formatTotal(col.total) }}</bdi>
+        </span>
+        }
+        @if (col.weighted !== null) {
+        <span class="kanban-total kanban-total--weighted">
+          {{ 'entityViews.kanban.weighted' | translate }} <bdi>{{ formatTotal(col.weighted) }}</bdi>
+        </span>
+        }
+      </div>
+      }
       <div class="kanban-column-body">
         @for (card of col.cards; track card.id) {
         <div class="kanban-card" draggable="true" role="button" tabindex="0"
+          [class.kanban-card--stalled]="card.stalledDays !== null"
           (dragstart)="onDragStart(card, $event)"
           (dragend)="onDragEnd()"
           (click)="onCardClick(card)"
@@ -42,6 +57,22 @@
           <div class="kanban-card-field">
             <span class="kanban-card-label">{{ f.label }}</span>
             <span class="kanban-card-value">{{ f.value }}</span>
+          </div>
+          }
+          @if (card.stalledDays !== null || card.flag !== null) {
+          <div class="kanban-card-flags">
+            @if (card.stalledDays !== null) {
+            <span class="kanban-flag kanban-flag--stalled">
+              <i class="las la-clock" aria-hidden="true"></i>
+              {{ 'entityViews.kanban.stalled' | translate: { days: card.stalledDays } }}
+            </span>
+            }
+            @if (card.flag !== null) {
+            <span class="kanban-flag">
+              <i class="las la-flag" aria-hidden="true"></i>
+              {{ 'entityViews.kanban.flagged' | translate: { count: card.flag } }}
+            </span>
+            }
           </div>
           }
         </div>

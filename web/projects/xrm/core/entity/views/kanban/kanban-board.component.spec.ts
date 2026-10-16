@@ -58,7 +58,7 @@ describe('KanbanBoardComponent', () => {
         { provide: ViewAdminService, useValue: { listAvailable } },
         { provide: QueryService, useValue: { execute } },
         { provide: EntityService, useValue: { getSchema, listTransitions, transition } },
-        { provide: LangService, useValue: { translate: (key: string) => key } },
+        { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     });
     TestBed.overrideComponent(KanbanBoardComponent, { set: { template: '' } });
@@ -106,6 +106,47 @@ describe('KanbanBoardComponent', () => {
     const inProgressColumn = fixture.componentInstance.columns().find(c => c.value === 'in_progress')!;
     expect(fixture.componentInstance.isDropTarget(wonColumn)).toBe(false);
     expect(fixture.componentInstance.isDropTarget(inProgressColumn)).toBe(true);
+  });
+
+  it('totals each column and marks stalled and flagged cards (D5-T2)', async () => {
+    const entered = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString();
+    listAvailable.mockReturnValue(of([{
+      ...KANBAN_VIEW,
+      view_metadata: {
+        state_field: 'status', sum_field: 'amount', weighted_field: 'weighted',
+        state_entered_field: 'entered_at', stalled_after_days: { open: 14, in_progress: 30 },
+        flag_field: 'pushes',
+      },
+    }]));
+    execute.mockReturnValue(of({
+      metadata: { query_id: 'q-1', view_id: 'view-1', record_no: null, entity_logical_name: null, can_edit_query: false },
+      data: {
+        columns: [
+          { name: 'name', display_name: 'Name', data_type: 'text', is_visible: true, is_sortable: true, is_searchable: true, is_clickable: false, route_template: '' },
+        ],
+        records: [
+          { id: 'r-1', name: 'A', status: 'open', amount: '100', weighted: 10, entered_at: entered, pushes: 2 },
+          { id: 'r-2', name: 'B', status: 'open', amount: 50, weighted: null, entered_at: entered, pushes: 0 },
+          { id: 'r-3', name: 'C', status: 'in_progress', amount: 70, weighted: 35, entered_at: entered, pushes: null },
+        ],
+        total: 3, page: 1, page_size: 500, total_pages: 1,
+      },
+    }));
+    const fixture = TestBed.createComponent(KanbanBoardComponent);
+    fixture.componentRef.setInput('entityName', 'deal');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const [open, inProgress, won] = fixture.componentInstance.columns();
+    expect(open.total).toBe(150);
+    expect(open.weighted).toBe(10);
+    expect(inProgress.total).toBe(70);
+    expect(won.total).toBe(0);
+    expect(open.cards[0].stalledDays).toBe(20);
+    expect(open.cards[0].flag).toBe(2);
+    expect(open.cards[1].flag).toBeNull();
+    // 20 days is within in_progress's 30-day limit.
+    expect(inProgress.cards[0].stalledDays).toBeNull();
   });
 
   it('drop never calls the transition endpoint for a column that was not offered', async () => {

@@ -958,6 +958,10 @@ export const xrmAr = {
       empty: 'لا توجد سجلات في هذا العمود.',
       noView: 'لا يوجد عرض كانبان مُهيأ لهذا الكيان.',
       noStateField: 'عرض الكانبان هذا لا يحتوي على حقل حالة مُهيأ.',
+      total: 'الإجمالي',
+      weighted: 'المرجّح',
+      stalled: 'متوقفة منذ {days} يوم',
+      flagged: 'أُجّلت {count} مرة',
     },
     calendar: {
       loading: 'جارٍ تحميل التقويم…',

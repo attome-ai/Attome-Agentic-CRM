@@ -14,6 +14,18 @@ export type ViewKind = 'list' | 'kanban' | 'calendar' | 'timeline' | 'chart';
 export interface KanbanViewMetadata {
   state_field: string;
   wip_limits?: Record<string, number | null>;
+  /** D5-T2: a number field totalled per column (a deal's amount). */
+  sum_field?: string | null;
+  /** D5-T2: a second total per column (a deal's weighted amount). */
+  weighted_field?: string | null;
+  /** D5-T2: when the card entered its current state; with
+   * `stalled_after_days` it marks cards that sat too long. */
+  state_entered_field?: string | null;
+  /** D5-T2: days a card may stay in each state before it is stalled. */
+  stalled_after_days?: Record<string, number | null>;
+  /** D5-T2: a number field whose positive value flags the card (how often a
+   * deal's close date was pushed out). */
+  flag_field?: string | null;
 }
 
 /** D-429 — `calendar`/`timeline` view_metadata. */

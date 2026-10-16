@@ -525,6 +525,9 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if let Some(counter) = options.get("counts_changes") {
         validate_change_counter(field_type, counter)?;
     }
+    if let Some(stamp) = options.get("stamps_changes") {
+        validate_change_stamp(field_type, stamp)?;
+    }
     if let Some(editable_by) = options.get("editable_by")
         && !matches!(editable_by.as_str(), Some("everyone" | "integrations_only"))
     {
@@ -544,6 +547,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
                 || map.contains_key("strict")
                 || map.contains_key("create_only")
                 || map.contains_key("counts_changes")
+                || map.contains_key("stamps_changes")
                 || map.contains_key("editable_by") =>
         {
             let mut map = map.clone();
@@ -554,6 +558,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
             map.remove("strict");
             map.remove("create_only");
             map.remove("counts_changes");
+            map.remove("stamps_changes");
             map.remove("editable_by");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
@@ -784,6 +789,36 @@ pub fn change_counter(options: Option<&Value>) -> Option<(&str, CountedChange)> 
         _ => CountedChange::Any,
     };
     Some((field, when))
+}
+
+/// D5-T2: a date field that holds when another field of the same record last
+/// changed (`options.stamps_changes: {"field": "stage"}`), such as when a deal
+/// entered its current stage. The engine sets it on create when the watched
+/// field is given, and on every update that changes it.
+pub fn change_stamp(options: Option<&Value>) -> Option<&str> {
+    options?
+        .get("stamps_changes")?
+        .get("field")?
+        .as_str()
+        .filter(|f| !f.trim().is_empty())
+}
+
+fn validate_change_stamp(field_type: &FieldType, stamp: &Value) -> Result<(), AppError> {
+    if *field_type != FieldType::Date {
+        return Err(AppError::Validation(
+            "stamps_changes: only a date field can hold when a field changed".into(),
+        ));
+    }
+    if stamp
+        .get("field")
+        .and_then(Value::as_str)
+        .is_none_or(|f| f.trim().is_empty())
+    {
+        return Err(AppError::Validation(
+            "stamps_changes: {\"field\": name}".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn validate_change_counter(field_type: &FieldType, counter: &Value) -> Result<(), AppError> {
@@ -1067,6 +1102,18 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    /// D5-T2: only a date field may stamp changes, and it must name a field.
+    #[test]
+    fn change_stamp_option() {
+        use serde_json::json;
+        let stamp = json!({"stamps_changes": {"field": "stage"}});
+        assert_eq!(change_stamp(Some(&stamp)), Some("stage"));
+        assert!(validate_options(&FieldType::Date, &stamp).is_ok());
+        assert!(validate_options(&FieldType::Number, &stamp).is_err());
+        assert!(validate_options(&FieldType::Date, &json!({"stamps_changes": {}})).is_err());
+        assert_eq!(change_stamp(None), None);
     }
 
     /// A29-T4: `editable_by` locks a field to integrations.
