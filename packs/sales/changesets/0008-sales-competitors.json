@@ -1,0 +1,1718 @@
+{
+  "author": "packs",
+  "checksum": "sha256:768942342c18c65dab2c9dcfd52ef79f230d7bcb67accd84fb3a6629c496fd90",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Competitors (D25-T2): competitor records with positioning, competitors on deals, the products they compete with, win-loss reviews, competitor mentions found in text, the competitor a deal was lost to, the incumbent on an account and the incumbent supplier on a lead.",
+  "format": "attome-changeset/v1",
+  "id": "01a143b6-e1f5-7aac-9c9f-e7f042222be0",
+  "layer": "product",
+  "name": "sales-competitors",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Competitor",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "competitor",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "competitor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "competitor",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "competitor",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Website",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "website",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "competitor",
+        "field": "website"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "competitor_type",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "direct",
+              "partial",
+              "substitute",
+              "in_house_build",
+              "do_nothing"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "competitor",
+        "field": "competitor_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Regions",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "regions",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "competitor",
+        "field": "regions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Strengths",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "strengths",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "competitor",
+        "field": "strengths"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Weaknesses",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "weaknesses",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "competitor",
+        "field": "weaknesses"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Price Position",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "price_position",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "lower",
+              "similar",
+              "higher"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "competitor",
+        "field": "price_position"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "competitor",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Battle Card",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "battlecard_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "competitor",
+        "field": "battlecard_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Tracked",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_tracked",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "competitor",
+        "field": "is_tracked"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Opportunity Competitor",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "opportunity_competitor",
+          "primary_name_attribute": "status"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "opportunity_competitor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "opportunity_competitor",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Competitor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "competitor_ref",
+          "lookup_entity": "competitor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "opportunity_competitor",
+        "field": "competitor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "suspected",
+              "confirmed",
+              "primary"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "opportunity_competitor",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Threat",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "threat_level",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "opportunity_competitor",
+        "field": "threat_level"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Competitor Product",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "competitor_product",
+          "primary_name_attribute": "competitor_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "competitor_product"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Competitor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "competitor_ref",
+          "lookup_entity": "competitor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "competitor_product",
+        "field": "competitor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "competitor_product",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Win-Loss Review",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "win_loss_review",
+          "primary_name_attribute": "outcome"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "win_loss_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Outcome",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outcome",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "won",
+              "lost"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "outcome"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Main Reason",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "main_reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "price",
+              "product_fit",
+              "relationship",
+              "timing",
+              "procurement",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "main_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Other Reasons",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "secondary_reasons",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "secondary_reasons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "What the Winner Did Better",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "winner_did_better",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "winner_did_better"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Notes",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "notes",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Competitors Snapshot",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "competitors_snapshot",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "competitors_snapshot"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reviewed By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reviewed_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "reviewed_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Buyer Feedback",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "buyer_feedback_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "win_loss_review",
+        "field": "buyer_feedback_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Competitor Mention",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "competitor_mention",
+          "primary_name_attribute": "snippet"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "competitor_mention"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Competitor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "competitor_ref",
+          "lookup_entity": "competitor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "competitor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source Type",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "source_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "source_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Snippet",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "snippet",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "snippet"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "proposed",
+              "confirmed",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "competitor_mention",
+        "field": "decided_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lost To",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lost_to_competitor_ref",
+          "lookup_entity": "competitor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "opportunity",
+        "field": "lost_to_competitor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Incumbent Competitor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "incumbent_competitor_ref",
+          "lookup_entity": "competitor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "account",
+        "field": "incumbent_competitor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Incumbent Supplier",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "incumbent_supplier",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "lead",
+        "field": "incumbent_supplier"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review Amount Threshold",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "review_amount_threshold",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "review_amount_threshold"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review Required Fields",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "review_required_fields",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "review_required_fields"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنافس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.website",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.competitor_type",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المناطق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.regions",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نقاط القوة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.strengths",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نقاط الضعف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.weaknesses",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موقع السعر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.price_position",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المسؤول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.owner_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بطاقة المنافسة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.battlecard_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "متتبع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor.is_tracked",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "منافس الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_competitor",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_competitor.opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنافس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_competitor.competitor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_competitor.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستوى التهديد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_competitor.threat_level",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "منتج المنافس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_product",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنافس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_product.competitor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_product.product_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مراجعة الفوز والخسارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النتيجة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.outcome",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب الرئيسي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.main_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أسباب أخرى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.secondary_reasons",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ما تفوق به الفائز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.winner_did_better",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملاحظات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.notes",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "لقطة المنافسين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.competitors_snapshot",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "راجعه"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.reviewed_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملاحظات المشتري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "locale": "ar",
+        "object_key": "win_loss_review.buyer_feedback_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ذكر المنافس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنافس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.competitor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نوع المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.source_entity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.source_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المقتطف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.snippet",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قرره"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "competitor_mention.decided_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خسرت لصالح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.lost_to_competitor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنافس الحالي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.incumbent_competitor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المورد الحالي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.incumbent_supplier",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حد مبلغ المراجعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.review_amount_threshold",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حقول المراجعة المطلوبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.review_required_fields",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 8,
+  "title": "Pack: sales competitors and win-loss"
+}

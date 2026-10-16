@@ -1,0 +1,1269 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b3632db3f518fea536f4118e8659d4ff9c4ca2360f11010d418d329afde9401c",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Opportunity lines (D6-T2): product lines with list and sales price, discounts, units and one-time or recurring value, their revenue schedules, and the deal totals, price list and primary quote on the opportunity.",
+  "format": "attome-changeset/v1",
+  "id": "01a143b6-e041-7369-9bf7-dc4d7ca32342",
+  "layer": "product",
+  "name": "sales-opportunity-lines",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Opportunity Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "opportunity_line",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit_ref",
+          "lookup_entity": "unit",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "unit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "List Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "list_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "list_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sales Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sales_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "sales_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Discount %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "discount_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "discount_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Discount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "discount_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "discount_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "line_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Service Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "service_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "service_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "one_time",
+              "recurring"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "line_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Recurrence",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "recurrence",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "monthly",
+              "yearly"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "recurrence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Term (months)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "term_months",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "term_months"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quote Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_quote_line_ref",
+          "lookup_entity": "quote_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "source_quote_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "sort_order",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "opportunity_line",
+        "field": "sort_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Line Schedule",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "opportunity_line_schedule",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "opportunity_line_schedule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "opportunity_line_schedule",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_ref",
+          "lookup_entity": "opportunity_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "opportunity_line_schedule",
+        "field": "line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period Start",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "period_start",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "opportunity_line_schedule",
+        "field": "period_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Revenue",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "revenue",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "opportunity_line_schedule",
+        "field": "revenue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "opportunity_line_schedule",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Price List",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "price_list_ref",
+          "lookup_entity": "price_list",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "opportunity",
+        "field": "price_list_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Has Lines",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "has_lines",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "opportunity",
+        "field": "has_lines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Deal Discount %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "deal_discount_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "opportunity",
+        "field": "deal_discount_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "One-time Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "one_time_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "opportunity",
+        "field": "one_time_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Recurring (annual)",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "recurring_annual",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "opportunity",
+        "field": "recurring_annual"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Total Contract Value",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "total_contract_value",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "opportunity",
+        "field": "total_contract_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Primary Quote",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "primary_quote_ref",
+          "lookup_entity": "quote",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "opportunity",
+        "field": "primary_quote_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lines Synced",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lines_synced_hash",
+          "lookup_entity": null,
+          "max_length": 128,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "opportunity",
+        "field": "lines_synced_hash"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.product_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.unit_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر القائمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.list_price",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر البيع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.sales_price",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة الخصم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.discount_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الخصم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.discount_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجمالي البند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.line_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوصف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.description",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الخدمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.service_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.line_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التكرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.recurrence",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدة (أشهر)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.term_months",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند عرض السعر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.source_quote_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الترتيب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line.sort_order",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جدول البند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line_schedule",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line_schedule.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line_schedule.line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بداية الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line_schedule.period_start",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإيراد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line_schedule.revenue",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_line_schedule.quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قائمة الأسعار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.price_list_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "لها بنود"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.has_lines",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة خصم الصفقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.deal_discount_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجمالي لمرة واحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.one_time_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المتكرر سنويا"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.recurring_annual",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجمالي قيمة العقد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.total_contract_value",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عرض السعر الرئيسي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.primary_quote_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مزامنة البنود"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.lines_synced_hash",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 7,
+  "title": "Pack: sales opportunity lines"
+}
