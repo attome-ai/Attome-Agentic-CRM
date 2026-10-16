@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Opportunity lines: `GET/POST /api/v1/sales/opportunities/{id}/lines`, `PATCH`/`DELETE .../lines/{line_id}`
+  and `POST .../deal-discount` (`If-Match` with the deal's row version) price every line together in one
+  transaction, store each line total and the deal's one-time, recurring and contract totals and amount,
+  and recalculate the stored split amounts. A product must be on the deal's price list in its currency
+  (`product_not_on_price_list`). `opportunity_line` and the deal totals are now engine-managed.
 - Commission recalculation previews (`comp_recalc_preview`, commission pack `0003`): publishing a plan
   or crediting an open period recomputes it into per-participant previews (current and recalculated
   amount) without touching statements; `POST /api/v1/commission/periods/{id}/recalc/apply` starts the

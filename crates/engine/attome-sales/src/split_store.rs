@@ -56,6 +56,15 @@ fn lock_key(opportunity: Uuid) -> String {
     format!("attome-sales/opportunity:{opportunity}")
 }
 
+/// The deal's lock, shared by split and line changes so their amounts never
+/// race.
+pub(crate) async fn lock_deal(
+    tx: &mut attome_db::Tx<'_>,
+    opportunity: Uuid,
+) -> Result<(), AppError> {
+    lock(tx, opportunity).await
+}
+
 async fn lock(tx: &mut attome_db::Tx<'_>, opportunity: Uuid) -> Result<(), AppError> {
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
         .bind(crate::ADVISORY_LOCK_NAMESPACE)

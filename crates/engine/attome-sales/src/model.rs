@@ -4,7 +4,7 @@ use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_SALES, ModuleId};
 use axum::{
     Router,
-    routing::{patch, post, put},
+    routing::{get, patch, post, put},
 };
 
 /// Registered in `attome::boot::register_engines`.
@@ -31,13 +31,23 @@ impl EngineModel for SalesModel {
     /// through the team routes, which grant and revoke their share of the
     /// deal in the same transaction.
     fn engine_owned_entities(&self) -> &'static [&'static str] {
-        &["opportunity_split", "opportunity_team_member"]
+        &[
+            "opportunity_split",
+            "opportunity_team_member",
+            "opportunity_line",
+        ]
     }
 
     fn engine_managed_fields(&self) -> &'static [(&'static str, &'static str)] {
         &[
             ("opportunity_split", "amount"),
             ("opportunity_team_member", "share_id"),
+            ("opportunity_line", "line_total"),
+            ("opportunity_line", "list_price"),
+            ("opportunity", "has_lines"),
+            ("opportunity", "one_time_total"),
+            ("opportunity", "recurring_annual"),
+            ("opportunity", "total_contract_value"),
         ]
     }
 
@@ -58,6 +68,20 @@ impl EngineModel for SalesModel {
             .route(
                 "/api/v1/sales/opportunities/{id}/team/copy-account-team",
                 post(crate::team_defaults::post_sales_copy_account_team),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/lines",
+                get(crate::opportunity_lines::get_sales_lines)
+                    .post(crate::opportunity_lines::post_sales_line),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/lines/{line_id}",
+                patch(crate::opportunity_lines::patch_sales_line)
+                    .delete(crate::opportunity_lines::delete_sales_line),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/deal-discount",
+                post(crate::opportunity_lines::post_sales_deal_discount),
             )
             .route(
                 "/api/v1/sales/opportunities/{id}/change-owner",

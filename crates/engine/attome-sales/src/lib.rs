@@ -17,6 +17,7 @@ pub mod enrichment;
 pub mod flags;
 pub mod forecast;
 pub mod model;
+pub mod opportunity_lines;
 pub mod orgchart;
 pub mod owner_change;
 pub mod price_resolution;
@@ -42,5 +43,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<team::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<team_defaults::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<owner_change::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<opportunity_lines::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
