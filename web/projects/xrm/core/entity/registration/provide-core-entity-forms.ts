@@ -18,6 +18,7 @@ import { TagCategoryFormComponent } from './forms/tag-category-form/tag-category
 import { TagItemFormComponent } from './forms/tag-item-form/tag-item-form.component';
 import { ReminderFormComponent } from './forms/reminder-form/reminder-form.component';
 import { ActivityFormComponent } from './forms/activity-form/activity-form.component';
+import { ScanActionFormComponent } from './forms/scan-action-form/scan-action-form.component';
 
 // 'attome_document'/'note' -> their own dedicated forms. Split into this
 // separate, lighter entry (rather than living directly in `core/entity`
@@ -50,4 +51,5 @@ export function registerCoreEntityForms(registry: EntityRouteRegistry): void {
   registry.register('tag_item', { formComponent: TagItemFormComponent });
   registry.register('reminder', { formComponent: ReminderFormComponent });
   registry.register('activity', { formComponent: ActivityFormComponent });
+  registry.register('scan_action', { formComponent: ScanActionFormComponent });
 }

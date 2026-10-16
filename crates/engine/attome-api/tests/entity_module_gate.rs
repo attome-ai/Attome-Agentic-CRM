@@ -106,6 +106,10 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "reminder",
         "core platform (platform-bundles/xrm-reminder.json, D-602)",
     ),
+    (
+        "scan_action",
+        "core platform (platform-bundles/attome-scan.json, B16-T7)",
+    ),
     // Engines with no EngineModel impl and no licence gate on their routes.
     (
         "audit_header",

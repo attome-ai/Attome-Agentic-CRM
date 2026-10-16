@@ -1085,6 +1085,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-metric-governance",
         // R12-T1: regulatory changes and the controls they touch.
         "attome-grc-regulatory-change",
+        // B16-T7: scan-action bindings (code pattern to action).
+        "attome-scan",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
