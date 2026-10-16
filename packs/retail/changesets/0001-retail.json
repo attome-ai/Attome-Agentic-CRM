@@ -1,0 +1,4999 @@
+{
+  "author": "packs",
+  "checksum": "sha256:7914f11f56ada1677c43874caba8959eea3c4de7c74dd335707497d9f784ac1e",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Retail and consumer goods (X9-T1); POS, checkout, inventory and merchandising stay in the customer's systems: outlets with chains and routes, visit plans and store visits with audits and photos, in-store orders handed to the ERP, van sales with collection, trade promotions on a Ramadan and Eid calendar with claims and approval, retailer agreements and product recalls. Roles, report queries and a sidebar.",
+  "format": "attome-changeset/v1",
+  "id": "01a143d3-a823-7ac5-bea8-b59a3242b335",
+  "layer": "product",
+  "name": "retail",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Retail Chain",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_chain",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "rtl_chain"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "rtl_chain",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "rtl_chain",
+        "field": "account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Channel",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "channel",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "hypermarket",
+              "supermarket",
+              "grocery",
+              "pharmacy",
+              "convenience",
+              "wholesale",
+              "online"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "rtl_chain",
+        "field": "channel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Route",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_route",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "rtl_route"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "rtl_route",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sales Rep",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "rep_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "rtl_route",
+        "field": "rep_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Visit Days",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "visit_days",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "rtl_route",
+        "field": "visit_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Region",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "region",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "rtl_route",
+        "field": "region"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Outlet",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_outlet",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "rtl_outlet"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Chain",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "chain_ref",
+          "lookup_entity": "rtl_chain",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "chain_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Route",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "route_ref",
+          "lookup_entity": "rtl_route",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "route_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Class",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outlet_class",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "outlet_class"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "City",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "city",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "city"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Address",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "address",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "address"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Latitude",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "latitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "latitude"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Longitude",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "longitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "longitude"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "ERP ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "erp_customer_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "rtl_outlet",
+        "field": "erp_customer_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Store Visit",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_visit",
+          "primary_name_attribute": "visit_date"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "rtl_visit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Outlet",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outlet_ref",
+          "lookup_entity": "rtl_outlet",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "outlet_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rep",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "rep_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "rep_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "visit_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "visit_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Checked In",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "checked_in_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "checked_in_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Checked Out",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "checked_out_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "checked_out_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Planned",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "planned",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "planned"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Notes",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "notes",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "planned",
+              "in_progress",
+              "done",
+              "missed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "rtl_visit",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Store Audit",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_store_audit",
+          "primary_name_attribute": "product_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "rtl_store_audit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Visit",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "visit_ref",
+          "lookup_entity": "rtl_visit",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "visit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Barcode",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "barcode",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "barcode"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "On Shelf",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "on_shelf",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "on_shelf"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Facings",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "facings",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "facings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Shelf Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "shelf_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "shelf_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stock Count",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "stock_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "stock_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Photo",
+          "field_type": "file",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "photo",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "rtl_store_audit",
+        "field": "photo"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "In-store Order",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_order",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "rtl_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "rtl_order",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Outlet",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outlet_ref",
+          "lookup_entity": "rtl_outlet",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "rtl_order",
+        "field": "outlet_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Visit",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "visit_ref",
+          "lookup_entity": "rtl_visit",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "rtl_order",
+        "field": "visit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pre_order",
+              "van_sale"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "rtl_order",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "rtl_order",
+        "field": "total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Collected",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "collected_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "rtl_order",
+        "field": "collected_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "E-invoice",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "einvoice_reference",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "rtl_order",
+        "field": "einvoice_reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "ERP Order",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "erp_order_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "rtl_order",
+        "field": "erp_order_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "submitted",
+              "sent_to_erp",
+              "delivered",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "rtl_order",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "In-store Order Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_order_line",
+          "primary_name_attribute": "product_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "rtl_order_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "rtl_order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "rtl_order_line",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "rtl_order_line",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "rtl_order_line",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "rtl_order_line",
+        "field": "unit_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "rtl_order_line",
+        "field": "line_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Trade Promotion",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_promotion",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "rtl_promotion"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Chain",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "chain_ref",
+          "lookup_entity": "rtl_chain",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "chain_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Season",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "season",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "ramadan",
+              "eid_al_fitr",
+              "eid_al_adha",
+              "back_to_school",
+              "national_day",
+              "white_friday",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "season"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Mechanic",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "mechanic",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "price_off",
+              "buy_x_get_y",
+              "display",
+              "listing_fee",
+              "rebate"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "mechanic"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "starts_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "starts_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ends_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "ends_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Budget",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "budget",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Spent",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "spent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "spent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "planned",
+              "approved",
+              "running",
+              "closed",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "rtl_promotion",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Promotion Claim",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_promotion_claim",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "rtl_promotion_claim"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Promotion",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "promotion_ref",
+          "lookup_entity": "rtl_promotion",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "promotion_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Chain",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "chain_ref",
+          "lookup_entity": "rtl_chain",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "chain_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Claimed",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "claimed_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "claimed_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approved",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approved_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "approved_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Evidence",
+          "field_type": "file",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "evidence",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "decided_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "submitted",
+              "validating",
+              "approved",
+              "partly_approved",
+              "rejected",
+              "paid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Retailer Agreement",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_retailer_agreement",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "rtl_retailer_agreement"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "rtl_retailer_agreement",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Chain",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "chain_ref",
+          "lookup_entity": "rtl_chain",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "rtl_retailer_agreement",
+        "field": "chain_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "starts_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "rtl_retailer_agreement",
+        "field": "starts_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "ends_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "rtl_retailer_agreement",
+        "field": "ends_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Listing Fees",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "listing_fees",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "rtl_retailer_agreement",
+        "field": "listing_fees"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Terms",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "terms",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "rtl_retailer_agreement",
+        "field": "terms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Product Recall",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "rtl_recall",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "rtl_recall"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Batches",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "batch_numbers",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "batch_numbers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Authority Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "authority_reference",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "authority_reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Started",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "started_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "started_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Units Recovered",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "units_recovered",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "units_recovered"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "in_progress",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "rtl_recall",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سلسلة التجزئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_chain",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_chain.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_chain.account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القناة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_chain.channel",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط السير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_route",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_route.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المندوب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_route.rep_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أيام الزيارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_route.visit_days",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنطقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_route.region",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نقطة البيع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلسلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.chain_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط السير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.route_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التصنيف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.outlet_class",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدينة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.city",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.address",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.latitude",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خط الطول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.longitude",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعرف في نظام ERP"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_outlet.erp_customer_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "زيارة المتجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نقطة البيع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.outlet_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المندوب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.rep_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التاريخ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.visit_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وقت الوصول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.checked_in_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وقت المغادرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.checked_out_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مخططة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.planned",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملاحظات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.notes",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_visit.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تدقيق المتجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الزيارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.visit_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.product_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الباركود"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.barcode",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "على الرف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.on_shelf",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الواجهات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.facings",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر الرف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.shelf_price",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المخزون"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.stock_count",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصورة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_store_audit.photo",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب المتجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نقطة البيع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.outlet_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الزيارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.visit_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المحصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.collected_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفاتورة الإلكترونية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.einvoice_reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطلب في نظام ERP"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.erp_order_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند طلب المتجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order_line",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطلب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order_line.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order_line.product_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order_line.quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order_line.unit_price",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجمالي البند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_order_line.line_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العرض الترويجي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلسلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.chain_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.season",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آلية العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.mechanic",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يبدأ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.starts_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينتهي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.ends_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الميزانية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.budget",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المصروف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.spent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مطالبة العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.promotion_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلسلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.chain_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المطالب به"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.claimed_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.approved_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدليل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.evidence",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قرره"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.decided_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_promotion_claim.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اتفاقية بائع التجزئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلسلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement.chain_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يبدأ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement.starts_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينتهي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement.ends_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رسوم الإدراج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement.listing_fees",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشروط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_retailer_agreement.terms",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "استدعاء المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.product_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدفعات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.batch_numbers",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرجع الجهة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.authority_reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ البدء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.started_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوحدات المستردة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.units_recovered",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "locale": "ar",
+        "object_key": "rtl_recall.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_chain",
+          "key": "rtl_chain.create",
+          "name": "rtl_chain.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "privilege": "rtl_chain.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_chain",
+          "key": "rtl_chain.read",
+          "name": "rtl_chain.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "privilege": "rtl_chain.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_chain",
+          "key": "rtl_chain.update",
+          "name": "rtl_chain.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "privilege": "rtl_chain.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_order",
+          "key": "rtl_order.create",
+          "name": "rtl_order.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "privilege": "rtl_order.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_order",
+          "key": "rtl_order.read",
+          "name": "rtl_order.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 187,
+      "target": {
+        "privilege": "rtl_order.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_order",
+          "key": "rtl_order.update",
+          "name": "rtl_order.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 188,
+      "target": {
+        "privilege": "rtl_order.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_order_line",
+          "key": "rtl_order_line.create",
+          "name": "rtl_order_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 189,
+      "target": {
+        "privilege": "rtl_order_line.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_order_line",
+          "key": "rtl_order_line.read",
+          "name": "rtl_order_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 190,
+      "target": {
+        "privilege": "rtl_order_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_order_line",
+          "key": "rtl_order_line.update",
+          "name": "rtl_order_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 191,
+      "target": {
+        "privilege": "rtl_order_line.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_outlet",
+          "key": "rtl_outlet.read",
+          "name": "rtl_outlet.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 192,
+      "target": {
+        "privilege": "rtl_outlet.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_outlet",
+          "key": "rtl_outlet.update",
+          "name": "rtl_outlet.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 193,
+      "target": {
+        "privilege": "rtl_outlet.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_promotion",
+          "key": "rtl_promotion.create",
+          "name": "rtl_promotion.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 194,
+      "target": {
+        "privilege": "rtl_promotion.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_promotion",
+          "key": "rtl_promotion.read",
+          "name": "rtl_promotion.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 195,
+      "target": {
+        "privilege": "rtl_promotion.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_promotion",
+          "key": "rtl_promotion.update",
+          "name": "rtl_promotion.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 196,
+      "target": {
+        "privilege": "rtl_promotion.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_promotion_claim",
+          "key": "rtl_promotion_claim.read",
+          "name": "rtl_promotion_claim.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 197,
+      "target": {
+        "privilege": "rtl_promotion_claim.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_promotion_claim",
+          "key": "rtl_promotion_claim.update",
+          "name": "rtl_promotion_claim.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 198,
+      "target": {
+        "privilege": "rtl_promotion_claim.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_recall",
+          "key": "rtl_recall.create",
+          "name": "rtl_recall.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 199,
+      "target": {
+        "privilege": "rtl_recall.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_recall",
+          "key": "rtl_recall.read",
+          "name": "rtl_recall.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 200,
+      "target": {
+        "privilege": "rtl_recall.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_recall",
+          "key": "rtl_recall.update",
+          "name": "rtl_recall.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 201,
+      "target": {
+        "privilege": "rtl_recall.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_retailer_agreement",
+          "key": "rtl_retailer_agreement.create",
+          "name": "rtl_retailer_agreement.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 202,
+      "target": {
+        "privilege": "rtl_retailer_agreement.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_retailer_agreement",
+          "key": "rtl_retailer_agreement.read",
+          "name": "rtl_retailer_agreement.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 203,
+      "target": {
+        "privilege": "rtl_retailer_agreement.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_retailer_agreement",
+          "key": "rtl_retailer_agreement.update",
+          "name": "rtl_retailer_agreement.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 204,
+      "target": {
+        "privilege": "rtl_retailer_agreement.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_route",
+          "key": "rtl_route.read",
+          "name": "rtl_route.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 205,
+      "target": {
+        "privilege": "rtl_route.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_store_audit",
+          "key": "rtl_store_audit.create",
+          "name": "rtl_store_audit.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 206,
+      "target": {
+        "privilege": "rtl_store_audit.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_store_audit",
+          "key": "rtl_store_audit.read",
+          "name": "rtl_store_audit.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 207,
+      "target": {
+        "privilege": "rtl_store_audit.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_store_audit",
+          "key": "rtl_store_audit.update",
+          "name": "rtl_store_audit.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 208,
+      "target": {
+        "privilege": "rtl_store_audit.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on rtl_visit",
+          "key": "rtl_visit.create",
+          "name": "rtl_visit.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 209,
+      "target": {
+        "privilege": "rtl_visit.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on rtl_visit",
+          "key": "rtl_visit.read",
+          "name": "rtl_visit.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 210,
+      "target": {
+        "privilege": "rtl_visit.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on rtl_visit",
+          "key": "rtl_visit.update",
+          "name": "rtl_visit.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 211,
+      "target": {
+        "privilege": "rtl_visit.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Visits outlets, audits shelves and takes orders.",
+          "is_customized": false,
+          "name": "Field Sales Rep",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 212,
+      "target": {
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 213,
+      "target": {
+        "privilege": "rtl_outlet.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 214,
+      "target": {
+        "privilege": "rtl_outlet.update",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 215,
+      "target": {
+        "privilege": "rtl_visit.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 216,
+      "target": {
+        "privilege": "rtl_visit.create",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 217,
+      "target": {
+        "privilege": "rtl_visit.update",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 218,
+      "target": {
+        "privilege": "rtl_store_audit.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 219,
+      "target": {
+        "privilege": "rtl_store_audit.create",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 220,
+      "target": {
+        "privilege": "rtl_store_audit.update",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 221,
+      "target": {
+        "privilege": "rtl_order.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 222,
+      "target": {
+        "privilege": "rtl_order.create",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 223,
+      "target": {
+        "privilege": "rtl_order.update",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 224,
+      "target": {
+        "privilege": "rtl_order_line.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 225,
+      "target": {
+        "privilege": "rtl_order_line.create",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 226,
+      "target": {
+        "privilege": "rtl_order_line.update",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 227,
+      "target": {
+        "privilege": "rtl_route.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 228,
+      "target": {
+        "privilege": "rtl_chain.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 229,
+      "target": {
+        "privilege": "rtl_promotion.read",
+        "role": "Field Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Owns chains, agreements and promotions.",
+          "is_customized": false,
+          "name": "Key Account Manager (Retail)",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 230,
+      "target": {
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 231,
+      "target": {
+        "privilege": "rtl_chain.read",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 232,
+      "target": {
+        "privilege": "rtl_chain.create",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 233,
+      "target": {
+        "privilege": "rtl_chain.update",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 234,
+      "target": {
+        "privilege": "rtl_retailer_agreement.read",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 235,
+      "target": {
+        "privilege": "rtl_retailer_agreement.create",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 236,
+      "target": {
+        "privilege": "rtl_retailer_agreement.update",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 237,
+      "target": {
+        "privilege": "rtl_promotion.read",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 238,
+      "target": {
+        "privilege": "rtl_promotion.create",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 239,
+      "target": {
+        "privilege": "rtl_promotion.update",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 240,
+      "target": {
+        "privilege": "rtl_promotion_claim.read",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 241,
+      "target": {
+        "privilege": "rtl_outlet.read",
+        "role": "Key Account Manager (Retail)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Approves promotions and claims; prices never change here.",
+          "is_customized": false,
+          "name": "Trade Marketing Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 242,
+      "target": {
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 243,
+      "target": {
+        "privilege": "rtl_chain.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 244,
+      "target": {
+        "privilege": "rtl_route.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 245,
+      "target": {
+        "privilege": "rtl_outlet.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 246,
+      "target": {
+        "privilege": "rtl_visit.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 247,
+      "target": {
+        "privilege": "rtl_store_audit.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 248,
+      "target": {
+        "privilege": "rtl_order.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 249,
+      "target": {
+        "privilege": "rtl_order_line.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 250,
+      "target": {
+        "privilege": "rtl_promotion.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 251,
+      "target": {
+        "privilege": "rtl_promotion.update",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 252,
+      "target": {
+        "privilege": "rtl_promotion_claim.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 253,
+      "target": {
+        "privilege": "rtl_promotion_claim.update",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 254,
+      "target": {
+        "privilege": "rtl_retailer_agreement.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 255,
+      "target": {
+        "privilege": "rtl_recall.read",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 256,
+      "target": {
+        "privilege": "rtl_recall.create",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 257,
+      "target": {
+        "privilege": "rtl_recall.update",
+        "role": "Trade Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "rtl_promotion_claim",
+          "initial_state": "submitted",
+          "is_active": true,
+          "name": "Promotion Claim",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 258,
+      "target": {
+        "entity": "rtl_promotion_claim"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Validate",
+          "required_privilege": null,
+          "to_state": "validating"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 259,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "transition": "submitted->validating"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "validating",
+          "guard_expression": null,
+          "name": "Approve",
+          "required_privilege": null,
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 260,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "transition": "validating->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "validating",
+          "guard_expression": null,
+          "name": "Approve Part",
+          "required_privilege": null,
+          "to_state": "partly_approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 261,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "transition": "validating->partly_approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "validating",
+          "guard_expression": null,
+          "name": "Reject",
+          "required_privilege": null,
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 262,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "transition": "validating->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "approved",
+          "guard_expression": null,
+          "name": "Pay",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 263,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "transition": "approved->paid"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "partly_approved",
+          "guard_expression": null,
+          "name": "Pay",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 264,
+      "target": {
+        "entity": "rtl_promotion_claim",
+        "transition": "partly_approved->paid"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "rtl_visit",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Retail: Visit Compliance This Week",
+          "required_privilege": "rtl_visit.read",
+          "sql": "SELECT rep_ref, COUNT(*) FILTER (WHERE planned) AS planned, COUNT(*) FILTER (WHERE planned AND status = 'done') AS done FROM rtl_visit WHERE (is_active IS NULL OR is_active = true) AND visit_date >= date_trunc('week', NOW()) GROUP BY rep_ref",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 265,
+      "target": {
+        "entity": "rtl_visit",
+        "query": "Retail: Visit Compliance This Week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "rtl_store_audit",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Retail: Out of Stock Findings",
+          "required_privilege": "rtl_store_audit.read",
+          "sql": "SELECT product_ref, COUNT(*) AS outlets_out FROM rtl_store_audit WHERE (is_active IS NULL OR is_active = true) AND on_shelf = false AND created_at > NOW() - INTERVAL '14 days' GROUP BY product_ref ORDER BY outlets_out DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 266,
+      "target": {
+        "entity": "rtl_store_audit",
+        "query": "Retail: Out of Stock Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "rtl_promotion",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Retail: Promotion Spend vs Budget",
+          "required_privilege": "rtl_promotion.read",
+          "sql": "SELECT id, name, season, budget, spent FROM rtl_promotion WHERE (is_active IS NULL OR is_active = true) AND status IN ('approved', 'running') ORDER BY starts_on",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 267,
+      "target": {
+        "entity": "rtl_promotion",
+        "query": "Retail: Promotion Spend vs Budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 67,
+          "entity": null,
+          "icon": "la-store",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 268,
+      "target": {
+        "path": "Retail"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-store-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Outlets"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_outlet/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 269,
+      "target": {
+        "path": "Retail/Outlets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-route",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Visits"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_visit/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 270,
+      "target": {
+        "path": "Retail/Visits"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-shopping-cart",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Orders"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_order/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 271,
+      "target": {
+        "path": "Retail/Orders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-tags",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Promotions"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_promotion/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 272,
+      "target": {
+        "path": "Retail/Promotions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-receipt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Claims"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_promotion_claim/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 273,
+      "target": {
+        "path": "Retail/Claims"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 6,
+          "entity": null,
+          "icon": "la-link",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Chains"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_chain/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 274,
+      "target": {
+        "path": "Retail/Chains"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 7,
+          "entity": null,
+          "icon": "la-undo",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Retail",
+            "Recalls"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/rtl_recall/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 275,
+      "target": {
+        "path": "Retail/Recalls"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "state"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "retail",
+  "seq": 1,
+  "title": "Pack: retail and consumer goods"
+}
