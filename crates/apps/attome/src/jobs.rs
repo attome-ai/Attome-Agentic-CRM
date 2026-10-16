@@ -1915,6 +1915,10 @@ const METRIC_PARTITIONED_TABLES: &[(&str, &str)] = &[("metric_snapshot", "comput
 /// folded into `PARTITIONED_TABLES`.
 const PROCESS_PARTITIONED_TABLES: &[(&str, &str)] = &[("process_event", "ts_start")];
 
+/// E14-T2 — `marketing_web_event` (migrations/0085_marketing_web_events.sql),
+/// RANGE-partitioned by month on `occurred_at` and append-only.
+const MARKETING_PARTITIONED_TABLES: &[(&str, &str)] = &[("marketing_web_event", "occurred_at")];
+
 /// Detached `tokio::spawn` loop, same shape as
 /// `attome_api::spawn_chainer_lag_refresh` — periodically enqueues
 /// `EngineJob::EnsureAuditPartitions` onto the reliable apalis queue rather
@@ -2802,6 +2806,19 @@ async fn ensure_audit_partitions(
         }
     }
     for (table, col) in METRIC_PARTITIONED_TABLES {
+        let created = attome_core::partition_maintenance::ensure_ahead_partitions(
+            db,
+            table,
+            col,
+            PARTITION_STORAGE_PARAMS,
+            months_ahead,
+        )
+        .await?;
+        if created > 0 {
+            tracing::info!(table = %table, created, "partition create-ahead: new partitions created");
+        }
+    }
+    for (table, col) in MARKETING_PARTITIONED_TABLES {
         let created = attome_core::partition_maintenance::ensure_ahead_partitions(
             db,
             table,
