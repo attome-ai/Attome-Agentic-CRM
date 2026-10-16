@@ -50,7 +50,7 @@ fn non_literal_pattern_rejected() {
 
 #[test]
 fn oversized_pattern_rejected() {
-    let err = compile(r#"matches(code, "\w{1000}{1000}")"#, Budgets::default()).unwrap_err();
+    let err = compile(r#"matches(code, "a{1000}{1000}")"#, Budgets::default()).unwrap_err();
     assert_eq!(err.code(), "rules.regex.invalid");
     let err = compile(r#"matches(code, "(unclosed")"#, Budgets::default()).unwrap_err();
     assert_eq!(err.code(), "rules.regex.invalid");
