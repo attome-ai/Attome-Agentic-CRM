@@ -1,0 +1,2250 @@
+{
+  "author": "packs",
+  "checksum": "sha256:e6f93e1f410c65c7aca8be680db1e0d9e0dda74178e77caed1c5c8740dd956a2",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Org chart (D23-T2): reports-to, dotted line, department and former-employee fields on contact. Enrichment (D24-T2): legal names, CR and VAT numbers, ISIC industry, size and revenue bands, founding year, head office, logo, social links and technologies on account; department, seniority, email verification, mobile, city, country and LinkedIn on contact and lead. The ISIC code list entity with its 21 sections (D24-T3 seeds the full list). Lead qualification fields (D3-T1): budget, authority, need, timeline and disqualify reason.",
+  "format": "attome-changeset/v1",
+  "id": "01a143c1-c0d1-7333-aa9f-2ebf23e758e3",
+  "layer": "product",
+  "name": "crm-org-chart-enrichment",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Industry Code",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "isic_code",
+          "primary_name_attribute": "label_en"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "isic_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "code",
+          "lookup_entity": null,
+          "max_length": 4,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "isic_code",
+        "field": "code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Level",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "level",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "section",
+              "division",
+              "group",
+              "class"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "isic_code",
+        "field": "level"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "English Label",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "label_en",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "isic_code",
+        "field": "label_en"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Label",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "label_ar",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "isic_code",
+        "field": "label_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_ref",
+          "lookup_entity": "isic_code",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "isic_code",
+        "field": "parent_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reports To",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reports_to",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "contact",
+        "field": "reports_to"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Dotted Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "dotted_line_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "contact",
+        "field": "dotted_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Department",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "department",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "contact",
+        "field": "department"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Department",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "department_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "contact",
+        "field": "department_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Former Employee",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_former_employee",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "contact",
+        "field": "is_former_employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Left On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "left_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "contact",
+        "field": "left_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Seniority",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "seniority",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "owner",
+              "c_level",
+              "vp",
+              "director",
+              "manager",
+              "senior",
+              "entry"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "contact",
+        "field": "seniority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Verification",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_verification_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "unknown",
+              "valid",
+              "risky",
+              "invalid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "contact",
+        "field": "email_verification_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Mobile",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "mobile_phone",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "contact",
+        "field": "mobile_phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "City",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "city",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "contact",
+        "field": "city"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "contact",
+        "field": "country_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "LinkedIn",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "linkedin_url",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "contact",
+        "field": "linkedin_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Department",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "department",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "lead",
+        "field": "department"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Seniority",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "seniority",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "owner",
+              "c_level",
+              "vp",
+              "director",
+              "manager",
+              "senior",
+              "entry"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "lead",
+        "field": "seniority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Verification",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_verification_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "unknown",
+              "valid",
+              "risky",
+              "invalid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "lead",
+        "field": "email_verification_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Mobile",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "mobile_phone",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "lead",
+        "field": "mobile_phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "City",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "city",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "lead",
+        "field": "city"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "lead",
+        "field": "country_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "LinkedIn",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "linkedin_url",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "lead",
+        "field": "linkedin_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Budget",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "budget",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "lead",
+        "field": "budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Authority",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "authority",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "decision_maker",
+              "influencer",
+              "user",
+              "unknown"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "lead",
+        "field": "authority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Need",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "need",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "lead",
+        "field": "need"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Timeline",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "timeline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "now",
+              "quarter",
+              "half_year",
+              "year",
+              "unknown"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "lead",
+        "field": "timeline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Disqualify Reason",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "disqualify_reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "no_budget",
+              "no_need",
+              "no_authority",
+              "bad_timing",
+              "competitor",
+              "unreachable",
+              "duplicate",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "lead",
+        "field": "disqualify_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Legal Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "legal_name_en",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "account",
+        "field": "legal_name_en"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Legal Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "legal_name_ar",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "account",
+        "field": "legal_name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "CR Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cr_number",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "account",
+        "field": "cr_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_number",
+          "lookup_entity": null,
+          "max_length": 30,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "account",
+        "field": "vat_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Industry Code",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "isic_code_ref",
+          "lookup_entity": "isic_code",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "account",
+        "field": "isic_code_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Employees",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "employee_band",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "1-10",
+              "11-50",
+              "51-200",
+              "201-500",
+              "501-1000",
+              "1001-5000",
+              "5000+"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "account",
+        "field": "employee_band"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Revenue Band",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "revenue_band",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "<1M",
+              "1M-10M",
+              "10M-50M",
+              "50M-250M",
+              "250M+"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "account",
+        "field": "revenue_band"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Founded",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "founded_year",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "account",
+        "field": "founded_year"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Head Office",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "hq_address",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "account",
+        "field": "hq_address"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Logo",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "logo_url",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "account",
+        "field": "logo_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Social Links",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "social_links",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "account",
+        "field": "social_links"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Technologies",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "technologies",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "account",
+        "field": "technologies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Proposed Parent",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "proposed_parent_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "account",
+        "field": "proposed_parent_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز النشاط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "isic_code",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرمز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "isic_code.code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستوى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "isic_code.level",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوصف الإنجليزي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "isic_code.label_en",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوصف العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "isic_code.label_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "isic_code.parent_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يتبع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.reports_to",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تبعية غير مباشرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.dotted_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإدارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.department",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإدارة بالعربية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.department_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موظف سابق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.is_former_employee",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ المغادرة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.left_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستوى الوظيفي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.seniority",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التحقق من البريد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.email_verification_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الجوال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.mobile_phone",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدينة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.city",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.country_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "لينكدإن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.linkedin_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإدارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.department",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستوى الوظيفي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.seniority",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التحقق من البريد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.email_verification_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الجوال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.mobile_phone",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدينة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.city",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.country_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "لينكدإن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.linkedin_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الميزانية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.budget",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "صلاحية القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.authority",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحاجة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.need",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإطار الزمني"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.timeline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب الاستبعاد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.disqualify_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم القانوني"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.legal_name_en",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم القانوني بالعربية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.legal_name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم السجل التجاري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.cr_number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرقم الضريبي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.vat_number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز النشاط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.isic_code_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عدد الموظفين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.employee_band",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فئة الإيرادات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.revenue_band",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سنة التأسيس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.founded_year",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المقر الرئيسي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.hq_address",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشعار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.logo_url",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "روابط التواصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.social_links",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التقنيات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.technologies",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشركة الأم المقترحة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.proposed_parent_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "A",
+          "label_ar": "الزراعة والحراجة وصيد الأسماك",
+          "label_en": "Agriculture, forestry and fishing",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "A"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "B",
+          "label_ar": "التعدين واستغلال المحاجر",
+          "label_en": "Mining and quarrying",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "B"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "C",
+          "label_ar": "الصناعة التحويلية",
+          "label_en": "Manufacturing",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "C"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "D",
+          "label_ar": "إمدادات الكهرباء والغاز والبخار وتكييف الهواء",
+          "label_en": "Electricity, gas, steam and air conditioning supply",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "D"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "E",
+          "label_ar": "إمدادات المياه وأنشطة الصرف الصحي وإدارة النفايات ومعالجتها",
+          "label_en": "Water supply; sewerage, waste management and remediation activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "E"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "F",
+          "label_ar": "التشييد",
+          "label_en": "Construction",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "F"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "G",
+          "label_ar": "تجارة الجملة والتجزئة وإصلاح المركبات ذات المحركات والدراجات النارية",
+          "label_en": "Wholesale and retail trade; repair of motor vehicles and motorcycles",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "G"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "H",
+          "label_ar": "النقل والتخزين",
+          "label_en": "Transportation and storage",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "H"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "I",
+          "label_ar": "أنشطة خدمات الإقامة والطعام",
+          "label_en": "Accommodation and food service activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "I"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "J",
+          "label_ar": "المعلومات والاتصالات",
+          "label_en": "Information and communication",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "J"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "K",
+          "label_ar": "الأنشطة المالية وأنشطة التأمين",
+          "label_en": "Financial and insurance activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "K"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "L",
+          "label_ar": "الأنشطة العقارية",
+          "label_en": "Real estate activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "L"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "M",
+          "label_ar": "الأنشطة المهنية والعلمية والتقنية",
+          "label_en": "Professional, scientific and technical activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "M"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "N",
+          "label_ar": "أنشطة الخدمات الإدارية وخدمات الدعم",
+          "label_en": "Administrative and support service activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "N"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "O",
+          "label_ar": "الإدارة العامة والدفاع والضمان الاجتماعي الإلزامي",
+          "label_en": "Public administration and defence; compulsory social security",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "O"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "P",
+          "label_ar": "التعليم",
+          "label_en": "Education",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "P"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "Q",
+          "label_ar": "أنشطة صحة الإنسان والعمل الاجتماعي",
+          "label_en": "Human health and social work activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "Q"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "R",
+          "label_ar": "الفنون والترفيه والتسلية",
+          "label_en": "Arts, entertainment and recreation",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "R"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "S",
+          "label_ar": "أنشطة الخدمات الأخرى",
+          "label_en": "Other service activities",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "S"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "T",
+          "label_ar": "أنشطة الأسر المعيشية كأصحاب عمل وأنشطة إنتاج السلع والخدمات غير المميزة للأسر المعيشية لاستعمالها الخاص",
+          "label_en": "Activities of households as employers; undifferentiated goods- and services-producing activities of households for own use",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "T"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "code": "U",
+          "label_ar": "أنشطة المنظمات والهيئات الخارجة عن نطاق الولاية الإقليمية",
+          "label_en": "Activities of extraterritorial organizations and bodies",
+          "level": "section"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "entity": "isic_code",
+        "key": {
+          "code": "U"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 3,
+  "title": "Pack: contact org chart and company enrichment fields"
+}
