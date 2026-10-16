@@ -10372,6 +10372,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/default-team/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_default_team_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/default-team/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_default_team_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/change-owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_change_owner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/opportunities/{id}/splits": {
         parameters: {
             query?: never;
@@ -10398,6 +10446,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_sales_team_member"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/team/copy-account-team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_copy_account_team"];
         delete?: never;
         options?: never;
         head?: never;
@@ -27780,6 +27844,37 @@ export interface components {
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
         };
+        SalesChangeOwnerBody: {
+            /** @description Move the old owner's splits to the new owner (else they stay). */
+            move_splits?: boolean;
+            /** Format: uuid */
+            new_owner: string;
+            /**
+             * Format: uuid
+             * @description Keep the old owner on the team with this team role; absent removes
+             *     them and their share.
+             */
+            old_owner_role?: string | null;
+        };
+        SalesCopyAccountTeamBody: {
+            /** @description The account team roles to copy, e.g. `["account_manager", "pre_sales"]`. */
+            roles: string[];
+        };
+        SalesDefaultTeamApply: {
+            queued: boolean;
+        };
+        SalesDefaultTeamPreview: {
+            /** @description The caller's open deals that miss at least one default member. */
+            opportunity_ids: string[];
+        };
+        SalesOwnerChanged: {
+            /** Format: uuid */
+            opportunity_id: string;
+            /** Format: uuid */
+            owner_id: string;
+            /** Format: int64 */
+            splits_moved: number;
+        };
         SalesSplitsBody: {
             /** @description Required when the deal is won. */
             change_reason?: string | null;
@@ -27795,6 +27890,15 @@ export interface components {
             /** Format: uuid */
             opportunity_id: string;
             splits: components["schemas"]["StoredSplit"][];
+        };
+        SalesTeamChange: {
+            /** Format: int64 */
+            added: number;
+            /**
+             * Format: int64
+             * @description Members left out because their own roles do not allow the access.
+             */
+            skipped: number;
         };
         SalesTeamMember: {
             access_level?: string | null;
@@ -65583,6 +65687,136 @@ export interface operations {
             };
         };
     };
+    post_sales_default_team_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A job adds the caller's default members to their open deals */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDefaultTeamApply"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_default_team_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open deals their default team would change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDefaultTeamPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_change_owner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesChangeOwnerBody"];
+            };
+        };
+        responses: {
+            /** @description The deal has its new owner, team and splits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOwnerChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The team is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The new owner is already the owner, or their roles do not allow editing deals */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     put_sales_splits: {
         parameters: {
             query?: never;
@@ -65726,6 +65960,78 @@ export interface operations {
                 };
             };
             /** @description Neither or both of user_ref and partner_contact_ref, or access above the member's roles (access_above_role) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_copy_account_team: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesCopyAccountTeamBody"];
+            };
+        };
+        responses: {
+            /** @description The account team's members with those roles are on the deal's team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesTeamChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The team is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No roles given */
             422: {
                 headers: {
                     [name: string]: unknown;
