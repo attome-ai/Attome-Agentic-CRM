@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod change_calendar;
 pub mod clock;
 pub mod convert;
 mod intake;
