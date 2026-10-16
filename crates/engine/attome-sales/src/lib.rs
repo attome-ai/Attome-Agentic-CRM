@@ -31,7 +31,7 @@ pub use model::SalesModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 32;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first sales route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <dialer::claim::ApiDocFragment as utoipa::OpenApi>::openapi()
 }

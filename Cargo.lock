@@ -1554,13 +1554,17 @@ dependencies = [
 name = "attome-sales"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-core",
+ "attome-db",
  "attome-modules",
  "attome-records",
  "attome-rules",
+ "attome-server",
  "attome-types",
  "axum",
  "chrono",
+ "chrono-tz",
  "rust_decimal",
  "serde",
  "serde_json",

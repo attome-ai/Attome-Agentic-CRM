@@ -2,7 +2,7 @@
 //! `sales` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_SALES, ModuleId};
-use axum::Router;
+use axum::{Router, routing::post};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -24,6 +24,9 @@ impl EngineModel for SalesModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new()
+        Router::new().route(
+            "/api/v1/sales/call-lists/{id}/claim",
+            post(crate::dialer::claim::post_claim),
+        )
     }
 }

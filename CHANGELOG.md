@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/sales/call-lists/{id}/claim` (privilege `call_list.call`) gives a caller the next
+  pending member of a call list, never the same one to two callers; members with do-not-call, no
+  `sales_calls` consent (when that purpose exists) or too many attempts are skipped, and those outside
+  their country's calling hours or over the daily limit are snoozed, each with a stored reason.
 - Forecast cells fill themselves: deals carry a forecast category (on the deal or from its stage, sales
   pack 0015), and a nightly job sums each open period's deals per owner and category, rolls them up
   through the position tree, keeps adjusted amounts, and snapshots every cell once a week.

@@ -1,0 +1,38 @@
+{
+  "author": "packs",
+  "checksum": "sha256:79778e72f372a0b05048cc8b654a84d26ebfe2717ad88b05fdd5635a71f7816f",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "D21-T4: the call_list.call privilege that lets a role take the next member of a call list through POST /api/v1/sales/call-lists/{id}/claim.",
+  "format": "attome-changeset/v1",
+  "id": "01a144ff-56e5-7221-896e-a47db1be1d23",
+  "layer": "product",
+  "name": "sales-dialer-claim",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Takes the next member of a call list and calls them.",
+          "key": "call_list.call",
+          "name": "Call From Lists"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "call_list.call"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 16,
+  "title": "Pack: claim from call lists"
+}
