@@ -2581,7 +2581,7 @@ async fn verify_approval_flow_move(
     let allowed = match request.status {
         S::Executing => payload.to.as_str(),
         S::Rejected => payload.on_reject_state.as_str(),
-        S::Cancelled | S::Expired | S::Invalidated => payload.from.as_str(),
+        S::Cancelled | S::Recalled | S::Expired | S::Invalidated => payload.from.as_str(),
         S::Pending | S::Approved | S::Executed => {
             return refuse("the request is not in a status that moves the record");
         }
