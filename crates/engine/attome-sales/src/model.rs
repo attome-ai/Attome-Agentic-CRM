@@ -56,6 +56,18 @@ impl EngineModel for SalesModel {
                 post(crate::team::post_sales_team_member),
             )
             .route(
+                "/api/v1/sales/opportunities/{id}/team/copy-account-team",
+                post(crate::team_defaults::post_sales_copy_account_team),
+            )
+            .route(
+                "/api/v1/sales/default-team/preview",
+                post(crate::team_defaults::post_sales_default_team_preview),
+            )
+            .route(
+                "/api/v1/sales/default-team/apply",
+                post(crate::team_defaults::post_sales_default_team_apply),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/team/{member_id}",
                 patch(crate::team::patch_sales_team_member)
                     .delete(crate::team::delete_sales_team_member),

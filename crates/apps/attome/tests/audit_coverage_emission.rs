@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/sales/opportunities/{id}/team/copy-account-team",
+        "needs the crm and sales packs' account team and opportunity entities, which this harness does not install",
+    ),
+    (
         "POST /api/v1/sales/opportunities/{id}/team",
         "needs the sales pack's opportunity and team entities, which this harness does not install; \
          the member's share and its Access event are written in one transaction by attome-sales's team.rs",

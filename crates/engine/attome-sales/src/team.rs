@@ -139,6 +139,93 @@ fn access_event(actor: Uuid, member: Uuid, operation: AuditOperation) -> Securit
     )
 }
 
+/// A member to add.
+#[derive(Debug, Clone, Copy)]
+pub struct NewMember {
+    pub user: Option<Uuid>,
+    pub partner_contact: Option<Uuid>,
+    pub team_role: Option<Uuid>,
+    pub access: TeamAccess,
+}
+
+/// Adds a member inside a transaction that holds the team lock: a user
+/// member's share of the deal, the member row and its Access event. The
+/// caller has already checked the member's own roles allow `access`.
+pub async fn add_member_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    entity: Uuid,
+    opportunity: Uuid,
+    new: NewMember,
+    actor: Uuid,
+) -> Result<Uuid, AppError> {
+    let member = Uuid::now_v7();
+    let share = match new.user {
+        Some(user) => Some(
+            attome_records::entity_crud::grant_user_share_in_tx(
+                tx,
+                entity,
+                opportunity,
+                user,
+                new.access.capability(),
+                actor,
+            )
+            .await?,
+        ),
+        None => None,
+    };
+    sqlx::query(
+        "INSERT INTO opportunity_team_member \
+           (id, opportunity_ref, user_ref, partner_contact_ref, team_role_ref, access_level, \
+            share_id, owner_ref) \
+         SELECT $1, o.id, $3, $4, $5, $6, $7, o.owner_ref FROM opportunity o WHERE o.id = $2",
+    )
+    .bind(member)
+    .bind(opportunity)
+    .bind(new.user)
+    .bind(new.partner_contact)
+    .bind(new.team_role)
+    .bind(new.access.as_str())
+    .bind(share.map(|s| s.to_string()))
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    write_security_event(
+        tx,
+        &attome_audit::audit_service(state),
+        access_event(actor, member, AuditOperation::Grant).comment(format!(
+            "deal {opportunity}: {} access",
+            new.access.as_str()
+        )),
+    )
+    .await?;
+    Ok(member)
+}
+
+/// Whether a user's own roles allow `access` to deals.
+pub(crate) async fn member_access_allowed(
+    state: &EngineState,
+    user: Uuid,
+    access: TeamAccess,
+) -> Result<bool, AppError> {
+    match check_member_access(state, user, access).await {
+        Ok(()) => Ok(true),
+        Err(AppError::Validation(_)) => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
+pub(crate) fn opportunity_entity_id(state: &EngineState) -> Result<Uuid, AppError> {
+    opportunity_entity(state)
+}
+
+pub(crate) async fn lock_team(
+    tx: &mut attome_db::Tx<'_>,
+    opportunity: Uuid,
+) -> Result<(), AppError> {
+    lock(tx, opportunity).await
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct SalesTeamMemberBody {
     /// A user on the team; give this or `partner_contact_ref`.
@@ -236,44 +323,18 @@ pub(crate) async fn post_sales_team_member(
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, opportunity).await?;
-    let member = Uuid::now_v7();
-    let share = match body.user_ref {
-        Some(user) => Some(
-            attome_records::entity_crud::grant_user_share_in_tx(
-                &mut tx,
-                entity,
-                opportunity,
-                user,
-                body.access_level.capability(),
-                ctx.user_id,
-            )
-            .await?,
-        ),
-        None => None,
-    };
-    sqlx::query(
-        "INSERT INTO opportunity_team_member \
-           (id, opportunity_ref, user_ref, partner_contact_ref, team_role_ref, access_level, \
-            share_id, owner_ref) \
-         SELECT $1, o.id, $3, $4, $5, $6, $7, o.owner_ref FROM opportunity o WHERE o.id = $2",
-    )
-    .bind(member)
-    .bind(opportunity)
-    .bind(body.user_ref)
-    .bind(body.partner_contact_ref)
-    .bind(body.team_role_ref)
-    .bind(body.access_level.as_str())
-    .bind(share.map(|s| s.to_string()))
-    .execute(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    write_security_event(
+    let member = add_member_in_tx(
         &mut tx,
-        &attome_audit::audit_service(&state),
-        access_event(ctx.user_id, member, AuditOperation::Grant).comment(format!(
-            "deal {opportunity}: {} access",
-            body.access_level.as_str()
-        )),
+        &state,
+        entity,
+        opportunity,
+        NewMember {
+            user: body.user_ref,
+            partner_contact: body.partner_contact_ref,
+            team_role: Some(body.team_role_ref),
+            access: body.access_level,
+        },
+        ctx.user_id,
     )
     .await?;
     let created = read_member(&mut tx, opportunity, member).await?;

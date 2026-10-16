@@ -25,6 +25,7 @@ pub mod scoring_run;
 pub mod split_store;
 pub mod splits;
 pub mod team;
+pub mod team_defaults;
 
 pub use model::SalesModel;
 
@@ -38,5 +39,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <dialer::claim::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<split_store::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<team::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<team_defaults::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

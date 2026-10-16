@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Default deal teams: a new deal gets its owner's default team members (each with their share and
+  Access event; a member whose roles do not allow the access is skipped).
+  `POST /api/v1/sales/opportunities/{id}/team/copy-account-team` copies account team members with the
+  given roles onto a deal on request; `POST /api/v1/sales/default-team/preview` lists the caller's open
+  deals their default team would change and `.../apply` queues a job that adds the missing members.
 - Deal teams: `POST /api/v1/sales/opportunities/{id}/team`, `PATCH` and `DELETE .../team/{member_id}`
   add, change and remove members; a user member gets a view or act share of the deal in the same
   transaction (refused above what their own roles allow, `access_above_role`), the owner cannot be

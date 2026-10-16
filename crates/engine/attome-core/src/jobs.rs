@@ -304,6 +304,9 @@ pub enum EngineJob {
     /// `POST /api/v1/webcrawl/targets` and `.../recrawl`, both
     /// `Authorized<Admin>`-gated.
     CrawlWebsite { target_id: Uuid },
+    /// D7-T3: adds an owner's default team to their open deals that miss a
+    /// member, in batches. Enqueued by `POST /api/v1/sales/default-team/apply`.
+    SalesDefaultTeamApply { owner_id: Uuid },
     /// F10-T5: computes (or resumes) one commission calculation run,
     /// enqueued by `POST /api/v1/commission/periods/{id}/runs`. Pure
     /// pointer; the run's `cursor` makes a retry resume.
@@ -444,6 +447,9 @@ pub enum EngineJob {
     MarketingSweep,
     /// Q10-T6: removes role grants past their end date. Bare unit variant.
     RoleGrantExpiry,
+    /// D7-T3: gives new deals their owner's default team, off the change
+    /// feed. Bare unit variant.
+    SalesDefaultTeamSweep,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -843,6 +849,7 @@ impl EngineJob {
             | Self::ApplyChangesets { .. }
             | Self::RunDataStep { .. }
             | Self::CrawlWebsite { .. }
+            | Self::SalesDefaultTeamApply { .. }
             | Self::CommissionRun { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
@@ -896,6 +903,7 @@ impl EngineJob {
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
+            | Self::SalesDefaultTeamSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -969,6 +977,7 @@ impl EngineJob {
             EngineJob::WorkflowSlaSweep => "WorkflowSlaSweep",
             EngineJob::WorkflowEntityTriggerDispatch => "WorkflowEntityTriggerDispatch",
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
+            EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
             EngineJob::ComputeMetricSnapshots => "ComputeMetricSnapshots",
@@ -995,6 +1004,7 @@ impl EngineJob {
             EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
             EngineJob::MarketingSweep => "MarketingSweep",
             EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
+            EngineJob::SalesDefaultTeamSweep => "SalesDefaultTeamSweep",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1105,6 +1115,7 @@ impl EngineJob {
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
+            | Self::SalesDefaultTeamSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1138,6 +1149,7 @@ impl EngineJob {
             // maintenance.
             Self::RewrapSecrets { .. }
             | Self::CrawlWebsite { .. }
+            | Self::SalesDefaultTeamApply { .. }
             | Self::CommissionRun { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
         }
@@ -1228,6 +1240,7 @@ impl EngineJob {
             | Self::SegmentRefreshDue
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
+            | Self::SalesDefaultTeamSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1269,6 +1282,7 @@ impl EngineJob {
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::CrawlWebsite { .. }
+            | Self::SalesDefaultTeamApply { .. }
             | Self::CommissionRun { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
@@ -1568,6 +1582,10 @@ mod tests {
         assert_round_trips(EngineJob::SegmentRefreshDue);
         assert_round_trips(EngineJob::MarketingSweep);
         assert_round_trips(EngineJob::RoleGrantExpiry);
+        assert_round_trips(EngineJob::SalesDefaultTeamSweep);
+        assert_round_trips(EngineJob::SalesDefaultTeamApply {
+            owner_id: Uuid::now_v7(),
+        });
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),
         });

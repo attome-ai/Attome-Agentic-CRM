@@ -952,6 +952,17 @@ async fn dispatch_platform_job(
                 tracing::info!(moved, "nurture: people moved between tracks");
             }
         }
+        // D7-T3: new deals get their owner's default team.
+        EngineJob::SalesDefaultTeamSweep => {
+            let added = attome_sales::team_defaults::sweep_new_deals(&attome_state).await?;
+            if added > 0 {
+                tracing::info!(added, "default team: members added to new deals");
+            }
+        }
+        EngineJob::SalesDefaultTeamApply { owner_id } => {
+            let added = attome_sales::team_defaults::run_apply(&attome_state, owner_id).await?;
+            tracing::info!(%owner_id, added, "default team: applied to open deals");
+        }
         // Q10-T6: role grants past their end, hourly.
         EngineJob::RoleGrantExpiry => {
             let removed = attome_security::grant_expiry::expire_role_grants(
@@ -2130,6 +2141,7 @@ const DEDUP_KEY_MARKETING_NIGHTLY: &str = "marketing-nightly";
 const DEDUP_KEY_SEGMENT_REFRESH_DUE: &str = "segment-refresh-due";
 const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
+const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2196,6 +2208,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SegmentRefreshDue => DEDUP_KEY_SEGMENT_REFRESH_DUE,
         EngineJob::MarketingSweep => DEDUP_KEY_MARKETING_SWEEP,
         EngineJob::RoleGrantExpiry => DEDUP_KEY_ROLE_GRANT_EXPIRY,
+        EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2520,6 +2533,17 @@ pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::MarketingSweep,
         DEDUP_KEY_MARKETING_SWEEP,
         "marketing sweep",
+    );
+}
+
+/// D7-T3: every minute, new deals' default teams.
+pub fn spawn_sales_default_team_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::SalesDefaultTeamSweep,
+        DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
+        "sales default team",
     );
 }
 
