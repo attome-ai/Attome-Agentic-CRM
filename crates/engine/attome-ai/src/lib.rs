@@ -94,6 +94,7 @@ pub mod evidence;
 pub mod execute;
 /// C10-B — thumbs feedback on a turn's answer.
 pub mod feedback;
+pub mod followup;
 pub mod gate;
 /// BIN-FX1 — the pooled generation client, built once per config.
 pub mod inference_client;
