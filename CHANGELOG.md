@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Sales pack: account plans with goals, a products-by-department whitespace grid and actions
+  (`packs/sales/changesets/0005-sales-account-plans.json`), labelled in Arabic.
 - Rate-limit bans screen (`/admin/rate-limit-bans`) on `GET /api/v1/admin/rate-limits/bans` and
   `DELETE /api/v1/admin/rate-limits/bans/{bucket}` (audited).
 - Security policy schema: per-operation entity access levels and child-unit flags on role grants
