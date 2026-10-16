@@ -941,18 +941,12 @@ async fn dispatch_approved(
                         }
                         // The draft or a resolved dependency changed after the
                         // request: the approver did not review this content.
-                        // Terminal, like an invalidated agent action.
+                        // Terminal, like an invalidated agent action: the
+                        // claimed (`executing`) request closes as invalidated.
                         attome_dashboard::lifecycle::PublishOutcome::DefinitionChanged => {
-                            attome_approval::mark_invalidated(
-                                &state.base.db,
-                                request.id,
-                                request.row_version,
-                            )
-                            .await?;
-                            return Err(AppError::Conflict(
-                                "the dashboard changed after this approval was requested and was \
-                                 not published; the request has been invalidated",
-                            ));
+                            return Ok(Dispatched::Invalidated {
+                                reason: "the dashboard changed after this approval was requested",
+                            });
                         }
                     };
                     serde_json::json!({
