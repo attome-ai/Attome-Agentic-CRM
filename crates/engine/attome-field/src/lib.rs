@@ -519,6 +519,9 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if options.get("strict").is_some_and(|s| !s.is_boolean()) {
         return Err(AppError::Validation("strict: true or false".into()));
     }
+    if options.get("create_only").is_some_and(|s| !s.is_boolean()) {
+        return Err(AppError::Validation("create_only: true or false".into()));
+    }
     if let Some(editable_by) = options.get("editable_by")
         && !matches!(editable_by.as_str(), Some("everyone" | "integrations_only"))
     {
@@ -536,6 +539,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
                 || map.contains_key("external_id")
                 || map.contains_key("unique")
                 || map.contains_key("strict")
+                || map.contains_key("create_only")
                 || map.contains_key("editable_by") =>
         {
             let mut map = map.clone();
@@ -544,6 +548,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
             map.remove("external_id");
             map.remove("unique");
             map.remove("strict");
+            map.remove("create_only");
             map.remove("editable_by");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
@@ -747,6 +752,15 @@ pub fn integrations_only(options: Option<&Value>) -> bool {
         .and_then(|o| o.get("editable_by"))
         .and_then(Value::as_str)
         == Some("integrations_only")
+}
+
+/// Q15-T4: a field set when the record is created and never changed after
+/// (`options.create_only: true`); an update that names it is refused.
+pub fn create_only(options: Option<&Value>) -> bool {
+    options
+        .and_then(|o| o.get("create_only"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
 }
 
 /// A3-T6: a required field with `options.strict: true` is also refused

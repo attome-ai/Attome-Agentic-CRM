@@ -21,6 +21,13 @@ pub enum AppError {
     #[error("forbidden")]
     Forbidden,
 
+    /// Q15-T4: the write sets an attribute the caller may not write (no
+    /// field-security write grant, or a create-only attribute after create).
+    /// Refused, never silently dropped. Carries the attribute's logical name.
+    /// `403 attribute_not_writable`.
+    #[error("attribute not writable: {0}")]
+    AttributeNotWritable(String),
+
     #[error("conflict: {0}")]
     Conflict(&'static str),
 
@@ -313,6 +320,7 @@ impl IntoResponse for AppError {
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "forbidden"),
+            AppError::AttributeNotWritable(_) => (StatusCode::FORBIDDEN, "attribute_not_writable"),
             AppError::Conflict(_) => (StatusCode::CONFLICT, "conflict"),
             AppError::VersionConflict => (StatusCode::CONFLICT, "version_conflict"),
             AppError::VersionConflictAt { .. } => (StatusCode::CONFLICT, "version_conflict"),
@@ -389,6 +397,9 @@ impl IntoResponse for AppError {
             if let Some(details) = details {
                 body["details"] = json!(details);
             }
+        }
+        if let AppError::AttributeNotWritable(field) = &self {
+            body["field"] = json!(field);
         }
         if let AppError::FieldLocked { locks, .. } = &self {
             if let Some(first) = locks.first() {
@@ -1222,6 +1233,7 @@ mod tests {
             AppError::QueryTimeout => 25,
             AppError::ReadOnly => 26,
             AppError::DuplicateDetected { .. } => 27,
+            AppError::AttributeNotWritable(_) => 28,
         }
     }
 
@@ -1273,6 +1285,7 @@ mod tests {
                 hidden: 1,
             },
             AppError::MethodNotAllowed,
+            AppError::AttributeNotWritable("x".to_string()),
             AppError::FieldLocked {
                 locks: vec![crate::types::LockedField {
                     field: "x".to_string(),
@@ -1328,7 +1341,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=27).collect::<Vec<_>>(),
+            (0..=28).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

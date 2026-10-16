@@ -479,19 +479,33 @@ async fn lock_file_fields_for(
     }
 }
 
+/// Q15-T4: an update may not name a create-only attribute; refused by name.
+pub(crate) fn validate_create_only_fields(
+    attrs: &[AttrInfo],
+    obj: &serde_json::Map<String, Value>,
+) -> Result<(), AppError> {
+    match attrs.iter().find(|attr| {
+        obj.contains_key(&attr.logicalname) && attome_field::create_only(attr.options.as_ref())
+    }) {
+        Some(attr) => Err(AppError::AttributeNotWritable(attr.logicalname.clone())),
+        None => Ok(()),
+    }
+}
+
 pub(crate) fn validate_field_write_grants(
     ctx: &SecurityContext,
     entity_name: &str,
     attrs: &[AttrInfo],
     obj: &serde_json::Map<String, Value>,
 ) -> Result<(), AppError> {
-    let denied = attrs.iter().any(|attr| {
+    // Q15-T4: refused by name, never dropped.
+    let denied = attrs.iter().find(|attr| {
         attr.requires_field_write_grant()
             && obj.contains_key(&attr.logicalname)
             && !ctx.has_field_write_grant(entity_name, &attr.logicalname)
     });
-    if denied {
-        return Err(AppError::Forbidden);
+    if let Some(attr) = denied {
+        return Err(AppError::AttributeNotWritable(attr.logicalname.clone()));
     }
     Ok(())
 }
@@ -2632,6 +2646,7 @@ pub async fn update_one_as(
     }
     validate_body(attrs, obj, false)?;
     validate_principal_field_writes(principal, entity_name, attrs, obj)?;
+    validate_create_only_fields(attrs, obj)?;
     validate_self_addressed(principal, entity_name, obj, false)?;
     validate_engine_managed_fields(state, entity_name, obj, mode)?;
     validate_model_record_validators(state, entity_name, obj)?;

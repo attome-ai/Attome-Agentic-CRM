@@ -12,6 +12,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `auth.breach_list_file` loads the full Have I Been Pwned SHA-1 download, checked locally), and
   a password reset may not reuse the current password or any of the last five (migration `0040`).
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
+- A password reset with an already used token answers `409` whatever password it carries.
 
 ### Added
 - Duplicate rules compare `phone`, `email`, `id`, `name` and `phonetic` keys (Arabic names meet their
@@ -478,6 +479,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- A write that sets an attribute the caller may not write (no field-security write grant, a field
+  locked to integrations, or a new `options.create_only: true` field on update) answers
+  `403 attribute_not_writable` with the attribute in `field`, instead of `403 forbidden` or, for
+  create-only, being saved.
 - `POST /api/v1/{entity}/{id}/clone` now needs the create privilege on the entity (and on every
   child entity it copies); it used to need only read access.
 - `DELETE /api/v1/{entity}/{id}/hard-delete` needs the new `{entity}.hard_delete` privilege besides

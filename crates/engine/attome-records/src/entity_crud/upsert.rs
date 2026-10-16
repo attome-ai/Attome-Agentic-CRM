@@ -549,11 +549,11 @@ pub(super) async fn refuse_integration_only_fields(
     let locked = attrs
         .iter()
         .filter(|a| attome_field::integrations_only(a.options.as_ref()))
-        .any(|a| fields.iter().any(|f| f.contains_key(&a.logicalname)));
-    if locked {
-        Err(AppError::Forbidden)
-    } else {
-        Ok(())
+        .find(|a| fields.iter().any(|f| f.contains_key(&a.logicalname)));
+    match locked {
+        // Q15-T4: refused by name.
+        Some(attr) => Err(AppError::AttributeNotWritable(attr.logicalname.clone())),
+        None => Ok(()),
     }
 }
 

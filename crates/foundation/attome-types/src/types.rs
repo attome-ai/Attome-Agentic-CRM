@@ -131,6 +131,7 @@ pub enum ErrorDetails {
 )]
 pub struct ErrorResponse {
     /// Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
+    /// `attribute_not_writable`,
     /// `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
     /// `validation_error`, `feature_unavailable`, `feature_hidden`,
     /// `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
@@ -158,7 +159,9 @@ pub struct ErrorResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rule_id: Option<Uuid>,
     /// Present on `field_locked` / `field_locked_required` (D-789): the first
-    /// refused field (every one is in `details.fields`).
+    /// refused field (every one is in `details.fields`); on
+    /// `attribute_not_writable` (Q15-T4): the attribute the caller may not
+    /// write.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub field: Option<String>,
     /// Present on `field_locked` / `field_locked_required`: the display name

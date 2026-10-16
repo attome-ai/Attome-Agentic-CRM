@@ -4076,6 +4076,9 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
             .await
             .expect("person writes a locked field");
         assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        let refused = body_json(res).await;
+        assert_eq!(refused["error"], "attribute_not_writable", "{refused}");
+        assert_eq!(refused["field"], "erp_id", "{refused}");
         let res = app
             .clone()
             .oneshot(post(
@@ -4085,6 +4088,102 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
             .await
             .expect("person leaves it alone");
         assert_eq!(res.status(), StatusCode::CREATED);
+    })
+}
+
+/// Q15-T4: a create-only attribute is set on create and an update that
+/// names it is refused with 403 `attribute_not_writable` naming it, not
+/// silently dropped; the record keeps its value.
+#[test]
+fn attribute_write_refused_for_create_only_field() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id) = create_entity(&app, &admin_cookie, "createonly").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"origin","name":"Origin","field_type":"text","options":{"create_only":true}}"#,
+        )
+        .await;
+        let send = |method: &str, uri: String, if_match: Option<i64>, body: serde_json::Value| {
+            let mut req = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json");
+            if let Some(version) = if_match {
+                req = req.header("if-match", format!("\"{version}\""));
+            }
+            req.body(Body::from(body.to_string())).unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/{entity}"),
+                None,
+                serde_json::json!({"title": "first", "origin": "web"}),
+            ))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        let id = created["id"].as_str().expect("id").to_owned();
+        let version = created["row_version"].as_i64().expect("version");
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "PATCH",
+                format!("/api/v1/{entity}/{id}"),
+                Some(version),
+                serde_json::json!({"title": "second", "origin": "phone"}),
+            ))
+            .await
+            .expect("update the create-only field");
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        let refused = body_json(res).await;
+        assert_eq!(refused["error"], "attribute_not_writable", "{refused}");
+        assert_eq!(refused["field"], "origin", "{refused}");
+
+        // An update that leaves it out goes through, and the value stays.
+        let res = app
+            .clone()
+            .oneshot(send(
+                "PATCH",
+                format!("/api/v1/{entity}/{id}"),
+                Some(version),
+                serde_json::json!({"title": "second"}),
+            ))
+            .await
+            .expect("update other fields");
+        assert_eq!(res.status(), StatusCode::OK);
+        let updated = body_json(res).await;
+        assert_eq!(updated["data"]["origin"], "web", "{updated}");
+
+        // A malformed option is refused when the field is defined.
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/admin/entities/{entity_id}/fields"),
+                None,
+                serde_json::json!({"logicalname": "bad", "name": "Bad", "field_type": "text",
+                                   "options": {"create_only": "yes"}}),
+            ))
+            .await
+            .expect("bad option");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
 

@@ -6,6 +6,9 @@ export type ApiErrorKind =
   | 'not_found'
   | 'unauthorized'
   | 'forbidden'
+  // Q15-T4: the write set an attribute the caller may not write; the
+  // message names it.
+  | 'attribute_not_writable'
   | 'conflict'
   | 'version_conflict'
   // A15-T4: the save matches existing records under a blocking duplicate
@@ -48,6 +51,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<ApiErrorKind>([
   'not_found',
   'unauthorized',
   'forbidden',
+  'attribute_not_writable',
   'conflict',
   'version_conflict',
   'duplicate_detected',
