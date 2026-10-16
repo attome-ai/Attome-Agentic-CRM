@@ -45276,6 +45276,105 @@
         ]
       }
     },
+    "/api/v1/commission/periods/{id}/runs": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "post_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The commission period",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The run is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_run.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The period is approved or locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/composite": {
       "post": {
         "tags": [
@@ -106579,6 +106678,18 @@
           }
         },
         "additionalProperties": false
+      },
+      "StartRunBody": {
+        "type": "object",
+        "required": [
+          "plan_version_id"
+        ],
+        "properties": {
+          "plan_version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "StartRunRequest": {
         "type": "object",

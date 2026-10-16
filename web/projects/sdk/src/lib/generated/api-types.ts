@@ -8717,6 +8717,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commission/periods/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/composite": {
         parameters: {
             query?: never;
@@ -28389,6 +28405,10 @@ export interface components {
             allowed_action_ids?: string[] | null;
             /** @description **Required.** `"read"` | `"reversible"` | `"consequential"`. */
             risk_ceiling: string;
+        };
+        StartRunBody: {
+            /** Format: uuid */
+            plan_version_id: string;
         };
         /** @description Body of `POST /api/v1/ai/conversations/{id}/runs` (N7-T1). */
         StartRunRequest: {
@@ -60102,6 +60122,69 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The commission period */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRunBody"];
+            };
+        };
+        responses: {
+            /** @description The run is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_run.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such period */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is approved or locked */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
