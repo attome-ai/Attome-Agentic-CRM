@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/sales/call-lists/{id}/build` fills a call list as the caller from its saved query, the
+  caller's phone calls due today, or named records (each read-checked), skipping records without a
+  phone; a rebuild keeps existing members and adds only new ones (up to 10,000).
 - `POST /api/v1/sales/call-list-members/{id}/outcome` saves a call attempt for the member the caller
   claimed, finishes or re-queues the member, and queues the list's outcome rules (lead status, deal stage,
   a callback task, the wrong-number flag), applied after commit as the caller and never twice.

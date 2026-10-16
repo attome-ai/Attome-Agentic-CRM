@@ -58,6 +58,10 @@ impl EngineModel for SalesModel {
                 post(crate::dialer::claim::post_claim),
             )
             .route(
+                "/api/v1/sales/call-lists/{id}/build",
+                post(crate::dialer::build::post_sales_build_list),
+            )
+            .route(
                 "/api/v1/sales/call-list-members/{id}/outcome",
                 post(crate::dialer::outcome::post_sales_call_outcome),
             )
