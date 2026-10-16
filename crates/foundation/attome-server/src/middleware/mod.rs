@@ -9,6 +9,7 @@ pub mod host_gate;
 pub mod idempotency;
 pub mod idempotency_durable;
 pub mod ip_allowlist;
+pub mod json_shape;
 pub mod mutation_gate;
 pub mod profiler;
 pub mod rate_limit;

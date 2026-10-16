@@ -13,6 +13,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   a password reset may not reuse the current password or any of the last five (migration `0040`).
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 - A password reset with an already used token answers `409` whatever password it carries.
+- A JSON request body nested deeper than 64 levels, or with an array of more than 10,000 items, is
+  refused with `413 payload_too_large` before authentication or any handler reads it.
+- Pages carry `Permissions-Policy` (camera, microphone and location for this origin only) and
+  `Cross-Origin-Opener-Policy: same-origin-allow-popups`; API responses deny every browser feature
+  and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
 - Duplicate rules compare `phone`, `email`, `id`, `name` and `phonetic` keys (Arabic names meet their

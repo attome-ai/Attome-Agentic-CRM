@@ -27,8 +27,8 @@ use tracing::Span;
 use crate::{
     health,
     middleware::{
-        auth, authoring_gate, body_limit, csrf, deprecation, idempotency, mutation_gate,
-        rate_limit, request_id_body, request_meta, security_headers, trace_context,
+        auth, authoring_gate, body_limit, csrf, deprecation, idempotency, json_shape,
+        mutation_gate, rate_limit, request_id_body, request_meta, security_headers, trace_context,
     },
     state::AppState,
 };
@@ -349,6 +349,9 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
                 body_limit::reject_declared_oversized_body(max_bytes, req, next)
             }))
             .layer(RequestBodyLimitLayer::new(max_bytes))
+            // Q21-T4: inside the body limit, so the bytes it reads are
+            // bounded; before every auth and handler layer.
+            .layer(middleware::from_fn(json_shape::reject_oversized_json_shape))
             .layer(HandleErrorLayer::new(timeout_response))
             .layer(TimeoutLayer::new(config.request_timeout()))
             .layer(compression_layer()),
