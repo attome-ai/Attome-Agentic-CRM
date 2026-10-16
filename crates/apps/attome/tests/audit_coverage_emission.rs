@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/sales/opportunities/{id}/change-owner",
+        "needs the crm and sales packs' opportunity and team entities, which this harness does not install",
+    ),
+    (
         "POST /api/v1/sales/opportunities/{id}/team/copy-account-team",
         "needs the crm and sales packs' account team and opportunity entities, which this harness does not install",
     ),

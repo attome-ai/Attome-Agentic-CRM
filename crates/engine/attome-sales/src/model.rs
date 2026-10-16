@@ -60,6 +60,10 @@ impl EngineModel for SalesModel {
                 post(crate::team_defaults::post_sales_copy_account_team),
             )
             .route(
+                "/api/v1/sales/opportunities/{id}/change-owner",
+                post(crate::owner_change::post_sales_change_owner),
+            )
+            .route(
                 "/api/v1/sales/default-team/preview",
                 post(crate::team_defaults::post_sales_default_team_preview),
             )

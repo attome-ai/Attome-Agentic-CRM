@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/sales/opportunities/{id}/change-owner` moves a deal to a new owner in one transaction:
+  the new owner's share and team membership, the old owner kept with a role or removed, and their
+  splits moved or kept, with an owner-change Access event.
 - Default deal teams: a new deal gets its owner's default team members (each with their share and
   Access event; a member whose roles do not allow the access is skipped).
   `POST /api/v1/sales/opportunities/{id}/team/copy-account-team` copies account team members with the

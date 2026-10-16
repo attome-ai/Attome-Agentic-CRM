@@ -18,6 +18,7 @@ pub mod flags;
 pub mod forecast;
 pub mod model;
 pub mod orgchart;
+pub mod owner_change;
 pub mod price_resolution;
 pub mod pricing;
 pub mod scoring;
@@ -40,5 +41,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<split_store::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<team::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<team_defaults::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<owner_change::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
