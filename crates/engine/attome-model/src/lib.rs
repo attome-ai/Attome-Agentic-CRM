@@ -21,6 +21,7 @@ pub mod files;
 pub mod identity;
 pub mod kind;
 pub mod kinds;
+pub mod layer_stack;
 pub mod publish;
 pub mod references;
 pub mod runtime;
