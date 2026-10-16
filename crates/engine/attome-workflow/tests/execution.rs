@@ -4024,3 +4024,57 @@ async fn a_failed_run_retries_and_a_run_pauses_and_resumes() {
         .expect("resume");
     assert_eq!(run_to_checkpoint(&state, instance_id).await, "waiting");
 }
+
+/// M3-T4: a step finished past the retention loses its payload and keeps
+/// its summary; a recent one keeps both.
+#[tokio::test]
+async fn old_step_payloads_are_cleared() {
+    let state = skip_if_no_db!(test_state().await);
+    let user_id = seed_user(&state.base.db).await;
+    let graph = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "w", "type": "wait", "config": {"delay_seconds": 3600}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "w", "to_port": "in"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "payload-retention-test", graph).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start");
+    for (node, age_days) in [("old", 40), ("new", 1)] {
+        sqlx::query(
+            "INSERT INTO workflow_node_run (instance_id, node_id, status, input, output, completed_at) \
+             VALUES ($1, $2, 'succeeded', '{\"a\":1}', '{\"b\":2}', NOW() - make_interval(days => $3))",
+        )
+        .bind(instance_id)
+        .bind(node)
+        .bind(age_days)
+        .execute(&state.base.db)
+        .await
+        .expect("insert step");
+    }
+    attome_workflow::retention::prune_payloads(&state, 30)
+        .await
+        .expect("prune");
+    let rows: Vec<(String, Option<serde_json::Value>, String)> = sqlx::query_as(
+        "SELECT node_id, input, status FROM workflow_node_run \
+          WHERE instance_id = $1 AND node_id IN ('old', 'new') ORDER BY node_id",
+    )
+    .bind(instance_id)
+    .fetch_all(&state.base.db)
+    .await
+    .expect("read steps");
+    assert_eq!(rows[0].0, "new");
+    assert!(rows[0].1.is_some(), "a recent step keeps its payload");
+    assert_eq!(rows[1].0, "old");
+    assert!(rows[1].1.is_none(), "an old step loses its payload");
+    assert_eq!(rows[1].2, "succeeded", "and keeps its summary");
+}
