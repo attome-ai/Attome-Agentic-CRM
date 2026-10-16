@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Target account lists (migration `0097`): each account on a list is rescored nightly from its
+  contacts' activity of the last 90 days, with the buying roles covered and missing, and moves from
+  identified to aware to engaged on its own.
 - Referrals (migration `0096`): each contact gets a readable referral code; a lead arriving with it is
   attributed once (self-referrals by the same email or phone are refused), and when the lead converts
   the referrer earns 500 loyalty points, once.

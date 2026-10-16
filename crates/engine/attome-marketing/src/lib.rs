@@ -5,6 +5,7 @@
 //! tasks add it. Gated on the `marketing` module.
 
 pub mod ab_test;
+pub mod abm;
 pub mod address_check;
 pub mod attribution;
 pub mod deliverability;

@@ -937,10 +937,13 @@ async fn dispatch_platform_job(
             let expired = attome_marketing::loyalty::expire_due(&db, now).await?;
             // E31-T1: converted referrals earn their referrer points.
             let referrals = attome_marketing::referral::reward_converted(&db, now).await?;
+            // E20-T1: target accounts rescored on the same nightly pass.
+            let target_accounts = attome_marketing::abm::rescore(&db, now).await?;
             tracing::info!(
                 orders,
                 expired,
                 referrals,
+                target_accounts,
                 "loyalty: points earned and expired"
             );
         }
