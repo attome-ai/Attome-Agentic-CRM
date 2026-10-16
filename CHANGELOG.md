@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Watch-only website sources import nothing (the import route refuses them) and report each page
+  whose text changed as a `webcrawl.page_changed` change event with the added and removed lines.
 - Website crawls are scope-aware and polite: include and exclude patterns (exclude wins), sitemap
   seeding limited to pages changed since the last crawl, `If-None-Match`/`If-Modified-Since` with
   304 or an unchanged text hash leaving the stored page alone, the site's `Crawl-delay` or one

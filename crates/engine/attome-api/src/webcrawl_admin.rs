@@ -551,6 +551,20 @@ async fn import_pages(
     }
     let ctx_ref: &attome_server::security::SecurityContext = &ctx;
 
+    // K6-T9: a watch-only source reports changes and imports nothing.
+    let watch_only: Option<bool> = sqlx::query_scalar(
+        "SELECT watch_only FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
+    )
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if watch_only == Some(true) {
+        return Err(AppError::Validation(
+            "this source only watches for changes; it imports nothing".into(),
+        ));
+    }
+
     let data_source_id = ensure_data_source_for_target(&state, ctx_ref, id).await?;
     ctx_ref.require("knowledge_data_item", "create")?;
 

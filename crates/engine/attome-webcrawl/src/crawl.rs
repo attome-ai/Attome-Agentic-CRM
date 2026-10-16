@@ -304,6 +304,48 @@ pub fn sitemap_seeds(
         .collect()
 }
 
+/// The most lines a change event carries each way.
+pub const MAX_DIFF_LINES: usize = 50;
+
+/// K6-T9: the lines added and removed between two versions of a page's
+/// text, in order, each list capped at [`MAX_DIFF_LINES`]. A line counts
+/// as many times as it appears.
+pub fn text_diff(old: &str, new: &str) -> (Vec<String>, Vec<String>) {
+    let lines = |t: &str| -> Vec<String> {
+        t.lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(str::to_owned)
+            .collect()
+    };
+    let (old, new) = (lines(old), lines(new));
+    let mut remaining: HashMap<&str, usize> = HashMap::new();
+    for line in &old {
+        *remaining.entry(line.as_str()).or_default() += 1;
+    }
+    let mut added = Vec::new();
+    for line in &new {
+        match remaining.get_mut(line.as_str()) {
+            Some(n) if *n > 0 => *n -= 1,
+            _ => added.push(line.clone()),
+        }
+    }
+    let mut kept: HashMap<&str, usize> = HashMap::new();
+    for line in &new {
+        *kept.entry(line.as_str()).or_default() += 1;
+    }
+    let mut removed = Vec::new();
+    for line in &old {
+        match kept.get_mut(line.as_str()) {
+            Some(n) if *n > 0 => *n -= 1,
+            _ => removed.push(line.clone()),
+        }
+    }
+    added.truncate(MAX_DIFF_LINES);
+    removed.truncate(MAX_DIFF_LINES);
+    (added, removed)
+}
+
 fn text_hash(text: &str) -> String {
     use sha2::{Digest, Sha256};
     let digest = Sha256::digest(text.as_bytes());
@@ -495,6 +537,52 @@ struct DbPageSink<'a> {
     db: &'a attome_db::DbPool,
     target_id: Uuid,
     recorded: i32,
+    /// K6-T9: a watch-only source reports each changed page as an event.
+    watch_only: bool,
+}
+
+impl DbPageSink<'_> {
+    /// Emits `webcrawl.page_changed` with the text difference when a
+    /// watched page's text changed. Best effort: a failure is logged.
+    async fn report_change(&self, url_path: &str, old: &str, new: &str) {
+        let (added, removed) = text_diff(old, new);
+        if added.is_empty() && removed.is_empty() {
+            return;
+        }
+        let result: Result<(), AppError> = async {
+            let page_id: Uuid = sqlx::query_scalar(
+                "SELECT id FROM webcrawl_page WHERE target_ref = $1 AND url_path = $2",
+            )
+            .bind(self.target_id)
+            .bind(url_path)
+            .fetch_one(self.db)
+            .await
+            .map_err(AppError::internal)?;
+            let mut conn = self.db.acquire().await.map_err(AppError::internal)?;
+            attome_core::change_feed::emit_with(
+                &mut conn,
+                "webcrawl_page",
+                page_id,
+                attome_core::change_feed::ChangeOperation::Update,
+                Some("webcrawl.page_changed"),
+                &attome_core::change_feed::ChangePayload {
+                    changed_attributes: vec!["content".to_owned()],
+                    before: Some(serde_json::json!({
+                        "target_id": self.target_id, "url_path": url_path, "removed": removed,
+                    })),
+                    after: Some(serde_json::json!({
+                        "target_id": self.target_id, "url_path": url_path, "added": added,
+                    })),
+                },
+            )
+            .await
+        }
+        .await;
+        if let Err(e) = result {
+            tracing::warn!(target_id = %self.target_id, url_path, error = %e,
+                "webcrawl: could not report a watched page's change");
+        }
+    }
 }
 
 impl PageSink for DbPageSink<'_> {
@@ -522,6 +610,20 @@ impl PageSink for DbPageSink<'_> {
             }
             return;
         }
+        let previous: Option<String> = if self.watch_only && page.content.is_some() {
+            sqlx::query_scalar(
+                "SELECT content FROM webcrawl_page WHERE target_ref = $1 AND url_path = $2",
+            )
+            .bind(self.target_id)
+            .bind(&page.url_path)
+            .fetch_optional(self.db)
+            .await
+            .ok()
+            .flatten()
+            .flatten()
+        } else {
+            None
+        };
         let result = sqlx::query(
             r#"INSERT INTO webcrawl_page
                    (target_ref, url_path, parent_path, depth, size_bytes, status, content,
@@ -552,6 +654,11 @@ impl PageSink for DbPageSink<'_> {
         .bind(&page.content_hash)
         .execute(self.db)
         .await;
+        if result.is_ok()
+            && let (Some(old), Some(new)) = (previous.as_deref(), page.content.as_deref())
+        {
+            self.report_change(&page.url_path, old, new).await;
+        }
         match result {
             Ok(_) => self.recorded += 1,
             Err(e) => tracing::warn!(
@@ -584,7 +691,7 @@ async fn set_target_status(
     Ok(())
 }
 
-type TargetRow = (String, i16, String, String, Option<String>);
+type TargetRow = (String, i16, String, String, Option<String>, bool);
 
 /// The job body for `EngineJob::CrawlWebsite`. Never fails the whole job
 /// on a crawl-domain failure (unreachable host, SSRF-rejected address,
@@ -599,14 +706,14 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     let cfg = state.base.config.webcrawl.clone();
 
     let row: Option<TargetRow> = sqlx::query_as(
-        "SELECT url, max_depth, include_patterns, exclude_patterns, sitemap_url \
+        "SELECT url, max_depth, include_patterns, exclude_patterns, sitemap_url, watch_only \
          FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(target_id)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let Some((url_str, max_depth, include, exclude, sitemap_url)) = row else {
+    let Some((url_str, max_depth, include, exclude, sitemap_url, watch_only)) = row else {
         tracing::info!(target_id = %target_id, "webcrawl: target no longer exists, skipping");
         return Ok(());
     };
@@ -688,6 +795,7 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
         db,
         target_id,
         recorded: 0,
+        watch_only,
     };
     let outcome = walk_with(&fetcher, &root, &limits, &robots, &scope, &mut sink).await;
 
@@ -859,6 +967,18 @@ mod tests {
         walk(&fetcher, &root, &limits, &robots, &mut sink).await;
 
         assert!(!sink.0.iter().any(|p| p.url_path == "/private"));
+    }
+
+    #[test]
+    fn text_diff_lists_added_and_removed_lines() {
+        let (added, removed) = text_diff(
+            "Price: 10\nHours: 9-5\n",
+            "Price: 12\nHours: 9-5\nNew branch\n",
+        );
+        assert_eq!(added, vec!["Price: 12", "New branch"]);
+        assert_eq!(removed, vec!["Price: 10"]);
+        let (a, r) = text_diff("same\n", "  same  \n\n");
+        assert!(a.is_empty() && r.is_empty(), "spacing alone is no change");
     }
 
     #[test]
