@@ -370,7 +370,13 @@ pub async fn redeem_session_outcome_with(
          JOIN user_account u ON u.id = t.user_ref
              AND u.is_active = TRUE
          WHERE t.public_id = $1 AND t.revoked_at IS NULL AND t.expires_at > NOW()
-           AND t.family_started_at + make_interval(secs => $2::float8) > NOW()",
+           AND t.family_started_at + make_interval(secs => $2::float8) > NOW()
+           -- Q8-T2: the role's own limits, when the family carries them.
+           AND (t.absolute_secs IS NULL
+                OR t.family_started_at + make_interval(secs => t.absolute_secs) > NOW())
+           AND (t.idle_secs IS NULL
+                OR COALESCE(t.last_activity_at, t.created_at)
+                   + make_interval(secs => t.idle_secs) > NOW())",
     )
     .bind(public_id)
     .bind(lifetimes.absolute_secs)
@@ -470,11 +476,15 @@ pub async fn redeem_session_outcome_with(
     let new_token_id: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO refresh_token
              (user_ref, public_id, secret_hash, family_id, family_started_at,
-              auth_time, amr, elevated_until, expires_at)
+              auth_time, amr, elevated_until, expires_at,
+              idle_secs, absolute_secs, last_activity_at)
          SELECT $1, $2, $3, $4, $5, $6, $7, $8,
                 LEAST(NOW() + make_interval(secs => $9::float8),
-                      $5 + make_interval(secs => $10::float8))
-         WHERE $5 + make_interval(secs => $10::float8) > NOW()
+                      $5 + make_interval(secs => $10::float8)),
+                -- A rotation is not activity: the family keeps its last real use.
+                o.idle_secs, o.absolute_secs, COALESCE(o.last_activity_at, o.created_at)
+           FROM refresh_token o
+          WHERE o.id = $11 AND $5 + make_interval(secs => $10::float8) > NOW()
          RETURNING id",
     )
     .bind(user_id)
@@ -487,6 +497,8 @@ pub async fn redeem_session_outcome_with(
     .bind(elevated_until)
     .bind(lifetimes.idle_secs)
     .bind(lifetimes.absolute_secs)
+    // Q8-T2: the rotated token keeps the family's role limits.
+    .bind(token_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
