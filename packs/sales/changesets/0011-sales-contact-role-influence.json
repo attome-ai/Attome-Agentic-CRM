@@ -1,0 +1,230 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0a03261ead05961222550b9965e9dbce5687e460408f3444fbcd840b2ed6fede",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Deal coverage (D23-T6): influence and attitude on each opportunity contact role, readable only through the Deal Attitude field profile held by the Sales Manager role, and the contact roles each stage requires, as a JSON array of role codes, for coverage gaps.",
+  "format": "attome-changeset/v1",
+  "id": "01a143c1-c28b-7dd2-9970-f4771569a828",
+  "layer": "product",
+  "name": "sales-contact-role-influence",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Influence",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "influence",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "influence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Attitude",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "attitude",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "champion",
+              "supporter",
+              "neutral",
+              "sceptic",
+              "blocker"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "attitude"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Required Contact Roles",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "required_contact_roles",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "required_contact_roles"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التأثير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role.influence",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموقف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role.attitude",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أدوار جهات الاتصال المطلوبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.required_contact_roles",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Manages a sales team; reads deal attitude and influence.",
+          "is_customized": false,
+          "name": "Sales Manager",
+          "position_hierarchy_enabled": true
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Read access to the influence and attitude of deal contacts.",
+          "is_customized": false,
+          "name": "Deal Attitude"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "profile": "Deal Attitude"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "influence",
+        "profile": "Deal Attitude"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "attitude",
+        "profile": "Deal Attitude"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "profile": "Deal Attitude",
+        "role": "Sales Manager"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 11,
+  "title": "Pack: influence and attitude on deal contact roles"
+}
