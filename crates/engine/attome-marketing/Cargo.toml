@@ -11,6 +11,7 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+attome-audit.workspace = true
 attome-calendar.workspace = true
 attome-compliance.workspace = true
 attome-config.workspace = true

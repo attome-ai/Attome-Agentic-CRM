@@ -1161,6 +1161,7 @@ dependencies = [
 name = "attome-marketing"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-calendar",
  "attome-compliance",
  "attome-config",
