@@ -7,6 +7,7 @@
 //! `scorecard`/`trendline` config — no Rust-level dependency. See D-480 for
 //! why M28/M48 themselves stay in `attome-dashboard`.
 pub mod alerts;
+pub mod anomaly;
 pub mod auth;
 pub mod lineage;
 pub mod metric;
