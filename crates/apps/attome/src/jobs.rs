@@ -958,6 +958,23 @@ async fn dispatch_platform_job(
                 tracing::info!(moved, "nurture: people moved between tracks");
             }
         }
+        // AI4-T5: the follow-up rules' stall scans.
+        EngineJob::AiFollowupScan => {
+            let now = chrono::Utc::now();
+            let mut found = 0;
+            for rule in attome_ai::followup::active_rules(&attome_state.base.db).await? {
+                match attome_ai::followup::detect(&attome_state, &rule, now).await {
+                    Ok(n) => found += n,
+                    // One broken rule never stops the others.
+                    Err(e) => {
+                        tracing::warn!(rule = %rule.id, error = %e, "follow-up scan: rule skipped")
+                    }
+                }
+            }
+            if found > 0 {
+                tracing::info!(found, "follow-up scan: new stalls recorded");
+            }
+        }
         // D25-T3: win/loss reviews for big closes.
         EngineJob::SalesDealCloseSweep => {
             let created = attome_sales::win_loss::sweep_closes(&attome_state).await?;
@@ -2189,6 +2206,7 @@ const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
 const DEDUP_KEY_SALES_SNAPSHOT_PRUNE: &str = "sales-snapshot-prune";
 const DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP: &str = "notification-follow-sweep";
 const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
+const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2260,6 +2278,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SalesSnapshotPrune => DEDUP_KEY_SALES_SNAPSHOT_PRUNE,
         EngineJob::NotificationFollowSweep => DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP,
         EngineJob::SalesDealCloseSweep => DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP,
+        EngineJob::AiFollowupScan => DEDUP_KEY_AI_FOLLOWUP_SCAN,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2584,6 +2603,17 @@ pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::MarketingSweep,
         DEDUP_KEY_MARKETING_SWEEP,
         "marketing sweep",
+    );
+}
+
+/// AI4-T5: every hour, the follow-up stall scans.
+pub fn spawn_ai_followup_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::AiFollowupScan,
+        DEDUP_KEY_AI_FOLLOWUP_SCAN,
+        "ai follow-up scan",
     );
 }
 

@@ -470,6 +470,9 @@ pub enum EngineJob {
     /// D25-T3: win/loss reviews for big closes, off the change feed. Bare
     /// unit variant.
     SalesDealCloseSweep,
+    /// AI4-T5: runs every active follow-up rule's stall detector. Bare unit
+    /// variant.
+    AiFollowupScan,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -931,6 +934,7 @@ impl EngineJob {
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
+            | Self::AiFollowupScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1039,6 +1043,7 @@ impl EngineJob {
             EngineJob::SalesSnapshotPrune => "SalesSnapshotPrune",
             EngineJob::NotificationFollowSweep => "NotificationFollowSweep",
             EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
+            EngineJob::AiFollowupScan => "AiFollowupScan",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1154,6 +1159,7 @@ impl EngineJob {
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
+            | Self::AiFollowupScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1286,6 +1292,7 @@ impl EngineJob {
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
+            | Self::AiFollowupScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1635,6 +1642,7 @@ mod tests {
         assert_round_trips(EngineJob::SalesSnapshotPrune);
         assert_round_trips(EngineJob::NotificationFollowSweep);
         assert_round_trips(EngineJob::SalesDealCloseSweep);
+        assert_round_trips(EngineJob::AiFollowupScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
         });
