@@ -930,6 +930,14 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // E7-T4: scheduled segment refreshes, hourly.
+        EngineJob::SegmentRefreshDue => {
+            let refreshed =
+                attome_marketing::segment::refresh_due(&attome_state, chrono::Utc::now()).await?;
+            if refreshed > 0 {
+                tracing::info!(refreshed, "segments: scheduled lists refreshed");
+            }
+        }
         // E30-T1: loyalty earning and expiry, nightly.
         EngineJob::MarketingNightly => {
             let now = chrono::Utc::now();
@@ -2086,6 +2094,7 @@ const DEDUP_KEY_MRR_SNAPSHOT: &str = "mrr-snapshot";
 const DEDUP_KEY_WEBCRAWL_RECRAWL_DUE: &str = "webcrawl-recrawl-due";
 const DEDUP_KEY_TIMER_SWEEP: &str = "timer-sweep";
 const DEDUP_KEY_MARKETING_NIGHTLY: &str = "marketing-nightly";
+const DEDUP_KEY_SEGMENT_REFRESH_DUE: &str = "segment-refresh-due";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2149,6 +2158,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::WebcrawlRecrawlDue => DEDUP_KEY_WEBCRAWL_RECRAWL_DUE,
         EngineJob::TimerSweep => DEDUP_KEY_TIMER_SWEEP,
         EngineJob::MarketingNightly => DEDUP_KEY_MARKETING_NIGHTLY,
+        EngineJob::SegmentRefreshDue => DEDUP_KEY_SEGMENT_REFRESH_DUE,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2462,6 +2472,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// E7-T4: every hour, the scheduled marketing lists that are due.
+pub fn spawn_segment_refresh_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::SegmentRefreshDue,
+        DEDUP_KEY_SEGMENT_REFRESH_DUE,
+        "segment refresh due",
     );
 }
 

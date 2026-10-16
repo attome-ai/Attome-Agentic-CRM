@@ -432,6 +432,9 @@ pub enum EngineJob {
     /// referral rewards (E31-T1), target account scores (E20-T1) and bounce
     /// and complaint effects (E6-T5). Bare unit variant.
     MarketingNightly,
+    /// E7-T4: refreshes the scheduled marketing lists that are due. Bare
+    /// unit variant.
+    SegmentRefreshDue,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -880,6 +883,7 @@ impl EngineJob {
             | Self::WebcrawlRecrawlDue
             | Self::TimerSweep
             | Self::MarketingNightly
+            | Self::SegmentRefreshDue
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -975,6 +979,7 @@ impl EngineJob {
             EngineJob::TimerSweep => "TimerSweep",
             EngineJob::TimerFire { .. } => "TimerFire",
             EngineJob::MarketingNightly => "MarketingNightly",
+            EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1082,6 +1087,7 @@ impl EngineJob {
             | Self::WebcrawlRecrawlDue
             | Self::TimerSweep
             | Self::MarketingNightly
+            | Self::SegmentRefreshDue
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1201,6 +1207,7 @@ impl EngineJob {
             | Self::WebcrawlRecrawlDue
             | Self::TimerSweep
             | Self::MarketingNightly
+            | Self::SegmentRefreshDue
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1537,6 +1544,7 @@ mod tests {
         assert_round_trips(EngineJob::WebcrawlRecrawlDue);
         assert_round_trips(EngineJob::TimerSweep);
         assert_round_trips(EngineJob::MarketingNightly);
+        assert_round_trips(EngineJob::SegmentRefreshDue);
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),
         });

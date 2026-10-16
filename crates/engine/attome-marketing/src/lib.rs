@@ -12,6 +12,7 @@ pub mod deliverability;
 pub mod loyalty;
 pub mod model;
 pub mod referral;
+pub mod segment;
 pub mod send_time;
 pub mod tracking;
 

@@ -15,12 +15,17 @@ attome-compliance.workspace = true
 attome-core.workspace = true
 attome-db.workspace = true
 attome-modules.workspace = true
+attome-records.workspace = true
+attome-security.workspace = true
+attome-server.workspace = true
 attome-types.workspace = true
 axum.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true
+tracing.workspace = true
 utoipa.workspace = true
 uuid.workspace = true
 

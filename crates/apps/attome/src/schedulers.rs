@@ -76,7 +76,9 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // A18-T4: bursts of deletion, checked every five minutes.
     crate::jobs::spawn_bin_delete_alert_scheduler(db.clone(), std::time::Duration::from_secs(300));
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
-    // E30-T1: loyalty points earned and expired, nightly.
+    // E7-T4: scheduled marketing lists, checked hourly.
+    crate::jobs::spawn_segment_refresh_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // The nightly marketing pass: loyalty, referrals, target accounts, bounces.
     crate::jobs::spawn_marketing_nightly_scheduler(
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),

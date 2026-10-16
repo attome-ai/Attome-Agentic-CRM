@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Marketing lists refresh: a segment's people come from its stored query as the list's owner sees
+  them, combinations include, intersect or exclude other lists in order (five deep, cycles refused),
+  account lists expand to contacts or decision makers, and each refresh writes the joins and leaves
+  as membership events; scheduled lists refresh hourly or daily on their own.
 - Bounces and complaints reach the person: a nightly pass marks the email of a contact or lead whose
   address hard-bounced `invalid`, and withdraws marketing consent on email for each complaint, once.
 - Target account lists (migration `0097`): each account on a list is rescored nightly from its
