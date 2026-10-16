@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c4dbfba012b5daa409c832da77cfed465c7815d2c9f7c2f7db7ec53a997dbd84",
+  "checksum": "sha256:c4dd5ced4b14fa1a3b79bd3184b4c978ec286101186f12ec2d209476767f0415",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metric-governance.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -454,6 +454,32 @@
       "args": {
         "definition": {
           "data_classification": "general",
+          "display_name": "Alerts Snoozed Until",
+          "field_type": "date",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "alerts_snoozed_until",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "alerts_snoozed_until"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
           "display_name": "Backfill",
           "field_type": "bool",
           "is_customized": false,
@@ -470,7 +496,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "backfill_enabled"
@@ -503,7 +529,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "calendar_kind"
@@ -529,7 +555,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "certified"
@@ -555,7 +581,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 24,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "certified_at"
@@ -581,7 +607,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 24,
+      "seq": 25,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "date_attribute"
@@ -607,7 +633,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 25,
+      "seq": 26,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "definition_version"
@@ -633,7 +659,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 26,
+      "seq": 27,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "dimension_attributes"
@@ -659,7 +685,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 27,
+      "seq": 28,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "entity_logicalname"
@@ -685,7 +711,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 28,
+      "seq": 29,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "filter_expression"
@@ -711,7 +737,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 29,
+      "seq": 30,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "glossary_term_ref"
@@ -737,7 +763,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 30,
+      "seq": 31,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "measure_attribute"
@@ -763,7 +789,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 31,
+      "seq": 32,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "review_due"
@@ -789,7 +815,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 32,
+      "seq": 33,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "steward_ref"
@@ -815,7 +841,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 33,
+      "seq": 34,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "visible_role_keys"
@@ -848,7 +874,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 34,
+      "seq": 35,
       "target": {
         "entity": "dashboard_metric_definition",
         "field": "week_start"
@@ -874,7 +900,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 35,
+      "seq": 36,
       "target": {
         "entity": "dashboard_metric_target",
         "field": "at_risk_tolerance"
@@ -900,7 +926,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 36,
+      "seq": 37,
       "target": {
         "entity": "dashboard_metric_target",
         "field": "dimension_attribute"
@@ -926,7 +952,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 37,
+      "seq": 38,
       "target": {
         "entity": "dashboard_metric_target",
         "field": "dimension_value"
@@ -952,7 +978,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 38,
+      "seq": 39,
       "target": {
         "entity": "dashboard_metric_target",
         "field": "parent_target_ref"
@@ -985,7 +1011,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 39,
+      "seq": 40,
       "target": {
         "entity": "dashboard_metric_target",
         "field": "spread_method"
@@ -997,7 +1023,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard",
@@ -1010,7 +1036,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 41,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard.name",
@@ -1023,7 +1049,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 42,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard.description",
@@ -1036,7 +1062,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 43,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard.owner_user",
@@ -1049,7 +1075,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard_item",
@@ -1062,7 +1088,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard_item.scorecard_ref",
@@ -1075,7 +1101,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard_item.metric_ref",
@@ -1088,7 +1114,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "metric_scorecard_item.sort_order",
@@ -1101,7 +1127,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "metric_comment",
@@ -1114,7 +1140,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 49,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "metric_comment.metric_ref",
@@ -1127,7 +1153,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 50,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "metric_comment.period_start",
@@ -1140,7 +1166,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 51,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "metric_comment.dimension_value",
@@ -1153,7 +1179,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 52,
+      "seq": 53,
       "target": {
         "locale": "ar",
         "object_key": "metric_comment.body",
@@ -1166,7 +1192,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 53,
+      "seq": 54,
       "target": {
         "locale": "ar",
         "object_key": "metric_comment.author_ref",
@@ -1179,7 +1205,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 54,
+      "seq": 55,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.entity_logicalname",
@@ -1192,7 +1218,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 55,
+      "seq": 56,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.aggregate",
@@ -1205,7 +1231,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 56,
+      "seq": 57,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.measure_attribute",
@@ -1218,7 +1244,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 57,
+      "seq": 58,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.date_attribute",
@@ -1231,7 +1257,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 58,
+      "seq": 59,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.filter_expression",
@@ -1244,7 +1270,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 59,
+      "seq": 60,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.dimension_attributes",
@@ -1257,7 +1283,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 60,
+      "seq": 61,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.calendar_kind",
@@ -1270,7 +1296,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 61,
+      "seq": 62,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.week_start",
@@ -1283,7 +1309,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 62,
+      "seq": 63,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.definition_version",
@@ -1296,7 +1322,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 63,
+      "seq": 64,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.visible_role_keys",
@@ -1309,7 +1335,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 64,
+      "seq": 65,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.steward_ref",
@@ -1322,7 +1348,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 65,
+      "seq": 66,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.certified",
@@ -1335,7 +1361,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 66,
+      "seq": 67,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.certified_at",
@@ -1348,7 +1374,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 67,
+      "seq": 68,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.review_due",
@@ -1361,7 +1387,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 68,
+      "seq": 69,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.glossary_term_ref",
@@ -1374,10 +1400,23 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 69,
+      "seq": 70,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_definition.backfill_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إيقاف التنبيهات حتى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "locale": "ar",
+        "object_key": "dashboard_metric_definition.alerts_snoozed_until",
         "object_kind": "attribute"
       }
     },
@@ -1387,7 +1426,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 70,
+      "seq": 72,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_target.dimension_attribute",
@@ -1400,7 +1439,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 71,
+      "seq": 73,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_target.dimension_value",
@@ -1413,7 +1452,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 72,
+      "seq": 74,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_target.parent_target_ref",
@@ -1426,7 +1465,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 73,
+      "seq": 75,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_target.spread_method",
@@ -1439,7 +1478,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 74,
+      "seq": 76,
       "target": {
         "locale": "ar",
         "object_key": "dashboard_metric_target.at_risk_tolerance",

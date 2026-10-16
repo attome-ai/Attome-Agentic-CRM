@@ -542,6 +542,24 @@
       }
     },
     {
+      "entity": "dashboard_metric_definition",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Alerts Snoozed Until",
+        "field_type": "date",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "alerts_snoozed_until",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
       "entity": "dashboard_metric_target",
       "attribute": {
         "data_classification": "general",

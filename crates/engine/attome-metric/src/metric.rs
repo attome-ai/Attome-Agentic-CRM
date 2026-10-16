@@ -839,6 +839,10 @@ pub async fn compute_and_record(
         error_message.as_deref(),
     )
     .await?;
+    // P11-T1: a worse status than the last one notifies the owner, once.
+    if status != SnapshotStatus::Failed {
+        crate::alerts::after_snapshot(state, metric_id).await;
+    }
     Ok(ComputeOutcome {
         snapshot: row,
         skipped: false,

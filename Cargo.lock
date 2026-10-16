@@ -1144,6 +1144,7 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-modules",
+ "attome-notification",
  "attome-records",
  "attome-rules",
  "attome-security",
