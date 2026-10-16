@@ -94,3 +94,16 @@ inspection and disposition.
 The human-resources pack's `0002` adds positions, leave types and balances and labelled HR documents
 (a health document is special-category data); the customer-service pack's `0002` adds entitlements
 and their usage ledger (G10).
+
+## itsm
+
+IT service management on the platform service ticket: configuration items with classes and typed,
+directional relationships (H5); urgency, major-incident manager, affected CI and restore time on the
+ticket, and post-incident reviews with actions (H1); problems, their incidents and known errors with
+workarounds (H2); change requests with type, risk, window, plans, affected CIs and pre-approved
+standard templates (H3); releases grouping changes and tasks with a go/no-go decision (H4).
+
+The sales pack's `0009`–`0011` add forecasts, territories, playbooks, deal teams and splits, quote and
+order totals, quotas, and contact-role influence behind the Deal Attitude field profile; the crm pack's
+`0003` adds the contact org chart, enrichment fields and ISIC sections; the marketing pack's `0003`
+adds events.
