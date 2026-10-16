@@ -1,6 +1,7 @@
 {
   "name": "@attome/xrm",
   "version": "1.0.0",
+  "license": "AGPL-3.0-only",
   "peerDependencies": {
     "@angular/cdk":    "^22.0.0",
     "@angular/common": "^22.0.0",
