@@ -1,6 +1,6 @@
 //! Tax determination and line math (roadmap F4-T4), pure. The caller passes
 //! the tax-rate rows (the region pack's `region_tax_rate` records, by
-//! country, category and effective dates); a later step caches them.
+//! country, category and effective dates), read through [`TaxRateCache`].
 //!
 //! Rules: a sale inside one country takes that country's rate for the
 //! category on the invoice date; a cross-border sale to a VAT-registered
@@ -8,6 +8,10 @@
 //! carry 0 and their reason. Each line rounds once, half away from zero, to
 //! the currency's minor units (3 for KWD, BHD, OMR and JOD, else 2), and the
 //! invoice totals are sums of rounded lines, so a printed invoice adds up.
+
+use std::future::Future;
+use std::sync::Arc;
+use std::time::Duration;
 
 use chrono::NaiveDate;
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -180,6 +184,71 @@ pub fn invoice_totals(lines: &[LineAmounts]) -> LineAmounts {
     )
 }
 
+/// The tax-rate cache's one key.
+pub const TAX_RATES_KEY: &str = "attome-billing:tax_rates";
+
+/// How long a loaded rate set is used before it is read again.
+pub const TAX_RATES_TTL: Duration = Duration::from_secs(300);
+
+/// The process-local cache of every tax-rate row.
+///
+/// - Source of truth: the `region_tax_rate` records in PostgreSQL.
+/// - Key: [`TAX_RATES_KEY`], one entry holding the whole set (a few hundred
+///   rows at most).
+/// - TTL: [`TAX_RATES_TTL`]; a rate edited on one node is used everywhere
+///   within five minutes. A rate change takes effect on a date, and rates
+///   are entered ahead of it, so the delay never prices a line wrongly.
+/// - Invalidation: [`TaxRateCache::invalidate`] after a rate write on this
+///   node; other nodes wait for the TTL.
+/// - Failure: a failed load is returned to the caller and not cached, so the
+///   next call reads again; nothing falls back to stale or built-in rates.
+/// - Cold start: the first call loads.
+#[derive(Clone)]
+pub struct TaxRateCache {
+    inner: moka::future::Cache<&'static str, Arc<Vec<TaxRateRow>>>,
+}
+
+impl std::fmt::Debug for TaxRateCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TaxRateCache").finish_non_exhaustive()
+    }
+}
+
+impl Default for TaxRateCache {
+    fn default() -> Self {
+        Self::with_ttl(TAX_RATES_TTL)
+    }
+}
+
+impl TaxRateCache {
+    pub fn with_ttl(ttl: Duration) -> Self {
+        Self {
+            inner: moka::future::Cache::builder()
+                .max_capacity(1)
+                .time_to_live(ttl)
+                .build(),
+        }
+    }
+
+    /// The cached rows, or the rows `load` reads when none are cached.
+    /// Concurrent callers on a cold cache share one load.
+    pub async fn get_or_load<F, Fut, E>(&self, load: F) -> Result<Arc<Vec<TaxRateRow>>, Arc<E>>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<Vec<TaxRateRow>, E>>,
+        E: Send + Sync + 'static,
+    {
+        self.inner
+            .try_get_with(TAX_RATES_KEY, async move { load().await.map(Arc::new) })
+            .await
+    }
+
+    /// Drops the cached rows; the next call loads.
+    pub async fn invalidate(&self) {
+        self.inner.invalidate(TAX_RATES_KEY).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,5 +355,36 @@ mod tests {
             determine(&ctx("SA", false, "2017-01-01"), &sa_rates()),
             Err(TaxError::NoRate { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn rates_load_once_until_invalidated() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let cache = TaxRateCache::default();
+        let loads = AtomicUsize::new(0);
+        let load = || async {
+            loads.fetch_add(1, Ordering::SeqCst);
+            Ok::<_, std::convert::Infallible>(sa_rates())
+        };
+        let first = cache.get_or_load(load).await.map(|r| r.len());
+        let again = cache.get_or_load(load).await.map(|r| r.len());
+        assert_eq!(first.ok(), again.ok());
+        assert_eq!(loads.load(Ordering::SeqCst), 1);
+        cache.invalidate().await;
+        let _ = cache.get_or_load(load).await;
+        assert_eq!(loads.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn a_failed_load_is_not_cached() {
+        let cache = TaxRateCache::default();
+        let failed = cache
+            .get_or_load(|| async { Err::<Vec<TaxRateRow>, _>("database down") })
+            .await;
+        assert!(failed.is_err());
+        let ok = cache
+            .get_or_load(|| async { Ok::<_, &str>(sa_rates()) })
+            .await;
+        assert!(ok.is_ok());
     }
 }
