@@ -22,6 +22,7 @@ pub(crate) fn all() -> Vec<FeatureFlag> {
     all.extend(e13_flags());
     all.extend(e14_flags());
     all.extend(d6_flags());
+    all.extend(d7_flags());
     all
 }
 
@@ -63,6 +64,47 @@ fn d6_flags() -> Vec<FeatureFlag> {
             "Agent-drafted product suggestions for an opportunity.",
             false,
             &["sales.opportunity_lines"],
+        ),
+    ]
+}
+
+/// D7-T10: deal teams and splits stay off until switched on.
+fn d7_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "sales.deal_teams",
+            MODULE_SALES,
+            "Deal teams on opportunities: members with roles and access.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "sales.splits",
+            MODULE_SALES,
+            "Revenue and overlay splits between deal team members.",
+            false,
+            &["sales.deal_teams"],
+        ),
+        FeatureFlag::new(
+            "sales.line_splits",
+            MODULE_SALES,
+            "Splits of single opportunity lines rather than the whole deal.",
+            false,
+            &["sales.splits", "sales.opportunity_lines"],
+        ),
+        FeatureFlag::new(
+            "sales.partner_members",
+            MODULE_SALES,
+            "Partner contacts as deal team members with partner split types.",
+            false,
+            &["sales.deal_teams"],
+        ),
+        FeatureFlag::new(
+            "sales.team_suggestions",
+            MODULE_SALES,
+            "Default team members added to a new deal from the owner's defaults.",
+            false,
+            &["sales.deal_teams"],
         ),
     ]
 }
@@ -232,6 +274,28 @@ fn core_flags() -> Vec<FeatureFlag> {
 
 #[cfg(test)]
 mod tests {
+    /// D7-T10: the deal team and split flags exist and are off.
+    #[test]
+    fn sales_team_flags_off_by_default() {
+        let registry = crate::feature_flag_descriptor::registry();
+        for key in [
+            "sales.deal_teams",
+            "sales.splits",
+            "sales.line_splits",
+            "sales.partner_members",
+            "sales.team_suggestions",
+        ] {
+            let flag = registry
+                .get(key)
+                .unwrap_or_else(|| panic!("{key} is registered"));
+            assert!(!flag.default, "{key} is off by default");
+        }
+        assert_eq!(
+            registry.get("sales.splits").map(|f| f.requires),
+            Some(&["sales.deal_teams"][..])
+        );
+    }
+
     /// E13-T2: the SEO flags exist and are off until switched on.
     #[test]
     fn e13_flags_registered_and_off_by_default() {

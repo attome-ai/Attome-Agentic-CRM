@@ -304,6 +304,13 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "feature.sales.schedules" => "سياسة جداول الإيراد والتسليم لبنود الفرص.",
         "feature.sales.quote_sync" => "سياسة مزامنة بنود الفرصة مع عرض السعر الأساسي.",
         "feature.sales.product_suggestions" => "سياسة اقتراح المنتجات المرتبطة على الفرص.",
+        "feature.sales.deal_teams" => "سياسة فرق الصفقات: الأعضاء وأدوارهم وصلاحياتهم.",
+        "feature.sales.splits" => "سياسة تقسيم الإيراد والدعم الإضافي بين أعضاء فريق الصفقة.",
+        "feature.sales.line_splits" => "سياسة تقسيم بنود الفرصة منفردة بدلا من الصفقة كاملة.",
+        "feature.sales.partner_members" => "سياسة إضافة جهات اتصال الشركاء إلى فرق الصفقات.",
+        "feature.sales.team_suggestions" => {
+            "سياسة إضافة أعضاء الفريق الافتراضيين إلى الصفقات الجديدة."
+        }
         "feature.scan.continuous_enabled" => "سياسة المسح المتواصل مع عدّاد للرموز المقروءة.",
         "feature.project.gantt_v2_preview" => "سياسة معاينة مخطط جانت الجديد؛ تتطلب وحدة المشاريع.",
         "ai.record_update_field_allowlist" => {

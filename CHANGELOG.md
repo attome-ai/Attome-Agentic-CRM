@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Deal teams and splits (`sales.deal_teams`, `sales.splits`, `sales.line_splits`,
+  `sales.partner_members`, `sales.team_suggestions`, all off by default): team members with roles,
+  revenue splits that total 100% and overlay splits, rounding remainder to the owner; see
+  `docs/deal-teams.md`.
 - Packs: `field-service` (stock and serials, returns), HR positions, leave and labelled documents,
   service entitlements with a usage ledger.
 - Packs: `privacy` (processing activities, DPIA, breaches), `internal-audit`, `bcm` (impact

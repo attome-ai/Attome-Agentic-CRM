@@ -330,6 +330,26 @@ fn feature_flag_settings() -> Vec<SettingDescriptor> {
             "feature.sales.product_suggestions",
             "Stored policy value for the sales.product_suggestions feature flag (D6-T13).",
         ),
+        scan(
+            "feature.sales.deal_teams",
+            "Stored policy value for the sales.deal_teams feature flag (D7-T10).",
+        ),
+        scan(
+            "feature.sales.splits",
+            "Stored policy value for the sales.splits feature flag (D7-T10).",
+        ),
+        scan(
+            "feature.sales.line_splits",
+            "Stored policy value for the sales.line_splits feature flag (D7-T10).",
+        ),
+        scan(
+            "feature.sales.partner_members",
+            "Stored policy value for the sales.partner_members feature flag (D7-T10).",
+        ),
+        scan(
+            "feature.sales.team_suggestions",
+            "Stored policy value for the sales.team_suggestions feature flag (D7-T10).",
+        ),
         SettingDescriptor::new(
             "feature.core.beta_ui",
             "Stored policy value for the core.beta_ui feature flag (M95, D-430): \
