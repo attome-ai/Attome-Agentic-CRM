@@ -344,6 +344,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         base_state.redis_coordination.clone(),
         flush_interval,
     );
+    // Q8-T3: session activity, folded into refresh_token once a minute.
+    attome_server::session_activity::spawn_flush_scheduler(db.clone(), base_state.redis.clone());
     attome_s2s::telemetry::spawn_touch_flush_scheduler(
         db.clone(),
         base_state.redis_coordination.clone(),

@@ -310,6 +310,14 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 // D-510 rule 7: marks a validated cookie session, the only
                 // caller that can ever step up.
                 req.extensions_mut().insert(CookieSession);
+                // Q8-T3: a person's request (not a poller's) keeps the
+                // session alive; buffered, flushed once a minute.
+                if !crate::session_activity::is_background(req.headers())
+                    && let Err(e) =
+                        crate::session_activity::record(&state.redis, sid.0, Utc::now()).await
+                {
+                    tracing::debug!(error = %e, "session activity not recorded");
+                }
                 // D-510 rule 2: the refresh family this session belongs to,
                 // taken only from the validated token. Never set on the
                 // API-key or S2S paths, which have no refresh family.
