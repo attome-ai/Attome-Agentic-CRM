@@ -21,6 +21,7 @@ pub mod bulk;
 pub mod business;
 pub mod claim_check;
 pub mod classify;
+pub mod commission;
 pub mod draft_article;
 pub mod draft_email;
 pub mod duplicates;
@@ -83,6 +84,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(agent_playground::descriptor());
     all.push(crate::orchestrate::descriptor());
     all.extend(duplicates::descriptors());
+    all.extend(commission::descriptors());
     all
 }
 
@@ -127,5 +129,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(agent_playground::AgentPlaygroundComplete));
     all.push(Box::new(crate::orchestrate::AgentDelegate));
     all.extend(duplicates::executors());
+    all.extend(commission::executors());
     all
 }

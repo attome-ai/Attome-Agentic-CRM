@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Agent actions `commission.explain_line` (a statement line's stored explanation, under the caller's
+  record rules and field grants) and `commission.draft_plan_from_policy` (checks a plan drafted from a
+  policy document compiles and returns the normalised draft; writes nothing).
 - Commission period close: `POST /api/v1/commission/periods/{id}/submit` (`If-Match`) puts an open
   period in review and opens a finance approval (`commission.period_close`) regarding it; approval
   locks the period and approves its calculated payouts, rejection reopens it with the comment. A
