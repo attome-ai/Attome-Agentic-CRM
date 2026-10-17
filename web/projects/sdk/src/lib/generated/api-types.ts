@@ -10756,6 +10756,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/competitors/{id}/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sales_competitor_card"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/competitors/{id}/head-to-head": {
         parameters: {
             query?: never;
@@ -17040,6 +17056,20 @@ export interface components {
              *     success nor a failure yet.
              */
             total_decided: number;
+        };
+        CompetitorCard: {
+            /**
+             * @description The knowledge article holding the battle card, when one is set, the
+             *     deployment names its article entity and the caller may read it.
+             */
+            article?: Record<string, never> | null;
+            /**
+             * @description The competitor's fields the caller may read (name, strengths,
+             *     weaknesses, price position, regions, battle card id).
+             */
+            competitor: Record<string, never>;
+            /** Format: uuid */
+            competitor_id: string;
         };
         ComplianceModelRow: {
             /**
@@ -68166,6 +68196,56 @@ export interface operations {
             };
             /** @description If-Match missing or malformed */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_competitor_card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The competitor */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The competitor's fields the caller may read, and its battle card article when set and readable */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompetitorCard"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read competitors */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such competitor, or competitors are not installed */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

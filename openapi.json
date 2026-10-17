@@ -55118,6 +55118,76 @@
         }
       }
     },
+    "/api/v1/sales/competitors/{id}/card": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "get_sales_competitor_card",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The competitor",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The competitor's fields the caller may read, and its battle card article when set and readable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitorCard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read competitors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such competitor, or competitors are not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/sales/competitors/{id}/head-to-head": {
       "get": {
         "tags": [
@@ -80247,6 +80317,30 @@
             "type": "integer",
             "format": "int64",
             "description": "Non-pending outcomes — the denominator every rate below is computed\nagainst. Excludes `pending` for the same reason `quality_monitor.rs`\nand `compliance_report.rs` do: an undecided suggestion is neither a\nsuccess nor a failure yet."
+          }
+        }
+      },
+      "CompetitorCard": {
+        "type": "object",
+        "required": [
+          "competitor_id",
+          "competitor"
+        ],
+        "properties": {
+          "article": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The knowledge article holding the battle card, when one is set, the\ndeployment names its article entity and the caller may read it."
+          },
+          "competitor": {
+            "type": "object",
+            "description": "The competitor's fields the caller may read (name, strengths,\nweaknesses, price position, regions, battle card id)."
+          },
+          "competitor_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
