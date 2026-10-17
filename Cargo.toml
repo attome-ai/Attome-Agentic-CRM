@@ -148,7 +148,7 @@ attome-release   = { path = "crates/apps/attome-release" }
 
 # External crates
 aes-gcm       = { version = "0.10", features = ["aes"] }
-ammonia       = "~4.1"
+ammonia       = "~4.2"
 apalis        = { version = "0.7.4", default-features = false, features = ["limit", "tracing"] }
 apalis-sql    = { version = "0.7.4", default-features = false, features = ["postgres"] }
 arc-swap      = "1"
@@ -182,7 +182,7 @@ regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 rsa           = "0.9"
 rust_decimal  = { version = "1.36", features = ["serde-with-str"] }
-rust_xlsxwriter = "0.99"
+rust_xlsxwriter = "0.100"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }
 scraper       = "0.27"
 serde         = { version = "1", features = ["derive"] }

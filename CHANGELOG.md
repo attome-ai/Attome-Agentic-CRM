@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- ammonia 4.2.4 (RUSTSEC-2026-0373, CSS `url()` matched case-sensitively) and zip 9.0.5 through
+  rust_xlsxwriter 0.100 (RUSTSEC-2026-0367, -0368, -0369, extraction permissions and symlinks).
 - An erasure answers with a certificate: what was erased, when, by whom, its SHA-256 digest and
   the audit key's signature when one is configured. Legal holds still refuse the erasure.
 - Data profiles keep only the shapes (`999-AAA`) of a personal, special-category or masked

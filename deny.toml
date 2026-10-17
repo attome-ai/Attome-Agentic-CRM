@@ -75,12 +75,6 @@ ignore = [
     # available" per the advisory itself (`patched = []`); the only newer
     # line is the 0.10 release-candidate series, a pre-release semver-major.
     { id = "RUSTSEC-2023-0071", reason = "Owner: @attome-ai/seniors — dev-only dependency (base-auth test suite), never reaches a production binary; no safe upgrade available upstream (re-triaged 2026-09-28; only rsa 0.10 RCs exist) — revisit 2026-12-26" },
-    # zip 8.x — every 8.x release (8.3.0 to 8.6.0) is yanked upstream in favour
-    # of 9.x, but rust_xlsxwriter (report exports) requires zip ^8.3 up to its
-    # latest release 0.99.1 (checked 2026-10-16 with `cargo info`), so no
-    # unyanked version satisfies the graph. Yanked, not vulnerable: no
-    # advisory names it. Fix = a rust_xlsxwriter release on zip 9.
-    { crate = "zip@8.6.0", reason = "Owner: @attome-ai/seniors — yanked upstream (whole 8.x line, superseded by 9.x), no advisory; rust_xlsxwriter 0.99.1 still requires zip ^8.3; checked 2026-10-16 — revisit 2026-12-31" },
 ]
 
 [licenses]
