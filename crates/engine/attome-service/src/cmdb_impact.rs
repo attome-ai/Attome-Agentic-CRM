@@ -101,7 +101,7 @@ pub fn analyse(failed: Uuid, relationships: &[Relationship], items: &[Item]) -> 
 }
 
 #[cfg(test)]
-mod cmdb_impact {
+mod tests {
     use super::*;
 
     fn u(n: u128) -> Uuid {

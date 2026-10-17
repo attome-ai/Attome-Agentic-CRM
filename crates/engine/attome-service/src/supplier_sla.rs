@@ -261,7 +261,7 @@ pub async fn report(
 }
 
 #[cfg(test)]
-mod supplier_sla {
+mod tests {
     use super::*;
     use chrono::TimeZone;
 

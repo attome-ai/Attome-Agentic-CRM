@@ -4,6 +4,10 @@
 //! security requirement — so a prefix can never swallow a protected route
 //! added under it later. Reads the OpenAPI document the server serves; needs
 //! no database.
+#![allow(
+    clippy::expect_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
 
 use attome_server::middleware::bypass::{EXACT_BYPASS_PATHS, is_bypass};
 

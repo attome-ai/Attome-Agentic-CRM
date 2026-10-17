@@ -91,6 +91,9 @@ pub fn next_stage(current: &str, score: f64, engaged_contacts: usize) -> &str {
 
 type TargetRow = (Uuid, Uuid, String);
 
+/// An account's engagement events (time, kind) and the contacts behind them.
+type AccountSignals = (Vec<(DateTime<Utc>, String)>, HashSet<Uuid>);
+
 /// Rescores every target account; the number scored.
 pub async fn rescore(db: &attome_db::DbPool, now: DateTime<Utc>) -> Result<u64, AppError> {
     let installed: bool = sqlx::query_scalar(
@@ -127,8 +130,7 @@ pub async fn rescore(db: &attome_db::DbPool, now: DateTime<Utc>) -> Result<u64, 
         .fetch_all(db)
         .await
         .map_err(AppError::internal)?;
-        let mut by_account: HashMap<Uuid, (Vec<(DateTime<Utc>, String)>, HashSet<Uuid>)> =
-            HashMap::new();
+        let mut by_account: HashMap<Uuid, AccountSignals> = HashMap::new();
         for (account, contact, at, kind) in events {
             let entry = by_account.entry(account).or_default();
             entry.0.push((at, kind));

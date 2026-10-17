@@ -159,7 +159,7 @@ pub fn reconcile(found: &Discovered, existing: &[Existing], precedence: &Precede
 }
 
 #[cfg(test)]
-mod cmdb_reconcile {
+mod tests {
     use super::*;
 
     fn s(v: &str) -> Option<String> {

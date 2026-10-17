@@ -99,7 +99,7 @@ impl ChoiceMatcher {
 }
 
 #[cfg(test)]
-mod import_choice_match {
+mod tests {
     use super::*;
 
     fn matcher() -> ChoiceMatcher {

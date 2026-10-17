@@ -43,7 +43,7 @@ async fn repeated_key_is_ignored() {
             duplicates: 2,
         },
     ] {
-        let mut tx = pool.begin().await.expect("begin");
+        let mut tx = attome_db::tx::begin(&pool).await.expect("begin");
         let result = insert_batch(&mut tx, &batch).await.expect("insert");
         tx.commit().await.expect("commit");
         assert_eq!(result, expected);

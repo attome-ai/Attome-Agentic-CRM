@@ -27,10 +27,7 @@ fn migration_columns() -> Vec<(String, String)> {
                 .strip_prefix("CREATE TABLE IF NOT EXISTS ")
                 .or_else(|| upper.strip_prefix("CREATE TABLE "))
             {
-                let name = rest
-                    .split(|c: char| c == ' ' || c == '(')
-                    .next()
-                    .unwrap_or("");
+                let name = rest.split([' ', '(']).next().unwrap_or("");
                 table = Some(name.trim_matches('"').to_ascii_lowercase());
                 continue;
             }

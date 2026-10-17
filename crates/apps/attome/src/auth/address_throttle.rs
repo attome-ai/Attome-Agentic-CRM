@@ -81,12 +81,10 @@ pub async fn blocked(store: &Store, key: &str) -> Result<Option<u64>, AppError> 
 /// Whether `count` failures are over budget, and for how long, given the
 /// counter's remaining `ttl` in seconds (negative when it has none).
 fn over_budget(count: i64, ttl: i64) -> Option<u64> {
-    (count >= FAILURES_PER_WINDOW).then(|| {
-        if ttl > 0 {
-            ttl as u64
-        } else {
-            WINDOW_SECS as u64
-        }
+    (count >= FAILURES_PER_WINDOW).then_some(if ttl > 0 {
+        ttl as u64
+    } else {
+        WINDOW_SECS as u64
     })
 }
 

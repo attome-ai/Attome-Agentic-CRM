@@ -33,6 +33,9 @@ pub fn snoozed(snoozed_until: Option<NaiveDate>, today: NaiveDate) -> bool {
     snoozed_until.is_some_and(|until| today <= until)
 }
 
+/// A metric's name, owner, steward and snooze date.
+type MetricAlertRow = (String, Option<Uuid>, Option<Uuid>, Option<NaiveDate>);
+
 /// Notifies the metric's owner and steward when its newest snapshot crossed
 /// into a worse status. Never fails the snapshot: a notification error is
 /// logged.
@@ -60,7 +63,7 @@ async fn notify_on_crossing(state: &EngineState, metric_id: Uuid) -> Result<(), 
     let Some(level) = crossing(statuses.get(1).map(String::as_str), current) else {
         return Ok(());
     };
-    let metric: Option<(String, Option<Uuid>, Option<Uuid>, Option<NaiveDate>)> = sqlx::query_as(
+    let metric: Option<MetricAlertRow> = sqlx::query_as(
         "SELECT name, owner_ref, steward_ref, alerts_snoozed_until::date \
              FROM dashboard_metric_definition WHERE id = $1",
     )

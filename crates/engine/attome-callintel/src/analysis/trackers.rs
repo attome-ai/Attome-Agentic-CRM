@@ -40,9 +40,12 @@ pub struct CompiledTrackers {
     pub trackers: Vec<CompiledTracker>,
 }
 
+/// One tracker as loaded: id, version, exact terms and example vectors.
+pub type TrackerRow = (Uuid, i64, Vec<String>, Vec<Vec<f32>>);
+
 impl CompiledTrackers {
     /// Builds the set from `(id, version, exact terms, example vectors)`.
-    pub fn build(rows: Vec<(Uuid, i64, Vec<String>, Vec<Vec<f32>>)>) -> Self {
+    pub fn build(rows: Vec<TrackerRow>) -> Self {
         let version = rows.iter().map(|r| r.1).max().unwrap_or(0);
         let trackers = rows
             .into_iter()

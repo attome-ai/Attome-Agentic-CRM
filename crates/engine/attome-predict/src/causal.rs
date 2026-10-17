@@ -227,7 +227,7 @@ pub fn propensity_matched(units: &[Unit]) -> Result<Estimate, CausalError> {
 }
 
 #[cfg(test)]
-mod causal {
+mod tests {
     use super::*;
 
     /// A tiny deterministic noise source.

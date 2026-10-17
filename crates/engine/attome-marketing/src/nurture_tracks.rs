@@ -110,6 +110,15 @@ pub async fn run(db: &attome_db::DbPool) -> Result<u64, AppError> {
     Ok(changed)
 }
 
+/// A track's id, lifecycle stage, interest, language and position.
+type TrackRow = (
+    Uuid,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<f64>,
+);
+
 type StateRow = (Uuid, Option<Uuid>, bool);
 
 async fn move_person(db: &attome_db::DbPool, entity: &str, person: Uuid) -> Result<u64, AppError> {
@@ -163,13 +172,7 @@ async fn move_person(db: &attome_db::DbPool, entity: &str, person: Uuid) -> Resu
             .rows_affected();
             continue;
         }
-        let tracks: Vec<(
-            Uuid,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<f64>,
-        )> = sqlx::query_as(
+        let tracks: Vec<TrackRow> = sqlx::query_as(
             "SELECT id, lifecycle_stage, interest, language, position::float8 \
                  FROM marketing_nurture_track \
                  WHERE program_ref = $1 AND (is_active IS NULL OR is_active = true)",
