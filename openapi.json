@@ -45022,6 +45022,115 @@
         }
       }
     },
+    "/api/v1/billing/invoices/{id}/apply-deposit": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_apply_deposit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The final draft invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyDepositRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The deposit is deducted and the draft repriced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositApplied"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice or deposit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not a final draft, the deposit is not issued, or it is already deducted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a deposit, or another account or currency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/invoices/{id}/cancel": {
       "post": {
         "tags": [
@@ -45103,6 +45212,95 @@
           },
           "422": {
             "description": "No reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/billing/invoices/{id}/convert-pro-forma": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_convert_pro_forma",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The pro forma invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The new draft invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProFormaConverted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not a pro forma invoice",
             "content": {
               "application/json": {
                 "schema": {
@@ -74774,6 +74972,18 @@
           }
         }
       },
+      "ApplyDepositRequest": {
+        "type": "object",
+        "required": [
+          "deposit_invoice_id"
+        ],
+        "properties": {
+          "deposit_invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ApplyPhase": {
         "type": "string",
         "description": "The phase a ledger row covers.",
@@ -84888,6 +85098,34 @@
           },
           "version": {
             "type": "string"
+          }
+        }
+      },
+      "DepositApplied": {
+        "type": "object",
+        "description": "The final invoice after a deposit was deducted.",
+        "required": [
+          "invoice_id",
+          "deposit_invoice_id",
+          "lines",
+          "grand_total"
+        ],
+        "properties": {
+          "deposit_invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grand_total": {
+            "type": "string"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "integer",
+            "description": "Lines added, one per VAT category of the deposit.",
+            "minimum": 0
           }
         }
       },
@@ -106991,6 +107229,29 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "ProFormaConverted": {
+        "type": "object",
+        "description": "The new draft a pro forma invoice became.",
+        "required": [
+          "pro_forma_id",
+          "invoice_id",
+          "lines"
+        ],
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pro_forma_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

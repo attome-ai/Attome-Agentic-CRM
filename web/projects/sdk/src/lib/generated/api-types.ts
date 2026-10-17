@@ -8629,6 +8629,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoices/{id}/apply-deposit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_apply_deposit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoices/{id}/cancel": {
         parameters: {
             query?: never;
@@ -8639,6 +8655,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices/{id}/convert-pro-forma": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_convert_pro_forma"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14706,6 +14738,10 @@ export interface components {
             /** @description The phase every row covers. */
             phase: components["schemas"]["ApplyPhase"];
         };
+        ApplyDepositRequest: {
+            /** Format: uuid */
+            deposit_invoice_id: string;
+        };
         /**
          * @description The phase a ledger row covers.
          * @enum {string}
@@ -18752,6 +18788,16 @@ export interface components {
             started_at: string;
             started_by?: string | null;
             version: string;
+        };
+        /** @description The final invoice after a deposit was deducted. */
+        DepositApplied: {
+            /** Format: uuid */
+            deposit_invoice_id: string;
+            grand_total: string;
+            /** Format: uuid */
+            invoice_id: string;
+            /** @description Lines added, one per VAT category of the deposit. */
+            lines: number;
         };
         DescribeQueryBody: {
             sql_query: string;
@@ -27028,6 +27074,14 @@ export interface components {
             id: string;
             key: string;
             name: string;
+        };
+        /** @description The new draft a pro forma invoice became. */
+        ProFormaConverted: {
+            /** Format: uuid */
+            invoice_id: string;
+            lines: number;
+            /** Format: uuid */
+            pro_forma_id: string;
         };
         ProfileEnqueueResponse: {
             /** Format: uuid */
@@ -61729,6 +61783,78 @@ export interface operations {
             };
         };
     };
+    post_apply_deposit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The final draft invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyDepositRequest"];
+            };
+        };
+        responses: {
+            /** @description The deposit is deducted and the draft repriced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositApplied"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice or deposit */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a final draft, the deposit is not issued, or it is already deducted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a deposit, or another account or currency */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_cancel: {
         parameters: {
             query?: never;
@@ -61792,6 +61918,65 @@ export interface operations {
             };
             /** @description No reason */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_convert_pro_forma: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The pro forma invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new draft invoice */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProFormaConverted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a pro forma invoice */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
