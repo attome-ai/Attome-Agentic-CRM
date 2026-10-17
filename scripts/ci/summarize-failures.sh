@@ -4,7 +4,9 @@
 #   1. every panic with the message lines that follow it,
 #   2. the failing test targets (cargo's "rerun pass" lines),
 #   3. compile and lint errors with their locations,
-#   4. rustfmt diffs.
+#   4. rustfmt diffs,
+#   5. every gate step that failed, with its reason (a failure outside the
+#      tests, such as cargo-deny or the alert rules, shows nowhere else).
 # GitHub keeps at most 10 error annotations per step and truncates long ones
 # (about 4 KB each), so every line is cut to 240 characters and the summary is
 # split into chunks of 14 lines, at most 9 annotations.
@@ -14,6 +16,8 @@ clean=$(mktemp)
 sed -e 's/\x1b\[[0-9;]*m//g' "$log" > "$clean"
 
 {
+  echo "== failed gate steps"
+  grep -E '^ +[a-z_]+: FAILED' "$clean" | sed -E 's/^ +//' | head -20
   echo "== panics"
   grep -E -A2 'panicked at' "$clean" \
     | grep -vE '^--$|^note: run with|^stack backtrace|^ +[0-9]+: |^ +at ' | head -400
