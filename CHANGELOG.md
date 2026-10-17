@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `docs/agents.md` describes the follow-up agent: what each rule reason finds, the three modes, the
+  daily cap and `GET /api/v1/ai/follow-ups`, `POST /api/v1/ai/follow-ups/{id}/dismiss` and
+  `POST /api/v1/admin/ai/follow-up-rules/{id}/run`.
 - A "My follow-ups" screen (`/ai/follow-ups`, English and Arabic): the caller's open follow-up items
   with their reason, age and status, a link to each record and a dismiss button.
 - Follow-up items now run: each hourly scan queues one `AiFollowupItem` job per open item. A rule in

@@ -112,6 +112,32 @@ answers and proposes any change through its own gate.
 - What a session did: `GET /api/v1/admin/agents/sessions/{id}/trace` (the Steps button on the agent
   sessions screen).
 
+## Follow-up agent
+
+Finds records that went quiet and follows them up for their owner. Nothing happens until an
+administrator adds a rule (an `ai_followup_rule` record, under AI in the admin area); there is
+none by default.
+
+- **What a rule finds** (`reason`, on the rule's `target_entity`, after `idle_days`):
+  `stalled_deal` is an open record (a `stage` other than `closed_won`/`closed_lost`, or
+  `is_closed` false) untouched for `idle_days` (its `last_activity_at`, else its last change);
+  `overdue_task` is an open record past its `due_at` or `due_date`; `unanswered_customer` is a
+  conversation whose newest message is inbound, older than `idle_days`, with no reply after it.
+  Each record is recorded at most once a week (`ai_followup_item`).
+- **When:** every hour. `POST /api/v1/admin/ai/follow-up-rules/{id}/run` runs one rule now.
+- **What it does** (`mode`): `remind_owner` sends the owner an in-app reminder.
+  `draft_message` has the `followup_agent` draft a message, filed as an email draft on the record,
+  and reminds the owner. `send_message` has it draft the message and send it with
+  `followup.send_message`, which always waits for a person's approval; there is no auto-send.
+  The agent ships as a draft: until an administrator activates `followup_agent`, both modes only
+  remind the owner. The agent acts as the record's owner and its drafts and reminders wait for
+  the owner's confirmation in that conversation.
+- **Daily cap:** `daily_cap` limits the items of a rule reminded or sent per day (UTC); past it the
+  rest wait for the next run.
+- **Switched off:** while AI chat is switched off (`/ai/switches`), nothing runs and items stay open.
+- **Owners** see their open follow-ups at `/ai/follow-ups` (`GET /api/v1/ai/follow-ups`) and dismiss
+  them (`POST /api/v1/ai/follow-ups/{id}/dismiss`, `If-Match`).
+
 ## Safety around the model
 
 - Untrusted text (records, documents, tool results) is cleaned of hidden characters and hidden HTML
