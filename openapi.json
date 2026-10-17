@@ -48378,6 +48378,95 @@
         }
       }
     },
+    "/api/v1/hr/offers/{id}/hire": {
+      "post": {
+        "tags": [
+          "hr"
+        ],
+        "operationId": "post_hr_hire",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The accepted job offer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The employee is created from the offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrHired"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks employee.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The offer is not accepted, or was already hired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/hr/payroll-export": {
       "get": {
         "tags": [
@@ -54813,6 +54902,292 @@
         }
       }
     },
+    "/api/v1/sales/competitor-mentions/{id}/confirm": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_mention_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The proposed mention",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The mention's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The competitor is on the deal and the mention confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesMentionDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the deal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such mention",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version, or already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/sales/competitor-mentions/{id}/reject": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_mention_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The proposed mention",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The mention's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The mention is rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesMentionDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the deal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such mention",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version, or already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/sales/competitors/{id}/head-to-head": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "get_sales_head_to_head",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The competitor",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Won, lost and open deals against the competitor, over the deals the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesHeadToHead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks competitor.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such competitor, or competitors are not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/sales/default-team/apply": {
       "post": {
         "tags": [
@@ -54897,6 +55272,79 @@
           "reason": "dry_run",
           "via": null
         }
+      }
+    },
+    "/api/v1/sales/opportunities/{id}/battlecards": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "get_sales_battlecards",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deal's competitors with their battle cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SalesBattlecard"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity, or competitors are not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/sales/opportunities/{id}/change-owner": {
@@ -88479,6 +88927,31 @@
           }
         }
       },
+      "HrHired": {
+        "type": "object",
+        "required": [
+          "offer_id",
+          "employee_id"
+        ],
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "offer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The user account linked by the candidate's email, when one exists."
+          }
+        }
+      },
       "HrLeaveDecided": {
         "type": "object",
         "required": [
@@ -109891,6 +110364,43 @@
           }
         }
       },
+      "SalesBattlecard": {
+        "type": "object",
+        "required": [
+          "competitor_id"
+        ],
+        "properties": {
+          "battlecard_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The knowledge article holding the battle card, when one is set."
+          },
+          "competitor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threat_level": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "SalesBuildListBody": {
         "type": "object",
         "properties": {
@@ -110061,6 +110571,99 @@
           }
         }
       },
+      "SalesHeadToHead": {
+        "type": "object",
+        "required": [
+          "competitor_id",
+          "won",
+          "lost",
+          "open",
+          "won_amount",
+          "lost_amount",
+          "open_amount",
+          "top_reasons",
+          "recent_mentions"
+        ],
+        "properties": {
+          "competitor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lost": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lost_amount": {
+            "type": "string"
+          },
+          "open": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "open_amount": {
+            "type": "string"
+          },
+          "recent_mentions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesHeadToHeadMention"
+            }
+          },
+          "top_reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesHeadToHeadReason"
+            }
+          },
+          "won": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "won_amount": {
+            "type": "string",
+            "description": "Decimal sums, as text."
+          }
+        }
+      },
+      "SalesHeadToHeadMention": {
+        "type": "object",
+        "required": [
+          "mention_id",
+          "opportunity_id"
+        ],
+        "properties": {
+          "mention_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snippet": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SalesHeadToHeadReason": {
+        "type": "object",
+        "required": [
+          "reason",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "SalesLineBody": {
         "type": "object",
         "required": [
@@ -110214,6 +110817,30 @@
             "description": "D6-T8: for a deal discount, the snapshot that undoes it\n(`POST /api/v1/sales/undo/{snapshot_id}`, 30 minutes)."
           },
           "total_contract_value": {
+            "type": "string"
+          }
+        }
+      },
+      "SalesMentionDecided": {
+        "type": "object",
+        "required": [
+          "mention_id",
+          "status"
+        ],
+        "properties": {
+          "mention_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity_competitor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The deal's competitor link, on a confirm."
+          },
+          "status": {
             "type": "string"
           }
         }

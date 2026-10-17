@@ -9375,6 +9375,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hr/offers/{id}/hire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_hr_hire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hr/payroll-export": {
         parameters: {
             query?: never;
@@ -10708,6 +10724,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/competitor-mentions/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_mention_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/competitor-mentions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_mention_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/competitors/{id}/head-to-head": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sales_head_to_head"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/default-team/apply": {
         parameters: {
             query?: never;
@@ -10734,6 +10798,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_sales_default_team_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/battlecards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sales_battlecards"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -20546,6 +20626,17 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        HrHired: {
+            /** Format: uuid */
+            employee_id: string;
+            /** Format: uuid */
+            offer_id: string;
+            /**
+             * Format: uuid
+             * @description The user account linked by the candidate's email, when one exists.
+             */
+            user_id?: string | null;
+        };
         HrLeaveDecided: {
             /** Format: uuid */
             leave_request_id: string;
@@ -28584,6 +28675,15 @@ export interface components {
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
         };
+        SalesBattlecard: {
+            /** @description The knowledge article holding the battle card, when one is set. */
+            battlecard_ref?: string | null;
+            /** Format: uuid */
+            competitor_id: string;
+            name?: string | null;
+            status?: string | null;
+            threat_level?: string | null;
+        };
         SalesBuildListBody: {
             /** @description For a `manual` list: the records to add. */
             records?: components["schemas"]["CallListRecord"][];
@@ -28639,6 +28739,34 @@ export interface components {
             /** @description The caller's open deals that miss at least one default member. */
             opportunity_ids: string[];
         };
+        SalesHeadToHead: {
+            /** Format: uuid */
+            competitor_id: string;
+            /** Format: int64 */
+            lost: number;
+            lost_amount: string;
+            /** Format: int64 */
+            open: number;
+            open_amount: string;
+            recent_mentions: components["schemas"]["SalesHeadToHeadMention"][];
+            top_reasons: components["schemas"]["SalesHeadToHeadReason"][];
+            /** Format: int64 */
+            won: number;
+            /** @description Decimal sums, as text. */
+            won_amount: string;
+        };
+        SalesHeadToHeadMention: {
+            /** Format: uuid */
+            mention_id: string;
+            /** Format: uuid */
+            opportunity_id: string;
+            snippet?: string | null;
+        };
+        SalesHeadToHeadReason: {
+            /** Format: int64 */
+            count: number;
+            reason: string;
+        };
         SalesLineBody: {
             description?: string | null;
             discount_amount?: string | null;
@@ -28680,6 +28808,16 @@ export interface components {
              */
             snapshot_id?: string | null;
             total_contract_value: string;
+        };
+        SalesMentionDecided: {
+            /** Format: uuid */
+            mention_id: string;
+            /**
+             * Format: uuid
+             * @description The deal's competitor link, on a confirm.
+             */
+            opportunity_competitor_id?: string | null;
+            status: string;
         };
         SalesOpportunityLine: {
             discount_amount?: string | null;
@@ -63578,6 +63716,65 @@ export interface operations {
             };
         };
     };
+    post_hr_hire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The accepted job offer */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The employee is created from the offer */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HrHired"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks employee.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such offer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The offer is not accepted, or was already hired */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_hr_payroll_export: {
         parameters: {
             query: {
@@ -67836,6 +68033,198 @@ export interface operations {
             };
         };
     };
+    post_sales_mention_confirm: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The mention's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The proposed mention */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The competitor is on the deal and the mention confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesMentionDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the deal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such mention */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_mention_reject: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The mention's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The proposed mention */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mention is rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesMentionDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the deal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such mention */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_head_to_head: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The competitor */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Won, lost and open deals against the competitor, over the deals the caller may read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesHeadToHead"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks competitor.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such competitor, or competitors are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_default_team_apply: {
         parameters: {
             query?: never;
@@ -67885,6 +68274,56 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_battlecards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's competitors with their battle cards */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesBattlecard"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity, or competitors are not installed */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
