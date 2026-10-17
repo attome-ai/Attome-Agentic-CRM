@@ -4,6 +4,7 @@
 //! lines, and writes the ledger posting.
 //! F4-T7: credit and debit notes correct an issued invoice; cancelling is a
 //! full credit note, issued at once.
+//! F4-T8: a deposit is deducted once; a pro forma is converted, never issued.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -528,6 +529,132 @@ fn cancel_issues_full_credit_note() {
         // Nothing is left to cancel.
         let (status, _) = app
             .request(Method::POST, &cancel, Some(json!({ "reason": "Again" })))
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+    });
+}
+
+// feature: F4
+#[test]
+fn deposit_is_deducted_once() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        // A deposit of 100 net (115 with VAT), issued.
+        let deposit = unnumbered(&app, account, "deposit", "TD").await;
+        line(&app, deposit, "1", "100", "0", "standard").await;
+        let (status, body) = issue(&app, deposit).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let deposit_number = body["invoice_number"].as_str().unwrap().to_owned();
+
+        // The final invoice of 400 net: 300 net and 345 due after the deposit.
+        let app = &app;
+        let apply = |invoice: Uuid| {
+            let path = format!("/api/v1/billing/invoices/{invoice}/apply-deposit");
+            let body = json!({ "deposit_invoice_id": deposit });
+            async move { app.request(Method::POST, &path, Some(body)).await }
+        };
+        let first = unnumbered(app, account, "invoice", "TD").await;
+        line(app, first, "4", "100", "0", "standard").await;
+        let (status, body) = apply(first).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["lines"], 1);
+        assert_eq!(
+            body["grand_total"]
+                .as_str()
+                .unwrap()
+                .parse::<f64>()
+                .unwrap(),
+            345.0
+        );
+        let label = text(
+            app,
+            "SELECT description FROM invoice_line WHERE invoice_ref = $1 AND source_kind = 'deposit'",
+            first,
+        )
+        .await;
+        assert_eq!(label, format!("Deposit {deposit_number}"));
+
+        // Twice on the same invoice, or on another, is refused.
+        let (status, _) = apply(first).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        let second = unnumbered(app, account, "invoice", "TD").await;
+        line(app, second, "1", "100", "0", "standard").await;
+        let (status, _) = apply(second).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        // A draft deposit is not deducted.
+        let draft_deposit = unnumbered(app, account, "deposit", "TD").await;
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/billing/invoices/{second}/apply-deposit"),
+                Some(json!({ "deposit_invoice_id": draft_deposit })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+
+        let (status, body) = issue(app, first).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    });
+}
+
+// feature: F4
+#[test]
+fn pro_forma_cannot_be_issued() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let pro_forma = unnumbered(&app, account, "pro_forma", "TP").await;
+        line(&app, pro_forma, "2", "50", "0", "standard").await;
+        let (status, _) = issue(&app, pro_forma).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        let number = text(
+            &app,
+            "SELECT invoice_number FROM invoice WHERE id = $1",
+            pro_forma,
+        )
+        .await;
+        assert!(number.is_empty(), "a pro forma took a number: {number}");
+
+        // Converting makes a priced draft invoice with the same lines.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/billing/invoices/{pro_forma}/convert-pro-forma"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["lines"], 1);
+        let invoice: Uuid = body["invoice_id"].as_str().unwrap().parse().unwrap();
+        let kind = text(&app, "SELECT kind FROM invoice WHERE id = $1", invoice).await;
+        assert_eq!(kind, "invoice");
+        let grand = text(
+            &app,
+            "SELECT grand_total::text FROM invoice WHERE id = $1",
+            invoice,
+        )
+        .await;
+        assert_eq!(grand.parse::<f64>().unwrap(), 115.0);
+        let (status, body) = issue(&app, invoice).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        // Converting an invoice that is not pro forma is refused.
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/billing/invoices/{invoice}/convert-pro-forma"),
+                None,
+            )
             .await;
         assert_eq!(status, StatusCode::CONFLICT);
     });

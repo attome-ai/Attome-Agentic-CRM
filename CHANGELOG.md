@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/billing/invoices/{id}/apply-deposit` deducts an issued deposit invoice from a final
+  draft (one negative line per VAT category, `Deposit DEP-…`), once: a second deduction is `409`,
+  and issuing re-checks it under a per-deposit lock. `POST …/{id}/convert-pro-forma` copies a pro
+  forma invoice into a new priced draft; a pro forma itself is never issued.
 - `POST /api/v1/billing/invoices/{id}/credit-notes`, `/debit-notes` and `/cancel` (`billing.credit`)
   correct an issued invoice: a credit note copies chosen lines negated (never beyond what is left
   uncredited, checked again under the series lock on issue), a debit note adds charges, and

@@ -242,6 +242,8 @@ pub async fn do_issue(
     if kind.as_deref() == Some("credit_note") {
         crate::notes::check_issued_credit(&mut tx, invoice_id).await?;
     }
+    // F4-T8: a deposit is deducted on one issued invoice only.
+    crate::deposit::check_deposits(&mut tx, invoice_id).await?;
     let year = today.year();
     let prefix = format!("{series}-{year}-");
     let issued: i64 = sqlx::query_scalar(

@@ -4,6 +4,7 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `billing` module.
 
+pub mod deposit;
 pub mod invoice;
 pub mod issue;
 pub mod metrics;
@@ -28,5 +29,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<invoice::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<issue::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<notes::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<deposit::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

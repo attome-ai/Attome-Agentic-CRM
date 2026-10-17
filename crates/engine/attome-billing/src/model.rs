@@ -54,5 +54,14 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoices/{id}/cancel",
                 post(crate::notes::post_cancel),
             )
+            // F4-T8: deposits and pro forma invoices.
+            .route(
+                "/api/v1/billing/invoices/{id}/apply-deposit",
+                post(crate::deposit::post_apply_deposit),
+            )
+            .route(
+                "/api/v1/billing/invoices/{id}/convert-pro-forma",
+                post(crate::deposit::post_convert_pro_forma),
+            )
     }
 }
