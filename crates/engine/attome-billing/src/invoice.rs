@@ -160,8 +160,10 @@ fn number(value: Decimal) -> Value {
         .map_or(Value::Null, Value::Number)
 }
 
-/// An invoice's stored net, VAT, grand and open totals, as text.
+/// An invoice's stored net, VAT, grand and open totals and the finance
+/// pack's amount, as text.
 type TotalsRow = (
+    Option<String>,
     Option<String>,
     Option<String>,
     Option<String>,
@@ -266,14 +268,15 @@ pub async fn recompute_draft(
 
     let totals = invoice_totals(&amounts);
     let current: Option<TotalsRow> = sqlx::query_as(
-        "SELECT net_total::text, vat_total::text, grand_total::text, open_total::text \
+        "SELECT net_total::text, vat_total::text, grand_total::text, open_total::text, \
+                amount::text \
              FROM invoice WHERE id = $1",
     )
     .bind(invoice_id)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let (old_net, old_vat, old_grand, old_open) = current.unwrap_or_default();
+    let (old_net, old_vat, old_grand, old_open, old_amount) = current.unwrap_or_default();
     let mut patch = Map::new();
     if changed(old_net.as_deref(), totals.net) {
         patch.insert("net_total".into(), number(totals.net));
@@ -287,6 +290,10 @@ pub async fn recompute_draft(
     // Nothing is paid on a draft: what is open is the whole amount.
     if changed(old_open.as_deref(), totals.total) {
         patch.insert("open_total".into(), number(totals.total));
+    }
+    // The finance pack's amount is what finance-only views show.
+    if changed(old_amount.as_deref(), totals.total) {
+        patch.insert("amount".into(), number(totals.total));
     }
     if !patch.is_empty() {
         attome_records::entity_crud::update_record_for(

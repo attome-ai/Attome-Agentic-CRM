@@ -1,0 +1,49 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1a9709cfd8f0c9bb89ebeb16c2c5877b7c420f82f500914fefbc6d50a8a8e920",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Notes (F4-T7): a credit or debit note is created as a draft before its lines are priced, so the finance invoice's amount is no longer required on create; the billing engine keeps it equal to the grand total.",
+  "format": "attome-changeset/v1",
+  "id": "01a14c2a-5424-7a18-b77b-b245864280e7",
+  "layer": "product",
+  "name": "billing-notes",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "invoice",
+        "field": "amount"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 7,
+  "title": "Pack: invoice amount follows the billing totals"
+}

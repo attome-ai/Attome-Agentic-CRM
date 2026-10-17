@@ -237,6 +237,11 @@ pub async fn do_issue(
             "another invoice of this series is being issued; try again",
         ));
     }
+    // F4-T7: a credit note never takes a line beyond its quantity, counted
+    // under the series lock against the notes already issued.
+    if kind.as_deref() == Some("credit_note") {
+        crate::notes::check_issued_credit(&mut tx, invoice_id).await?;
+    }
     let year = today.year();
     let prefix = format!("{series}-{year}-");
     let issued: i64 = sqlx::query_scalar(

@@ -2,6 +2,8 @@
 //! summed from the rounded lines; an issued invoice is never recomputed.
 //! F4-T6: issuing numbers a draft gap-free in its series, locks it and its
 //! lines, and writes the ledger posting.
+//! F4-T7: credit and debit notes correct an issued invoice; cancelling is a
+//! full credit note, issued at once.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -370,5 +372,163 @@ fn concurrent_issues_never_share_a_number() {
         let year = chrono::Utc::now().format("%Y").to_string();
         let expected: Vec<String> = (1..=4).map(|n| format!("TC-{year}-{n:06}")).collect();
         assert_eq!(numbers, expected);
+    });
+}
+
+/// An issued invoice of one line, `qty` at 100 SAR.
+async fn issued_invoice(app: &TestApp, account: Uuid, qty: &str, series: &str) -> (Uuid, Uuid) {
+    let draft = unnumbered(app, account, "invoice", series).await;
+    let line_id = line(app, draft, qty, "100", "0", "standard").await;
+    let (status, body) = issue(app, draft).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    (draft, line_id)
+}
+
+// feature: F4
+#[test]
+fn credit_more_than_issued_is_422() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let (original, original_line) = issued_invoice(&app, account, "5", "TN").await;
+        let credit = |qty: f64, reason: &str| json!({ "lines": [{ "line_id": original_line, "quantity": qty }], "reason": reason });
+        let path = format!("/api/v1/billing/invoices/{original}/credit-notes");
+
+        // Two of five credited: a draft credit note with the line negated.
+        let (status, body) = app
+            .request(Method::POST, &path, Some(credit(2.0, "Returned")))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["kind"], "credit_note");
+        let note: Uuid = body["note_id"].as_str().unwrap().parse().unwrap();
+        let grand = text(
+            &app,
+            "SELECT grand_total::text FROM invoice WHERE id = $1",
+            note,
+        )
+        .await;
+        assert_eq!(grand.parse::<f64>().unwrap(), -230.0);
+        let link = text(
+            &app,
+            "SELECT original_invoice_ref::text FROM invoice WHERE id = $1",
+            note,
+        )
+        .await;
+        assert_eq!(link, original.to_string());
+
+        // Four more would credit six of five: refused, naming the line.
+        let (status, body) = app
+            .request(Method::POST, &path, Some(credit(4.0, "Again")))
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert!(
+            body.to_string().contains(&original_line.to_string()),
+            "{body}"
+        );
+        // No reason, refused.
+        let (status, _) = app
+            .request(Method::POST, &path, Some(credit(1.0, " ")))
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        // A draft is not corrected by a note.
+        let draft = unnumbered(&app, account, "invoice", "TN").await;
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/billing/invoices/{draft}/credit-notes"),
+                Some(credit(1.0, "No")),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+
+        // A debit note adds a positive charge.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/billing/invoices/{original}/debit-notes"),
+                Some(json!({
+                    "lines": [{ "description": "Freight", "quantity": 1, "unit_price": 20 }],
+                    "reason": "Freight was not billed",
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let debit: Uuid = body["note_id"].as_str().unwrap().parse().unwrap();
+        let grand = text(
+            &app,
+            "SELECT grand_total::text FROM invoice WHERE id = $1",
+            debit,
+        )
+        .await;
+        assert_eq!(grand.parse::<f64>().unwrap(), 23.0);
+    });
+}
+
+// feature: F4
+#[test]
+fn cancel_issues_full_credit_note() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let (original, original_line) = issued_invoice(&app, account, "3", "TX").await;
+        // One of three already credited (and issued): the cancel credits two.
+        let (_, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/billing/invoices/{original}/credit-notes"),
+                Some(json!({
+                    "lines": [{ "line_id": original_line, "quantity": 1 }],
+                    "reason": "Damaged",
+                })),
+            )
+            .await;
+        let partial: Uuid = body["note_id"].as_str().unwrap().parse().unwrap();
+        let (status, body) = issue(&app, partial).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let partial_number = body["invoice_number"].as_str().unwrap().to_owned();
+
+        let cancel = format!("/api/v1/billing/invoices/{original}/cancel");
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &cancel,
+                Some(json!({ "reason": "Order cancelled" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "issued");
+        // Credit notes share the CRN series: the next number after the
+        // partial credit's.
+        let year = chrono::Utc::now().format("%Y").to_string();
+        let number = body["invoice_number"].as_str().unwrap();
+        assert!(number.starts_with(&format!("CRN-{year}-")), "{number}");
+        assert!(
+            number > partial_number.as_str(),
+            "{number} after {partial_number}"
+        );
+        let note: Uuid = body["note_id"].as_str().unwrap().parse().unwrap();
+        let quantity = text(
+            &app,
+            "SELECT quantity::text FROM invoice_line WHERE invoice_ref = $1",
+            note,
+        )
+        .await;
+        assert_eq!(quantity.parse::<f64>().unwrap(), -2.0);
+
+        // Nothing is left to cancel.
+        let (status, _) = app
+            .request(Method::POST, &cancel, Some(json!({ "reason": "Again" })))
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT);
     });
 }

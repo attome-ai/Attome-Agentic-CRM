@@ -8,6 +8,7 @@ pub mod invoice;
 pub mod issue;
 pub mod metrics;
 pub mod model;
+pub mod notes;
 pub mod payment;
 pub mod subscription;
 pub mod tax;
@@ -26,5 +27,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<metrics::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<invoice::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<issue::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<notes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

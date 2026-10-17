@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/billing/invoices/{id}/credit-notes`, `/debit-notes` and `/cancel` (`billing.credit`)
+  correct an issued invoice: a credit note copies chosen lines negated (never beyond what is left
+  uncredited, checked again under the series lock on issue), a debit note adds charges, and
+  cancelling issues a full credit note at once. Each note links the original and carries a reason.
+  The finance invoice's `amount` is no longer required and follows the billing grand total.
 - `POST /api/v1/billing/invoices/{id}/issue` issues a draft invoice: the next gap-free number of
   its series and year (`INV-2026-000001`; credit notes `CRN`, debit notes `DBN`, deposits `DEP`)
   under a series lock, issue and due dates, locked lines and a ledger posting; above

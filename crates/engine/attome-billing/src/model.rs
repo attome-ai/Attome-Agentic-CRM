@@ -41,5 +41,18 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoices/{id}/issue",
                 post(crate::issue::post_issue),
             )
+            // F4-T7: corrections of an issued invoice.
+            .route(
+                "/api/v1/billing/invoices/{id}/credit-notes",
+                post(crate::notes::post_credit_note),
+            )
+            .route(
+                "/api/v1/billing/invoices/{id}/debit-notes",
+                post(crate::notes::post_debit_note),
+            )
+            .route(
+                "/api/v1/billing/invoices/{id}/cancel",
+                post(crate::notes::post_cancel),
+            )
     }
 }
