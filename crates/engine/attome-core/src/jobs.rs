@@ -475,6 +475,9 @@ pub enum EngineJob {
     /// AI4-T5: runs every active follow-up rule's stall detector. Bare unit
     /// variant.
     AiFollowupScan,
+    /// AI4-T5: one follow-up item, run by the follow-up agent for the
+    /// record's owner. Bare id pointer; the ledger row is the state.
+    AiFollowupItem { item_id: Uuid },
     /// Y2-T8: the daily table-health sample. Bare unit variant.
     TableHealthSample,
     /// D25-T4: competitor mentions in new emails and notes, off the change
@@ -943,6 +946,7 @@ impl EngineJob {
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
             | Self::AiFollowupScan
+            | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
@@ -1055,6 +1059,7 @@ impl EngineJob {
             EngineJob::NotificationFollowSweep => "NotificationFollowSweep",
             EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
             EngineJob::AiFollowupScan => "AiFollowupScan",
+            EngineJob::AiFollowupItem { .. } => "AiFollowupItem",
             EngineJob::TableHealthSample => "TableHealthSample",
             EngineJob::SalesMentionScan => "SalesMentionScan",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
@@ -1173,6 +1178,7 @@ impl EngineJob {
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
             | Self::AiFollowupScan
+            | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
@@ -1309,6 +1315,7 @@ impl EngineJob {
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
             | Self::AiFollowupScan
+            | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
@@ -1662,6 +1669,9 @@ mod tests {
         assert_round_trips(EngineJob::NotificationFollowSweep);
         assert_round_trips(EngineJob::SalesDealCloseSweep);
         assert_round_trips(EngineJob::AiFollowupScan);
+        assert_round_trips(EngineJob::AiFollowupItem {
+            item_id: Uuid::nil(),
+        });
         assert_round_trips(EngineJob::TableHealthSample);
         assert_round_trips(EngineJob::SalesMentionScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {

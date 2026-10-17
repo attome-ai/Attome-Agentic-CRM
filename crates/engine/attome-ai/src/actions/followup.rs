@@ -278,52 +278,68 @@ impl Action for RemindOwner {
     ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
         Box::pin(async move {
             let item_id = uuid_arg(args, "item_id")?;
-            let item = load_item(state, ctx, item_id).await?;
-            enforce_caps(state, ctx, REMIND_OWNER, &item).await?;
-            let note = args["note"].as_str().map(str::trim).unwrap_or_default();
-            let body = if note.is_empty() {
-                format!("This {} needs a follow-up ({}).", item.entity, item.reason)
-            } else {
-                note.to_owned()
-            };
-            let req = attome_notification::dispatch::DispatchRequest {
-                template_key: None,
-                locale: "en".to_owned(),
-                recipient_user_ref: Some(item.owner),
-                is_global: false,
-                organization_ref: None,
-                channels: Some(vec!["in_app".to_owned()]),
-                subject: Some(format!("Follow up: {}", item.entity)),
-                body_html: None,
-                body_text: Some(body),
-                route: Some(format!("/{}/{}", item.entity, item.record_id)),
-                variables: std::collections::HashMap::new(),
-                priority: "normal".to_owned(),
-                escalate_after_minutes: None,
-                escalate_channels: None,
-            };
-            let mut tx = attome_db::tx::begin(&state.base.db).await?;
-            let dispatch = attome_notification::dispatch::create_dispatch_in_tx(
-                &mut tx,
-                &state.base.config.notification,
-                req,
-                Some("ai.followup"),
-            )
-            .await?;
-            mark(&mut tx, item_id, "reminded", ctx.agent_session_id).await?;
-            tx.commit().await.map_err(AppError::internal)?;
-            record_outcome(state, ctx, REMIND_OWNER, item_id, &item).await;
-            Ok(ActionResult::plain(json!({
-                "item_id": item_id,
-                "status": "reminded",
-                "dispatch_id": dispatch,
-            })))
+            let note = args["note"].as_str();
+            Ok(ActionResult::plain(
+                remind(state, ctx, item_id, note).await?,
+            ))
         })
     }
 
     fn confirmation_proposal(&self, args: &Value) -> Option<Value> {
         Some(json!({ "action": REMIND_OWNER, "item_id": args["item_id"], "note": args["note"] }))
     }
+}
+
+/// Reminds the item's owner and marks it reminded: the body of
+/// `followup.remind_owner`, also called by the follow-up run for a rule whose
+/// mode is `remind_owner` (a notification to the owner about their own
+/// record, which needs no agent).
+pub async fn remind(
+    state: &EngineState,
+    ctx: &ActionContext,
+    item_id: Uuid,
+    note: Option<&str>,
+) -> Result<Value, AppError> {
+    let item = load_item(state, ctx, item_id).await?;
+    enforce_caps(state, ctx, REMIND_OWNER, &item).await?;
+    let note = note.map(str::trim).unwrap_or_default();
+    let body = if note.is_empty() {
+        format!("This {} needs a follow-up ({}).", item.entity, item.reason)
+    } else {
+        note.to_owned()
+    };
+    let req = attome_notification::dispatch::DispatchRequest {
+        template_key: None,
+        locale: "en".to_owned(),
+        recipient_user_ref: Some(item.owner),
+        is_global: false,
+        organization_ref: None,
+        channels: Some(vec!["in_app".to_owned()]),
+        subject: Some(format!("Follow up: {}", item.entity)),
+        body_html: None,
+        body_text: Some(body),
+        route: Some(format!("/{}/{}", item.entity, item.record_id)),
+        variables: std::collections::HashMap::new(),
+        priority: "normal".to_owned(),
+        escalate_after_minutes: None,
+        escalate_channels: None,
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let dispatch = attome_notification::dispatch::create_dispatch_in_tx(
+        &mut tx,
+        &state.base.config.notification,
+        req,
+        Some("ai.followup"),
+    )
+    .await?;
+    mark(&mut tx, item_id, "reminded", ctx.agent_session_id).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    record_outcome(state, ctx, REMIND_OWNER, item_id, &item).await;
+    Ok(json!({
+        "item_id": item_id,
+        "status": "reminded",
+        "dispatch_id": dispatch,
+    }))
 }
 
 struct SendMessage;

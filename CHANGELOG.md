@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Follow-up items now run: each hourly scan queues one `AiFollowupItem` job per open item. A rule in
+  `remind_owner` mode reminds the owner; `draft_message` and `send_message` start a session of the
+  `followup_agent` definition for the record's owner (once an administrator activates it; until then
+  the owner is reminded), whose drafts and sends wait for the owner's confirmation or approval. A run
+  claims its item, so a repeated job does nothing; nothing runs while AI chat is switched off.
 - Agent actions `followup.remind_owner` (reversible) and `followup.send_message` (consequential)
   for follow-up items, under the rule's daily cap; each records an `agent_task` outcome with its
   agent session. The communication writer behind the compose route moved to

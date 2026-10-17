@@ -979,6 +979,22 @@ async fn dispatch_platform_job(
             if found > 0 {
                 tracing::info!(found, "follow-up scan: new stalls recorded");
             }
+            // One job per open, unclaimed item; the key makes a rescan
+            // enqueue nothing twice.
+            let db = &attome_state.base.db;
+            for item_id in attome_ai::followup_run::open_items(db).await? {
+                attome_jobs::enqueue_dedup(
+                    db,
+                    EngineJob::AiFollowupItem { item_id },
+                    &format!("ai-followup-item:{item_id}"),
+                )
+                .await?;
+            }
+        }
+        // AI4-T5: one follow-up item, run for the record's owner.
+        EngineJob::AiFollowupItem { item_id } => {
+            let outcome = attome_ai::followup_run::run_item(&attome_state, item_id).await?;
+            tracing::info!(item = %item_id, ?outcome, "follow-up item run");
         }
         // D25-T4: competitor mentions proposed from new emails and notes.
         EngineJob::SalesMentionScan => {

@@ -96,6 +96,7 @@ pub mod execute;
 pub mod feedback;
 pub mod followup;
 pub mod followup_routes;
+pub mod followup_run;
 pub mod gate;
 /// BIN-FX1 — the pooled generation client, built once per config.
 pub mod inference_client;
