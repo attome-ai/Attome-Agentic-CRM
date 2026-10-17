@@ -91,7 +91,7 @@ pub fn strength(interactions: &[Interaction], now: DateTime<Utc>) -> Strength {
 }
 
 #[cfg(test)]
-mod relationship_strength {
+mod tests {
     use super::*;
     use chrono::{Duration, TimeZone};
 

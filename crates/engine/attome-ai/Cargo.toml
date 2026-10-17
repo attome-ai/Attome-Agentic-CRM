@@ -52,7 +52,7 @@ uuid.workspace                = true
 attome-project.workspace  = true
 attome-service.workspace  = true
 attome-storage.workspace  = true
-attome-testkit.workspace  = true
+attome-testkit  = { workspace = true, features = ["app-config"] }
 
 [lints]
 workspace = true

@@ -190,9 +190,11 @@ pub async fn detect(
     Ok(inserted)
 }
 
+type RuleRow = (Uuid, Option<String>, Option<String>, Option<i64>);
+
 /// The active follow-up rules.
 pub async fn active_rules(db: &attome_db::DbPool) -> Result<Vec<FollowupRule>, AppError> {
-    let rows: Vec<(Uuid, Option<String>, Option<String>, Option<i64>)> = sqlx::query_as(
+    let rows: Vec<RuleRow> = sqlx::query_as(
         "SELECT id, reason, target_entity, idle_days::bigint FROM ai_followup_rule \
          WHERE COALESCE(is_active, true) ORDER BY id",
     )

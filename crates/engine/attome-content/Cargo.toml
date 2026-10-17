@@ -33,7 +33,7 @@ attome-cache.workspace   = true
 attome-config.workspace  = true
 attome-jobs.workspace    = true
 attome-storage.workspace = true
-attome-testkit.workspace = true
+attome-testkit = { workspace = true, features = ["app-config"] }
 tokio                    = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [lints]
