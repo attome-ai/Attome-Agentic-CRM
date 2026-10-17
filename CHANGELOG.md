@@ -34,6 +34,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- An issued invoice's `payment_status`, `paid_total` and `open_total` follow its payment
+  allocations and due date: a nightly sweep marks past-due open invoices `overdue`, and the billing
+  pack refuses hand edits of those fields (no manual "mark paid").
 - `POST /api/v1/billing/invoice-requests` (`billing.issue`) stores an invoice another feature asks
   for, once per `source_kind` and `idempotency_key`; a five-minute sweep turns pending requests
   into draft invoices as their requester (one per currency and day for accounts with

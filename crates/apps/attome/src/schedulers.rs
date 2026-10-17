@@ -104,6 +104,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),
     );
+    // F4-T10: invoices past due, nightly.
+    crate::jobs::spawn_billing_overdue_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // D7-T3: new deals get their owner's default team, every minute.
     crate::jobs::spawn_sales_default_team_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // Q10-T6: role grants past their end date, hourly.

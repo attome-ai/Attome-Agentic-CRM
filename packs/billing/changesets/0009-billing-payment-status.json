@@ -1,0 +1,66 @@
+{
+  "author": "packs",
+  "checksum": "sha256:01d16c4016d7edd4bddfbbe8922fd47e8a2ae0495a0176801b5ac05186056b08",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Payment status (F4-T10): an issued invoice's payment status and totals are derived from its payments and due date and refused to every other writer.",
+  "format": "attome-changeset/v1",
+  "id": "01a14c3f-fa38-76a1-955b-46e79523a5fb",
+  "layer": "product",
+  "name": "billing-payment-status",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "status",
+            "op": "ne",
+            "value": "draft"
+          },
+          "description": "An issued invoice's payment status, paid and open totals follow its payments and due date; nobody marks an invoice paid by hand.",
+          "display_name": "Payment status is derived",
+          "display_order": 0,
+          "entity_logicalname": "invoice",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "invoice_payment_derived",
+          "policies": [
+            {
+              "field": "payment_status",
+              "type": "disabled"
+            },
+            {
+              "field": "paid_total",
+              "type": "disabled"
+            },
+            {
+              "field": "open_total",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "invoice",
+        "rule": "invoice_payment_derived"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 9,
+  "title": "Pack: payment status is derived"
+}

@@ -474,6 +474,9 @@ pub enum EngineJob {
     /// F4-T9: copies each due invoice schedule's template into a draft.
     /// Bare unit variant.
     BillingScheduleRun,
+    /// F4-T10: marks issued invoices past due with something open as
+    /// overdue. Bare unit variant.
+    BillingOverdueSweep,
     /// D6-T8: removes line snapshots older than a day. Bare unit variant.
     SalesSnapshotPrune,
     /// C2-T1: tells followers about changes to records they follow, off
@@ -957,6 +960,7 @@ impl EngineJob {
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
+            | Self::BillingOverdueSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
@@ -1075,6 +1079,7 @@ impl EngineJob {
             EngineJob::CommissionCreditSweep => "CommissionCreditSweep",
             EngineJob::BillingRequestSweep => "BillingRequestSweep",
             EngineJob::BillingScheduleRun => "BillingScheduleRun",
+            EngineJob::BillingOverdueSweep => "BillingOverdueSweep",
             EngineJob::SalesSnapshotPrune => "SalesSnapshotPrune",
             EngineJob::NotificationFollowSweep => "NotificationFollowSweep",
             EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
@@ -1197,6 +1202,7 @@ impl EngineJob {
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
+            | Self::BillingOverdueSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
@@ -1338,6 +1344,7 @@ impl EngineJob {
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
+            | Self::BillingOverdueSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
@@ -1696,6 +1703,7 @@ mod tests {
         assert_round_trips(EngineJob::CommissionCreditSweep);
         assert_round_trips(EngineJob::BillingRequestSweep);
         assert_round_trips(EngineJob::BillingScheduleRun);
+        assert_round_trips(EngineJob::BillingOverdueSweep);
         assert_round_trips(EngineJob::SalesSnapshotPrune);
         assert_round_trips(EngineJob::NotificationFollowSweep);
         assert_round_trips(EngineJob::SalesDealCloseSweep);

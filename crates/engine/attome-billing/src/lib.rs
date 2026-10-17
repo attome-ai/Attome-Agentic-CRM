@@ -12,6 +12,7 @@ pub mod model;
 pub mod notes;
 pub mod payment;
 pub mod requests;
+pub mod status;
 pub mod subscription;
 pub mod tax;
 pub mod usage;

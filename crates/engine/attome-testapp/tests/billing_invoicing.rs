@@ -6,6 +6,7 @@
 //! full credit note, issued at once.
 //! F4-T8: a deposit is deducted once; a pro forma is converted, never issued.
 //! F4-T9: invoice requests become drafts once; schedules run once a period.
+//! F4-T10: payment status follows payments and the due date, never a hand edit.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -811,5 +812,76 @@ fn schedule_runs_once_per_period() {
                 .await
                 .expect("drafts");
         assert_eq!(drafts, 1);
+    });
+}
+
+// feature: F4
+#[test]
+fn overdue_sweep_marks_past_due_open_invoices() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let ctx = attome_security::resolve_uncached(app.db(), app.admin.id)
+            .await
+            .expect("admin context");
+        let account = buyer(&app).await;
+        let mut issued = Vec::new();
+        for _ in 0..3 {
+            let draft = unnumbered(&app, account, "invoice", "TO").await;
+            line(&app, draft, "1", "100", "0", "standard").await;
+            let (status, body) = issue(&app, draft).await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            issued.push(draft);
+        }
+        let (late, paid, current) = (issued[0], issued[1], issued[2]);
+        // Two fall due last month; one of them is paid in full.
+        sqlx::query("UPDATE invoice SET due_date = CURRENT_DATE - 30 WHERE id = ANY($1)")
+            .bind(vec![late, paid])
+            .execute(app.db())
+            .await
+            .expect("backdate");
+        sqlx::query(
+            "INSERT INTO payment_allocation (id, invoice_ref, amount, is_active, row_version) \
+             VALUES ($1, $2, 115, true, 0)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(paid)
+        .execute(app.db())
+        .await
+        .expect("allocation");
+        let state = attome_billing::status::refresh_status(&app.state, paid)
+            .await
+            .expect("refresh");
+        assert_eq!(state.payment_status, "paid");
+
+        attome_billing::status::overdue_sweep(&app.state)
+            .await
+            .expect("sweep");
+        let status_of = |id| text(&app, "SELECT payment_status FROM invoice WHERE id = $1", id);
+        assert_eq!(status_of(late).await, "overdue");
+        assert_eq!(status_of(paid).await, "paid");
+        assert_eq!(status_of(current).await, "open");
+
+        // Nobody marks an issued invoice paid by hand.
+        let version: i64 = sqlx::query_scalar("SELECT row_version FROM invoice WHERE id = $1")
+            .bind(late)
+            .fetch_one(app.db())
+            .await
+            .expect("version");
+        let edit = attome_records::entity_crud::update_record_for(
+            &app.state,
+            &ctx,
+            ctx.user_id,
+            "invoice",
+            late,
+            version,
+            json!({ "payment_status": "paid" }),
+        )
+        .await;
+        assert!(edit.is_err(), "payment status was set by hand: {edit:?}");
     });
 }
