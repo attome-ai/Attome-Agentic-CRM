@@ -475,15 +475,40 @@ pub(crate) async fn get_sales_head_to_head(
     Ok(Json(head_to_head(&state, &ctx, competitor).await?))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/sales/competitors/{id}/card",
+    tag = "sales",
+    params(("id" = Uuid, Path, description = "The competitor")),
+    responses(
+        (status = 200, description = "The competitor's fields the caller may read, and its battle card article when set and readable", body = crate::competitor_drafts::CompetitorCard),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not read competitors", body = ErrorResponse),
+        (status = 404, description = "No such competitor, or competitors are not installed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn get_sales_competitor_card(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<CompetitorRead>>,
+    Path(competitor): Path<Uuid>,
+) -> Result<Json<crate::competitor_drafts::CompetitorCard>, AppError> {
+    Ok(Json(
+        crate::competitor_drafts::battlecard(&state, &ctx, competitor).await?,
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(
         post_sales_mention_confirm,
         post_sales_mention_reject,
         get_sales_battlecards,
-        get_sales_head_to_head
+        get_sales_head_to_head,
+        get_sales_competitor_card
     ),
     components(schemas(
+        crate::competitor_drafts::CompetitorCard,
         SalesMentionDecided,
         SalesBattlecard,
         SalesHeadToHead,

@@ -13,5 +13,8 @@
         </div>
       </div>
     </section>
+    @if (competitorsPanel(); as m) {
+      <ng-container *ngComponentOutlet="m.BattlecardPanelComponent; inputs: { opportunityId: id() }" />
+    }
   </ng-template>
 </xrm-base-form>

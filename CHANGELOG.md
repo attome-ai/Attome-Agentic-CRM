@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- A battle card panel on the opportunity form: a tab per competitor on the deal with its strengths,
+  weaknesses, price position and knowledge article, the competitors proposed from emails and notes
+  with confirm and reject, and a link to a closed deal's unfinished win-loss review; hidden when the
+  deal has none. `GET /api/v1/sales/competitors/{id}/card` returns a competitor's readable fields and
+  its battle card article.
 - Agent actions `sales.competitors.on_deal`, `sales.battlecard.get`, `sales.winloss.draft_review`
   and `sales.battlecard.draft_update`: read only, as the person; the review and battle card drafts are
   returned for a person to save or publish.

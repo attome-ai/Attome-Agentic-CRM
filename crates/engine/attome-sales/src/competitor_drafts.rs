@@ -23,6 +23,7 @@ use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use serde::Serialize;
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::competitor_routes::{SalesBattlecard, battlecards};
@@ -46,14 +47,16 @@ pub const REVIEW_REASONS: [&str; 6] = [
     "other",
 ];
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
 pub struct CompetitorCard {
     pub competitor_id: Uuid,
     /// The competitor's fields the caller may read (name, strengths,
     /// weaknesses, price position, regions, battle card id).
+    #[schema(value_type = Object)]
     pub competitor: Value,
     /// The knowledge article holding the battle card, when one is set, the
     /// deployment names its article entity and the caller may read it.
+    #[schema(value_type = Option<Object>)]
     pub article: Option<Value>,
 }
 

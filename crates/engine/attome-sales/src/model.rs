@@ -128,6 +128,10 @@ impl EngineModel for SalesModel {
                 get(crate::competitor_routes::get_sales_head_to_head),
             )
             .route(
+                "/api/v1/sales/competitors/{id}/card",
+                get(crate::competitor_routes::get_sales_competitor_card),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/change-owner",
                 post(crate::owner_change::post_sales_change_owner),
             )

@@ -211,6 +211,17 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  battlecards: {
+    title: 'Competitors and battle cards',
+    proposed: 'Competitors named in emails and notes',
+    confirm: 'Add to deal', reject: 'Not a competitor',
+    strengths: 'Strengths', weaknesses: 'Weaknesses', price: 'Price',
+    priceValue: { lower: 'Lower than ours', similar: 'Similar to ours', higher: 'Higher than ours' },
+    threat: { low: 'Low threat', medium: 'Medium threat', high: 'High threat' },
+    noArticle: 'No battle card article yet.',
+    reviewPending: 'This deal is closed and its win-loss review is waiting for you.',
+    openReview: 'Open the review',
+  },
   rateLimitBans: {
     title: 'Rate-limit bans',
     intro: 'Callers that tripped a limit five times in an hour are refused for fifteen minutes. Lift a ban when you know the caller.',

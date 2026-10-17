@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { LangService, TranslatePipe } from '@attome/base';
 import {
@@ -6,6 +7,8 @@ import {
 } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { FieldSchema } from '@attome/xrm';
+
+type CompetitorsModule = typeof import('@attome/xrm/verticals/sales/competitors');
 
 /**
  * Hand-coded form for `opportunity`, scaffolded from verticals/crm/bundle.json's
@@ -23,12 +26,25 @@ import type { FieldSchema } from '@attome/xrm';
   selector:   'xrm-opportunity-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe],
+  imports: [NgComponentOutlet, ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe],
   styleUrls:  ['../../../../styles/xrm-form.css', './opportunity-form.component.css'],
   templateUrl: './opportunity-form.component.html',
 })
 export class OpportunityFormComponent extends EngineFormBase {
   private readonly lang = inject(LangService);
+
+  /** The sales pack's battle card panel (D25-T9), loaded on its own so a
+   *  deployment without sales never fetches it; it hides itself when the deal
+   *  has no competitor. */
+  protected readonly competitorsPanel = signal<CompetitorsModule | null>(null);
+
+  constructor() {
+    super();
+    import('@attome/xrm/verticals/sales/competitors').then(
+      m => this.competitorsPanel.set(m),
+      () => this.competitorsPanel.set(null),
+    );
+  }
 
   protected override defineTabs(): XrmFormTabDef[] {
     return [
