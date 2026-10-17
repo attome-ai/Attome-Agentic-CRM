@@ -213,6 +213,7 @@ async fn build() -> Option<TestApp> {
     );
     let system = EngineSystem::builder(EngineState::new(base))
         .register(attome_security::model::SecurityModel)
+        .register(attome_billing::BillingModel)
         .build()
         .await
         .expect("build the engine system");

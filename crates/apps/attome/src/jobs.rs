@@ -818,6 +818,11 @@ async fn dispatch_platform_job(
                 attome_commission::recalc::preview_period(&attome_state, period_id).await?;
             tracing::info!(%period_id, written, "commission recalc preview: complete");
         }
+        // F4-T6: the work that follows an issued invoice.
+        EngineJob::BillingAfterIssue { invoice_id } => {
+            attome_billing::issue::run_after_issue(&attome_state, invoice_id).await?;
+            tracing::info!(%invoice_id, "billing after-issue hooks: complete");
+        }
         // F10-T5: one commission calculation run.
         EngineJob::CommissionRun { run_id } => {
             let paid = attome_commission::run::execute(&attome_state, run_id).await?;

@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/billing/invoices/{id}/issue` issues a draft invoice: the next gap-free number of
+  its series and year (`INV-2026-000001`; credit notes `CRN`, debit notes `DBN`, deposits `DEP`)
+  under a series lock, issue and due dates, locked lines and a ledger posting; above
+  `billing.issue_approval_threshold` it waits for a `billing.issue` approval. The billing pack
+  adds the `issued` status, lets drafts go unnumbered and locks issued invoices and their lines.
 - `POST /api/v1/billing/invoices/{id}/recompute` prices a draft invoice's lines with VAT from the
   regions pack's rates and stores line and invoice totals (sums of rounded lines); an issued invoice
   answers `409`. The `billing.seller_country` setting (default `SA`) is the seller side of VAT.

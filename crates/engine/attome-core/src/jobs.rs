@@ -322,6 +322,10 @@ pub enum EngineJob {
     /// F10-T9: recomputes an open period into recalculation previews,
     /// leaving statements alone.
     CommissionRecalcPreview { period_id: Uuid },
+    /// F4-T6: runs the registered after-issue hooks (e-invoicing, the
+    /// document, sending) for one invoice, enqueued in the issuing
+    /// transaction. Pure pointer; each hook is idempotent.
+    BillingAfterIssue { invoice_id: Uuid },
     /// TECHNICAL-DUE-DILIGENCE-2026-08-24 finding 3.2 (T2-2) — the async half
     /// of `attome_server::entity_mutation::apply_dependents_on_delete`'s
     /// `OnTargetDelete::CascadeDeactivate` handling. A dependent group at or
@@ -981,6 +985,7 @@ impl EngineJob {
             | Self::AuditV1CutoverCheckpoint
             | Self::ExecuteApprovedRequest { .. }
             | Self::FleetPoll
+            | Self::BillingAfterIssue { .. }
             | Self::FleetRolloutStep { .. } => false,
         }
     }
@@ -1032,6 +1037,7 @@ impl EngineJob {
             EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
             EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CommissionRecalcPreview { .. } => "CommissionRecalcPreview",
+            EngineJob::BillingAfterIssue { .. } => "BillingAfterIssue",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
             EngineJob::ComputeMetricSnapshots => "ComputeMetricSnapshots",
             EngineJob::EventsDispatchTick => "EventsDispatchTick",
@@ -1226,6 +1232,7 @@ impl EngineJob {
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
+            | Self::BillingAfterIssue { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
         }
     }
@@ -1372,6 +1379,7 @@ impl EngineJob {
             | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
+            | Self::BillingAfterIssue { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
             | Self::DataProfile(_)
@@ -1970,6 +1978,15 @@ mod tests {
         assert_round_trips(EngineJob::CommissionRecalcPreview {
             period_id: Uuid::now_v7(),
         });
+    }
+
+    #[test]
+    fn billing_after_issue_round_trips() {
+        let job = EngineJob::BillingAfterIssue {
+            invoice_id: Uuid::now_v7(),
+        };
+        assert!(!job.is_batch());
+        assert_round_trips(job);
     }
 
     #[test]

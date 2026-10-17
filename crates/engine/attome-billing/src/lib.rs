@@ -5,6 +5,7 @@
 //! tasks add it. Gated on the `billing` module.
 
 pub mod invoice;
+pub mod issue;
 pub mod metrics;
 pub mod model;
 pub mod payment;
@@ -24,5 +25,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <usage::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<metrics::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<invoice::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<issue::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

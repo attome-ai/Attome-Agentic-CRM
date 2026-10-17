@@ -108,6 +108,7 @@ pub(crate) use attome_dashboard::lifecycle::ACTION_DASHBOARD_PUBLISH;
 /// to `execute_approved`'s match arms so the two can never drift apart.
 pub const KNOWN_ACTION_TYPES: &[&str] = &[
     ACTION_SECURITY_REWRAP,
+    attome_billing::issue::ACTION_ISSUE,
     attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
     attome_commission::close::ACTION_PERIOD_CLOSE,
     attome_sales::split_store::ACTION_SPLIT_CHANGE,
@@ -1088,6 +1089,23 @@ async fn dispatch_approved(
                 serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
             let response =
                 attome_sales::split_store::do_apply_proposal(state, &proposal, approver_id).await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
+        attome_billing::issue::ACTION_ISSUE => {
+            // F4-T6: an invoice above the issue threshold, issued once
+            // approved, as the person who asked.
+            #[derive(serde::Deserialize)]
+            struct IssuePayload {
+                invoice_id: Uuid,
+            }
+            let payload: IssuePayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response = attome_billing::issue::do_issue_approved(
+                state,
+                payload.invoice_id,
+                request.requested_by,
+            )
+            .await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
         attome_commission::close::ACTION_PERIOD_CLOSE => {

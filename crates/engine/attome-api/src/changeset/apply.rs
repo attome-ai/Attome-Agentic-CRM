@@ -369,6 +369,35 @@ async fn run_one_row(state: &EngineState, apply_id: Uuid) -> Result<RunOutcome, 
     result
 }
 
+/// The blocked operations of a stored plan, `seq op: reason`, for the
+/// refusal message (so a pack author sees which operation to fix).
+fn blocked_reasons(plan: &Value) -> String {
+    let mut reasons: Vec<String> = plan
+        .get("blocked")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|b| b.as_str().map(str::to_owned))
+        .collect();
+    for op in plan
+        .get("operations")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|op| op.get("action").and_then(Value::as_str) == Some("blocked"))
+    {
+        reasons.push(format!(
+            "{} {}: {}",
+            op.get("seq").and_then(Value::as_i64).unwrap_or_default(),
+            op.get("op").and_then(Value::as_str).unwrap_or_default(),
+            op.get("reason")
+                .and_then(Value::as_str)
+                .unwrap_or("blocked"),
+        ));
+    }
+    reasons.join("; ")
+}
+
 /// The checks of a claimed row, then its steps from the cursor.
 async fn apply_claimed(
     state: &EngineState,
@@ -386,9 +415,10 @@ async fn apply_claimed(
         return Err(AppError::Conflict(ledger::CHANGESET_CHECKSUM_MISMATCH).into());
     }
     if row.plan.get("applicable").and_then(Value::as_bool) != Some(true) {
-        return Err(AppError::Validation(
-            "the plan of this changeset phase has blocked operations; it cannot be applied".into(),
-        )
+        return Err(AppError::Validation(format!(
+            "the plan of this changeset phase has blocked operations; it cannot be applied: {}",
+            blocked_reasons(&row.plan)
+        ))
         .into());
     }
     if row.phase == ApplyPhase::Contract && doc.phases().contains(&ApplyPhase::Expand) {

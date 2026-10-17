@@ -36,5 +36,10 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoices/{id}/recompute",
                 post(crate::invoice::post_recompute),
             )
+            // F4-T6: issuing a draft.
+            .route(
+                "/api/v1/billing/invoices/{id}/issue",
+                post(crate::issue::post_issue),
+            )
     }
 }

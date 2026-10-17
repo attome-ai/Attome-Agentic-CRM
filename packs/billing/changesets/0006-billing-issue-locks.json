@@ -1,0 +1,359 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b9a99bd7e6d79fe0d72bd76c0562c5274e1a82e4f039f960fae138382ea99250",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Issue (F4-T6): invoices gain the issued status and an unnumbered draft, only an issuer may send a draft, and an issued invoice's buyer, dates, number and amounts, and every line of it, are locked by business rules; payment fields stay writable.",
+  "format": "attome-changeset/v1",
+  "id": "01a14c1b-68c3-7c2c-89c3-6ee9aad3e73d",
+  "layer": "product",
+  "name": "billing-issue-locks",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_number",
+          "lookup_entity": null,
+          "max_length": 60,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "target": {
+        "entity": "invoice",
+        "field": "invoice_number"
+      },
+      "seq": 1,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "issued",
+              "sent",
+              "paid",
+              "overdue",
+              "void"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "target": {
+        "entity": "invoice",
+        "field": "status"
+      },
+      "seq": 2,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Send",
+          "required_privilege": "billing.issue",
+          "to_state": "sent"
+        }
+      },
+      "op": "upsert_state_transition",
+      "target": {
+        "entity": "invoice",
+        "transition": "draft->sent"
+      },
+      "seq": 3,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "issued",
+          "guard_expression": null,
+          "name": "Send",
+          "required_privilege": null,
+          "to_state": "sent"
+        }
+      },
+      "op": "upsert_state_transition",
+      "target": {
+        "entity": "invoice",
+        "transition": "issued->sent"
+      },
+      "seq": 4,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 8,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "issued",
+          "guard_expression": null,
+          "name": "Mark Paid",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "target": {
+        "entity": "invoice",
+        "transition": "issued->paid"
+      },
+      "seq": 5,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 9,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "issued",
+          "guard_expression": null,
+          "name": "Mark Overdue",
+          "required_privilege": null,
+          "to_state": "overdue"
+        }
+      },
+      "op": "upsert_state_transition",
+      "target": {
+        "entity": "invoice",
+        "transition": "issued->overdue"
+      },
+      "seq": 6,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "status",
+            "op": "ne",
+            "value": "draft"
+          },
+          "description": "Once an invoice is issued its buyer, dates, number and amounts never change; corrections are credit and debit notes. Payment fields stay open for receipts.",
+          "display_name": "Issued invoices are locked",
+          "display_order": 0,
+          "entity_logicalname": "invoice",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "invoice_locked_after_issue",
+          "policies": [
+            {
+              "field": "kind",
+              "type": "disabled"
+            },
+            {
+              "field": "invoice_number",
+              "type": "disabled"
+            },
+            {
+              "field": "account_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "contact_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "billing_address",
+              "type": "disabled"
+            },
+            {
+              "field": "buyer_vat_number",
+              "type": "disabled"
+            },
+            {
+              "field": "currency",
+              "type": "disabled"
+            },
+            {
+              "field": "fx_rate",
+              "type": "disabled"
+            },
+            {
+              "field": "payment_terms_days",
+              "type": "disabled"
+            },
+            {
+              "field": "issued_date",
+              "type": "disabled"
+            },
+            {
+              "field": "due_date",
+              "type": "disabled"
+            },
+            {
+              "field": "supply_date",
+              "type": "disabled"
+            },
+            {
+              "field": "series_key",
+              "type": "disabled"
+            },
+            {
+              "field": "original_invoice_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "net_total",
+              "type": "disabled"
+            },
+            {
+              "field": "discount_total",
+              "type": "disabled"
+            },
+            {
+              "field": "vat_total",
+              "type": "disabled"
+            },
+            {
+              "field": "grand_total",
+              "type": "disabled"
+            },
+            {
+              "field": "language",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "target": {
+        "entity": "invoice",
+        "rule": "invoice_locked_after_issue"
+      },
+      "seq": 7,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "is_locked",
+            "op": "eq",
+            "value": true
+          },
+          "description": "A line of an issued invoice never changes; corrections are credit and debit notes.",
+          "display_name": "Lines of issued invoices are locked",
+          "display_order": 0,
+          "entity_logicalname": "invoice_line",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "line_locked_after_issue",
+          "policies": [
+            {
+              "field": "invoice_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "product_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "description",
+              "type": "disabled"
+            },
+            {
+              "field": "unit",
+              "type": "disabled"
+            },
+            {
+              "field": "quantity",
+              "type": "disabled"
+            },
+            {
+              "field": "unit_price",
+              "type": "disabled"
+            },
+            {
+              "field": "discount",
+              "type": "disabled"
+            },
+            {
+              "field": "vat_category",
+              "type": "disabled"
+            },
+            {
+              "field": "vat_rate",
+              "type": "disabled"
+            },
+            {
+              "field": "vat_amount",
+              "type": "disabled"
+            },
+            {
+              "field": "line_total",
+              "type": "disabled"
+            },
+            {
+              "field": "period_from",
+              "type": "disabled"
+            },
+            {
+              "field": "period_to",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "target": {
+        "entity": "invoice_line",
+        "rule": "line_locked_after_issue"
+      },
+      "seq": 8,
+      "phase": "expand"
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 6,
+  "title": "Pack: issued invoices are locked"
+}

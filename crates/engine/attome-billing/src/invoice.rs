@@ -20,6 +20,7 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 
 use attome_core::EngineState;
+use attome_security::SecurityContextExt;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use chrono::{NaiveDate, Utc};
@@ -190,6 +191,8 @@ pub async fn recompute_draft(
     let Some((status, currency, buyer_vat, supply_date, issued_date, invoice_version)) = row else {
         return Err(AppError::NotFound);
     };
+    ctx.require("invoice", "update")?;
+    ctx.require("invoice_line", "update")?;
     if status.as_deref().unwrap_or("draft") != "draft" {
         return Err(AppError::Conflict("only a draft invoice is recomputed"));
     }

@@ -51,15 +51,25 @@ fn records_settings() -> Vec<SettingDescriptor> {
 
 /// F4: billing settings.
 fn billing_settings() -> Vec<SettingDescriptor> {
-    vec![SettingDescriptor::new(
-        "billing.seller_country",
-        "The deployment's own country, as an ISO 3166 two-letter code: the seller \
+    vec![
+        SettingDescriptor::new(
+            "billing.seller_country",
+            "The deployment's own country, as an ISO 3166 two-letter code: the seller \
          side of VAT on every invoice line.",
-        || json!({"type": "string", "pattern": "^[A-Z]{2}$"}),
-        &[SettingScope::Deployment],
-        false,
-        || json!("SA"),
-    )]
+            || json!({"type": "string", "pattern": "^[A-Z]{2}$"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!("SA"),
+        ),
+        SettingDescriptor::new(
+            "billing.issue_approval_threshold",
+            "Invoices whose grand total is above this wait for an approval before          they are issued; zero issues every invoice without one.",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+    ]
 }
 
 /// F10: commission settings.
