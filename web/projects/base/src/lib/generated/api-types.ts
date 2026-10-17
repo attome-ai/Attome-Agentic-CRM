@@ -8629,6 +8629,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/accounts/{id}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/ageing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_ageing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/ageing/totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_ageing_totals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoice-requests": {
         parameters: {
             query?: never;
@@ -14273,6 +14321,15 @@ export interface components {
             code: string;
             password: string;
         };
+        AccountStatement: {
+            /** Format: uuid */
+            account_id: string;
+            currencies: components["schemas"]["CurrencyStatement"][];
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
         Ack: {
             ok: boolean;
         };
@@ -14437,6 +14494,30 @@ export interface components {
             changeset_id: string;
             checksum: string;
             ref: string;
+        };
+        /** @description One account's open amounts in one currency, by days past due. */
+        AgeingRow: {
+            /** Format: uuid */
+            account_id: string;
+            account_name?: string | null;
+            currency: string;
+            /** @description Not yet due (and open credit, which is negative). */
+            current: string;
+            days_1_30: string;
+            days_31_60: string;
+            days_61_90: string;
+            over_90: string;
+            total: string;
+        };
+        /** @description The whole book in one currency, by days past due. */
+        AgeingTotals: {
+            currency: string;
+            current: string;
+            days_1_30: string;
+            days_31_60: string;
+            days_61_90: string;
+            over_90: string;
+            total: string;
         };
         /** @description One agent a partner can hand work to. */
         AgentCard: {
@@ -18219,6 +18300,13 @@ export interface components {
         CreditNoteRequest: {
             lines: components["schemas"]["CreditLine"][];
             reason: string;
+        };
+        /** @description A statement's section in one currency. */
+        CurrencyStatement: {
+            closing_balance: string;
+            currency: string;
+            entries: components["schemas"]["StatementEntry"][];
+            opening_balance: string;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_ChangeFeedEntry: {
@@ -22757,6 +22845,46 @@ export interface components {
                 category?: string | null;
                 /** Format: int64 */
                 seconds_left: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_AgeingRow: {
+            items: {
+                /** Format: uuid */
+                account_id: string;
+                account_name?: string | null;
+                currency: string;
+                /** @description Not yet due (and open credit, which is negative). */
+                current: string;
+                days_1_30: string;
+                days_31_60: string;
+                days_61_90: string;
+                over_90: string;
+                total: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_AgeingTotals: {
+            items: {
+                currency: string;
+                current: string;
+                days_1_30: string;
+                days_31_60: string;
+                days_61_90: string;
+                over_90: string;
+                total: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -30355,6 +30483,22 @@ export interface components {
             pending_state?: string | null;
             required_privilege?: string | null;
             to_state: string;
+        };
+        /** @description One line of a statement. */
+        StatementEntry: {
+            /** @description What it adds to the balance (a payment or credit note is negative). */
+            amount: string;
+            /** Format: date */
+            date: string;
+            /**
+             * Format: uuid
+             * @description The invoice the line is about.
+             */
+            invoice_id: string;
+            /** @description `invoice`, `credit_note`, `debit_note`, `deposit` or `payment`. */
+            kind: string;
+            /** @description The document number, or the payment's reference. */
+            reference?: string | null;
         };
         StatusResponseBody: {
             enrolled: boolean;
@@ -61847,6 +61991,155 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_statement: {
+        parameters: {
+            query?: {
+                /** @description First day of the period (default: the first of this month). */
+                from?: string;
+                /** @description Last day of the period (default: today). */
+                to?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The account */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Opening balance, the period's documents and payments, closing balance, per currency */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatement"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such account, or not one the caller can read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description from is after to */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ageing: {
+        parameters: {
+            query?: {
+                /** @description The day the ageing is taken on (default today). */
+                as_of?: string;
+                /** @description One-based page. */
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open amounts per account and currency by days past due */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AgeingRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read invoices or accounts */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ageing_totals: {
+        parameters: {
+            query?: {
+                /** @description The day the ageing is taken on (default today). */
+                as_of?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ageing of every readable account, per currency (a handful of rows) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AgeingTotals"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read invoices or accounts */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -45022,6 +45022,245 @@
         }
       }
     },
+    "/api/v1/billing/accounts/{id}/statement": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_statement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The account",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First day of the period (default: the first of this month).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Last day of the period (default: today).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opening balance, the period's documents and payments, closing balance, per currency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountStatement"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such account, or not one the caller can read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "from is after to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/billing/ageing": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_ageing",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "description": "The day the ageing is taken on (default today).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open amounts per account and currency by days past due",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AgeingRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read invoices or accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/billing/ageing/totals": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_ageing_totals",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "description": "The day the ageing is taken on (default today).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ageing of every readable account, per currency (a handful of rows)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AgeingTotals"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read invoices or accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/billing/invoice-requests": {
       "post": {
         "tags": [
@@ -73869,6 +74108,35 @@
           }
         }
       },
+      "AccountStatement": {
+        "type": "object",
+        "required": [
+          "account_id",
+          "from",
+          "to",
+          "currencies"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurrencyStatement"
+            }
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "Ack": {
         "type": "object",
         "required": [
@@ -74302,6 +74570,90 @@
             "type": "string"
           },
           "ref": {
+            "type": "string"
+          }
+        }
+      },
+      "AgeingRow": {
+        "type": "object",
+        "description": "One account's open amounts in one currency, by days past due.",
+        "required": [
+          "account_id",
+          "currency",
+          "current",
+          "days_1_30",
+          "days_31_60",
+          "days_61_90",
+          "over_90",
+          "total"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "account_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "current": {
+            "type": "string",
+            "description": "Not yet due (and open credit, which is negative)."
+          },
+          "days_1_30": {
+            "type": "string"
+          },
+          "days_31_60": {
+            "type": "string"
+          },
+          "days_61_90": {
+            "type": "string"
+          },
+          "over_90": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          }
+        }
+      },
+      "AgeingTotals": {
+        "type": "object",
+        "description": "The whole book in one currency, by days past due.",
+        "required": [
+          "currency",
+          "current",
+          "days_1_30",
+          "days_31_60",
+          "days_61_90",
+          "over_90",
+          "total"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "current": {
+            "type": "string"
+          },
+          "days_1_30": {
+            "type": "string"
+          },
+          "days_31_60": {
+            "type": "string"
+          },
+          "days_61_90": {
+            "type": "string"
+          },
+          "over_90": {
+            "type": "string"
+          },
+          "total": {
             "type": "string"
           }
         }
@@ -83721,6 +84073,33 @@
             }
           },
           "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "CurrencyStatement": {
+        "type": "object",
+        "description": "A statement's section in one currency.",
+        "required": [
+          "currency",
+          "opening_balance",
+          "entries",
+          "closing_balance"
+        ],
+        "properties": {
+          "closing_balance": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatementEntry"
+            }
+          },
+          "opening_balance": {
             "type": "string"
           }
         }
@@ -95030,6 +95409,144 @@
                   "type": "integer",
                   "format": "int64",
                   "minimum": 0
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_AgeingRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One account's open amounts in one currency, by days past due.",
+              "required": [
+                "account_id",
+                "currency",
+                "current",
+                "days_1_30",
+                "days_31_60",
+                "days_61_90",
+                "over_90",
+                "total"
+              ],
+              "properties": {
+                "account_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "account_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "current": {
+                  "type": "string",
+                  "description": "Not yet due (and open credit, which is negative)."
+                },
+                "days_1_30": {
+                  "type": "string"
+                },
+                "days_31_60": {
+                  "type": "string"
+                },
+                "days_61_90": {
+                  "type": "string"
+                },
+                "over_90": {
+                  "type": "string"
+                },
+                "total": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_AgeingTotals": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "The whole book in one currency, by days past due.",
+              "required": [
+                "currency",
+                "current",
+                "days_1_30",
+                "days_31_60",
+                "days_61_90",
+                "over_90",
+                "total"
+              ],
+              "properties": {
+                "currency": {
+                  "type": "string"
+                },
+                "current": {
+                  "type": "string"
+                },
+                "days_1_30": {
+                  "type": "string"
+                },
+                "days_31_60": {
+                  "type": "string"
+                },
+                "days_61_90": {
+                  "type": "string"
+                },
+                "over_90": {
+                  "type": "string"
+                },
+                "total": {
+                  "type": "string"
                 }
               }
             }
@@ -115410,6 +115927,42 @@
           },
           "to_state": {
             "type": "string"
+          }
+        }
+      },
+      "StatementEntry": {
+        "type": "object",
+        "description": "One line of a statement.",
+        "required": [
+          "date",
+          "kind",
+          "invoice_id",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "What it adds to the balance (a payment or credit note is negative)."
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The invoice the line is about."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`invoice`, `credit_note`, `debit_note`, `deposit` or `payment`."
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The document number, or the payment's reference."
           }
         }
       },
