@@ -68,5 +68,15 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoice-requests",
                 post(crate::requests::post_request),
             )
+            // F4-T11: statements and ageing.
+            .route(
+                "/api/v1/billing/accounts/{id}/statement",
+                get(crate::statements::get_statement),
+            )
+            .route("/api/v1/billing/ageing", get(crate::statements::get_ageing))
+            .route(
+                "/api/v1/billing/ageing/totals",
+                get(crate::statements::get_ageing_totals),
+            )
     }
 }

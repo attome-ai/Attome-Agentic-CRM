@@ -7,6 +7,7 @@
 //! F4-T8: a deposit is deducted once; a pro forma is converted, never issued.
 //! F4-T9: invoice requests become drafts once; schedules run once a period.
 //! F4-T10: payment status follows payments and the due date, never a hand edit.
+//! F4-T11: statements and receivables ageing.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -883,5 +884,152 @@ fn overdue_sweep_marks_past_due_open_invoices() {
         )
         .await;
         assert!(edit.is_err(), "payment status was set by hand: {edit:?}");
+    });
+}
+
+/// An issued invoice of `net` (15% VAT) to `account`, due `due_in` days
+/// from today (negative: past due).
+async fn issued_due(app: &TestApp, account: Uuid, net: &str, due_in: i32) -> Uuid {
+    let draft = unnumbered(app, account, "invoice", "TA").await;
+    line(app, draft, "1", net, "0", "standard").await;
+    let (status, body) = issue(app, draft).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    sqlx::query("UPDATE invoice SET due_date = CURRENT_DATE + $2 WHERE id = $1")
+        .bind(draft)
+        .bind(due_in)
+        .execute(app.db())
+        .await
+        .expect("due date");
+    draft
+}
+
+// feature: F4
+#[test]
+fn ageing_buckets_by_days_past_due() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        issued_due(&app, account, "100", 5).await; // 115 current
+        issued_due(&app, account, "200", -10).await; // 230 in 1-30
+        issued_due(&app, account, "300", -45).await; // 345 in 31-60
+        issued_due(&app, account, "400", -100).await; // 460 over 90
+
+        let mut row = None;
+        for page in 1..=50 {
+            let (status, body) = app
+                .request(
+                    Method::GET,
+                    &format!("/api/v1/billing/ageing?page={page}&page_size=200"),
+                    None,
+                )
+                .await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            let items = body["items"].as_array().unwrap().clone();
+            if let Some(found) = items
+                .iter()
+                .find(|i| i["account_id"] == json!(account))
+                .cloned()
+            {
+                row = Some(found);
+                break;
+            }
+            if items.is_empty() {
+                break;
+            }
+        }
+        let row = row.expect("the account is in the ageing");
+        let amount = |key: &str| row[key].as_str().unwrap().parse::<f64>().unwrap();
+        assert_eq!(row["currency"], "SAR");
+        assert_eq!(amount("current"), 115.0);
+        assert_eq!(amount("days_1_30"), 230.0);
+        assert_eq!(amount("days_31_60"), 345.0);
+        assert_eq!(amount("days_61_90"), 0.0);
+        assert_eq!(amount("over_90"), 460.0);
+        assert_eq!(amount("total"), 1150.0);
+
+        let (status, totals) = app
+            .request(Method::GET, "/api/v1/billing/ageing/totals", None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{totals}");
+        assert!(
+            totals["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|t| t["currency"] == "SAR")
+        );
+    });
+}
+
+// feature: F4
+#[test]
+fn statement_closing_equals_open_totals() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let first = issued_due(&app, account, "100", 30).await;
+        issued_due(&app, account, "200", 30).await;
+        sqlx::query(
+            "INSERT INTO payment_allocation (id, invoice_ref, amount, allocated_on, is_active, \
+                 row_version) \
+             VALUES ($1, $2, 50, CURRENT_DATE, true, 0)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(first)
+        .execute(app.db())
+        .await
+        .expect("allocation");
+        attome_billing::status::refresh_status(&app.state, first)
+            .await
+            .expect("refresh");
+
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/billing/accounts/{account}/statement?from=2000-01-01"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let sar = body["currencies"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["currency"] == "SAR")
+            .expect("a SAR section")
+            .clone();
+        assert_eq!(sar["opening_balance"], "0");
+        assert_eq!(sar["entries"].as_array().unwrap().len(), 3);
+        let closing: f64 = sar["closing_balance"].as_str().unwrap().parse().unwrap();
+        let open: String = sqlx::query_scalar(
+            "SELECT SUM(open_total)::text FROM invoice WHERE account_ref = $1 \
+               AND status <> 'draft'",
+        )
+        .bind(account)
+        .fetch_one(app.db())
+        .await
+        .expect("open totals");
+        assert_eq!(closing, open.parse::<f64>().unwrap());
+        assert_eq!(closing, 295.0);
+
+        // An unknown account is not found.
+        let (status, _) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/billing/accounts/{}/statement", Uuid::now_v7()),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
     });
 }

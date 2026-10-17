@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET /api/v1/billing/accounts/{id}/statement?from=&to=` (opening balance, issued documents and
+  payment allocations in the period, closing balance, per currency), `GET /api/v1/billing/ageing`
+  (open amounts per account and currency in current, 1-30, 31-60, 61-90 and over-90-day buckets,
+  paginated) and `GET /api/v1/billing/ageing/totals`; all need `invoice.read` and follow the
+  caller's record scope on accounts.
 - An issued invoice's `payment_status`, `paid_total` and `open_total` follow its payment
   allocations and due date: a nightly sweep marks past-due open invoices `overdue`, and the billing
   pack refuses hand edits of those fields (no manual "mark paid").

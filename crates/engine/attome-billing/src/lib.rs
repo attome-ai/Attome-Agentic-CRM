@@ -12,6 +12,7 @@ pub mod model;
 pub mod notes;
 pub mod payment;
 pub mod requests;
+pub mod statements;
 pub mod status;
 pub mod subscription;
 pub mod tax;
@@ -33,5 +34,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<notes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<deposit::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<requests::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<statements::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
