@@ -15,6 +15,7 @@ attome-audit.workspace = true
 attome-core.workspace = true
 attome-db.workspace = true
 attome-modules.workspace = true
+attome-records.workspace = true
 attome-server.workspace = true
 attome-types.workspace = true
 axum.workspace = true

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:b07295fa674e9319462631096190236b60104788a1918ccd9b5de4a6a3124c97",
+  "checksum": "sha256:f2e73a7ca553106e830bc635cb0086a4e7b55aaa8d36b77850bb28e95a09412f",
   "closed_at": "2026-10-18T00:00:00Z",
   "description": "Invoicing (F4-T2): the finance pack's invoice gains kind, payment status, account and contact, buyer VAT number, currency and rate, supply date, number series, the original invoice of a credit or debit note, stored totals, a request key and the e-invoice status; invoice lines with VAT category, rate and amount; recurring invoice schedules. Tax rates are the region pack's region_tax_rate. Privileges to issue, credit and write off, and the Billing Clerk, Accounts Receivable, Finance Manager and Billing Viewer roles. Install after crm, sales, finance and regions.",
   "format": "attome-changeset/v1",
@@ -1215,10 +1215,10 @@
           "options": {
             "choices": [
               "standard",
+              "reduced",
               "zero_rated",
               "exempt",
-              "out_of_scope",
-              "reverse_charge"
+              "out_of_scope"
             ],
             "multi": false
           }

@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/billing/invoices/{id}/recompute` prices a draft invoice's lines with VAT from the
+  regions pack's rates and stores line and invoice totals (sums of rounded lines); an issued invoice
+  answers `409`. The `billing.seller_country` setting (default `SA`) is the seller side of VAT.
 - Invoicing records in the billing pack (`0005`): invoice kinds, payment status, buyer, VAT number,
   currency, number series, stored totals and e-invoice status on `invoice`; `invoice_line` with VAT
   category, rate and amount; `invoice_schedule`; the `billing.issue`, `billing.credit` and

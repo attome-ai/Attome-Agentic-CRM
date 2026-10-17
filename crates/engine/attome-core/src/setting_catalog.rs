@@ -31,6 +31,7 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(omnichannel_settings());
     all.extend(ops_settings());
     all.extend(commission_settings());
+    all.extend(billing_settings());
     all.extend(records_settings());
     all
 }
@@ -45,6 +46,19 @@ fn records_settings() -> Vec<SettingDescriptor> {
         &[SettingScope::Deployment],
         false,
         || json!(0),
+    )]
+}
+
+/// F4: billing settings.
+fn billing_settings() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "billing.seller_country",
+        "The deployment's own country, as an ISO 3166 two-letter code: the seller \
+         side of VAT on every invoice line.",
+        || json!({"type": "string", "pattern": "^[A-Z]{2}$"}),
+        &[SettingScope::Deployment],
+        false,
+        || json!("SA"),
     )]
 }
 

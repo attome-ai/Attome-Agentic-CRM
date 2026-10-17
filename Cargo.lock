@@ -571,6 +571,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-modules",
+ "attome-records",
  "attome-server",
  "attome-testkit",
  "attome-types",
@@ -1838,6 +1839,7 @@ version = "0.1.0"
 dependencies = [
  "attome-api",
  "attome-auth",
+ "attome-billing",
  "attome-cache",
  "attome-config",
  "attome-contract",

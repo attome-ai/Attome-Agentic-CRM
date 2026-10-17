@@ -234,6 +234,7 @@ pub fn area(key: &str) -> &'static str {
         Some("omnichannel") => "channels",
         Some("ops") => "operations",
         Some("commission") => "sales",
+        Some("billing") => "sales",
         Some("records") => "data",
         _ => "other",
     }
@@ -332,6 +333,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "records.bulk_edit_approval_count" => {
             "التعديل الجماعي الذي يغيّر سجلات أكثر من هذا العدد ينتظر موافقة قبل تنفيذه؛ صفر يعني بلا موافقة."
+        }
+        "billing.seller_country" => {
+            "بلد النشر نفسه برمز ISO من حرفين: جهة البائع في ضريبة القيمة المضافة على كل بند فاتورة."
         }
         "commission.adjustment_approval_amount" => {
             "تعديلات العمولات اليدوية التي تتجاوز هذا المبلغ (زيادةً أو نقصًا، بعملة النشر الأساسية) لا تُسجَّل إلا بعد الموافقة."

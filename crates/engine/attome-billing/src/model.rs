@@ -31,5 +31,10 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/metrics/recurring",
                 get(crate::metrics::get_recurring),
             )
+            // F4-T5: a draft invoice's lines and totals.
+            .route(
+                "/api/v1/billing/invoices/{id}/recompute",
+                post(crate::invoice::post_recompute),
+            )
     }
 }
