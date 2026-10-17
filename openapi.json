@@ -45022,6 +45022,84 @@
         }
       }
     },
+    "/api/v1/billing/invoice-requests": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "The caller may ask for invoices: `billing.issue`, held by billing staff\nand by the service accounts of features that bill.",
+        "operationId": "post_request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The stored request (a repeat answers the first)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not ask for invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing key, an unknown account, a bad currency or line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/invoices/{id}/apply-deposit": {
       "post": {
         "tags": [
@@ -90322,6 +90400,54 @@
           }
         }
       },
+      "InvoiceRequest": {
+        "type": "object",
+        "description": "An invoice another feature asks for.",
+        "required": [
+          "source_kind",
+          "source_ref",
+          "idempotency_key",
+          "account_ref",
+          "currency",
+          "lines"
+        ],
+        "properties": {
+          "account_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217, three letters."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Unique per `source_kind`; a repeat with the same key is the same\nrequest."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestLine"
+            }
+          },
+          "request_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The day the charge belongs to (default today); grouped accounts get\none invoice per currency and day."
+          },
+          "source_kind": {
+            "type": "string",
+            "description": "What asked: `order`, `subscription`, `milestone`, …"
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "The asking record's id or key."
+          }
+        }
+      },
       "InvoiceTotals": {
         "type": "object",
         "description": "A draft's recomputed totals.",
@@ -109659,6 +109785,36 @@
         ],
         "description": "One item, with a conflict's values when the caller may read them."
       },
+      "RequestAccepted": {
+        "type": "object",
+        "description": "The stored request.",
+        "required": [
+          "request_id",
+          "status",
+          "created"
+        ],
+        "properties": {
+          "created": {
+            "type": "boolean",
+            "description": "False when this was a repeat of a stored request."
+          },
+          "invoice_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `invoiced` or `failed`."
+          }
+        }
+      },
       "RequestAudit": {
         "type": "object",
         "description": "An audit event a request wrote.",
@@ -109721,6 +109877,56 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "RequestLine": {
+        "type": "object",
+        "description": "One line of an invoice request.",
+        "required": [
+          "description",
+          "quantity",
+          "unit_price"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "period_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "period_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "product_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "vat_category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`standard` (default), `reduced`, `zero_rated`, `exempt` or\n`out_of_scope`."
           }
         }
       },

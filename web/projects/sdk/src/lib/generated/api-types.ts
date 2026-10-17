@@ -8629,6 +8629,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoice-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The caller may ask for invoices: `billing.issue`, held by billing staff
+         *     and by the service accounts of features that bill.
+         */
+        post: operations["post_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoices/{id}/apply-deposit": {
         parameters: {
             query?: never;
@@ -20994,6 +21014,29 @@ export interface components {
              */
             expires_at: string;
         };
+        /** @description An invoice another feature asks for. */
+        InvoiceRequest: {
+            /** Format: uuid */
+            account_ref: string;
+            /** @description ISO 4217, three letters. */
+            currency: string;
+            /**
+             * @description Unique per `source_kind`; a repeat with the same key is the same
+             *     request.
+             */
+            idempotency_key: string;
+            lines: components["schemas"]["RequestLine"][];
+            /**
+             * Format: date
+             * @description The day the charge belongs to (default today); grouped accounts get
+             *     one invoice per currency and day.
+             */
+            request_date?: string | null;
+            /** @description What asked: `order`, `subscription`, `milestone`, … */
+            source_kind: string;
+            /** @description The asking record's id or key. */
+            source_ref: string;
+        };
         /** @description A draft's recomputed totals. */
         InvoiceTotals: {
             currency: string;
@@ -28155,6 +28198,17 @@ export interface components {
             /** @description The values exist but the caller may not read the field. */
             values_hidden: boolean;
         };
+        /** @description The stored request. */
+        RequestAccepted: {
+            /** @description False when this was a repeat of a stored request. */
+            created: boolean;
+            /** Format: uuid */
+            invoice_id?: string | null;
+            /** Format: uuid */
+            request_id: string;
+            /** @description `pending`, `invoiced` or `failed`. */
+            status: string;
+        };
         /** @description An audit event a request wrote. */
         RequestAudit: {
             /** Format: date-time */
@@ -28172,6 +28226,25 @@ export interface components {
             job_type: string;
             status: string;
             variant?: string | null;
+        };
+        /** @description One line of an invoice request. */
+        RequestLine: {
+            description: string;
+            /** Format: date */
+            period_from?: string | null;
+            /** Format: date */
+            period_to?: string | null;
+            /** Format: uuid */
+            product_ref?: string | null;
+            /** Format: double */
+            quantity: number;
+            /** Format: double */
+            unit_price: number;
+            /**
+             * @description `standard` (default), `reduced`, `zero_rated`, `exempt` or
+             *     `out_of_scope`.
+             */
+            vat_category?: string | null;
         };
         /** @description What one request led to. */
         RequestTrail: {
@@ -61773,6 +61846,57 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceRequest"];
+            };
+        };
+        responses: {
+            /** @description The stored request (a repeat answers the first) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestAccepted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not ask for invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing key, an unknown account, a bad currency or line */
             422: {
                 headers: {
                     [name: string]: unknown;
