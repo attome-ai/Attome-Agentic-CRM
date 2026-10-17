@@ -27,3 +27,5 @@ export { AiMcpServersComponent, MCP_TIERS } from './mcp-servers/mcp-servers.comp
 export { AiStatusComponent, overall, type AiStatus } from './status/status.component';
 export { AiSpendComponent, forecastOver, spendState, type SpendLine, type SpendReport } from './spend/spend.component';
 export type { ScopeSwitch } from './admin/scope-switches/ai-scope-switches.component';
+// AI4-T7: my follow-ups ('ai/follow-ups').
+export { AiFollowupsComponent, ageInDays, type AiFollowupItem } from './followups/ai-followups.component';

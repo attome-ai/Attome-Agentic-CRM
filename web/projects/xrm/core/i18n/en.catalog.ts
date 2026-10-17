@@ -326,6 +326,14 @@ export const xrmEn = {
     states: { up: 'AI is working.', degraded: 'AI is working with some parts switched off.', down: 'AI is not available.' },
   },
   // N24-T2 — AI spend.
+  aiFollowups: {
+    title: 'My follow-ups',
+    intro: 'Records of yours that went quiet: deals with no activity, overdue tasks and customers waiting for an answer.',
+    open: 'Open record', dismiss: 'Dismiss', none: 'Nothing to follow up.',
+    age: '{days} days ago',
+    reason: { stalled_deal: 'Stalled deal', overdue_task: 'Overdue task', unanswered_customer: 'Customer waiting for an answer' },
+    status: { open: 'Open', reminded: 'Reminded', drafted: 'Draft ready', sent: 'Sent', dismissed: 'Dismissed', resolved: 'Resolved' },
+  },
   aiSpend: {
     title: 'AI spend', intro: 'This month against each cap, for', days: 'days',
     unpriced: 'This model has no price, so nothing is counted against a money cap.',

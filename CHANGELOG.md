@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- A "My follow-ups" screen (`/ai/follow-ups`, English and Arabic): the caller's open follow-up items
+  with their reason, age and status, a link to each record and a dismiss button.
 - Follow-up items now run: each hourly scan queues one `AiFollowupItem` job per open item. A rule in
   `remind_owner` mode reminds the owner; `draft_message` and `send_message` start a session of the
   `followup_agent` definition for the record's owner (once an administrator activates it; until then

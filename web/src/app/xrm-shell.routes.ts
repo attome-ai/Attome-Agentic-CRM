@@ -641,6 +641,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // AI4-T7: my follow-ups (the API lists only the caller's own).
+            path: 'ai/follow-ups',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiFollowupsComponent),
+          },
+          {
             // C6 (D-556) — the live-session supervisor: the screen over
             // GET /api/v1/admin/agents/sessions, gated on
             // `ai_agent.supervise` (the same privilege the three actions
