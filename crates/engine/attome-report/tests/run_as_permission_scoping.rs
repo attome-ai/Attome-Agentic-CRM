@@ -445,15 +445,18 @@ async fn create_record_as(
 /// `attome-api/tests/query_exec.rs::seed_entity_query` binds (D-133 metadata
 /// natural-keys migration 0133's own comment: "entity_logical_name is the
 /// entity's UUID").
-async fn seed_entity_query(db: &PgPool, sql: &str, entity_id: Uuid) -> Uuid {
+/// Gated on `privilege`: a query with no `required_privilege` runs for
+/// administrators only.
+async fn seed_entity_query(db: &PgPool, sql: &str, entity_id: Uuid, privilege: &str) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO sql_query (id, sql_query, table_definition, entity_logical_name, is_active, created_at, owner_layer) \
-         VALUES ($1, $2, '[]', $3, true, NOW(), 'project')",
+        "INSERT INTO sql_query (id, sql_query, table_definition, entity_logical_name, is_active, created_at, owner_layer, required_privilege) \
+         VALUES ($1, $2, '[]', $3, true, NOW(), 'project', $4)",
     )
     .bind(id)
     .bind(sql)
     .bind(entity_id)
+    .bind(privilege)
     .execute(db)
     .await
     .expect("insert throwaway entity-scoped sql_query");
@@ -521,6 +524,7 @@ async fn scheduled_run_never_surfaces_a_row_run_as_cannot_see() {
         &db,
         &format!("SELECT id, title FROM \"{logicalname}\" WHERE is_active = true"),
         entity_id,
+        &format!("{logicalname}.read"),
     )
     .await;
 

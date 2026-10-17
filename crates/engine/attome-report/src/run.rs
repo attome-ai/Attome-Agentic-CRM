@@ -60,7 +60,8 @@ const ENTITY: &str = "attome_report";
 /// hold, mirroring `data_export.rs::MAX_EXPORT_ROWS`'s own reasoning at a
 /// smaller ceiling (a report is rendered in memory, not streamed).
 const MAX_REPORT_ROWS: i64 = 100_000;
-const REPORT_PAGE_SIZE: i64 = 500;
+/// Rows per query page: the most `query/execute` serves in one page.
+const REPORT_PAGE_SIZE: i64 = attome_types::MAX_PAGE_SIZE;
 const DOWNLOAD_URL_TTL: Duration = Duration::from_secs(15 * 60);
 
 #[derive(Deserialize, ToSchema, Default)]
