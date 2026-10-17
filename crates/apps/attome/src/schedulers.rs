@@ -98,6 +98,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // F10-T3: commission credits for won deals, every minute.
     crate::jobs::spawn_commission_credit_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // F4-T9: invoice requests every five minutes, schedules daily.
+    crate::jobs::spawn_billing_request_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    crate::jobs::spawn_billing_schedule_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // D7-T3: new deals get their owner's default team, every minute.
     crate::jobs::spawn_sales_default_team_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // Q10-T6: role grants past their end date, hourly.

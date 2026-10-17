@@ -273,14 +273,45 @@ pub async fn convert_pro_forma(
     ctx: &SecurityContext,
     pro_forma_id: Uuid,
 ) -> Result<ProFormaConverted, AppError> {
+    let kind: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT kind FROM invoice WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(pro_forma_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    match kind {
+        None => return Err(AppError::NotFound),
+        Some(kind) if kind.as_deref() != Some("pro_forma") => {
+            return Err(AppError::Conflict("only a pro forma invoice is converted"));
+        }
+        Some(_) => {}
+    }
+    let mut extra = Map::new();
+    extra.insert("kind".into(), json!("invoice"));
+    let (invoice, lines) = copy_as_draft(state, ctx, pro_forma_id, extra).await?;
+    Ok(ProFormaConverted {
+        pro_forma_id,
+        invoice_id: invoice,
+        lines,
+    })
+}
+
+/// Copies an invoice's buyer, terms and lines into a new draft (as `ctx`,
+/// through the generic record path), with `extra` fields set on the new
+/// header, and prices it. Returns the draft and its line count.
+pub(crate) async fn copy_as_draft(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    source_id: Uuid,
+    extra: Map<String, Value>,
+) -> Result<(Uuid, usize), AppError> {
     ctx.require("invoice", "create")?;
     ctx.require("invoice_line", "create")?;
     let row: Option<ProFormaRow> = sqlx::query_as(
-        "SELECT kind, currency, account_ref, contact_ref, billing_address, buyer_vat_number, \
-                language, payment_terms_days::text, supply_date::text \
-         FROM invoice WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+        "SELECT kind, currency, account_ref, contact_ref, billing_address, buyer_vat_number,                 language, payment_terms_days::text, supply_date::text          FROM invoice WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )
-    .bind(pro_forma_id)
+    .bind(source_id)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -288,11 +319,11 @@ pub async fn convert_pro_forma(
     else {
         return Err(AppError::NotFound);
     };
-    if kind.as_deref() != Some("pro_forma") {
-        return Err(AppError::Conflict("only a pro forma invoice is converted"));
-    }
     let mut body = Map::new();
-    body.insert("kind".into(), json!("invoice"));
+    body.insert(
+        "kind".into(),
+        json!(kind.unwrap_or_else(|| "invoice".into())),
+    );
     body.insert("status".into(), json!("draft"));
     for (field, value) in [
         ("currency", currency.map(Value::String)),
@@ -311,6 +342,7 @@ pub async fn convert_pro_forma(
             body.insert(field.into(), value);
         }
     }
+    body.extend(extra);
     let (invoice, _) = attome_records::entity_crud::create_record_for(
         state,
         ctx,
@@ -320,13 +352,9 @@ pub async fn convert_pro_forma(
     )
     .await?;
     let lines: Vec<CopyLineRow> = sqlx::query_as(
-        "SELECT description, product_ref, unit, quantity::text, unit_price::text, \
-                discount::text, vat_category \
-         FROM invoice_line \
-         WHERE invoice_ref = $1 AND (is_active IS NULL OR is_active = true) \
-         ORDER BY id",
+        "SELECT description, product_ref, unit, quantity::text, unit_price::text,                 discount::text, vat_category          FROM invoice_line          WHERE invoice_ref = $1 AND (is_active IS NULL OR is_active = true)          ORDER BY id",
     )
-    .bind(pro_forma_id)
+    .bind(source_id)
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -357,12 +385,10 @@ pub async fn convert_pro_forma(
         )
         .await?;
     }
-    crate::invoice::recompute_draft(state, ctx, invoice).await?;
-    Ok(ProFormaConverted {
-        pro_forma_id,
-        invoice_id: invoice,
-        lines: count,
-    })
+    if count > 0 {
+        crate::invoice::recompute_draft(state, ctx, invoice).await?;
+    }
+    Ok((invoice, count))
 }
 
 /// `invoice.create`: may create invoices.

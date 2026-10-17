@@ -63,5 +63,10 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoices/{id}/convert-pro-forma",
                 post(crate::deposit::post_convert_pro_forma),
             )
+            // F4-T9: invoices other features ask for.
+            .route(
+                "/api/v1/billing/invoice-requests",
+                post(crate::requests::post_request),
+            )
     }
 }

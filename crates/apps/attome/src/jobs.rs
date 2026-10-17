@@ -1041,6 +1041,20 @@ async fn dispatch_platform_job(
                 tracing::info!(written, "commission credits: written for won deals");
             }
         }
+        // F4-T9: invoice requests into draft invoices.
+        EngineJob::BillingRequestSweep => {
+            let invoices = attome_billing::requests::process_pending(&attome_state).await?;
+            if invoices > 0 {
+                tracing::info!(invoices, "billing requests: draft invoices created");
+            }
+        }
+        // F4-T9: due invoice schedules into draft invoices.
+        EngineJob::BillingScheduleRun => {
+            let invoices = attome_billing::requests::run_schedules(&attome_state).await?;
+            if invoices > 0 {
+                tracing::info!(invoices, "billing schedules: draft invoices created");
+            }
+        }
         // D7-T3: new deals get their owner's default team.
         EngineJob::SalesDefaultTeamSweep => {
             let added = attome_sales::team_defaults::sweep_new_deals(&attome_state).await?;
@@ -2247,6 +2261,8 @@ const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
 const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
 const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
+const DEDUP_KEY_BILLING_REQUEST_SWEEP: &str = "billing-request-sweep";
+const DEDUP_KEY_BILLING_SCHEDULE_RUN: &str = "billing-schedule-run";
 const DEDUP_KEY_SALES_SNAPSHOT_PRUNE: &str = "sales-snapshot-prune";
 const DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP: &str = "notification-follow-sweep";
 const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
@@ -2322,6 +2338,8 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::RoleGrantExpiry => DEDUP_KEY_ROLE_GRANT_EXPIRY,
         EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
         EngineJob::CommissionCreditSweep => DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
+        EngineJob::BillingRequestSweep => DEDUP_KEY_BILLING_REQUEST_SWEEP,
+        EngineJob::BillingScheduleRun => DEDUP_KEY_BILLING_SCHEDULE_RUN,
         EngineJob::SalesSnapshotPrune => DEDUP_KEY_SALES_SNAPSHOT_PRUNE,
         EngineJob::NotificationFollowSweep => DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP,
         EngineJob::SalesDealCloseSweep => DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP,
@@ -2741,6 +2759,28 @@ pub fn spawn_commission_credit_scheduler(db: DbPool, interval: std::time::Durati
         EngineJob::CommissionCreditSweep,
         DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
         "commission credits",
+    );
+}
+
+/// F4-T9: every five minutes, pending invoice requests.
+pub fn spawn_billing_request_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingRequestSweep,
+        DEDUP_KEY_BILLING_REQUEST_SWEEP,
+        "billing requests",
+    );
+}
+
+/// F4-T9: daily, due invoice schedules.
+pub fn spawn_billing_schedule_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingScheduleRun,
+        DEDUP_KEY_BILLING_SCHEDULE_RUN,
+        "billing schedules",
     );
 }
 

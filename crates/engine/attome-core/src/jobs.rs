@@ -468,6 +468,12 @@ pub enum EngineJob {
     /// F10-T3: writes commission credits for won deals, off the change
     /// feed. Bare unit variant.
     CommissionCreditSweep,
+    /// F4-T9: turns pending invoice requests into draft invoices. Bare unit
+    /// variant.
+    BillingRequestSweep,
+    /// F4-T9: copies each due invoice schedule's template into a draft.
+    /// Bare unit variant.
+    BillingScheduleRun,
     /// D6-T8: removes line snapshots older than a day. Bare unit variant.
     SalesSnapshotPrune,
     /// C2-T1: tells followers about changes to records they follow, off
@@ -949,6 +955,8 @@ impl EngineJob {
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
             | Self::CommissionCreditSweep
+            | Self::BillingRequestSweep
+            | Self::BillingScheduleRun
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
@@ -1065,6 +1073,8 @@ impl EngineJob {
             EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
             EngineJob::SalesDefaultTeamSweep => "SalesDefaultTeamSweep",
             EngineJob::CommissionCreditSweep => "CommissionCreditSweep",
+            EngineJob::BillingRequestSweep => "BillingRequestSweep",
+            EngineJob::BillingScheduleRun => "BillingScheduleRun",
             EngineJob::SalesSnapshotPrune => "SalesSnapshotPrune",
             EngineJob::NotificationFollowSweep => "NotificationFollowSweep",
             EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
@@ -1185,6 +1195,8 @@ impl EngineJob {
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
             | Self::CommissionCreditSweep
+            | Self::BillingRequestSweep
+            | Self::BillingScheduleRun
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
@@ -1324,6 +1336,8 @@ impl EngineJob {
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
             | Self::CommissionCreditSweep
+            | Self::BillingRequestSweep
+            | Self::BillingScheduleRun
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
@@ -1680,6 +1694,8 @@ mod tests {
         assert_round_trips(EngineJob::RoleGrantExpiry);
         assert_round_trips(EngineJob::SalesDefaultTeamSweep);
         assert_round_trips(EngineJob::CommissionCreditSweep);
+        assert_round_trips(EngineJob::BillingRequestSweep);
+        assert_round_trips(EngineJob::BillingScheduleRun);
         assert_round_trips(EngineJob::SalesSnapshotPrune);
         assert_round_trips(EngineJob::NotificationFollowSweep);
         assert_round_trips(EngineJob::SalesDealCloseSweep);

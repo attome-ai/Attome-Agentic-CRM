@@ -5,6 +5,7 @@
 //! F4-T7: credit and debit notes correct an issued invoice; cancelling is a
 //! full credit note, issued at once.
 //! F4-T8: a deposit is deducted once; a pro forma is converted, never issued.
+//! F4-T9: invoice requests become drafts once; schedules run once a period.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -657,5 +658,158 @@ fn pro_forma_cannot_be_issued() {
             )
             .await;
         assert_eq!(status, StatusCode::CONFLICT);
+    });
+}
+
+async fn request(
+    app: &TestApp,
+    key: &str,
+    account: Uuid,
+    price: u32,
+) -> (StatusCode, serde_json::Value) {
+    app.request(
+        Method::POST,
+        "/api/v1/billing/invoice-requests",
+        Some(json!({
+            "source_kind": "order",
+            "source_ref": key,
+            "idempotency_key": key,
+            "account_ref": account,
+            "currency": "SAR",
+            "request_date": "2026-10-18",
+            "lines": [{ "description": "Goods", "quantity": 1, "unit_price": price }],
+        })),
+    )
+    .await
+}
+
+async fn invoices_of(app: &TestApp, request_id: &str) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COUNT(DISTINCT invoice_ref) FROM invoice_line \
+         WHERE source_kind = 'request' AND source_ref LIKE $1",
+    )
+    .bind(format!("{request_id}:%"))
+    .fetch_one(app.db())
+    .await
+    .expect("count")
+}
+
+// feature: F4
+#[test]
+fn repeated_request_creates_one_invoice() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let key = format!("SO-{}", Uuid::now_v7().simple());
+        let (status, first) = request(&app, &key, account, 100).await;
+        assert_eq!(status, StatusCode::OK, "{first}");
+        assert_eq!(first["created"], true);
+        let (_, again) = request(&app, &key, account, 100).await;
+        assert_eq!(again["created"], false);
+        assert_eq!(again["request_id"], first["request_id"]);
+        let id = first["request_id"].as_str().unwrap().to_owned();
+
+        attome_billing::requests::process_pending(&app.state)
+            .await
+            .expect("sweep");
+        attome_billing::requests::process_pending(&app.state)
+            .await
+            .expect("sweep again");
+        assert_eq!(invoices_of(&app, &id).await, 1);
+        let (_, after) = request(&app, &key, account, 100).await;
+        assert_eq!(after["status"], "invoiced", "{after}");
+        let invoice: Uuid = after["invoice_id"].as_str().unwrap().parse().unwrap();
+        let grand = text(
+            &app,
+            "SELECT grand_total::text FROM invoice WHERE id = $1",
+            invoice,
+        )
+        .await;
+        assert_eq!(grand.parse::<f64>().unwrap(), 115.0);
+
+        // A grouping account gets one draft for the day's requests.
+        let grouping = buyer(&app).await;
+        sqlx::query("UPDATE account SET billing_group_invoices = true WHERE id = $1")
+            .bind(grouping)
+            .execute(app.db())
+            .await
+            .expect("group");
+        let a = format!("SO-{}", Uuid::now_v7().simple());
+        let b = format!("SO-{}", Uuid::now_v7().simple());
+        request(&app, &a, grouping, 10).await;
+        request(&app, &b, grouping, 20).await;
+        attome_billing::requests::process_pending(&app.state)
+            .await
+            .expect("sweep grouped");
+        let (_, ra) = request(&app, &a, grouping, 10).await;
+        let (_, rb) = request(&app, &b, grouping, 20).await;
+        assert!(ra["invoice_id"].is_string(), "{ra}");
+        assert_eq!(ra["invoice_id"], rb["invoice_id"]);
+    });
+}
+
+// feature: F4
+#[test]
+fn schedule_runs_once_per_period() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let template = unnumbered(&app, account, "invoice", "TS").await;
+        line(&app, template, "1", "500", "0", "standard").await;
+        let today = chrono::Utc::now().date_naive();
+        let schedule: Uuid = sqlx::query_scalar(
+            "INSERT INTO invoice_schedule (id, template_invoice_ref, frequency, next_run, \
+                 is_enabled, created_by, is_active, row_version) \
+             VALUES ($1, $2, 'monthly', $3, true, $4, true, 0) RETURNING id",
+        )
+        .bind(Uuid::now_v7())
+        .bind(template)
+        .bind(today)
+        .bind(app.admin.id)
+        .fetch_one(app.db())
+        .await
+        .expect("schedule");
+
+        let made = attome_billing::requests::run_schedules(&app.state)
+            .await
+            .expect("run");
+        assert!(made >= 1);
+        let key = format!("schedule:{schedule}:{today}");
+        let drafts: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM invoice WHERE idempotency_key = $1")
+                .bind(&key)
+                .fetch_one(app.db())
+                .await
+                .expect("drafts");
+        assert_eq!(drafts, 1);
+        let next = text(
+            &app,
+            "SELECT next_run::date::text FROM invoice_schedule WHERE id = $1",
+            schedule,
+        )
+        .await;
+        let expected = attome_billing::requests::next_run(today, Some("monthly")).unwrap();
+        assert_eq!(next, expected.to_string());
+        // Run again the same day: the schedule is not due, nothing is made.
+        attome_billing::requests::run_schedules(&app.state)
+            .await
+            .expect("run again");
+        let drafts: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM invoice WHERE idempotency_key LIKE $1")
+                .bind(format!("schedule:{schedule}:%"))
+                .fetch_one(app.db())
+                .await
+                .expect("drafts");
+        assert_eq!(drafts, 1);
     });
 }

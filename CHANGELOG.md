@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/billing/invoice-requests` (`billing.issue`) stores an invoice another feature asks
+  for, once per `source_kind` and `idempotency_key`; a five-minute sweep turns pending requests
+  into draft invoices as their requester (one per currency and day for accounts with
+  `billing_group_invoices`), and a daily run copies due `invoice_schedule` templates into drafts
+  once per period. Migration `0104` records who asked.
 - `POST /api/v1/billing/invoices/{id}/apply-deposit` deducts an issued deposit invoice from a final
   draft (one negative line per VAT category, `Deposit DEP-…`), once: a second deduction is `409`,
   and issuing re-checks it under a per-deposit lock. `POST …/{id}/convert-pro-forma` copies a pro
