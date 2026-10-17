@@ -35,7 +35,7 @@ pub use rls::{
     polymorphic_audit_predicate, rls_predicate, rls_predicate_by_column,
     rls_predicate_with_conditions,
 };
-pub use rls_fragment::{RLS_BIND_COUNT, bind_rls_predicate};
+pub use rls_fragment::{RLS_BIND_COUNT, bind_rls_predicate, bind_rls_predicate_as};
 pub use rollout::{METADATA_ROLLOUT_PRIVILEGE_KEY, MetadataRollout};
 pub use visibility::PolymorphicVisibility;
 

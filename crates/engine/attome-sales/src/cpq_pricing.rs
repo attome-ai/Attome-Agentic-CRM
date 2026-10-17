@@ -138,7 +138,7 @@ pub fn price(input: &WaterfallInput) -> Waterfall {
 }
 
 #[cfg(test)]
-mod cpq_pricing {
+mod tests {
     use super::*;
     use std::str::FromStr;
     use uuid::Uuid;

@@ -45,7 +45,7 @@ utoipa.workspace          = true
 uuid.workspace            = true
 
 [dev-dependencies]
-attome-testkit.workspace = true
+attome-testkit = { workspace = true, features = ["app-config"] }
 
 [lints]
 workspace = true

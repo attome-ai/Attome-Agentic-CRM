@@ -216,6 +216,20 @@ pub fn bind_rls_predicate<'q, O>(
         .bind(&binds.subordinate_user_ids)
 }
 
+/// [`bind_rls_predicate`] for a `sqlx::query_as` query (a row of several
+/// columns), in the same bind order.
+pub fn bind_rls_predicate_as<'q, O>(
+    q: sqlx::query::QueryAs<'q, Postgres, O, sqlx::postgres::PgArguments>,
+    binds: &'q crate::rls::RlsBinds,
+) -> sqlx::query::QueryAs<'q, Postgres, O, sqlx::postgres::PgArguments> {
+    q.bind(binds.entity_ref)
+        .bind(binds.caller_id)
+        .bind(&binds.team_ids)
+        .bind(binds.capability)
+        .bind(&binds.accessible_org_ids)
+        .bind(&binds.subordinate_user_ids)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

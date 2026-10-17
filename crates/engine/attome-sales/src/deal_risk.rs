@@ -210,7 +210,7 @@ pub async fn run(db: &DbPool, now: DateTime<Utc>) -> Result<u64, AppError> {
 }
 
 #[cfg(test)]
-mod deal_risk {
+mod tests {
     use super::*;
     use chrono::TimeZone;
 

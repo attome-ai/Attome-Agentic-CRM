@@ -304,11 +304,17 @@ mod tests {
         let id = Uuid::nil();
         let c = CompetitorNames::new(id, Some("Acme"), Some("أكمي"));
         // Diacritics and the hamza variant in the email still match.
-        let hits = mentions("نحن نقارن عرضكم مع إكْمِي هذا الأسبوع", &[c.clone()]);
+        let hits = mentions(
+            "نحن نقارن عرضكم مع إكْمِي هذا الأسبوع",
+            std::slice::from_ref(&c),
+        );
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].0, id);
         // Case does not matter; part of a word does not count.
-        assert_eq!(mentions("They also talked to ACME.", &[c.clone()]).len(), 1);
+        assert_eq!(
+            mentions("They also talked to ACME.", std::slice::from_ref(&c)).len(),
+            1
+        );
         assert!(mentions("acmerail is unrelated", &[c]).is_empty());
     }
 

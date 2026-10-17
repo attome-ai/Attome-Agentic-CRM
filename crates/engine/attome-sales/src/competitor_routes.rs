@@ -15,7 +15,7 @@
 
 use attome_core::EngineState;
 use attome_security::{
-    RecordAction, bind_rls_predicate, resolve_entity_access_level, rls_predicate,
+    RecordAction, bind_rls_predicate_as, resolve_entity_access_level, rls_predicate,
 };
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
 use attome_types::{AppError, ErrorResponse};
@@ -133,6 +133,9 @@ async fn require_deal(
     .await
 }
 
+/// A mention's deal, competitor, status and `row_version`.
+type MentionRow = (Option<Uuid>, Option<Uuid>, Option<String>, i64);
+
 /// Decides one proposed mention as `ctx`.
 pub async fn decide_mention(
     state: &EngineState,
@@ -145,7 +148,7 @@ pub async fn decide_mention(
         return Err(AppError::NotFound);
     }
     let db = &state.base.db;
-    let row: Option<(Option<Uuid>, Option<Uuid>, Option<String>, i64)> = sqlx::query_as(
+    let row: Option<MentionRow> = sqlx::query_as(
         "SELECT opportunity_ref, competitor_ref, status, row_version FROM competitor_mention \
          WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )
@@ -412,9 +415,9 @@ pub async fn head_to_head(
     let mut mentions =
         sqlx::query_as::<_, (Uuid, Uuid, Option<String>)>(&mentions_sql).bind(competitor);
     if let Some(p) = &predicate {
-        totals = bind_rls_predicate(totals, &p.binds);
-        reasons = bind_rls_predicate(reasons, &p.binds);
-        mentions = bind_rls_predicate(mentions, &p.binds);
+        totals = bind_rls_predicate_as(totals, &p.binds);
+        reasons = bind_rls_predicate_as(reasons, &p.binds);
+        mentions = bind_rls_predicate_as(mentions, &p.binds);
     }
     let (won, lost, open, won_amount, lost_amount, open_amount) =
         totals.fetch_one(db).await.map_err(AppError::internal)?;

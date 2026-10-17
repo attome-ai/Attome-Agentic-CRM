@@ -81,8 +81,10 @@ async fn lock(tx: &mut attome_db::Tx<'_>, opportunity: Uuid) -> Result<(), AppEr
     }
 }
 
+type SplitTypeRow = (Uuid, Option<String>, Option<bool>, Option<String>);
+
 async fn split_types(tx: &mut attome_db::Tx<'_>) -> Result<Vec<SplitType>, AppError> {
-    let rows: Vec<(Uuid, Option<String>, Option<bool>, Option<String>)> = sqlx::query_as(
+    let rows: Vec<SplitTypeRow> = sqlx::query_as(
         "SELECT id, name, must_total_100, amount_basis FROM sales_split_type \
          WHERE (is_active IS NULL OR is_active = true)",
     )
@@ -150,17 +152,19 @@ async fn deal_amounts(
     Ok((owner, amounts))
 }
 
+type StoredSplitRow = (
+    Uuid,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<String>,
+);
+
 async fn stored_splits(
     tx: &mut attome_db::Tx<'_>,
     opportunity: Uuid,
 ) -> Result<Vec<Split>, AppError> {
-    let rows: Vec<(
-        Uuid,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<String>,
-    )> = sqlx::query_as(
+    let rows: Vec<StoredSplitRow> = sqlx::query_as(
         "SELECT s.id, s.split_type_ref, m.user_ref, s.line_ref, s.percent::text \
              FROM opportunity_split s \
              LEFT JOIN opportunity_team_member m ON m.id = s.member_ref \

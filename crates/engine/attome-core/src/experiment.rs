@@ -24,7 +24,7 @@ pub fn bucket(flag_key: &str, subject: Uuid) -> f64 {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for byte in flag_key
         .bytes()
-        .chain([b':'])
+        .chain(*b":")
         .chain(subject.as_bytes().iter().copied())
     {
         hash ^= u64::from(byte);
