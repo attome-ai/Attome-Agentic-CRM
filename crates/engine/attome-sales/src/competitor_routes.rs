@@ -18,7 +18,7 @@ use attome_security::{
     RecordAction, bind_rls_predicate_as, resolve_entity_access_level, rls_predicate,
 };
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json,
     extract::{Path, State},
@@ -327,7 +327,7 @@ pub async fn battlecards(
     tag = "sales",
     params(("id" = Uuid, Path, description = "The opportunity")),
     responses(
-        (status = 200, description = "The deal's competitors with their battle cards", body = [SalesBattlecard]),
+        (status = 200, description = "The deal's competitors with their battle cards, all on one page", body = PaginatedResponse<SalesBattlecard>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller may not read this opportunity", body = ErrorResponse),
         (status = 404, description = "No such opportunity, or competitors are not installed", body = ErrorResponse),
@@ -338,8 +338,16 @@ pub(crate) async fn get_sales_battlecards(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<OpportunityRead>>,
     Path(deal): Path<Uuid>,
-) -> Result<Json<Vec<SalesBattlecard>>, AppError> {
-    Ok(Json(battlecards(&state, &ctx, deal).await?))
+) -> Result<Json<PaginatedResponse<SalesBattlecard>>, AppError> {
+    // A deal has a handful of competitors: the whole list is one page.
+    let items = battlecards(&state, &ctx, deal).await?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse {
+        page_size: total.max(1),
+        items,
+        total,
+        page: 1,
+    }))
 }
 
 /// A competitor's record against the deals `ctx` may read.

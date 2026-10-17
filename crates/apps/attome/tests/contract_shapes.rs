@@ -25,6 +25,8 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
     ("health_startup", "503"),
     ("identity_link_google", "401"),
     ("mcp_endpoint", "503"),
+    // D6-T11: the conflict answer carries both line sets for the user to choose.
+    ("post_sales_quote_sync", "409"),
     ("reject_tool_call", "409"),
     ("rename_attribute", "409"),
 ];

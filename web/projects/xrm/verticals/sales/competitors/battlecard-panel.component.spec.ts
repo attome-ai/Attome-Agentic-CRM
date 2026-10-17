@@ -33,7 +33,9 @@ function mount(options: { cards?: SalesBattlecard[] | 'missing'; arabic?: boolea
   const cards = options.cards ?? CARDS;
   const get = vi.fn((path: string) => {
     if (path.endsWith('/battlecards')) {
-      return cards === 'missing' ? throwError(() => ({ status: 404, message: 'not found' })) : of(cards);
+      return cards === 'missing'
+        ? throwError(() => ({ status: 404, message: 'not found' }))
+        : of({ items: cards, total: cards.length, page: 1, page_size: cards.length });
     }
     return of(CARD);
   });

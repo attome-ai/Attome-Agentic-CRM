@@ -234,6 +234,7 @@ pub fn area(key: &str) -> &'static str {
         Some("omnichannel") => "channels",
         Some("ops") => "operations",
         Some("commission") => "sales",
+        Some("records") => "data",
         _ => "other",
     }
 }

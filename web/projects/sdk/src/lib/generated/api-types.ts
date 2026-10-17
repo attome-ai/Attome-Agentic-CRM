@@ -25336,6 +25336,24 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_SalesBattlecard: {
+            items: {
+                /** @description The knowledge article holding the battle card, when one is set. */
+                battlecard_ref?: string | null;
+                /** Format: uuid */
+                competitor_id: string;
+                name?: string | null;
+                status?: string | null;
+                threat_level?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_SalesOpportunityLine: {
             items: {
                 discount_amount?: string | null;
@@ -68375,13 +68393,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The deal's competitors with their battle cards */
+            /** @description The deal's competitors with their battle cards, all on one page */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SalesBattlecard"][];
+                    "application/json": components["schemas"]["PaginatedResponse_SalesBattlecard"];
                 };
             };
             /** @description Missing or invalid credentials */

@@ -146,6 +146,10 @@ const BASELINE: &[&str] = &[
     "openapi",
     "profiler_admin",
     "quality_admin",
+    // L2-T5/L2-T6: Arabic checks and fix transforms beside quality_admin and
+    // quality_score, which they extend; the three move out together.
+    "quality_arabic",
+    "quality_fixes",
     "quality_score",
     // Q20-T5: the bans live in attome-server's rate limiter; belongs in
     // attome-security's admin routes, kept here until it moves.
@@ -169,6 +173,9 @@ const BASELINE: &[&str] = &[
     "slo_admin",
     "system",
     "system_health",
+    // Y2-T8: reads the statistics views for every entity table, which needs
+    // the registry this crate composes; no engine crate owns table storage.
+    "table_health",
     "tag_seed",
     "view_admin",
     "webcrawl_admin",

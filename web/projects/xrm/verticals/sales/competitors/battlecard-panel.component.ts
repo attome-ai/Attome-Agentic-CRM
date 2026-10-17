@@ -186,8 +186,9 @@ export class BattlecardPanelComponent {
 
   load(id: string): void {
     // A 404 means competitors are not installed: the panel stays hidden.
-    this.api.get<SalesBattlecard[]>(`/api/v1/sales/opportunities/${encodeURIComponent(id)}/battlecards`).subscribe({
-      next: cards => {
+    this.api.get<{ items: SalesBattlecard[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(id)}/battlecards`).subscribe({
+      next: page => {
+        const cards = page.items;
         this.cards.set(cards);
         if (cards.length && !this.active()) this.open(cards[0].competitor_id);
         this.loadMentions(id);

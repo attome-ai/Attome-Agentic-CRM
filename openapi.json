@@ -55364,14 +55364,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The deal's competitors with their battle cards",
+            "description": "The deal's competitors with their battle cards, all on one page",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SalesBattlecard"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_SalesBattlecard"
                 }
               }
             }
@@ -101935,6 +101932,70 @@
                 },
                 "user_name": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_SalesBattlecard": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "competitor_id"
+              ],
+              "properties": {
+                "battlecard_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The knowledge article holding the battle card, when one is set."
+                },
+                "competitor_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "threat_level": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }

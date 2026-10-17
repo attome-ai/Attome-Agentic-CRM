@@ -151,6 +151,24 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "The shared SELECT/RETURNING projection builder — reads only.",
     ),
     (
+        "crates/engine/attome-sales/src/dialer/claim.rs",
+        "facts_for",
+        Projection,
+        "Reads the member's phone and do-not-call flag for the claim checks: a read.",
+    ),
+    (
+        "crates/engine/attome-sales/src/scoring_run.rs",
+        "score_one",
+        Projection,
+        "Reads one record as JSON to score it: a read; the score goes to points_score.",
+    ),
+    (
+        "crates/engine/attome-sales/src/scoring_run.rs",
+        "run",
+        Projection,
+        "Reads each record of the model's entity as JSON to score it: a read; scores go to points_score.",
+    ),
+    (
         "crates/engine/attome-search/src/corpus/mod.rs",
         "project_record",
         Projection,

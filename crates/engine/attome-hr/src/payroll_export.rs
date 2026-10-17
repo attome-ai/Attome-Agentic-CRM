@@ -15,7 +15,6 @@ use std::collections::BTreeMap;
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
-use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
@@ -241,8 +240,16 @@ pub(crate) async fn get_hr_payroll_export(
             "to is before from, or the period is over a year".into(),
         ));
     }
+    // A bulk surface (D-589); both fields are sensitive, so each needs its grant.
     for field in ["base_salary", "national_id"] {
-        if !ctx.has_field_read_grant("employee", field) {
+        if !attome_security::field_gate::field_readable(
+            &ctx,
+            "employee",
+            field,
+            true,
+            None,
+            attome_security::field_gate::Surface::Bulk,
+        ) {
             return Err(AppError::Forbidden);
         }
     }
