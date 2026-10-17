@@ -78,12 +78,30 @@ pub async fn resolve_visible(
         return HashMap::new();
     }
 
-    let Some((target_table, name_attr)) = ({
+    let cached = {
         let registry = state.entities.load();
         registry
             .get_by_id(target_entity_id)
             .map(|m| (m.logicalname.clone(), m.primary_name_attribute.clone()))
-    }) else {
+    };
+    // A target entity created moments ago can still be missing from this
+    // node's registry; read its name from `entity_info` rather than report
+    // every record of it as missing.
+    let found = match cached {
+        Some(found) => Some(found),
+        None => sqlx::query_as::<_, (String, Option<String>)>(
+            "SELECT logicalname, primary_name_attribute FROM entity_info \
+             WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+        )
+        .bind(target_entity_id)
+        .fetch_optional(&state.base.db)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "lookup-name target entity unreadable");
+            None
+        }),
+    };
+    let Some((target_table, name_attr)) = found else {
         return HashMap::new();
     };
 

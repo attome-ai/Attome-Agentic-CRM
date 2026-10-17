@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::rls_fragment::{
-    PlaceholderAllocator, RLS_BIND_COUNT, deny_clause_sql, principal_disjunction_sql,
+    PlaceholderAllocator, RLS_BIND_COUNT, SHARE_ROWS, deny_clause_sql, principal_disjunction_sql,
     text_array_literal,
 };
 
@@ -439,7 +439,7 @@ fn build_predicate(
             ({bu_tier})
             OR ({owner_arm})
             OR EXISTS (
-                SELECT 1 FROM record_share s
+                SELECT 1 FROM {SHARE_ROWS} s
                 WHERE s.record_id = {record_id_col} AND s.entity_ref = ${p_entity}::uuid
                   AND s.capability BETWEEN ${p_cap}::smallint AND 1
                   AND ({share_disjunction})
@@ -1104,6 +1104,26 @@ mod tests {
         assert!(with_alias.sql.contains("t.organization_ref"));
         assert!(!without_alias.sql.contains(".organization_ref"));
         assert!(without_alias.sql.contains("organization_ref"));
+    }
+
+    /// Without an alias the record column is a bare `id`. The share and deny
+    /// sub-queries read `record_share` through a derived table with no `id`
+    /// of its own, so that `id` can only be the outer record's.
+    #[test]
+    fn share_subqueries_cannot_capture_a_bare_record_id() {
+        let c = ctx(false);
+        let pred = rls_predicate(
+            &c,
+            Uuid::now_v7(),
+            "",
+            AccessLevel::None,
+            Capability::View,
+            2,
+        )
+        .unwrap();
+        assert!(pred.sql.contains("s.record_id = id"));
+        assert!(!pred.sql.contains("FROM record_share s"));
+        assert_eq!(pred.sql.matches(SHARE_ROWS).count(), 2, "{}", pred.sql);
     }
 
     // ── rls_predicate_by_column (P-stored-query-containment Phase 3, D-146) ──

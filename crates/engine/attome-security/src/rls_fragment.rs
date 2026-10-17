@@ -111,6 +111,14 @@ pub(crate) fn principal_disjunction_sql(
 /// {entity_ref_expr} AND {alias}.capability = {DENY_CAPABILITY} AND
 /// (<principal_disjunction_sql, no subordinate arm>) )` — the deny check,
 /// authoritative over every allow arm a caller ANDs this onto.
+/// `record_share` without its own `id` column, for the share and deny
+/// sub-queries. A caller that leaves the table unaliased writes the record
+/// column as a bare `id`; inside `FROM record_share s` that bare `id` would
+/// bind to the share row's own id, so no share would ever match and no deny
+/// would ever apply. Postgres flattens this sub-select, so it costs nothing.
+pub(crate) const SHARE_ROWS: &str =
+    "(SELECT record_id, entity_ref, capability, principal_type, principal_id FROM record_share)";
+
 pub(crate) fn deny_clause_sql(
     alias: &str,
     record_id_expr: &str,
@@ -119,7 +127,7 @@ pub(crate) fn deny_clause_sql(
     teams_ph: &str,
 ) -> String {
     format!(
-        "NOT EXISTS ( SELECT 1 FROM record_share {alias} WHERE {alias}.record_id = {record_id_expr} AND {alias}.entity_ref = {entity_ref_expr} AND {alias}.capability = {DENY_CAPABILITY} AND ({disjunction}) )",
+        "NOT EXISTS ( SELECT 1 FROM {SHARE_ROWS} {alias} WHERE {alias}.record_id = {record_id_expr} AND {alias}.entity_ref = {entity_ref_expr} AND {alias}.capability = {DENY_CAPABILITY} AND ({disjunction}) )",
         disjunction = principal_disjunction_sql(alias, caller_ph, teams_ph, None),
     )
 }
@@ -175,7 +183,7 @@ pub(crate) fn push_deny_clause(
     teams: &[Uuid],
 ) {
     qb.push(format!(
-        "NOT EXISTS ( SELECT 1 FROM record_share {alias} WHERE {alias}.record_id = {record_id_expr} AND {alias}.entity_ref = "
+        "NOT EXISTS ( SELECT 1 FROM {SHARE_ROWS} {alias} WHERE {alias}.record_id = {record_id_expr} AND {alias}.entity_ref = "
     ));
     push_entity_ref(qb);
     qb.push(format!(" AND {alias}.capability = {DENY_CAPABILITY} AND ("));
