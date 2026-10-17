@@ -1209,7 +1209,6 @@ impl EngineSystemBuilder {
             // the gap can be recorded as a gauge even on the healthy path —
             // staleness becomes an observable signal, not only a silent
             // self-heal.
-            let pending = debounce_pending.clone();
             let entities = state.entities.clone();
             let db = state.base.db.clone();
             let redis = state.base.redis.clone();
@@ -1264,14 +1263,7 @@ impl EngineSystemBuilder {
                             }
                         }
                         Ok(db_watermark) => {
-                            let lag = db_watermark - applied;
-                            metrics::gauge!("registry_watermark_lag").set(lag as f64);
-                            behind_polls = if lag > 0 {
-                                behind_polls.saturating_add(1)
-                            } else {
-                                0
-                            };
-                            lagging.store(behind_polls >= 2, Ordering::Relaxed);
+                            let mut lag = db_watermark - applied;
                             if lag > 0 {
                                 tracing::warn!(
                                     applied,
@@ -1281,14 +1273,21 @@ impl EngineSystemBuilder {
                                 );
                                 metrics::counter!("registry_watermark_poll_forced_catchup_total")
                                     .increment(1);
-                                spawn_debounced_catch_up(
-                                    pending.clone(),
-                                    entities.clone(),
-                                    db.clone(),
-                                    redis.clone(),
-                                    watermark.clone(),
-                                );
+                                // Caught up here, then judged: a node still
+                                // behind the change log after catching up
+                                // (twice in a row) is lagging, not one that
+                                // merely saw new changes arrive (a boot or a
+                                // publish writes many in a row).
+                                catch_up(&entities, &db, &redis, &watermark).await;
+                                lag = db_watermark - watermark.load(Ordering::Acquire);
                             }
+                            metrics::gauge!("registry_watermark_lag").set(lag.max(0) as f64);
+                            behind_polls = if lag > 0 {
+                                behind_polls.saturating_add(1)
+                            } else {
+                                0
+                            };
+                            lagging.store(behind_polls >= 2, Ordering::Relaxed);
                         }
                         Err(e) => tracing::warn!(
                             error = %e,
