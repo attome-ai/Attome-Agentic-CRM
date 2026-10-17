@@ -1,0 +1,2624 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b07295fa674e9319462631096190236b60104788a1918ccd9b5de4a6a3124c97",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Invoicing (F4-T2): the finance pack's invoice gains kind, payment status, account and contact, buyer VAT number, currency and rate, supply date, number series, the original invoice of a credit or debit note, stored totals, a request key and the e-invoice status; invoice lines with VAT category, rate and amount; recurring invoice schedules. Tax rates are the region pack's region_tax_rate. Privileges to issue, credit and write off, and the Billing Clerk, Accounts Receivable, Finance Manager and Billing Viewer roles. Install after crm, sales, finance and regions.",
+  "format": "attome-changeset/v1",
+  "id": "01a14bed-033d-78c8-89d0-3351a91d1460",
+  "layer": "product",
+  "name": "billing-invoicing",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "invoice",
+              "credit_note",
+              "debit_note",
+              "deposit",
+              "pro_forma"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "kind"
+      },
+      "seq": 1,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.kind",
+        "object_kind": "attribute"
+      },
+      "seq": 2,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payment Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "payment_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "partly_paid",
+              "paid",
+              "overdue",
+              "written_off"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "payment_status"
+      },
+      "seq": 3,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "حالة السداد"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.payment_status",
+        "object_kind": "attribute"
+      },
+      "seq": 4,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "account_ref"
+      },
+      "seq": 5,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الحساب"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.account_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 6,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "contact_ref"
+      },
+      "seq": 7,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.contact_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 8,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Billing Address",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_address",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "billing_address"
+      },
+      "seq": 9,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "عنوان الفوترة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.billing_address",
+        "object_kind": "attribute"
+      },
+      "seq": 10,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Buyer VAT Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "buyer_vat_number",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "buyer_vat_number"
+      },
+      "seq": 11,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الرقم الضريبي للمشتري"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.buyer_vat_number",
+        "object_kind": "attribute"
+      },
+      "seq": 12,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "currency"
+      },
+      "seq": 13,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.currency",
+        "object_kind": "attribute"
+      },
+      "seq": 14,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Exchange Rate",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "fx_rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "fx_rate"
+      },
+      "seq": 15,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "سعر الصرف"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.fx_rate",
+        "object_kind": "attribute"
+      },
+      "seq": 16,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payment Terms (days)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "payment_terms_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "payment_terms_days"
+      },
+      "seq": 17,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "مدة السداد (أيام)"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.payment_terms_days",
+        "object_kind": "attribute"
+      },
+      "seq": 18,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Supply Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "supply_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "supply_date"
+      },
+      "seq": 19,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التوريد"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.supply_date",
+        "object_kind": "attribute"
+      },
+      "seq": 20,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Number Series",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "series_key",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "series_key"
+      },
+      "seq": 21,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "سلسلة الترقيم"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.series_key",
+        "object_kind": "attribute"
+      },
+      "seq": 22,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Original Invoice",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "original_invoice_ref",
+          "lookup_entity": "invoice",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "original_invoice_ref"
+      },
+      "seq": 23,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الفاتورة الأصلية"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.original_invoice_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 24,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "reason"
+      },
+      "seq": 25,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.reason",
+        "object_kind": "attribute"
+      },
+      "seq": 26,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Net Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "net_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "net_total"
+      },
+      "seq": 27,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي قبل الضريبة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.net_total",
+        "object_kind": "attribute"
+      },
+      "seq": 28,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Discount Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "discount_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "discount_total"
+      },
+      "seq": 29,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "إجمالي الخصم"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.discount_total",
+        "object_kind": "attribute"
+      },
+      "seq": 30,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "vat_total"
+      },
+      "seq": 31,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "إجمالي الضريبة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.vat_total",
+        "object_kind": "attribute"
+      },
+      "seq": 32,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Grand Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "grand_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "grand_total"
+      },
+      "seq": 33,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي شامل الضريبة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.grand_total",
+        "object_kind": "attribute"
+      },
+      "seq": 34,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Paid",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "paid_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "paid_total"
+      },
+      "seq": 35,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "المدفوع"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.paid_total",
+        "object_kind": "attribute"
+      },
+      "seq": 36,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Open Balance",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "open_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "open_total"
+      },
+      "seq": 37,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الرصيد المستحق"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.open_total",
+        "object_kind": "attribute"
+      },
+      "seq": 38,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Request Key",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "idempotency_key",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "idempotency_key"
+      },
+      "seq": 39,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "مفتاح الطلب"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.idempotency_key",
+        "object_kind": "attribute"
+      },
+      "seq": 40,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "E-invoice Status",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "einvoice_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "einvoice_status"
+      },
+      "seq": 41,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "حالة الفوترة الإلكترونية"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.einvoice_status",
+        "object_kind": "attribute"
+      },
+      "seq": 42,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Language",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "language",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "ar",
+              "en",
+              "ar_en"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice",
+        "field": "language"
+      },
+      "seq": 43,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "اللغة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.language",
+        "object_kind": "attribute"
+      },
+      "seq": 44,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Invoice Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "invoice_line",
+          "primary_name_attribute": "description"
+        }
+      },
+      "op": "create_entity",
+      "target": {
+        "entity": "invoice_line"
+      },
+      "seq": 45,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "بند الفاتورة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line",
+        "object_kind": "entity"
+      },
+      "seq": 46,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "invoice_ref",
+          "lookup_entity": "invoice",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "invoice_ref"
+      },
+      "seq": 47,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الفاتورة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.invoice_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 48,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "product_ref"
+      },
+      "seq": 49,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.product_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 50,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "description"
+      },
+      "seq": 51,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الوصف"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.description",
+        "object_kind": "attribute"
+      },
+      "seq": 52,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "unit"
+      },
+      "seq": 53,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الوحدة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.unit",
+        "object_kind": "attribute"
+      },
+      "seq": 54,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "quantity"
+      },
+      "seq": 55,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.quantity",
+        "object_kind": "attribute"
+      },
+      "seq": 56,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "unit_price"
+      },
+      "seq": 57,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "سعر الوحدة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.unit_price",
+        "object_kind": "attribute"
+      },
+      "seq": 58,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Discount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "discount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "discount"
+      },
+      "seq": 59,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الخصم"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.discount",
+        "object_kind": "attribute"
+      },
+      "seq": 60,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Category",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_category",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "standard",
+              "zero_rated",
+              "exempt",
+              "out_of_scope",
+              "reverse_charge"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "vat_category"
+      },
+      "seq": 61,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "فئة الضريبة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.vat_category",
+        "object_kind": "attribute"
+      },
+      "seq": 62,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Rate",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "vat_rate"
+      },
+      "seq": 63,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "نسبة الضريبة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.vat_rate",
+        "object_kind": "attribute"
+      },
+      "seq": 64,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "vat_amount"
+      },
+      "seq": 65,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "مبلغ الضريبة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.vat_amount",
+        "object_kind": "attribute"
+      },
+      "seq": 66,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "line_total"
+      },
+      "seq": 67,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "إجمالي البند"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.line_total",
+        "object_kind": "attribute"
+      },
+      "seq": 68,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period From",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_from",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "period_from"
+      },
+      "seq": 69,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الفترة من"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.period_from",
+        "object_kind": "attribute"
+      },
+      "seq": 70,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period To",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_to",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "period_to"
+      },
+      "seq": 71,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الفترة إلى"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.period_to",
+        "object_kind": "attribute"
+      },
+      "seq": 72,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source Type",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "source_kind"
+      },
+      "seq": 73,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "نوع المصدر"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.source_kind",
+        "object_kind": "attribute"
+      },
+      "seq": 74,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_ref",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "source_ref"
+      },
+      "seq": 75,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "المصدر"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.source_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 76,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Locked",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_locked",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_line",
+        "field": "is_locked"
+      },
+      "seq": 77,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "مقفل"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_line.is_locked",
+        "object_kind": "attribute"
+      },
+      "seq": 78,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Invoice Schedule",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "invoice_schedule",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "target": {
+        "entity": "invoice_schedule"
+      },
+      "seq": 79,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "جدول الفوترة"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_schedule",
+        "object_kind": "entity"
+      },
+      "seq": 80,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Template Invoice",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "template_invoice_ref",
+          "lookup_entity": "invoice",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_schedule",
+        "field": "template_invoice_ref"
+      },
+      "seq": 81,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "الفاتورة النموذجية"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_schedule.template_invoice_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 82,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Frequency",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "frequency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "monthly",
+              "quarterly",
+              "yearly"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_schedule",
+        "field": "frequency"
+      },
+      "seq": 83,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "التكرار"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_schedule.frequency",
+        "object_kind": "attribute"
+      },
+      "seq": 84,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Next Run",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "next_run",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_schedule",
+        "field": "next_run"
+      },
+      "seq": 85,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "التشغيل التالي"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_schedule.next_run",
+        "object_kind": "attribute"
+      },
+      "seq": 86,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Enabled",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "target": {
+        "entity": "invoice_schedule",
+        "field": "is_enabled"
+      },
+      "seq": 87,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "display_name": "مفعّل"
+      },
+      "op": "set_label",
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice_schedule.is_enabled",
+        "object_kind": "attribute"
+      },
+      "seq": 88,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on invoice_line",
+          "key": "invoice_line.read",
+          "name": "invoice_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_line.read"
+      },
+      "seq": 89,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on invoice_line",
+          "key": "invoice_line.create",
+          "name": "invoice_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_line.create"
+      },
+      "seq": 90,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on invoice_line",
+          "key": "invoice_line.update",
+          "name": "invoice_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_line.update"
+      },
+      "seq": 91,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on invoice_line",
+          "key": "invoice_line.delete",
+          "name": "invoice_line.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_line.delete"
+      },
+      "seq": 92,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on invoice_schedule",
+          "key": "invoice_schedule.read",
+          "name": "invoice_schedule.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_schedule.read"
+      },
+      "seq": 93,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on invoice_schedule",
+          "key": "invoice_schedule.create",
+          "name": "invoice_schedule.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_schedule.create"
+      },
+      "seq": 94,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on invoice_schedule",
+          "key": "invoice_schedule.update",
+          "name": "invoice_schedule.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_schedule.update"
+      },
+      "seq": 95,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on invoice_schedule",
+          "key": "invoice_schedule.delete",
+          "name": "invoice_schedule.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "invoice_schedule.delete"
+      },
+      "seq": 96,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Issues a draft invoice, giving it its number.",
+          "key": "billing.issue",
+          "name": "Issue Invoices"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "billing.issue"
+      },
+      "seq": 97,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Raises credit and debit notes against issued invoices.",
+          "key": "billing.credit",
+          "name": "Credit Invoices"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "billing.credit"
+      },
+      "seq": 98,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Writes off an invoice's open balance.",
+          "key": "billing.write_off",
+          "name": "Write Off Balances"
+        }
+      },
+      "op": "ensure_privilege",
+      "target": {
+        "privilege": "billing.write_off"
+      },
+      "seq": 99,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Prepares draft invoices and their lines; cannot issue.",
+          "is_customized": false,
+          "name": "Billing Clerk",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "target": {
+        "role": "Billing Clerk"
+      },
+      "seq": 100,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.read",
+        "role": "Billing Clerk"
+      },
+      "seq": 101,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.create",
+        "role": "Billing Clerk"
+      },
+      "seq": 102,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.update",
+        "role": "Billing Clerk"
+      },
+      "seq": 103,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.read",
+        "role": "Billing Clerk"
+      },
+      "seq": 104,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.create",
+        "role": "Billing Clerk"
+      },
+      "seq": 105,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.update",
+        "role": "Billing Clerk"
+      },
+      "seq": 106,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.delete",
+        "role": "Billing Clerk"
+      },
+      "seq": 107,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.read",
+        "role": "Billing Clerk"
+      },
+      "seq": 108,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.create",
+        "role": "Billing Clerk"
+      },
+      "seq": 109,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.update",
+        "role": "Billing Clerk"
+      },
+      "seq": 110,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "region_tax_rate.read",
+        "role": "Billing Clerk"
+      },
+      "seq": 111,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "account.read",
+        "role": "Billing Clerk"
+      },
+      "seq": 112,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "product.read",
+        "role": "Billing Clerk"
+      },
+      "seq": 113,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Issues invoices, raises credit notes and follows balances.",
+          "is_customized": false,
+          "name": "Accounts Receivable",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "target": {
+        "role": "Accounts Receivable"
+      },
+      "seq": 114,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 115,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.create",
+        "role": "Accounts Receivable"
+      },
+      "seq": 116,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.update",
+        "role": "Accounts Receivable"
+      },
+      "seq": 117,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 118,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.create",
+        "role": "Accounts Receivable"
+      },
+      "seq": 119,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.update",
+        "role": "Accounts Receivable"
+      },
+      "seq": 120,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.delete",
+        "role": "Accounts Receivable"
+      },
+      "seq": 121,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 122,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.create",
+        "role": "Accounts Receivable"
+      },
+      "seq": 123,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.update",
+        "role": "Accounts Receivable"
+      },
+      "seq": 124,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "region_tax_rate.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 125,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "account.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 126,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "product.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 127,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "billing.issue",
+        "role": "Accounts Receivable"
+      },
+      "seq": 128,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "billing.credit",
+        "role": "Accounts Receivable"
+      },
+      "seq": 129,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Everything in billing, including write-offs and tax rates.",
+          "is_customized": false,
+          "name": "Finance Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "target": {
+        "role": "Finance Manager"
+      },
+      "seq": 130,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.read",
+        "role": "Finance Manager"
+      },
+      "seq": 131,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.create",
+        "role": "Finance Manager"
+      },
+      "seq": 132,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.update",
+        "role": "Finance Manager"
+      },
+      "seq": 133,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.delete",
+        "role": "Finance Manager"
+      },
+      "seq": 134,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.read",
+        "role": "Finance Manager"
+      },
+      "seq": 135,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.create",
+        "role": "Finance Manager"
+      },
+      "seq": 136,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.update",
+        "role": "Finance Manager"
+      },
+      "seq": 137,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.delete",
+        "role": "Finance Manager"
+      },
+      "seq": 138,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.read",
+        "role": "Finance Manager"
+      },
+      "seq": 139,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.create",
+        "role": "Finance Manager"
+      },
+      "seq": 140,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.update",
+        "role": "Finance Manager"
+      },
+      "seq": 141,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.delete",
+        "role": "Finance Manager"
+      },
+      "seq": 142,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "region_tax_rate.read",
+        "role": "Finance Manager"
+      },
+      "seq": 143,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "region_tax_rate.create",
+        "role": "Finance Manager"
+      },
+      "seq": 144,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "region_tax_rate.update",
+        "role": "Finance Manager"
+      },
+      "seq": 145,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "account.read",
+        "role": "Finance Manager"
+      },
+      "seq": 146,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "product.read",
+        "role": "Finance Manager"
+      },
+      "seq": 147,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "billing.issue",
+        "role": "Finance Manager"
+      },
+      "seq": 148,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "billing.credit",
+        "role": "Finance Manager"
+      },
+      "seq": 149,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "billing.write_off",
+        "role": "Finance Manager"
+      },
+      "seq": 150,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Reads invoices and balances.",
+          "is_customized": false,
+          "name": "Billing Viewer",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "target": {
+        "role": "Billing Viewer"
+      },
+      "seq": 151,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 152,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_line.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 153,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "invoice_schedule.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 154,
+      "phase": "expand"
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "target": {
+        "privilege": "region_tax_rate.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 155,
+      "phase": "expand"
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 5,
+  "title": "Pack: invoicing"
+}

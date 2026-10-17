@@ -21,7 +21,12 @@ cancel), its `subscription_line`s and charge models, the append-only dated `subs
 change writes, and the `subscription_charge`s a billing run plans (F3). `0002`: `customer_payment`,
 append-only `payment_allocation` to invoices, `payment_refund`, `payment_dispute`,
 `saved_payment_method` (the gateway token is masked), `payment_link` and `gateway_payout`, plus credit
-limit, payment terms and credit hold on `account` (F5). It builds on crm (`account`) and sales
+limit, payment terms and credit hold on `account` (F5). `0005`: invoicing (F4) on the finance pack's `invoice`: kind (invoice,
+credit and debit note, deposit, pro forma), payment status, account and contact, buyer VAT number,
+currency, supply date, number series, the original invoice of a note, stored totals and the e-invoice
+status; `invoice_line` with VAT category, rate and amount; `invoice_schedule` for recurring
+invoices. Tax rates are the regions pack's `region_tax_rate`. Roles: Billing Clerk, Accounts
+Receivable (issue, credit), Finance Manager (also write-offs and tax rates) and Billing Viewer. It builds on crm (`account`) and sales
 (`product`, `order`, `quote`) and on an `invoice` and a `contract` entity; install it after them.
 
 ## commission

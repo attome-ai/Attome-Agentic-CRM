@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Invoicing records in the billing pack (`0005`): invoice kinds, payment status, buyer, VAT number,
+  currency, number series, stored totals and e-invoice status on `invoice`; `invoice_line` with VAT
+  category, rate and amount; `invoice_schedule`; the `billing.issue`, `billing.credit` and
+  `billing.write_off` privileges and four billing roles.
 - When a user is disabled while still owning open deals, the active users holding the position
   above theirs (administrators when there is none) get one notification listing the deals to
   reassign; deals, teams and splits are unchanged (migration `0102`).
