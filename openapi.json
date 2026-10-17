@@ -45022,6 +45022,105 @@
         }
       }
     },
+    "/api/v1/billing/invoices/{id}/issue": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_issue",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The draft invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Issued with its number, or waiting for an approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not issue invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not a draft, pro forma, or the series is being issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No account, no lines, or no VAT rate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "execute"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/invoices/{id}/recompute": {
       "post": {
         "tags": [
@@ -89596,6 +89695,37 @@
         "properties": {
           "args": {
             "description": "The action's own arguments. Shape is per-action and validated by the\nexecutor, not here — a handler that understood every action's argument\nshape would be the business logic guidelines §12 keeps out of transport."
+          }
+        }
+      },
+      "IssueOutcome": {
+        "type": "object",
+        "description": "What issuing did.",
+        "required": [
+          "invoice_id",
+          "status"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "`issued`, or `pending_approval`."
           }
         }
       },

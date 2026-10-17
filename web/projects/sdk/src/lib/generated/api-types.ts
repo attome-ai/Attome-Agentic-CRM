@@ -8629,6 +8629,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoices/{id}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoices/{id}/recompute": {
         parameters: {
             query?: never;
@@ -20866,6 +20882,16 @@ export interface components {
              *     shape would be the business logic guidelines §12 keeps out of transport.
              */
             args?: unknown;
+        };
+        /** @description What issuing did. */
+        IssueOutcome: {
+            /** Format: uuid */
+            approval_id?: string | null;
+            /** Format: uuid */
+            invoice_id: string;
+            invoice_number?: string | null;
+            /** @description `issued`, or `pending_approval`. */
+            status: string;
         };
         IssueView: {
             code: string;
@@ -61596,6 +61622,74 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The draft invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Issued with its number, or waiting for an approval */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not issue invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a draft, pro forma, or the series is being issued */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No account, no lines, or no VAT rate */
             422: {
                 headers: {
                     [name: string]: unknown;
