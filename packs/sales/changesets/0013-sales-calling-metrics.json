@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:2422ebc489cdaa6e74a0af057944c7800158538b4c09ee3c5041c832d448c680",
+  "checksum": "sha256:bce06d0c614ba8a1a12de8c25360f03a76ea80167dc2f4a11d9b808584e1054d",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "D21-T10: calls made, connect rate, talk time, outcomes and meetings booked per person, list and day, over the last 90 days of call attempts.",
   "format": "attome-changeset/v1",
@@ -12,7 +12,7 @@
     {
       "args": {
         "definition": {
-          "entity": "call_attempt",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -26,20 +26,20 @@
       "phase": "expand",
       "seq": 1,
       "target": {
-        "entity": "call_attempt",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Calling: Calls per Person per Day"
       }
     },
     {
       "args": {
         "definition": {
-          "entity": "call_attempt",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
           "name": "Calling: Connect Rate per Person per Week",
           "required_privilege": "call_attempt.read",
-          "sql": "SELECT m.claimed_by AS user_ref, date_trunc('week', a.created_at)::date AS week, COUNT(*)::bigint AS calls, ROUND(100.0 * COUNT(*) FILTER (WHERE a.outcome = 'connected') / NULLIF(COUNT(*), 0), 1) AS connect_rate_pct {J} GROUP BY m.claimed_by, 2 ORDER BY 2 DESC",
+          "sql": "SELECT m.claimed_by AS user_ref, date_trunc('week', a.created_at)::date AS week, COUNT(*)::bigint AS calls, ROUND(100.0 * COUNT(*) FILTER (WHERE a.outcome = 'connected') / NULLIF(COUNT(*), 0), 1) AS connect_rate_pct FROM call_attempt a JOIN call_list_member m ON m.id = a.member_ref WHERE a.is_active IS NOT FALSE AND a.created_at >= NOW() - INTERVAL '90 days' GROUP BY m.claimed_by, 2 ORDER BY 2 DESC",
           "table_definition": "[]"
         }
       },
@@ -47,20 +47,20 @@
       "phase": "expand",
       "seq": 2,
       "target": {
-        "entity": "call_attempt",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Calling: Connect Rate per Person per Week"
       }
     },
     {
       "args": {
         "definition": {
-          "entity": "call_attempt",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
           "name": "Calling: Talk Time per Person per Day",
           "required_privilege": "call_attempt.read",
-          "sql": "SELECT m.claimed_by AS user_ref, date_trunc('day', a.created_at)::date AS day, COALESCE(SUM(a.duration_seconds), 0)::numeric AS talk_seconds {J} GROUP BY m.claimed_by, 2 ORDER BY 2 DESC",
+          "sql": "SELECT m.claimed_by AS user_ref, date_trunc('day', a.created_at)::date AS day, COALESCE(SUM(a.duration_seconds), 0)::numeric AS talk_seconds FROM call_attempt a JOIN call_list_member m ON m.id = a.member_ref WHERE a.is_active IS NOT FALSE AND a.created_at >= NOW() - INTERVAL '90 days' GROUP BY m.claimed_by, 2 ORDER BY 2 DESC",
           "table_definition": "[]"
         }
       },
@@ -68,14 +68,14 @@
       "phase": "expand",
       "seq": 3,
       "target": {
-        "entity": "call_attempt",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Calling: Talk Time per Person per Day"
       }
     },
     {
       "args": {
         "definition": {
-          "entity": "call_attempt",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -89,14 +89,14 @@
       "phase": "expand",
       "seq": 4,
       "target": {
-        "entity": "call_attempt",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Calling: Outcomes per List"
       }
     },
     {
       "args": {
         "definition": {
-          "entity": "call_attempt",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -110,7 +110,7 @@
       "phase": "expand",
       "seq": 5,
       "target": {
-        "entity": "call_attempt",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Calling: Meetings Booked per Person per Week"
       }
     }

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:716bca751dca9a483da365fa5c375bb45d2e68c4f143d4affd08ea2740990c05",
+  "checksum": "sha256:b072a88b3238f0ec8309a3a2dee28ffd7564556e7c787a7bd1936f442652a56a",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "F10-T13: the Commission Seller, Commission Manager, Sales Ops and Commission Finance roles. A seller reads only the plan participation, credits, statement lines, payouts, adjustments, draws and disputes they own (owner-only access); a manager reads their team's; sales ops and finance read all. Every pay amount is sensitive, so search, reports and query execution mask it for anyone without the Commission Amounts field profile, which only these four roles hold.",
   "format": "attome-changeset/v1",
@@ -12,7 +12,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Amount",
           "field_type": "currency",
           "is_customized": true,
@@ -38,7 +38,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Amount",
           "field_type": "currency",
           "is_customized": true,
@@ -64,7 +64,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Amount",
           "field_type": "currency",
           "is_customized": true,
@@ -90,7 +90,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Amount",
           "field_type": "currency",
           "is_customized": true,
@@ -116,7 +116,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Amount per Period",
           "field_type": "currency",
           "is_customized": true,
@@ -142,7 +142,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Balance",
           "field_type": "currency",
           "is_customized": true,
@@ -168,7 +168,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Cap per Deal",
           "field_type": "currency",
           "is_customized": true,
@@ -194,7 +194,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Cap per Period",
           "field_type": "currency",
           "is_customized": true,

@@ -1,6 +1,6 @@
 {
   "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
-  "checksum": "sha256:80e2d7f88e1984cc78225e64b41d59b1918f7692e0b9ecdcf0c2cc856f1865f1",
+  "checksum": "sha256:5dc8aeb6f1c1a925639dbf040da7fb501c6f58a186f31be24e247c9521dc2200",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "The vendor-supplier pack's metadata, converted from its v1 vertical bundle.",
   "format": "attome-changeset/v1",
@@ -434,32 +434,6 @@
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Contract",
-          "field_type": "lookup",
-          "is_customized": true,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "contract_ref",
-          "lookup_entity": "contract",
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 17,
-      "target": {
-        "entity": "vendor",
-        "field": "contract_ref"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
           "display_name": "Vendor",
           "field_type": "lookup",
           "is_customized": true,
@@ -476,7 +450,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 17,
       "target": {
         "entity": "vendor_compliance_document",
         "field": "vendor_ref"
@@ -502,7 +476,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 18,
       "target": {
         "entity": "vendor_evaluation",
         "field": "vendor_ref"
@@ -523,7 +497,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 20,
+      "seq": 19,
       "target": {
         "entity": "vendor",
         "query": "Vendors by Classification"
@@ -549,7 +523,7 @@
       },
       "op": "upsert_sidebar_item",
       "phase": "expand",
-      "seq": 21,
+      "seq": 20,
       "target": {
         "path": "Vendor & Supplier"
       }
@@ -575,7 +549,7 @@
       },
       "op": "upsert_sidebar_item",
       "phase": "expand",
-      "seq": 22,
+      "seq": 21,
       "target": {
         "path": "Vendor & Supplier/Compliance Documents"
       }
@@ -601,7 +575,7 @@
       },
       "op": "upsert_sidebar_item",
       "phase": "expand",
-      "seq": 23,
+      "seq": 22,
       "target": {
         "path": "Vendor & Supplier/Evaluations"
       }
@@ -627,7 +601,7 @@
       },
       "op": "upsert_sidebar_item",
       "phase": "expand",
-      "seq": 24,
+      "seq": 23,
       "target": {
         "path": "Vendor & Supplier/Vendors"
       }
@@ -644,7 +618,7 @@
       },
       "op": "upsert_state_model",
       "phase": "expand",
-      "seq": 25,
+      "seq": 24,
       "target": {
         "entity": "vendor"
       }
@@ -664,7 +638,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 26,
+      "seq": 25,
       "target": {
         "entity": "vendor",
         "transition": "active->suspended"
@@ -685,7 +659,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 27,
+      "seq": 26,
       "target": {
         "entity": "vendor",
         "transition": "active->terminated"
@@ -706,7 +680,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 28,
+      "seq": 27,
       "target": {
         "entity": "vendor",
         "transition": "onboarding->active"
@@ -727,7 +701,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 29,
+      "seq": 28,
       "target": {
         "entity": "vendor",
         "transition": "suspended->active"
@@ -748,7 +722,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 30,
+      "seq": 29,
       "target": {
         "entity": "vendor",
         "transition": "suspended->terminated"

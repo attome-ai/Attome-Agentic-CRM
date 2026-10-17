@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:9011c5db46544da571400a9f2cca2c1761df6a3f22176974f9ed236abffd0b74",
+  "checksum": "sha256:2356acd1b85c410c0ef4895297a111e14d05a4e5e74c2aa5efa77230da39ef1b",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Product mix (D6-T9): Pipeline by Product and Won by Product Family reports; unit cost and margin on opportunity lines; price-list cost, line cost and margin masked behind the Sales Cost and Margin field profile, which no role holds until an administrator grants it.",
   "format": "attome-changeset/v1",
@@ -129,7 +129,7 @@
     {
       "args": {
         "definition": {
-          "entity": "opportunity",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -143,14 +143,14 @@
       "phase": "expand",
       "seq": 7,
       "target": {
-        "entity": "opportunity",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Sales: Pipeline by Product"
       }
     },
     {
       "args": {
         "definition": {
-          "entity": "opportunity",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -164,7 +164,7 @@
       "phase": "expand",
       "seq": 8,
       "target": {
-        "entity": "opportunity",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Sales: Won by Product Family"
       }
     },

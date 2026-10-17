@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:f9f652c1e30f25165e70b0b484bf946f0d459161d13efbb24e891d1955be2ccb",
+  "checksum": "sha256:fa7e662570467f4779041663a3b4769245c6e24e59a1aabc03515185698031e1",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "H6-T2: entitled seats against installs per software product and version, and the products installed on more devices than their licences cover.",
   "format": "attome-changeset/v1",
@@ -12,7 +12,7 @@
     {
       "args": {
         "definition": {
-          "entity": "software_licence",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -26,14 +26,14 @@
       "phase": "expand",
       "seq": 1,
       "target": {
-        "entity": "software_licence",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "IT Assets: Licence Position"
       }
     },
     {
       "args": {
         "definition": {
-          "entity": "software_licence",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -47,7 +47,7 @@
       "phase": "expand",
       "seq": 2,
       "target": {
-        "entity": "software_licence",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "IT Assets: Over-Deployed Software"
       }
     }

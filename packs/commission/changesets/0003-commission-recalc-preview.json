@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:7699f48c8ba1775c5b918f57edb3a0edde803ae029e119f096b308a1e88f3388",
+  "checksum": "sha256:2b2907443f668d92a9593af8cb9378629f67ded890bd5c158517ac3b4f1ec56c",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "F10-T9: what a recalculation of an open period would pay each participant, before and after, kept as a preview until sales ops apply it. Amounts are in the Commission Amounts field profile like every other pay amount.",
   "format": "attome-changeset/v1",
@@ -109,7 +109,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Current Amount",
           "field_type": "currency",
           "is_customized": true,
@@ -135,7 +135,7 @@
     {
       "args": {
         "definition": {
-          "data_classification": "confidential",
+          "data_classification": "personal",
           "display_name": "Recalculated Amount",
           "field_type": "currency",
           "is_customized": true,

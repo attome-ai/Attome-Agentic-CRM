@@ -174,6 +174,11 @@ fn the_marketing_pack_installs_once_on_the_crm_pack() {
             return;
         };
         installs_once(&app, "crm", &["lead", "contact"]).await;
+        // Nurture journeys are workflow definitions; the server applies the
+        // workflow platform definition at boot, this test app does not.
+        attome_api::changeset::boot::apply_platform_definition(&app.state, "attome-workflow")
+            .await
+            .expect("workflow platform definition");
         installs_once(
             &app,
             "marketing",

@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:ef5358ad58ae2742edf857425e66f211076f8e8005dbded06c15fb4a03f1988f",
+  "checksum": "sha256:bc4083a4c20ee3df63340f6a646bfc1d789a62302c563639eb822d2f719bbd4c",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Budgets (W4-T1): budget lines by cost centre, account, project, campaign code and period with amount, commitments, actuals and what is left, and a Budget vs Actual report that counts only approved and paid expenses.",
   "format": "attome-changeset/v1",
@@ -512,7 +512,7 @@
     {
       "args": {
         "definition": {
-          "entity": "budget",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
@@ -526,7 +526,7 @@
       "phase": "expand",
       "seq": 27,
       "target": {
-        "entity": "budget",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Finance: Budget vs Actual"
       }
     }

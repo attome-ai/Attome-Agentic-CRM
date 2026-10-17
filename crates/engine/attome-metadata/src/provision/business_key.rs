@@ -62,9 +62,11 @@ pub const BUSINESS_KEY_INDEX_INLINE_ROW_LIMIT: i64 = 10_000;
 /// starts with it, and nothing else does.
 pub const BUSINESS_KEY_INDEX_PREFIX: &str = "uxbk_";
 
-/// The field types a key field may have (the record-set rule,
-/// `bundle::record_sets::valid_key_field_type`).
-pub const KEY_FIELD_TYPES: &[&str] = &["text", "number", "date", "bool", "lookup"];
+/// The field types a key field may have: the record-set rule
+/// (`bundle::record_sets::valid_key_field_type`) plus a single-valued choice,
+/// whose stored code is one text value (a pack's stage keyed by pipeline and
+/// stage, V2-D496). A multi-valued field is refused by [`check_key_fields`].
+pub const KEY_FIELD_TYPES: &[&str] = &["text", "number", "date", "bool", "choice", "lookup"];
 
 /// How many characters of the entity name the index name keeps.
 const INDEX_ENTITY_CHARS: usize = 40;
@@ -181,7 +183,7 @@ pub fn check_key_fields(
         if !KEY_FIELD_TYPES.contains(&row.field_type.as_str()) {
             return Err(format!(
                 "business_key_invalid: {field} (type {}) cannot be part of a business key; \
-                 key fields are text, number, date, bool or lookup",
+                 key fields are text, number, date, bool, choice or lookup",
                 row.field_type
             ));
         }
@@ -1050,6 +1052,11 @@ mod tests {
             field("tags", "choice"),
             KeyFieldRow {
                 multi: true,
+                ..field("colours", "choice")
+            },
+            field("photo", "file"),
+            KeyFieldRow {
+                multi: true,
                 ..field("labels", "text")
             },
             KeyFieldRow {
@@ -1067,6 +1074,10 @@ mod tests {
             },
         ];
         assert!(check_key_fields(me, &names(&["code", "rank"]), &found).is_ok());
+        assert!(
+            check_key_fields(me, &names(&["tags", "code"]), &found).is_ok(),
+            "a single-valued choice keys by its code"
+        );
         assert!(check_key_fields(me, &names(&["parent"]), &found).is_ok());
         assert!(
             check_key_fields(me, &names(&["same"]), &found).is_ok(),
@@ -1074,7 +1085,8 @@ mod tests {
         );
         for bad in [
             "missing", // not a live field
-            "tags",    // choice
+            "colours", // multi-valued choice
+            "photo",   // file
             "labels",  // multi-valued
             "region",  // lookup to an entity without a key
         ] {

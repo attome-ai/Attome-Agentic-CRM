@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:7c45cbf7cca7831242a81600287749c95ce606f79b500a6d0e8d919d981cf40a",
+  "checksum": "sha256:ef483d6a684eb85c01dc69cf4914f57cf26a756bcc916ec5d4cbb0f46a0f6228",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Contract lifecycle (W1-T2): contract types; counterparty account and vendor, owner, type, parent contract, notice period, auto-renewal, renewal term, notice deadline, confidentiality and current terms on the contract (the old counterparty text kept); bilingual rich-text clauses with versions, a stable key, a standard position and fallbacks; obligation owner, who owes it, recurrence, evidence and reminders; amendment terms and status. Contracts, clauses, obligations and amendments are audited, and contract status, end date and obligation due date are filterable.",
   "format": "attome-changeset/v1",
@@ -1386,6 +1386,32 @@
       "target": {
         "entity": "obligation",
         "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contract",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contract_ref",
+          "lookup_entity": "contract",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "vendor",
+        "field": "contract_ref"
       }
     }
   ],

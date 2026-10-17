@@ -774,6 +774,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- A single-valued choice field may be part of a business key (the sales pack keys its stages by
+  pipeline and stage); multi-valued fields still may not.
+- The sales, commission, marketing, vendor-supplier, contract-management and finance packs install
+  again: report queries that join tables are multi-entity queries, two calling-metric queries had an
+  unfilled `{J}` placeholder, pay amounts are classified `personal`, and `vendor.contract_ref` moved
+  to the contract-management pack, which already builds on vendors (install crm, vendor-supplier,
+  then contract-management).
 - A record write with bad fields answers with every failing field at once: one 422 whose `details`
   lists each field with a code (`unknown_field`, `required`, `invalid`, `too_long`). The dry run
   (`POST /api/v1/{entity}/validate`) returns the same list as `failures`.
