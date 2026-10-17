@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Agent actions `sales.competitors.on_deal`, `sales.battlecard.get`, `sales.winloss.draft_review`
+  and `sales.battlecard.draft_update`: read only, as the person; the review and battle card drafts are
+  returned for a person to save or publish.
 - Win and loss reports in the sales pack (`0017`): overall win rate, win rate and reasons by
   competitor, reasons by segment, region and size, discount and sales cycle by competitor, losses on
   price by discount band, and win rate by quarter, run through `query/execute`.

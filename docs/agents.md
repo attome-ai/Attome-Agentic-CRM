@@ -67,6 +67,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Outages: `system.status` lists the services (object storage, email, the job queues) and which are
   down. A call refused because one is down names it under `degraded` with `retryable`: `true` for a
   short outage, `false` once it has lasted five minutes, so the agent stops and tells the person.
+- Competitors: `sales.competitors.on_deal` (the competitors on a deal with their battle card),
+  `sales.battlecard.get` (a competitor's card and its knowledge article),
+  `sales.winloss.draft_review` (a deal's win-loss review drafted from the deal and its notes, emails
+  and call findings) and `sales.battlecard.draft_update` (a card update drafted from the last 20 loss
+  reviews). All read as the person; the drafts are never saved or published.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
 

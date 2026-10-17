@@ -8,6 +8,7 @@
 
 pub mod attainment;
 pub mod catalogue;
+pub mod competitor_drafts;
 pub mod competitor_mentions;
 pub mod competitor_routes;
 pub mod competitors;
