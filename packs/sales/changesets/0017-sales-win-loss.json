@@ -1,0 +1,170 @@
+{
+  "author": "packs",
+  "checksum": "sha256:ff648d5f5a5455204e1ea26cae1d8bdebd7358d67122d5650506746b9f55ca33",
+  "closed_at": "2026-10-17T00:00:00Z",
+  "description": "D25-T6: win and loss analysis reports: overall win rate, win rate and reasons by competitor, reasons by segment, region and size, discount and sales cycle by competitor, losses on price by discount band, and win rate by quarter. A deal counts against a competitor when it was lost to it or the competitor is on the deal.",
+  "format": "attome-changeset/v1",
+  "id": "01a14b05-561e-7cea-8ede-17cab478ac92",
+  "layer": "product",
+  "name": "sales-win-loss",
+  "opened_at": "2026-10-17T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Win Rate Overall",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT COUNT(*) FILTER (WHERE o.stage = 'closed_won') AS won, COUNT(*) FILTER (WHERE o.stage = 'closed_lost') AS lost, COALESCE(SUM(o.amount) FILTER (WHERE o.stage = 'closed_won'), 0) AS won_amount, COALESCE(SUM(o.amount) FILTER (WHERE o.stage = 'closed_lost'), 0) AS lost_amount, ROUND(100.0 * COUNT(*) FILTER (WHERE o.stage = 'closed_won') / NULLIF(COUNT(*) FILTER (WHERE o.stage = 'closed_won' OR o.stage = 'closed_lost'), 0), 1) AS win_rate_percent FROM opportunity o WHERE o.stage IN ('closed_won', 'closed_lost') AND (o.is_active IS NULL OR o.is_active = true)",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Win Rate Overall"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Win Rate by Competitor",
+          "required_privilege": "competitor.read",
+          "sql": "SELECT d.competitor_ref, d.competitor_name, COUNT(*) FILTER (WHERE d.stage = 'closed_won') AS won, COUNT(*) FILTER (WHERE d.stage = 'closed_lost') AS lost, COUNT(*) FILTER (WHERE COALESCE(d.stage, '') NOT IN ('closed_won', 'closed_lost')) AS open, COALESCE(SUM(d.amount) FILTER (WHERE d.stage = 'closed_won'), 0) AS won_amount, COALESCE(SUM(d.amount) FILTER (WHERE d.stage = 'closed_lost'), 0) AS lost_amount, ROUND(100.0 * COUNT(*) FILTER (WHERE d.stage = 'closed_won') / NULLIF(COUNT(*) FILTER (WHERE d.stage = 'closed_won' OR d.stage = 'closed_lost'), 0), 1) AS win_rate_percent FROM (SELECT c.id AS competitor_ref, c.name AS competitor_name, o.id AS opportunity_ref, o.stage, o.amount, o.deal_discount_percent, o.close_date, o.created_at FROM competitor c JOIN opportunity o ON (o.lost_to_competitor_ref = c.id OR EXISTS (SELECT 1 FROM opportunity_competitor oc WHERE oc.opportunity_ref = o.id AND oc.competitor_ref = c.id AND (oc.is_active IS NULL OR oc.is_active = true))) WHERE (c.is_active IS NULL OR c.is_active = true) AND (o.is_active IS NULL OR o.is_active = true)) d GROUP BY d.competitor_ref, d.competitor_name",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Win Rate by Competitor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Win-Loss Reasons by Competitor",
+          "required_privilege": "win_loss_review.read",
+          "sql": "SELECT d.competitor_ref, d.competitor_name, r.outcome, r.main_reason, COUNT(*) AS reviews, COALESCE(SUM(d.amount), 0) AS amount FROM (SELECT c.id AS competitor_ref, c.name AS competitor_name, o.id AS opportunity_ref, o.stage, o.amount, o.deal_discount_percent, o.close_date, o.created_at FROM competitor c JOIN opportunity o ON (o.lost_to_competitor_ref = c.id OR EXISTS (SELECT 1 FROM opportunity_competitor oc WHERE oc.opportunity_ref = o.id AND oc.competitor_ref = c.id AND (oc.is_active IS NULL OR oc.is_active = true))) WHERE (c.is_active IS NULL OR c.is_active = true) AND (o.is_active IS NULL OR o.is_active = true)) d JOIN win_loss_review r ON r.opportunity_ref = d.opportunity_ref AND (r.is_active IS NULL OR r.is_active = true) WHERE r.main_reason IS NOT NULL GROUP BY d.competitor_ref, d.competitor_name, r.outcome, r.main_reason",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Win-Loss Reasons by Competitor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Win-Loss Reasons by Segment, Region and Size",
+          "required_privilege": "win_loss_review.read",
+          "sql": "SELECT a.industry AS segment, a.territory_ref AS region_ref, a.employee_band AS size_band, r.outcome, r.main_reason, COUNT(*) AS reviews, COALESCE(SUM(o.amount), 0) AS amount FROM win_loss_review r JOIN opportunity o ON o.id = r.opportunity_ref AND (o.is_active IS NULL OR o.is_active = true) LEFT JOIN account a ON a.id = o.account_ref AND (a.is_active IS NULL OR a.is_active = true) WHERE (r.is_active IS NULL OR r.is_active = true) AND r.main_reason IS NOT NULL GROUP BY a.industry, a.territory_ref, a.employee_band, r.outcome, r.main_reason",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Win-Loss Reasons by Segment, Region and Size"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Discount and Sales Cycle by Competitor",
+          "required_privilege": "competitor.read",
+          "sql": "SELECT d.competitor_ref, d.competitor_name, d.stage AS outcome, COUNT(*) AS deals, ROUND(AVG(d.deal_discount_percent), 1) AS avg_discount_percent, ROUND(AVG(d.close_date::date - d.created_at::date), 1) AS avg_cycle_days FROM (SELECT c.id AS competitor_ref, c.name AS competitor_name, o.id AS opportunity_ref, o.stage, o.amount, o.deal_discount_percent, o.close_date, o.created_at FROM competitor c JOIN opportunity o ON (o.lost_to_competitor_ref = c.id OR EXISTS (SELECT 1 FROM opportunity_competitor oc WHERE oc.opportunity_ref = o.id AND oc.competitor_ref = c.id AND (oc.is_active IS NULL OR oc.is_active = true))) WHERE (c.is_active IS NULL OR c.is_active = true) AND (o.is_active IS NULL OR o.is_active = true)) d WHERE d.stage IN ('closed_won', 'closed_lost') GROUP BY d.competitor_ref, d.competitor_name, d.stage",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Discount and Sales Cycle by Competitor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Lost on Price by Discount Band",
+          "required_privilege": "win_loss_review.read",
+          "sql": "SELECT b.discount_band, COUNT(*) AS closed_deals, COUNT(*) FILTER (WHERE b.stage = 'closed_lost') AS lost, COUNT(*) FILTER (WHERE b.stage = 'closed_lost' AND b.main_reason = 'price') AS lost_on_price, ROUND(100.0 * COUNT(*) FILTER (WHERE b.stage = 'closed_lost' AND b.main_reason = 'price') / NULLIF(COUNT(*) FILTER (WHERE b.stage = 'closed_lost'), 0), 1) AS lost_on_price_percent FROM (SELECT o.stage, r.main_reason, CASE WHEN COALESCE(o.deal_discount_percent, 0) = 0 THEN '0' WHEN o.deal_discount_percent <= 5 THEN '0-5' WHEN o.deal_discount_percent <= 10 THEN '5-10' WHEN o.deal_discount_percent <= 20 THEN '10-20' ELSE '20+' END AS discount_band FROM opportunity o LEFT JOIN win_loss_review r ON r.opportunity_ref = o.id AND (r.is_active IS NULL OR r.is_active = true) WHERE o.stage IN ('closed_won', 'closed_lost') AND (o.is_active IS NULL OR o.is_active = true)) b GROUP BY b.discount_band",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Lost on Price by Discount Band"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Win Rate by Quarter",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT date_trunc('quarter', o.close_date)::date AS quarter, COUNT(*) FILTER (WHERE o.stage = 'closed_won') AS won, COUNT(*) FILTER (WHERE o.stage = 'closed_lost') AS lost, COALESCE(SUM(o.amount) FILTER (WHERE o.stage = 'closed_won'), 0) AS won_amount, ROUND(100.0 * COUNT(*) FILTER (WHERE o.stage = 'closed_won') / NULLIF(COUNT(*) FILTER (WHERE o.stage = 'closed_won' OR o.stage = 'closed_lost'), 0), 1) AS win_rate_percent FROM opportunity o WHERE o.stage IN ('closed_won', 'closed_lost') AND o.close_date IS NOT NULL AND (o.is_active IS NULL OR o.is_active = true) GROUP BY date_trunc('quarter', o.close_date)::date",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Win Rate by Quarter"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "report"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 17,
+  "title": "Pack: win and loss analysis"
+}

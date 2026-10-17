@@ -67,6 +67,10 @@ schedules and shift assignments, preferences, swap requests and overtime offers,
 
 The marketing pack's `0002` adds campaigns with members and marketing lists with combinations.
 The sales pack's `0007` adds opportunity lines and schedules, `0008` competitors and win-loss reviews.
+`0017` adds the win and loss reports: win rate overall, by competitor and by quarter, reasons by
+competitor and by segment, region and size, discount and cycle length by competitor, and losses on
+price by discount band. A deal counts against a competitor when it was lost to it or the competitor
+is on the deal.
 
 ## privacy
 

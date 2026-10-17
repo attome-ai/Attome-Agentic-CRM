@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Win and loss reports in the sales pack (`0017`): overall win rate, win rate and reasons by
+  competitor, reasons by segment, region and size, discount and sales cycle by competitor, losses on
+  price by discount band, and win rate by quarter, run through `query/execute`.
 - Competitor routes: `POST /api/v1/sales/competitor-mentions/{id}/confirm` and `/reject`
   (`If-Match`; confirm puts the competitor on the deal as `suspected`),
   `GET /api/v1/sales/opportunities/{id}/battlecards` and
