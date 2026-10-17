@@ -150,6 +150,7 @@ pub async fn record_suggestion(
             organization_ref: suggestion.organization_ref,
             expected_value: None,
         },
+        None,
     )
     .await
     {

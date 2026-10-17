@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod approval_timeouts;
+pub mod communication;
 mod consent_gate;
 pub mod dispatch;
 pub mod engine;

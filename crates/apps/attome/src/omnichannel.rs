@@ -614,7 +614,7 @@ async fn existing_thread_id(
 /// record_id)`. Both `direction = "inbound"` (the visitor's own text) and
 /// `direction = "outbound"` (the bot's fixed acknowledgment, or later a human
 /// agent's own reply through the ordinary reply route) go through
-/// [`attome_api::communication::write_communication`] — the full M52 writer,
+/// [`attome_notification::communication::write_communication`] — the full M52 writer,
 /// with the real privilege check, audit trail, and creator-share grant.
 ///
 /// **Every row is authored by the resolved service principal, even the
@@ -645,7 +645,7 @@ async fn write_message(
 ) -> Result<(), AppError> {
     let parent_thread_id = existing_thread_id(&state.base.db, entity_name, record_id).await?;
     principal_ctx.require("communication", "create")?;
-    attome_api::communication::write_communication(
+    attome_notification::communication::write_communication(
         state,
         principal_ctx,
         principal_id,

@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Agent actions `followup.remind_owner` (reversible) and `followup.send_message` (consequential)
+  for follow-up items, under the rule's daily cap; each records an `agent_task` outcome with its
+  agent session. The communication writer behind the compose route moved to
+  `attome_notification::communication` so engines send through the same path.
 - A battle card panel on the opportunity form: a tab per competitor on the deal with its strengths,
   weaknesses, price position and knowledge article, the competitors proposed from emails and notes
   with confirm and reject, and a link to a closed deal's unfinished win-loss review; hidden when the

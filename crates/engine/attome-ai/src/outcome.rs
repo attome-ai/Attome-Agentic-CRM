@@ -143,14 +143,15 @@ pub async fn record_proposed(
     id: Uuid,
     action_id: &str,
     proposal: &OutcomeProposal<'_>,
+    agent_session_ref: Option<Uuid>,
 ) -> Result<(), AppError> {
     require_declared_kind(action_id, proposal.kind)?;
     sqlx::query(
         "INSERT INTO outcome \
             (id, kind, source_module, entity_logicalname, regarding_entity, \
              regarding_id, model_id, prompt_version, rule_ref, proposed_by, \
-             organization_ref, expected_value) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+             organization_ref, expected_value, agent_session_ref) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
     )
     .bind(id)
     .bind(proposal.kind)
@@ -164,6 +165,7 @@ pub async fn record_proposed(
     .bind(proposal.proposed_by)
     .bind(proposal.organization_ref)
     .bind(proposal.expected_value.clone())
+    .bind(agent_session_ref)
     .execute(db)
     .await
     .map_err(AppError::internal)?;
@@ -501,11 +503,15 @@ mod tests {
     /// first time it ran, not at review time.
     #[test]
     fn every_declared_outcome_kind_is_a_value_0291_allows() {
-        let migration = include_str!("../../../apps/attome/migrations/0006_engine.sql");
+        // 0006 created the CHECK; 0044 replaced it, adding `agent_task`.
+        let migrations = [
+            include_str!("../../../apps/attome/migrations/0006_engine.sql"),
+            include_str!("../../../apps/attome/migrations/0044_ai_followup_item.sql"),
+        ];
         for d in crate::actions::all() {
             if let Some(kind) = d.outcome_kind {
                 assert!(
-                    migration.contains(&format!("'{kind}'")),
+                    migrations.iter().any(|m| m.contains(&format!("'{kind}'"))),
                     "{}'s outcome_kind {kind:?} is missing from 0291's kind CHECK",
                     d.id
                 );

@@ -67,6 +67,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Outages: `system.status` lists the services (object storage, email, the job queues) and which are
   down. A call refused because one is down names it under `degraded` with `retryable`: `true` for a
   short outage, `false` once it has lasted five minutes, so the agent stops and tells the person.
+- Follow-ups: `followup.remind_owner` (an in-app reminder to the owner of a stalled record, marking
+  the follow-up item reminded) and `followup.send_message` (the drafted message by email or as an
+  internal message, marking the item sent; consequential, so a person approves an agent's call).
+  Both act only on the caller's own open items and under the rule's `daily_cap`, counted per rule
+  since midnight UTC.
 - Competitors: `sales.competitors.on_deal` (the competitors on a deal with their battle card),
   `sales.battlecard.get` (a competitor's card and its knowledge article),
   `sales.winloss.draft_review` (a deal's win-loss review drafted from the deal and its notes, emails
