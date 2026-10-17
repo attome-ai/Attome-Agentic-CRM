@@ -1703,6 +1703,39 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
 
         // ── follow-up rules (AI4-T6) ────────────────────────────────────────
         "POST /api/v1/admin/ai/follow-up-rules/{id}/run" => {
+            // The rule entity comes from a platform changeset this fixture does
+            // not apply; provision it here (a throwaway database).
+            let entity = attome_metadata::provision::ensure_entity(
+                &fx.base.db,
+                "ai_followup_rule",
+                "Follow-up Rule",
+                None,
+                false,
+            )
+            .await
+            .expect("follow-up rule entity");
+            for (name, kind) in [
+                ("name", "text"),
+                ("reason", "text"),
+                ("target_entity", "text"),
+                ("idle_days", "number"),
+            ] {
+                attome_metadata::provision::ensure_attribute(
+                    &fx.base.db,
+                    entity,
+                    name,
+                    name,
+                    kind,
+                    false,
+                    false,
+                    false,
+                    false,
+                    None,
+                    None,
+                )
+                .await
+                .expect("follow-up rule attribute");
+            }
             let id = Uuid::now_v7();
             sqlx::query(
                 "INSERT INTO ai_followup_rule (id, name, reason, target_entity, idle_days, is_active) \

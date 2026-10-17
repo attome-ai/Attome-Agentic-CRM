@@ -19,6 +19,7 @@ attome-contract.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-modules.workspace  = true
+attome-sales.workspace    = true
 attome-security.workspace = true
 attome-server.workspace   = true
 attome-storage.workspace  = true

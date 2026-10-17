@@ -20,6 +20,7 @@ pub mod discount_policy;
 pub mod enrichment;
 pub mod flags;
 pub mod forecast;
+pub mod leavers;
 pub mod model;
 pub mod opportunity_lines;
 pub mod orgchart;

@@ -472,6 +472,9 @@ pub enum EngineJob {
     /// D25-T3: win/loss reviews for big closes, off the change feed. Bare
     /// unit variant.
     SalesDealCloseSweep,
+    /// D7-T6: tells managers about disabled users' open deals. Bare unit
+    /// variant.
+    SalesLeaverSweep,
     /// AI4-T5: runs every active follow-up rule's stall detector. Bare unit
     /// variant.
     AiFollowupScan,
@@ -945,6 +948,7 @@ impl EngineJob {
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
+            | Self::SalesLeaverSweep
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
@@ -1058,6 +1062,7 @@ impl EngineJob {
             EngineJob::SalesSnapshotPrune => "SalesSnapshotPrune",
             EngineJob::NotificationFollowSweep => "NotificationFollowSweep",
             EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
+            EngineJob::SalesLeaverSweep => "SalesLeaverSweep",
             EngineJob::AiFollowupScan => "AiFollowupScan",
             EngineJob::AiFollowupItem { .. } => "AiFollowupItem",
             EngineJob::TableHealthSample => "TableHealthSample",
@@ -1177,6 +1182,7 @@ impl EngineJob {
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
+            | Self::SalesLeaverSweep
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
@@ -1314,6 +1320,7 @@ impl EngineJob {
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
             | Self::SalesDealCloseSweep
+            | Self::SalesLeaverSweep
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
@@ -1669,6 +1676,7 @@ mod tests {
         assert_round_trips(EngineJob::NotificationFollowSweep);
         assert_round_trips(EngineJob::SalesDealCloseSweep);
         assert_round_trips(EngineJob::AiFollowupScan);
+        assert_round_trips(EngineJob::SalesLeaverSweep);
         assert_round_trips(EngineJob::AiFollowupItem {
             item_id: Uuid::nil(),
         });

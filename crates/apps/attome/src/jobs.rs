@@ -1010,6 +1010,13 @@ async fn dispatch_platform_job(
                 tracing::info!(created, "win/loss: reviews created for big closes");
             }
         }
+        // D7-T6: managers hear about disabled users' open deals.
+        EngineJob::SalesLeaverSweep => {
+            let reported = attome_sales::leavers::sweep_leavers(&attome_state).await?;
+            if reported > 0 {
+                tracing::info!(reported, "leavers: managers told about open deals");
+            }
+        }
         // C2-T1: followers hear about changes to records they follow.
         EngineJob::NotificationFollowSweep => {
             let sent = attome_notification::follows::sweep(&attome_state).await?;
@@ -2238,6 +2245,7 @@ const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
 const DEDUP_KEY_SALES_SNAPSHOT_PRUNE: &str = "sales-snapshot-prune";
 const DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP: &str = "notification-follow-sweep";
 const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
+const DEDUP_KEY_SALES_LEAVER_SWEEP: &str = "sales-leaver-sweep";
 const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_TABLE_HEALTH_SAMPLE: &str = "table-health-sample";
 const DEDUP_KEY_SALES_MENTION_SCAN: &str = "sales-mention-scan";
@@ -2312,6 +2320,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SalesSnapshotPrune => DEDUP_KEY_SALES_SNAPSHOT_PRUNE,
         EngineJob::NotificationFollowSweep => DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP,
         EngineJob::SalesDealCloseSweep => DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP,
+        EngineJob::SalesLeaverSweep => DEDUP_KEY_SALES_LEAVER_SWEEP,
         EngineJob::AiFollowupScan => DEDUP_KEY_AI_FOLLOWUP_SCAN,
         EngineJob::TableHealthSample => DEDUP_KEY_TABLE_HEALTH_SAMPLE,
         EngineJob::SalesMentionScan => DEDUP_KEY_SALES_MENTION_SCAN,
@@ -2683,6 +2692,17 @@ pub fn spawn_sales_deal_close_scheduler(db: DbPool, interval: std::time::Duratio
         EngineJob::SalesDealCloseSweep,
         DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP,
         "sales deal close sweep",
+    );
+}
+
+/// D7-T6: every hour, disabled users' open deals for their managers.
+pub fn spawn_sales_leaver_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::SalesLeaverSweep,
+        DEDUP_KEY_SALES_LEAVER_SWEEP,
+        "sales leaver sweep",
     );
 }
 

@@ -732,8 +732,8 @@ async fn score_peers(
 
     let sql = format!(
         "WITH capped AS ( \
-             SELECT id, {peer_cols} FROM {table} \
-              WHERE is_active = true AND id <> $1 AND {candidate_filter} \
+             SELECT p.id, {peer_cols} FROM {table} p \
+              WHERE p.is_active = true AND p.id <> $1 AND {candidate_filter} \
               {candidate_limit} \
          ), scored AS ( \
              SELECT p.id, ({numer}) / NULLIF({denom}, 0) AS score, \

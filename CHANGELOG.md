@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- When a user is disabled while still owning open deals, the active users holding the position
+  above theirs (administrators when there is none) get one notification listing the deals to
+  reassign; deals, teams and splits are unchanged (migration `0102`).
 - `docs/agents.md` describes the follow-up agent: what each rule reason finds, the three modes, the
   daily cap and `GET /api/v1/ai/follow-ups`, `POST /api/v1/ai/follow-ups/{id}/dismiss` and
   `POST /api/v1/admin/ai/follow-up-rules/{id}/run`.
