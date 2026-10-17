@@ -1,4 +1,4 @@
-use attome_core::{EngineState, OnTargetDelete, quote_ident};
+use attome_core::{AttrInfo, EngineState, OnTargetDelete, quote_ident};
 use attome_security::{
     RecordAction, SecurityContextExt, bind_rls_predicate, resolve_entity_access_level,
     resolve_owner_visible, rls_predicate_with_conditions,
@@ -201,6 +201,7 @@ pub(super) async fn require_record_access_any_active_state(
         require_active,
         access_level,
         owner_visible,
+        None,
     )
     .await
 }
@@ -246,14 +247,24 @@ async fn check_record_access<'e, E>(
     require_active: bool,
     access_level: AccessLevel,
     owner_visible: bool,
+    known_attrs: Option<&[AttrInfo]>,
 ) -> Result<(), AppError>
 where
     E: sqlx::PgExecutor<'e>,
 {
     let table = quote_ident(entity_name);
     // D-369: attrs are needed only to render an active condition's column
-    // cast, if any — an arc-swap registry read, not a DB round trip.
-    let (_, _, attrs, _) = resolve_entity(state, entity_name).await?;
+    // cast, if any. A caller inside a transaction passes its own: resolving
+    // them here could read `entity_info` through the pool on a registry miss
+    // while the transaction holds a connection (M01 Core C-12).
+    let resolved;
+    let attrs: &[AttrInfo] = match known_attrs {
+        Some(attrs) => attrs,
+        None => {
+            resolved = resolve_entity(state, entity_name).await?.2;
+            &resolved
+        }
+    };
     let privilege_key = format!("{entity_name}.{}", action.as_str());
     let Some(pred) = rls_predicate_with_conditions(
         ctx,
@@ -262,7 +273,7 @@ where
         access_level,
         action.share_capability(),
         &privilege_key,
-        &attrs,
+        attrs,
         owner_visible,
         2,
     ) else {
@@ -319,6 +330,7 @@ pub async fn require_record_access_in_tx(
     action: RecordAction,
     access_level: AccessLevel,
     owner_visible: bool,
+    attrs: &[AttrInfo],
 ) -> Result<(), AppError> {
     check_record_access(
         &mut **tx,
@@ -331,6 +343,7 @@ pub async fn require_record_access_in_tx(
         true,
         access_level,
         owner_visible,
+        Some(attrs),
     )
     .await
 }
@@ -370,6 +383,7 @@ pub async fn require_record_access_with(
         true,
         access_level,
         owner_visible,
+        None,
     )
     .await
 }

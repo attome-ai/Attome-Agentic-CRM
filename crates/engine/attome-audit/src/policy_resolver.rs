@@ -137,6 +137,26 @@ fn l1() -> &'static HotCache<AuditPolicy> {
 /// [`AuditPolicy::audit_all`] — this function never returns an `Err` that
 /// would let a caller skip auditing by accident.
 pub async fn resolve(state: &EngineState, entity_name: &str) -> AuditPolicy {
+    resolve_via(state, None, entity_name).await
+}
+
+/// [`resolve`] for a caller inside an open transaction: a cache miss reads
+/// `audit_config` on `conn`, the transaction's own connection, instead of
+/// taking a second one from the pool while the first is held (M01 Core
+/// C-12; a one-connection pool would otherwise wait out its acquire timeout).
+pub async fn resolve_in(
+    state: &EngineState,
+    conn: &mut sqlx::PgConnection,
+    entity_name: &str,
+) -> AuditPolicy {
+    resolve_via(state, Some(conn), entity_name).await
+}
+
+async fn resolve_via(
+    state: &EngineState,
+    conn: Option<&mut sqlx::PgConnection>,
+    entity_name: &str,
+) -> AuditPolicy {
     if let Some(policy) = l1().get(&redis_key(entity_name)).await {
         return policy;
     }
@@ -149,16 +169,18 @@ pub async fn resolve(state: &EngineState, entity_name: &str) -> AuditPolicy {
         return policy;
     }
 
-    let policy = resolve_from_db(state, entity_name)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(
-                error = %e,
-                entity = entity_name,
-                "audit policy resolution failed — failing safe to audit_all",
-            );
-            AuditPolicy::audit_all()
-        });
+    let from_db = match conn {
+        Some(conn) => resolve_from_db(conn, entity_name).await,
+        None => resolve_from_db(&state.base.db, entity_name).await,
+    };
+    let policy = from_db.unwrap_or_else(|e| {
+        tracing::warn!(
+            error = %e,
+            entity = entity_name,
+            "audit policy resolution failed — failing safe to audit_all",
+        );
+        AuditPolicy::audit_all()
+    });
 
     if let Ok(json) = serde_json::to_string(&policy) {
         let _ = tokio::time::timeout(
@@ -176,10 +198,10 @@ pub async fn resolve(state: &EngineState, entity_name: &str) -> AuditPolicy {
     policy
 }
 
-async fn resolve_from_db(
-    state: &EngineState,
-    entity_name: &str,
-) -> Result<AuditPolicy, sqlx::Error> {
+async fn resolve_from_db<'e, E>(db: E, entity_name: &str) -> Result<AuditPolicy, sqlx::Error>
+where
+    E: sqlx::PgExecutor<'e>,
+{
     // Field, entity and global rows in one query — cheapest single
     // round-trip that still lets us apply the field -> entity -> global
     // precedence in Rust, where the resolution rule is easy to read and test.
@@ -189,7 +211,7 @@ async fn resolve_from_db(
          WHERE is_active IS NOT FALSE AND (entity_name = $1 OR entity_name IS NULL)",
     )
     .bind(entity_name)
-    .fetch_all(&state.base.db)
+    .fetch_all(db)
     .await?;
 
     let mut entity_row: Option<(Option<i32>, Option<bool>, Option<bool>)> = None;

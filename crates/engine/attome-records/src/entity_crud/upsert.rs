@@ -435,6 +435,7 @@ async fn upsert_record_inner(
             RecordAction::Update,
             update_access_level,
             update_owner_visible,
+            &attrs,
         )
         .await?;
         update_one(

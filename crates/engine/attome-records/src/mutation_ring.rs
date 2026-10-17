@@ -277,7 +277,8 @@ impl<'a> MutationRing<'a> {
         // category any caller in this crate ever overrides `MutationAudit`'s
         // `Entity` default to is `Relationship`) — so the policy resolver
         // always applies to what this function writes, per I4/plan 5.2.
-        let policy = attome_audit::policy_resolver::resolve(self.state, entity_name).await;
+        let policy =
+            attome_audit::policy_resolver::resolve_in(self.state, &mut tx, entity_name).await;
 
         // Plan 5.2: a change to `audit_config` itself is always a
         // mandatory `Configuration` event, in the same transaction, never
