@@ -8629,6 +8629,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoices/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices/{id}/credit-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_credit_note"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices/{id}/debit-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_debit_note"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoices/{id}/issue": {
         parameters: {
             query?: never;
@@ -16106,6 +16154,9 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
+        CancelRequest: {
+            reason: string;
+        };
         /**
          * @description `POST /api/v1/{entity}/{id}/transition/cancel` — withdraws the record's
          *     open transition approval (requester only) and returns the record to the
@@ -18099,6 +18150,20 @@ export interface components {
             path: string;
             token: string;
         };
+        /** @description One original line to credit, and how much of it. */
+        CreditLine: {
+            /** Format: uuid */
+            line_id: string;
+            /**
+             * Format: double
+             * @description A positive quantity, at most what is still uncredited on the line.
+             */
+            quantity: number;
+        };
+        CreditNoteRequest: {
+            lines: components["schemas"]["CreditLine"][];
+            reason: string;
+        };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_ChangeFeedEntry: {
             items: {
@@ -18423,6 +18488,25 @@ export interface components {
              *     `"BulkEntityOperation"`) — never the payload itself.
              */
             variant: string;
+        };
+        /** @description A new line on a debit note. */
+        DebitLine: {
+            description: string;
+            /** Format: uuid */
+            product_ref?: string | null;
+            /** Format: double */
+            quantity: number;
+            /** Format: double */
+            unit_price: number;
+            /**
+             * @description `standard` (default), `reduced`, `zero_rated`, `exempt` or
+             *     `out_of_scope`.
+             */
+            vat_category?: string | null;
+        };
+        DebitNoteRequest: {
+            lines: components["schemas"]["DebitLine"][];
+            reason: string;
         };
         DecideAccessReviewItemBody: {
             /** @description `"keep"` or `"revoke"`. */
@@ -22133,6 +22217,19 @@ export interface components {
          */
         NotComputableResponse: {
             reason: string;
+            status: string;
+        };
+        /** @description The note created (a draft), or, for a cancellation, how its issue went. */
+        NoteCreated: {
+            /** Format: uuid */
+            approval_id?: string | null;
+            invoice_number?: string | null;
+            kind: string;
+            /** Format: uuid */
+            note_id: string;
+            /** Format: uuid */
+            original_id: string;
+            /** @description `draft`, `issued` or `pending_approval`. */
             status: string;
         };
         NotifOut: {
@@ -61622,6 +61719,222 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The issued invoice to cancel */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequest"];
+            };
+        };
+        responses: {
+            /** @description The full credit note, issued or waiting for an approval */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not cancel invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not issued, already fully credited, or the series is being issued */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_credit_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The issued invoice to credit */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreditNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description The draft credit note */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not credit invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The invoice is not issued, or is itself a credit note */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, an unknown line, or more than is left on a line */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_debit_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The issued invoice the charge belongs to */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DebitNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description The draft debit note */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not raise notes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The invoice is not issued, or is a credit note */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, no lines, or a line without a positive quantity */
             422: {
                 headers: {
                     [name: string]: unknown;

@@ -45022,6 +45022,333 @@
         }
       }
     },
+    "/api/v1/billing/invoices/{id}/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The issued invoice to cancel",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The full credit note, issued or waiting for an approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not cancel invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not issued, already fully credited, or the series is being issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/billing/invoices/{id}/credit-notes": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_credit_note",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The issued invoice to credit",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The draft credit note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not credit invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invoice is not issued, or is itself a credit note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, an unknown line, or more than is left on a line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/billing/invoices/{id}/debit-notes": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_debit_note",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The issued invoice the charge belongs to",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebitNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The draft debit note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not raise notes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invoice is not issued, or is a credit note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, no lines, or a line without a positive quantity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/invoices/{id}/issue": {
       "post": {
         "tags": [
@@ -78072,6 +78399,17 @@
           }
         }
       },
+      "CancelRequest": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "CancelTransitionBody": {
         "type": "object",
         "description": "`POST /api/v1/{entity}/{id}/transition/cancel` — withdraws the record's\nopen transition approval (requester only) and returns the record to the\nstate it came from; or, when that approval was already closed without\nexecuting (rejected, expired, invalidated) but the record is still\nparked, finishes returning it (the requester or an administrator).",
@@ -83062,6 +83400,43 @@
           }
         }
       },
+      "CreditLine": {
+        "type": "object",
+        "description": "One original line to credit, and how much of it.",
+        "required": [
+          "line_id",
+          "quantity"
+        ],
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double",
+            "description": "A positive quantity, at most what is still uncredited on the line."
+          }
+        }
+      },
+      "CreditNoteRequest": {
+        "type": "object",
+        "required": [
+          "lines",
+          "reason"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreditLine"
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "CursorPage_ChangeFeedEntry": {
         "type": "object",
         "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
@@ -83860,6 +84235,60 @@
           "variant": {
             "type": "string",
             "description": "The externally-tagged `EngineJob` variant name (e.g.\n`\"BulkEntityOperation\"`) — never the payload itself."
+          }
+        }
+      },
+      "DebitLine": {
+        "type": "object",
+        "description": "A new line on a debit note.",
+        "required": [
+          "description",
+          "quantity",
+          "unit_price"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "product_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "vat_category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`standard` (default), `reduced`, `zero_rated`, `exempt` or\n`out_of_scope`."
+          }
+        }
+      },
+      "DebitNoteRequest": {
+        "type": "object",
+        "required": [
+          "lines",
+          "reason"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebitLine"
+            }
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -92970,6 +93399,46 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "NoteCreated": {
+        "type": "object",
+        "description": "The note created (a draft), or, for a cancellation, how its issue went.",
+        "required": [
+          "note_id",
+          "original_id",
+          "kind",
+          "status"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "note_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "original_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`draft`, `issued` or `pending_approval`."
           }
         }
       },
