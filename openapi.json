@@ -45022,6 +45022,105 @@
         }
       }
     },
+    "/api/v1/billing/invoices/{id}/recompute": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_recompute",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The draft invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The draft's lines and totals, recomputed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceTotals"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invoice is not a draft, or a line changed meanwhile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No VAT rate applies to a line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/metrics/recurring": {
       "get": {
         "tags": [
@@ -89454,6 +89553,41 @@
             "type": "string",
             "format": "date-time",
             "description": "When the emailed link stops working. The link itself is never returned."
+          }
+        }
+      },
+      "InvoiceTotals": {
+        "type": "object",
+        "description": "A draft's recomputed totals.",
+        "required": [
+          "invoice_id",
+          "currency",
+          "net_total",
+          "vat_total",
+          "grand_total",
+          "lines"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "grand_total": {
+            "type": "string"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "net_total": {
+            "type": "string",
+            "description": "Decimal amounts, as text."
+          },
+          "vat_total": {
+            "type": "string"
           }
         }
       },

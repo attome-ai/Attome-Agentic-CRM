@@ -8629,6 +8629,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoices/{id}/recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_recompute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/metrics/recurring": {
         parameters: {
             query?: never;
@@ -20831,6 +20847,17 @@ export interface components {
              * @description When the emailed link stops working. The link itself is never returned.
              */
             expires_at: string;
+        };
+        /** @description A draft's recomputed totals. */
+        InvoiceTotals: {
+            currency: string;
+            grand_total: string;
+            /** Format: uuid */
+            invoice_id: string;
+            lines: number;
+            /** @description Decimal amounts, as text. */
+            net_total: string;
+            vat_total: string;
         };
         InvokeRequest: {
             /**
@@ -61569,6 +61596,74 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_recompute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The draft invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The draft's lines and totals, recomputed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceTotals"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The invoice is not a draft, or a line changed meanwhile */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No VAT rate applies to a line */
             422: {
                 headers: {
                     [name: string]: unknown;
