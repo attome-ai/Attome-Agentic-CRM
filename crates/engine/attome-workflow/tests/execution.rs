@@ -2549,6 +2549,7 @@ async fn unknown_node_type_fails_the_instance_with_a_stored_reason_instead_of_pa
 /// `execute_node`. Before `scheduler::ExecutionClaim`, both passes ran the
 /// node (two webhook calls) and only the second checkpoint was discarded.
 #[tokio::test]
+#[ignore = "the webhook node refuses its loopback test listener (attome_server::ssrf_guard, which allows no test bypass); needs an injectable webhook transport (V2-D497)"]
 async fn concurrent_passes_on_one_instance_execute_each_node_once() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -3181,6 +3182,20 @@ async fn create_record_node_grants_the_creator_share_to_started_by() {
             .await
             .expect("build registry"),
     );
+    // A flow runs as its starter, so the starter needs the create privilege
+    // the node uses.
+    let create_privilege = attome_security::db::ensure_privilege(
+        &state.base.db,
+        "wf_owner_visibility_test_entity.create",
+        "Create",
+        "Create workflow owner visibility test records",
+        attome_core::changeset::Layer::Project,
+    )
+    .await
+    .expect("ensure the create privilege");
+    attome_security::db::ensure_user_privilege_grant(&state.base.db, user_id, create_privilege)
+        .await
+        .expect("grant the create privilege to the starter");
 
     let graph = json!({
         "nodes": [
@@ -3244,10 +3259,15 @@ async fn create_record_node_grants_the_creator_share_to_started_by() {
 
     // Also written unconditionally now that the ring owns this mutation's
     // audit event end to end — before C-10, `execute_entity_write` wrote
-    // none at all for a Create/Update Record node.
+    // none at all for a Create/Update Record node. With the chainer on the
+    // event waits in `audit_ingest` until the chainer drains it into
+    // `audit_header`, so it is counted in either place.
     let audit_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM audit_header \
-         WHERE entity_name = 'wf_owner_visibility_test_entity' AND record_id = $1",
+        "SELECT (SELECT COUNT(*) FROM audit_header \
+                 WHERE entity_name = 'wf_owner_visibility_test_entity' AND record_id = $1) \
+              + (SELECT COUNT(*) FROM audit_ingest \
+                 WHERE payload->>'entity_name' = 'wf_owner_visibility_test_entity' \
+                   AND payload->>'record_id' = $1::text)",
     )
     .bind(record_id)
     .fetch_one(&state.base.db)
