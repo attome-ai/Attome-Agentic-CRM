@@ -24,9 +24,9 @@ const MAX_ADAPTED_BODY: usize = 16 * 1024 * 1024;
 /// One step between adjacent versions.
 pub trait VersionAdapter: Send + Sync {
     /// The older version.
-    fn from_version(&self) -> &'static str;
+    fn older_version(&self) -> &'static str;
     /// The next version up.
-    fn to_version(&self) -> &'static str;
+    fn newer_version(&self) -> &'static str;
     /// The operations it rewrites, as `"{METHOD} {route template}"`.
     fn operations(&self) -> &'static [&'static str];
     /// A request body written for `from`, as `to` expects it.
@@ -53,13 +53,13 @@ impl AdapterChain {
     /// before it ended.
     pub fn new(adapters: Vec<Box<dyn VersionAdapter>>) -> Result<Self, String> {
         for pair in adapters.windows(2) {
-            if pair[0].to_version() != pair[1].from_version() {
+            if pair[0].newer_version() != pair[1].older_version() {
                 return Err(format!(
                     "version adapters are not contiguous: {} -> {} is followed by {} -> {}",
-                    pair[0].from_version(),
-                    pair[0].to_version(),
-                    pair[1].from_version(),
-                    pair[1].to_version()
+                    pair[0].older_version(),
+                    pair[0].newer_version(),
+                    pair[1].older_version(),
+                    pair[1].newer_version()
                 ));
             }
         }
@@ -71,7 +71,7 @@ impl AdapterChain {
         match self
             .adapters
             .iter()
-            .position(|a| a.from_version() == version)
+            .position(|a| a.older_version() == version)
         {
             Some(start) => &self.adapters[start..],
             None => &[],
@@ -88,8 +88,8 @@ impl AdapterChain {
                 .iter()
                 .map(|a| {
                     serde_json::json!({
-                        "from": a.from_version(),
-                        "to": a.to_version(),
+                        "from": a.older_version(),
+                        "to": a.newer_version(),
                         "operations": a.operations(),
                     })
                 })
@@ -166,10 +166,10 @@ mod tests {
     struct RenameFullName;
 
     impl VersionAdapter for RenameFullName {
-        fn from_version(&self) -> &'static str {
+        fn older_version(&self) -> &'static str {
             "2026-04"
         }
-        fn to_version(&self) -> &'static str {
+        fn newer_version(&self) -> &'static str {
             "2026-10"
         }
         fn operations(&self) -> &'static [&'static str] {
@@ -196,10 +196,10 @@ mod tests {
     struct Noop(&'static str, &'static str);
 
     impl VersionAdapter for Noop {
-        fn from_version(&self) -> &'static str {
+        fn older_version(&self) -> &'static str {
             self.0
         }
-        fn to_version(&self) -> &'static str {
+        fn newer_version(&self) -> &'static str {
             self.1
         }
         fn operations(&self) -> &'static [&'static str] {

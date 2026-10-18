@@ -506,7 +506,7 @@ async fn send_in_span(
     // fails before any lookup or network attempt.
     let from = mailbox(&from_header(cfg, &msg))?;
     let to = mailbox(catch_all(cfg).unwrap_or(&msg.to))?;
-    let provider = crate::provider::select(cfg, &from.email.to_string())?;
+    let provider = crate::provider::select(cfg, from.email.as_ref())?;
 
     // Z8-T6: in test mode the catch-all is the one recipient.
     let recipient = normalize_email(catch_all(cfg).unwrap_or(&msg.to));

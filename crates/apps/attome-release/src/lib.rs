@@ -999,8 +999,12 @@ fn smoke(root: &Path) -> Result<(), String> {
     let mut ready = false;
     while Instant::now() < deadline {
         if let Ok(Some(status)) = server.try_wait() {
+            // The log stays on the runner; its last lines are the reason.
+            let log = std::fs::read_to_string(dir.join("serve.log")).unwrap_or_default();
+            let lines: Vec<&str> = log.lines().collect();
+            let tail = lines[lines.len().saturating_sub(30)..].join("\n");
             return Err(format!(
-                "attome serve exited during start-up ({status}); see {}",
+                "attome serve exited during start-up ({status}); last lines of {}:\n{tail}",
                 dir.join("serve.log").display()
             ));
         }

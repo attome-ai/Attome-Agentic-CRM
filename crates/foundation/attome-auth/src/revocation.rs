@@ -219,6 +219,6 @@ mod tests {
     #[tokio::test]
     async fn is_revoked_fails_closed_when_redis_is_unreachable() {
         let redis = unconnected_pool();
-        assert!(is_revoked(&redis, Uuid::now_v7()).await);
+        assert!(is_revoked(RevocationStore::Store(&redis), Uuid::now_v7()).await);
     }
 }
