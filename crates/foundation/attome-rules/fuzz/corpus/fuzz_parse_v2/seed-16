@@ -1,0 +1,1 @@
+any(lines, l => l.sku == "A")

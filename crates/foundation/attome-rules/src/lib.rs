@@ -101,6 +101,10 @@
 //! assert_eq!(compiled.eval(&ctx).unwrap(), Value::Bool(true));
 //! ```
 
+// Z11-T17: the parser and evaluator are fuzzed by the `fuzz/` crate (not a
+// workspace member; nightly and libFuzzer):
+//   cargo +nightly fuzz run fuzz_parse_v2 -- -max_total_time=60   (Linux or WSL)
+
 pub mod arabic;
 mod ast;
 mod budget;

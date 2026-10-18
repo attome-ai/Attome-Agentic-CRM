@@ -1,0 +1,1 @@
+date_add(opened, 3, "days")

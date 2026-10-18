@@ -1,0 +1,1 @@
+if(amount > 10, "big", "small")

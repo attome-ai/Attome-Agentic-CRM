@@ -1,0 +1,1 @@
+normalize_ar(name) == normalize_ar("احمد")

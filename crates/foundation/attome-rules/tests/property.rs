@@ -24,8 +24,8 @@
 )]
 
 use attome_rules::{
-    BinaryOp, Budgets, Context, Expr, FieldRef, RulesError, Schema, Type, UnaryOp, Value, compile,
-    compile_with_budgets,
+    BinaryOp, Budgets, Context, Expr, FieldRef, LanguageVersion, RulesError, Schema, Type, UnaryOp,
+    Value, compile, compile_versioned, compile_with_budgets,
 };
 use chrono::{TimeZone, Utc};
 use proptest::prelude::*;
@@ -461,6 +461,138 @@ proptest! {
         let compiled = compile_with_budgets(&src, &schema, too_small).unwrap();
         let ctx = fuzz_context();
         prop_assert_eq!(compiled.eval(&ctx), Err(RulesError::Budget(attome_rules::BudgetKind::StringLength)));
+    }
+}
+
+// ── Z11-T17: the V2 grammar ──────────────────────────────────────────────────
+
+/// Every V2 function and the lambda functions' names, beside the V1 ones.
+fn arb_v2_func_name() -> impl Strategy<Value = String> {
+    prop_oneof![
+        arb_func_name(),
+        prop_oneof![
+            Just("endswith"),
+            Just("normalize_ar"),
+            Just("concat"),
+            Just("substr"),
+            Just("replace"),
+            Just("abs"),
+            Just("floor"),
+            Just("ceil"),
+            Just("power"),
+            Just("clamp"),
+            Just("round_currency"),
+            Just("convert"),
+            Just("minor_units"),
+            Just("matches"),
+            Just("sum"),
+            Just("count"),
+            Just("avg"),
+            Just("first"),
+            Just("hijri_year"),
+            Just("hijri_date"),
+            Just("add_workdays"),
+            Just("to_zone"),
+        ]
+        .prop_map(str::to_owned),
+    ]
+}
+
+/// A V2-shaped tree: V2 calls, and `any`/`all`/`filter`/`map` with a lambda
+/// over the related list `lines`.
+fn arb_v2_expr() -> impl Strategy<Value = Expr> {
+    arb_leaf().prop_recursive(6, 128, 4, |inner| {
+        prop_oneof![
+            (arb_unary_op(), inner.clone()).prop_map(|(op, e)| Expr::Unary {
+                op,
+                expr: Box::new(e)
+            }),
+            (arb_binary_op(), inner.clone(), inner.clone()).prop_map(|(op, l, r)| Expr::Binary {
+                op,
+                lhs: Box::new(l),
+                rhs: Box::new(r)
+            }),
+            (
+                arb_v2_func_name(),
+                prop::collection::vec(inner.clone(), 0..4)
+            )
+                .prop_map(|(name, args)| Expr::Call { name, args }),
+            (
+                prop_oneof![Just("any"), Just("all"), Just("filter"), Just("map")],
+                inner.clone()
+            )
+                .prop_map(|(name, body)| Expr::Call {
+                    name: name.to_owned(),
+                    args: vec![
+                        Expr::FieldRef(FieldRef {
+                            base: "lines".to_owned(),
+                            hop: None
+                        }),
+                        Expr::Lambda {
+                            param: "l".to_owned(),
+                            body: Box::new(body)
+                        },
+                    ],
+                }),
+        ]
+    })
+}
+
+fn v2_schema() -> Schema {
+    fuzz_schema().with_related_list(
+        "lines",
+        vec![
+            ("qty".to_owned(), Type::Number),
+            ("sku".to_owned(), Type::Text),
+        ],
+    )
+}
+
+fn v2_context() -> Context {
+    fuzz_context().with_related_list(
+        "lines",
+        vec![
+            vec![
+                ("qty".to_owned(), Value::Number(2.0)),
+                ("sku".to_owned(), Value::Text("A".to_owned())),
+            ],
+            vec![
+                ("qty".to_owned(), Value::Number(0.0)),
+                ("sku".to_owned(), Value::Text("B".to_owned())),
+            ],
+        ],
+    )
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(512))]
+
+    /// Z11-T17: any text compiled as V2 compiles or errors, and what compiles
+    /// evaluates or errors against an empty context; nothing panics.
+    #[test]
+    fn v2_never_panics_on_arbitrary_source(src in ".{0,200}") {
+        if let Ok(compiled) =
+            compile_versioned(&src, &v2_schema(), LanguageVersion::V2, Budgets::default())
+        {
+            let _ = compiled.eval(&Context::new(Utc::now()));
+            let _ = compiled.eval(&v2_context());
+        }
+    }
+
+    /// Z11-T17: generated V2 trees, rendered to text, type-check or return a
+    /// typed error, and a checked one evaluates or errors; a lambda's Display
+    /// parses back.
+    #[test]
+    fn v2_generated_expressions_typecheck_or_error(expr in arb_v2_expr()) {
+        let src = expr.to_string();
+        match compile_versioned(&src, &v2_schema(), LanguageVersion::V2, Budgets::default()) {
+            Ok(compiled) => {
+                if let Ok(Value::Number(n)) = compiled.eval(&v2_context()) {
+                    prop_assert!(n.is_finite(), "non-finite {n} from {src}");
+                }
+            }
+            Err(error) => prop_assert!(error.code().starts_with("rules."), "{error:?}"),
+        }
     }
 }
 

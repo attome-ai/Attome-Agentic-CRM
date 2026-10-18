@@ -1,0 +1,1 @@
+count(filter(lines, l => l.qty > 0))

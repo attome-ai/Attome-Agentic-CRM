@@ -1,0 +1,1 @@
+all(lines, a => any(lines, b => b.qty >= a.qty))
