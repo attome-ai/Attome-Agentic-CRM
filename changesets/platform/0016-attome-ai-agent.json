@@ -399,6 +399,9 @@
               "search.knowledge",
               "search.records",
               "system.status",
+              "table.change_plan",
+              "table.health",
+              "table.index_proposals",
               "text.sentiment",
               "text.translate",
               "workflow.start"

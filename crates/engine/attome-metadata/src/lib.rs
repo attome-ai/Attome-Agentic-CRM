@@ -5,6 +5,8 @@ pub mod kinds;
 pub mod model_edit;
 pub mod provision;
 pub mod purge;
+/// Y2-T8 / Y2-T14: an entity table's health from the statistics views.
+pub mod table_health;
 
 pub use autovalue::{AutoValue, ResetScope};
 pub use provision::{ensure_attribute, ensure_entity, sync_attribute_index};

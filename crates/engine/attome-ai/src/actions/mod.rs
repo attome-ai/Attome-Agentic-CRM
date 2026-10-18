@@ -48,6 +48,8 @@ pub mod search_records;
 pub mod sentiment;
 pub mod summary_context;
 pub mod system_status;
+/// Y2-T14, Y12-T12: read tools over an entity's table.
+pub mod table;
 pub mod transition;
 pub mod translate;
 pub mod workflow;
@@ -80,6 +82,9 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
     all.push(ops_slo::descriptor());
+    all.push(table::health_descriptor());
+    all.push(table::index_proposals_descriptor());
+    all.push(table::change_plan_descriptor());
     all.push(bin::descriptor());
     all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
@@ -131,6 +136,9 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
     all.push(Box::new(ops_slo::OpsSloHealth));
+    all.push(Box::new(table::TableHealthTool));
+    all.push(Box::new(table::TableIndexProposalsTool));
+    all.push(Box::new(table::TableChangePlanTool));
     all.push(Box::new(bin::RecordDeleted));
     all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());

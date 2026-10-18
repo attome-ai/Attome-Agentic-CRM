@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Agents: `table.health`, `table.index_proposals` and `table.change_plan` (Y2-T14, Y12-T12),
+  read-only administrator tools over an entity's table: its health, the indexes slow statements
+  suggest, and a preview of how structure changes would run. No agent tool applies an index or a
+  structure change.
 - Tests: `attome_types::Clock` with `SystemClock` and `FakeClock` (Z15-T5). The approval expiry
   sweep and step-timeout sweep have `_at` variants taking a clock, its time bound into their
   due-ness SQL, so a test advances a fake clock instead of sleeping; production passes the
