@@ -34,7 +34,7 @@ use serde::Deserialize;
 /// nothing changes about boot. Configuring one without the other is a boot
 /// error (`AppConfig::validate`): a bundle without a key could never be
 /// verified, and a key with nothing to verify configures nothing.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct DeploymentSection {
     #[serde(default)]
     pub data_region: Option<String>,

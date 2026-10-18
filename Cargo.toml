@@ -195,6 +195,8 @@ rust_xlsxwriter = "0.100"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }
 scraper       = "0.27"
 serde         = { version = "1", features = ["derive"] }
+# Z1-T4: the configuration's JSON Schema, derived from the typed sections.
+schemars      = { version = "1", default-features = false, features = ["derive", "std", "uuid1"] }
 serde_ignored = "0.1"
 serde_json    = "1"
 sha1          = "0.10"

@@ -12,7 +12,7 @@
 //! still works regardless, so previously-imported knowledge stays visible.
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct WebcrawlSection {
     pub enabled: bool,

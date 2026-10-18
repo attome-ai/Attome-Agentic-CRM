@@ -33,7 +33,7 @@ impl std::fmt::Debug for IntegrationSection {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct IntegrationSection {
     pub enabled: bool,

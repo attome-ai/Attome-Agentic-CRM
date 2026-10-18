@@ -19,7 +19,7 @@ impl std::fmt::Debug for EinvoiceSection {
     }
 }
 
-#[derive(Clone, Default, Deserialize)]
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct EinvoiceSection {
     pub enabled: bool,

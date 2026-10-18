@@ -17,7 +17,7 @@
 //! worker or exhaust memory on an oversized response.
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct DocgenSection {
     pub render_service_url: String,

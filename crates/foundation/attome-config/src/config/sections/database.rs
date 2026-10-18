@@ -11,7 +11,7 @@ use crate::config::helpers::{
     default_max_body, default_request_timeout, default_server_host, default_true,
 };
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct AppSection {
     pub port: u16,
     #[serde(default = "default_server_host")]
@@ -129,7 +129,7 @@ pub(crate) fn default_shutdown_drain_delay_secs() -> u64 {
     10
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct DatabaseSection {
     pub host: String,
     pub port: u16,
@@ -363,7 +363,7 @@ impl DatabaseSection {
 
 /// attome-db hardening Phase 2.3 — `database.pools`: optional per-pool sizes.
 /// A pool with no entry is sized from `DatabaseSection::connection_number`.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
 pub struct DatabasePools {
     #[serde(default)]
     pub runtime: Option<DatabasePoolSize>,
@@ -381,7 +381,7 @@ pub struct DatabasePools {
 }
 
 /// Z2-T5: `database.statement_classes`, one optional override per class.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StatementClassOverrides {
     #[serde(default)]
@@ -396,7 +396,7 @@ pub struct StatementClassOverrides {
 
 /// Z2-T5: one statement class's timeouts in milliseconds; each must be
 /// above 0.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StatementClassTimeouts {
     pub statement_timeout_ms: u64,
@@ -405,7 +405,7 @@ pub struct StatementClassTimeouts {
 }
 
 /// One pool's size override; `max_connections` is validated to `1..=1000`.
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, schemars::JsonSchema)]
 pub struct DatabasePoolSize {
     pub max_connections: u32,
 }
@@ -430,7 +430,7 @@ fn default_sticky_primary_ttl_secs() -> u64 {
     5
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct ReadonlyDbCredentials {
     pub user: String,
     pub password: Secret,
@@ -468,7 +468,7 @@ impl std::fmt::Debug for ReadonlyDbCredentials {
 
 /// P-db-privilege-separation / D-117 — same shape as `ReadonlyDbCredentials`,
 /// for the DDL-capable `attome_migrator` role.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct MigratorDbCredentials {
     pub user: String,
     pub password: Secret,
@@ -487,7 +487,7 @@ impl std::fmt::Debug for MigratorDbCredentials {
 
 /// P-db-privilege-separation / D-117 — same shape as `ReadonlyDbCredentials`,
 /// for the DML-only `attome_runtime` role.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct RuntimeDbCredentials {
     pub user: String,
     pub password: Secret,

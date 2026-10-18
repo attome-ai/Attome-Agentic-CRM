@@ -12,6 +12,7 @@ publish.workspace      = true
 
 [dependencies]
 dotenvy.workspace       = true
+schemars.workspace      = true
 serde.workspace         = true
 serde_ignored.workspace = true
 serde_json.workspace    = true

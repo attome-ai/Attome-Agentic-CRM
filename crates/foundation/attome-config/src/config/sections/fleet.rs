@@ -40,7 +40,7 @@ impl std::fmt::Debug for FleetSection {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct FleetSection {
     /// Encrypts each customer's rollout S2S secret at rest. Required (and

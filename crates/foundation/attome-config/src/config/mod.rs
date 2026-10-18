@@ -105,9 +105,18 @@ use sections::cache::CacheSentinelNode;
 #[cfg(test)]
 use sections::database::{MigratorDbCredentials, ReadonlyDbCredentials};
 
+/// Z1-T4: the JSON Schema of the configuration file, derived from
+/// [`AppConfig`] and its sections; each field's doc comment is its
+/// description. Committed as `config.schema.json` and rendered as
+/// `docs/config-reference.md`, both kept in step by
+/// `tests/config_schema.rs`.
+pub fn config_json_schema() -> serde_json::Value {
+    serde_json::to_value(schemars::schema_for!(AppConfig)).unwrap_or_default()
+}
+
 // ── Top-level ─────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct AppConfig {
     pub app: AppSection,
     pub database: DatabaseSection,

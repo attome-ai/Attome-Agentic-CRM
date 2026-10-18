@@ -8,7 +8,7 @@ use crate::Secret;
 /// Where the platform keeps its shared, short-lived state: rate-limit
 /// windows, replay nonces, revocation markers, caches and doorbells.
 /// `docs/solo-memory-backend.md` is the design.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CacheBackend {
     /// Redis or Dragonfly (Standard and Cluster, and Solo if one is
@@ -22,7 +22,7 @@ pub enum CacheBackend {
     Memory,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct CacheSection {
     /// `redis` (the default) or `memory`. With `memory`, `host`, `port`,
     /// `password` and `db` are not used and may be left at any value.
@@ -149,7 +149,7 @@ fn default_metadata_poll_interval_secs() -> u64 {
 /// workspace-wide, see root `Cargo.toml`). Leave them unset when the
 /// sentinel nodes require no auth of their own, which most deployments do
 /// (Sentinel exposes no customer data — see `deploy/ha/sentinel.conf.example`).
-#[derive(Clone, Deserialize, Default)]
+#[derive(Clone, Deserialize, Default, schemars::JsonSchema)]
 pub struct CacheSentinelConfig {
     /// Fred's `sentinelServiceName` — the name Sentinel knows the monitored
     /// master by (often `mymaster`). Required whenever `sentinel` is set.
@@ -179,7 +179,7 @@ impl std::fmt::Debug for CacheSentinelConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct CacheSentinelNode {
     pub host: String,
     pub port: u16,
@@ -189,7 +189,7 @@ pub struct CacheSentinelNode {
 /// from one host/port to "one base block, optionally overridden per role."
 /// Widen this struct (never replace the base block) when a new role needs its
 /// own override.
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 pub struct CacheRoles {
     /// S2S nonce replay guard, S2S + general HTTP sliding-window rate limits,
     /// and the idempotency `SET NX` gate — the "coordination-critical" keys
@@ -201,7 +201,7 @@ pub struct CacheRoles {
     pub coordination: Option<CacheRoleOverride>,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct CacheRoleOverride {
     pub host: String,
     pub port: u16,

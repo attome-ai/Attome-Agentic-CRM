@@ -14,7 +14,7 @@ pub const DEFAULT_KEEP: u32 = 7;
 /// the Gulf.
 pub const DEFAULT_HOUR: u32 = 2;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct BackupSection {
     /// Run the daily backup. On by default.

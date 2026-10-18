@@ -53,7 +53,7 @@ impl std::fmt::Debug for S3Target<'_> {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct StorageSection {
     pub s3_endpoint: String,
     /// Endpoint embedded in presigned upload/download URLs, which browsers

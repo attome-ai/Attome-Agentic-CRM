@@ -23,7 +23,7 @@ impl std::fmt::Debug for EventsSection {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct EventsSection {
     pub webhooks_enabled: bool,

@@ -14,7 +14,7 @@ use crate::keyring::KeyRing;
 /// `metadata` — additive, every field defaulted, so a config file without it
 /// keeps today's behaviour: an unset mode is `auto` (see
 /// [`ChangesetsSection::mode`]).
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
 pub struct MetadataSection {
     #[serde(default)]
     pub changesets: ChangesetsSection,
@@ -53,7 +53,7 @@ pub const MAX_NOTIFY_ROLES: usize = 20;
 pub const MAX_ROLE_NAME_CHARS: usize = 200;
 
 /// `metadata.release_report`.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
 pub struct ReleaseReportSection {
     /// Who the post-apply notification goes to. Unset (the default) keeps
     /// today's recipients: the active holders of the admin privilege. Set,
@@ -112,7 +112,7 @@ impl ReleaseReportSection {
 }
 
 /// `metadata.changesets`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct ChangesetsSection {
     /// `required`: a metadata admin write with no open changeset is refused
     /// (409 `changeset_required`). `auto`: each request's writes become one
@@ -174,7 +174,7 @@ impl ChangesetsSection {
 }
 
 /// `metadata.changesets.mode`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ChangesetMode {
     Required,
@@ -192,7 +192,9 @@ impl ChangesetMode {
 
 /// The four owner layers (D-785 rule 2), lowest first. The wire and column
 /// form is [`Self::as_str`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum ChangesetLayer {
     Platform,

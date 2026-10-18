@@ -1,0 +1,3141 @@
+{
+  "$defs": {
+    "AiEnablement": {
+      "description": "Which AI surfaces are enabled. Every field defaults to **off**: a\ndeployment that upgrades into a build containing AI code gets no AI\nbehaviour, no model traffic, and no GPU expectation until someone turns it\non deliberately. This is the same ships-dark posture `idempotency` and\n`approval` already use, and it is the correct default for a subsystem whose\nfailure modes include \"said something wrong to a customer\".\n`Default` is derived rather than hand-written specifically so that adding a\nnew surface field cannot accidentally default it to `true` — the derive\ngives every `bool` `false`, which is the ships-dark answer, and there is no\nhand-maintained list to forget to update.",
+      "properties": {
+        "chat": {
+          "default": false,
+          "description": "The conversational agent (`MODULE_BOT`).",
+          "type": "boolean"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Master switch. `false` disables **every** AI surface regardless of the\nper-surface flags below — an operator reaching for the kill-switch\nduring an incident must not have to reason about which of five flags\nthey missed.",
+          "type": "boolean"
+        },
+        "fields": {
+          "default": false,
+          "description": "AI form fields and components (`MODULE_AI`) — summarise, draft,\nclassify, translate. Read-only suggestions.",
+          "type": "boolean"
+        },
+        "semantic_search": {
+          "default": false,
+          "description": "Semantic/dense retrieval within search (`MODULE_SEARCH`). Turning this\noff leaves lexical search fully working — that degradation is a\nsupported configuration, not an outage (P-inference §4.3).",
+          "type": "boolean"
+        },
+        "workflow_nodes": {
+          "default": false,
+          "description": "AI nodes inside workflows (`MODULE_AUTOMATION`).",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "AnchorStoreSection": {
+      "description": "The dedicated, WORM-provisioned bucket external audit anchors are written\nto, and the **append-only** credential they are written with — D-352,\nclosing the gap `xrm_audit::anchor`'s module doc has named since D-174.\n\n**Why this is a second bucket and not `storage`.** D-174 anchored to the\ndeployment's general object store, reusing `storage`'s client and\ncredential. That cannot be made immutable: the same credential must keep\n`DeleteObject` for the upload paths that genuinely delete objects\n(`xrm_document::files::…`, `files_scan`'s quarantine cleanup and rejected-scan\npurge), and Object Lock retention on that bucket would break every one of\nthem. An anchor whose own writer can delete it is not an independent\nrecord of anything — a party who compromised the deployment holds that\ncredential. So the anchor bucket is separate, its producer credential\ncarries `PutObject`/`GetObject`/`ListBucket` and nothing else, and\ndelete/retention authority lives with an operator identity that is never\nstored on the deployment host. See `deploy/audit-anchor/README.md`.\n\n**What this struct can and cannot enforce.** Object Lock is provisioned on\nthe bucket, out-of-band, before the deployment ever starts — application\ncode cannot turn it on, and nothing here pretends otherwise. The two\n`object_lock_*` fields are an operator *declaration* of what was\nprovisioned, and `validate_production_profile` refuses to boot a production\ndeployment that has anchoring on without them. A declaration is not proof,\nwhich is why it is deliberately not the only control: `preflight` probes\nthe credential's append-only-ness live, and\n`scripts/audit/anchor-immutability-drill.sh` proves the retention half\nagainst the real bucket. The boot check's job is to make \"we forgot to\nprovision it\" a loud failure rather than a silent one.",
+      "properties": {
+        "object_lock_mode": {
+          "default": "",
+          "description": "What the operator provisioned on the bucket, out-of-band:\n`\"compliance\"`, `\"governance\"`, or `\"none\"`. Mirrors\n`deploy/backup/README.md`'s fallback ladder, and means the same things:\ncompliance mode cannot be bypassed even by the bucket owner's root\ncredentials; governance mode can, by a distinct identity holding\n`s3:BypassGovernanceRetention`. `\"none\"` is honest about having no\nbucket-side backstop at all and is refused in production.",
+          "type": "string"
+        },
+        "object_lock_retention_days": {
+          "default": 0,
+          "description": "The default retention period, in days, configured on the bucket. Must\nbe at least as long as the deployment's audit-retention obligation —\nan anchor that expires before the events it attests to is worse than\nuseless, because the chain then looks anchored right up until the\nmoment someone needs it. Zero is refused in production.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "s3_access_key": {
+          "default": "",
+          "description": "The **producer** identity: `PutObject`/`GetObject`/`ListBucket` only.\nNo `DeleteObject`, no `DeleteObjectVersion`, no\n`PutBucketVersioning`/`PutBucketPolicy`/`PutLifecycleConfiguration`, no\n`s3:BypassGovernanceRetention`, no `PutObjectRetention` (which would\nlet a compromised app shorten its own retention).",
+          "type": "string"
+        },
+        "s3_bucket": {
+          "default": "",
+          "description": "Must differ from `storage.s3_bucket` — `validate()` rejects the same\nbucket for both, since the whole point is that this one is WORM and\nthat one cannot be.",
+          "type": "string"
+        },
+        "s3_endpoint": {
+          "default": "",
+          "description": "S3-compatible endpoint holding the anchor bucket. May be the same\nendpoint as `storage.s3_endpoint` (one RustFS/MinIO deployment, two\nbuckets) or a wholly separate one — a different account, region, or\nprovider is strictly better, since it widens the blast-radius gap this\nwhole mechanism exists to create. Empty selects AWS S3 proper (the\nsame convention `storage.s3_endpoint` uses).",
+          "type": "string"
+        },
+        "s3_region": {
+          "default": "",
+          "type": "string"
+        },
+        "s3_secret_key": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "s3_verify_ssl": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "ApiKeyPepper": {
+      "description": "One retired entry in `auth.apikey_hash_previous_peppers`.",
+      "properties": {
+        "id": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "secret": {
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "id",
+        "secret"
+      ],
+      "type": "object"
+    },
+    "AppSection": {
+      "properties": {
+        "contract_reference": {
+          "default": null,
+          "description": "U11-T1: the operator's contract or purchase-order reference, shown on\nthe usage page. Free text; nothing is enforced by it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "debug_pipeline_trace": {
+          "default": false,
+          "description": "Z5-T1: in a debug build, every response carries `x-attome-layers`,\nthe layers the request passed, outermost first, so a test can pin\nthe middleware order. Ignored in a release build.",
+          "type": "boolean"
+        },
+        "deployment_profile": {
+          "default": "development",
+          "description": "P-production-safety-profile — one of `\"development\"`/`\"production\"`\n(see `VALID_DEPLOYMENT_PROFILES` in `validate()`). Default\n`\"development\"` — today's behavior, unchanged: every other field in\nthis file keeps whatever value an operator gave it, validated only by\nthe per-field checks that already existed. Setting `\"production\"` is\nan explicit, additional opt-in (never derived from `APP_ENV`, which\nalready means \"tolerate unresolved `${VAR}` placeholders for local\ndev\" — a different concern) that runs `validate_production_profile`:\na fixed set of individually-valid-but-unsafe-in-combination defaults\n(`database.ssl_mode = \"prefer\"`, `cache.tls_enabled = false`,\n`storage.s3_verify_ssl = false`,\nno `auth.apikey_default_expiry_days`,\n`audit.signing_enabled = false`, `database.migrate_on_boot = true`,\n`jobs.run_worker_inline = true`) become hard boot errors instead of\nsilent template carry-overs. No per-check escape hatch by design — a\nhatch on any one of these would reopen exactly the gap this profile\ncloses.\n\nNot the *only* thing gated on this field: `validate_production_profile`\nbelow is `attome-config`'s own complete list, but `server::boot::init`\n(the composition root, which has visibility this crate doesn't) reads\nthis same value too — D-327's `idempotency.mandatory_operations`\ncompleteness floor is production-only for exactly the same reason,\njust enforced one layer up. Don't assume this field's production\nrequirements begin and end with what's checked in this file.",
+          "type": "string"
+        },
+        "frontend_host": {
+          "type": "string"
+        },
+        "frontend_port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_body_size_bytes": {
+          "default": 10485760,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_concurrent_per_ip": {
+          "default": 64,
+          "description": "Z5-T5: requests one address runs at once before answering 429 with\n`Retry-After: 1`. 1 to `max_concurrent_requests`.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_concurrent_requests": {
+          "default": 1024,
+          "description": "Z5-T5: requests this node runs at once before answering 503 with\n`Retry-After: 1`, ahead of authentication. 1 to 1,000,000.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "packs": {
+          "default": [],
+          "description": "Packs applied at every boot, in order (`attome init --pack crm`): each\npack's changesets from `<packs_root>/<name>/changesets/`, through the\nchangeset ledger, so a second boot changes nothing.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "packs_root": {
+          "default": null,
+          "description": "Where packs live. Unset: `packs` next to the executable.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "public_frontend_url": {
+          "default": null,
+          "description": "P-account-lifecycle — canonical public URL used to build links in\nemails (password reset, verification), e.g. \"https://app.customer.com\".\n`None` (the default) falls back to the same dev-only derived origin\n`allowed_origins()` uses (`http://{frontend_host}:{frontend_port}`) —\nany deployment behind TLS must set this explicitly, mirroring the\n`cors.allowed_origins` rule.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "request_timeout_secs": {
+          "default": 30,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "server_host": {
+          "default": "0.0.0.0",
+          "type": "string"
+        },
+        "shutdown_drain_delay_secs": {
+          "default": 10,
+          "description": "S1 (BSV-F13 / BSV-D11) — how many seconds a draining node keeps\nanswering `/health/ready` with 503 **before** it signals its HTTP\nlisteners to stop accepting connections.\n\n`main.rs` flips `AppState::draining` and then waits this long; without\nit the flag and the graceful-shutdown signal fire in the same instant,\naxum stops `accept()` immediately, and the only way a load balancer\ncould ever read the 503 was an already-open keep-alive connection — the\nprobe it actually makes opens a new one and gets connection refused. One\nLB probe interval x failure threshold is the right value; `0` restores\nthe pre-S1 behaviour (flip and signal in the same tick).\n\nD-205-safe default: hand-written `default_shutdown_drain_delay_secs`\nreturns 10, not a derived `Default`'s 0 (which would silently disable\nthe drain the moment the key is omitted). `AppSection` itself is not\n`#[serde(default)]` in `AppConfig` (its `frontend_host`/`port` are\nrequired), so an omitted `app` block already fails to deserialize and\nthis default can only apply to an omitted key inside a present block.\nBounded to `0..=SHUTDOWN_DRAIN_DELAY_MAX_SECS` by\n`AppConfig::validate`.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "time_zone": {
+          "default": null,
+          "description": "A4-T1: the deployment's time zone, an IANA name such as `Asia/Riyadh`.\nDates in autonumber formats and their yearly, monthly and daily resets\nfollow it. Unset (or unknown): UTC.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "web_root": {
+          "default": null,
+          "description": "The built web app's directory, served by `attome serve` for every\nGET outside the API (`attome_server::web`). Unset: a `web` directory\nnext to the executable when one exists; otherwise the server serves\nthe API only and the web app is hosted separately.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "port",
+        "frontend_host",
+        "frontend_port"
+      ],
+      "type": "object"
+    },
+    "ApprovalSection": {
+      "properties": {
+        "required_actions": {
+          "default": [],
+          "description": "`action_type` strings (e.g. `\"security.rewrap\"`,\n`\"security.role_grant\"`; `xrm_server::KNOWN_ACTION_TYPES` is the list\nof record) that must go\nthrough `attome_approval::submit` instead of executing inline. Empty\nby default — a deployment opts in explicitly, same shape as\n`idempotency.mandatory_operations`.\n\nValidated at boot, not here (same shape as\n`IdempotencySection::mandatory_operations`): `server::boot::init`'s\n`validate_operation_registries` checks every entry here against\n`xrm_server::KNOWN_ACTION_TYPES` (mirroring `execute_approved`'s\nmatch arms) and fails the boot closed on an unrecognized action_type,\ninstead of silently never gating anything. `attome-config` still has no\nvisibility into this itself (guidelines §1: base-* has zero xrm-*\nknowledge) — the composition root owns the check.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ttl_hours": {
+          "default": 72,
+          "description": "How long a submitted request stays decidable before\n`attome_approval::sweep_expired` reaps it as `expired`.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "AuditSection": {
+      "properties": {
+        "anchor_store": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnchorStoreSection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "D-352 (TODO-004 / review finding H-1) — the dedicated WORM bucket and\nappend-only credential anchors are written with. See\n[`AnchorStoreSection`] for why this is not `storage`.\n\n`None` (the default) keeps D-174's original behavior: anchors go to\nthis deployment's general `storage` bucket with the app's own\ncredential, which is tamper-*evident* (nothing overwrites an anchor\nthrough this application, `PutMode::Create`) but not tamper-*proof*\n(that credential can delete through the storage backend directly).\nThat remains fine for development. `validate_production_profile`\nrefuses it in production whenever `external_anchoring_enabled` is\ntrue — a production deployment claiming external anchoring while the\nanchor's own writer can delete it is the finding this closes."
+        },
+        "chainer_enabled": {
+          "default": true,
+          "description": "P1.13 stage 4 — the cutover, and since D-316 the **default**. When\ntrue, `write()` only durably captures the event into\n`xrm_audit_ingest` (no lock, no chain read) and the `audit_chainer`\nprocess becomes solely responsible for producing header rows —\nrequires `audit_chainer` to actually be running, or events accumulate\nin `xrm_audit_ingest` unchained (the lag gauge, the\n`AuditChainerLagHigh` alert, and finally `ingest_backlog_threshold`'s\nmutation gate are what make that visible rather than silent).\n\nFalse keeps the pre-P1.13 synchronous path: `AuditService::write`\nacquires the per-organization append lock and writes\n`xrm_audit_header`/`detail`/`snapshot` inline, inside the caller's\nbusiness transaction. That path serializes **every** mutation in the\ndeployment on one lock (D-002: one organization, one chain), which\nthe 2026-08-10 engineering review reproduced as ordinary concurrent\nsaves failing with `Conflict` after the 200 × 5 ms retry budget\n(F-001), each retry sleeping with an open transaction holding a\npooled connection (F-010). It is therefore supported only for\nsingle-writer development — `validate_production_profile` refuses to\nboot a `production` deployment with it false (D-316).\n\nTo roll back a deployment to the sync path: flip this to false, and\nrun `audit_chainer` once more afterwards to drain whatever was\ncaptured while it was on (the chainer deliberately still starts with\nthis false, exactly so that drain step is possible — see its module\ndoc).",
+          "type": "boolean"
+        },
+        "erasure_enabled": {
+          "default": null,
+          "description": "D-107 (P-data-lifecycle item (d)'s erasure ruling) — crypto-shredding.\nWhen active, every audit write for a record with an `id`\nfetches-or-creates that record's data-encryption key\n(`xrm_audit_erasure_key`, migration 0039) and encrypts its field values\nin place before any storage — see `xrm_audit::erasure`.\n\nD-540 (G2-2 a): optional. Omitted means \"on wherever a key is\nconfigured\" — active exactly when `erasure_key_encryption_key` is\nnon-empty ([`AuditSection::erasure_active`]). An explicit `false` keeps\nit off and stays allowed outside production; an explicit `true` without\na key is a boot error. `validate_production_profile` refuses a\n`production` deployment unless it is active with a real key (D-540\nruling 1, audit plan item 2.7).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "erasure_key_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "D-107 — AES-256-GCM master key(s) (64 hex chars each) wrapping every\nrecord's data-encryption key in `xrm_audit_erasure_key.wrapped_dek`. A\n*dedicated* key, same reasoning as `auth.mfa_encryption_key` not\nreusing `s2s.key_encryption_key`: audit-erasure keys are their own\ntrust domain. Only required (`check_secret`-validated) when\n`erasure_enabled = true`. Generate with: openssl rand -hex 32.\nP-key-rotation-and-jwt (a): a `KeyRing` — see that type's doc.",
+          "writeOnly": true
+        },
+        "external_anchoring_enabled": {
+          "default": false,
+          "description": "P-audit-chain-hardening item (b) — anchors each sealed batch's\nMerkle root to the deployment's own configured object store\n(`attome_storage`, e.g. RustFS), outside this database's own blast\nradius, so a compromise of the DB+app config together can no longer\nsilently rewrite history undetected. Default false: ships dark, same\nposture as every other flag in this section. Best-effort — an\nanchoring failure is logged/alertable but never blocks the chainer's\nown batch commit (`xrm_audit::chainer`'s degrade-not-fail design,\nD-027). See `xrm_audit::anchor`.",
+          "type": "boolean"
+        },
+        "ingest_backlog_threshold": {
+          "default": 100000,
+          "description": "P-audit-chain-hardening item (e) — ingest circuit breaker. How many\nundrained `xrm_audit_ingest` rows (summed across organizations,\n`xrm_audit::chainer::aggregate_lag`'s `total_pending_ingest`) trip\nthe mutating-request gate (`AppState::audit_ingest_backlog_exceeded`).\n100_000 matches the originating review's own number — a starting\npoint, not a measured one; tune per deployment. Reads are never\naffected, only `POST`/`PUT`/`PATCH`/`DELETE`.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "ingest_capture_enabled": {
+          "default": false,
+          "description": "P1.13 stage 1: additionally durably capture every audit event into\n`xrm_audit_ingest` (same transaction as the existing header/detail/\nsnapshot writes) so a future async chainer has something to drain.\nPurely additive today — the synchronous chain append in\n`AuditService::write` still runs unconditionally either way; this\nflag does not yet turn it off. Default false until the chainer\n(a later P1.13 stage) exists to consume the table.",
+          "type": "boolean"
+        },
+        "ingest_retention_days": {
+          "default": 0,
+          "description": "P1.13 step 6 — how many days a `xrm_audit_ingest` row is kept after\nits batch has already been drained into `xrm_audit_header` (i.e. it\nis provably redundant, kept only for a debugging/replay window).\n`0` disables pruning entirely — an explicit opt-in, never a\ndefault-on delete of audit data.\n\nAudit 10/10 plan item 2.8: only ingest ranges whose chain batches are\nsigned and externally anchored are pruned, and the pruned watermark is\nrecorded so verification still passes. With\n`external_anchoring_enabled = false` nothing is pruned, whatever this\nis set to (`xrm_audit::chainer::prune_ingest`).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "partition_create_ahead_months": {
+          "default": 2,
+          "description": "P-db-maintenance item (c) — how many months of partitions the\ncreate-ahead job keeps provisioned beyond the current one, for the\naudit family + `xrm_s2s_access_log` (migrations/0026). `2` matches\nthe plan's stated default; raise it for a deployment whose\nmaintenance window runs less often than this job's own poll interval.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "signing_enabled": {
+          "default": false,
+          "description": "Sign every audit chain event's (prev_hash||event_hash) with a\ndedicated Ed25519 keypair (D-016 — unrelated to the license\nverifier's verify-only key in xrm-license, D-142). When false,\n`signature`/`signing_key_id` are left NULL; hash-chaining alone\nstill applies.",
+          "type": "boolean"
+        },
+        "signing_key_id": {
+          "default": "",
+          "description": "Identifies which keypair produced a signature — stays alongside every\nsignature it makes so old signatures remain attributable after a key\nrotation. Any operator-chosen label, e.g. \"audit-key-1\".",
+          "type": "string"
+        },
+        "signing_private_key": {
+          "description": "64-hex-char Ed25519 signing seed. Required when signing_enabled = true.\nGenerate with: openssl rand -hex 32",
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "type": "object"
+    },
+    "AuthSection": {
+      "properties": {
+        "access_token_expiry_mins": {
+          "default": 15,
+          "description": "Access-token (session_token cookie) lifetime, in minutes. Deliberately\nshort (Plan 1.6a) — the refresh flow is what makes that tolerable.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "apikey_default_expiry_days": {
+          "default": null,
+          "description": "P-account-lifecycle — default `api_key.expires_at` for newly\ncreated keys, in days. `None` (the default) means new keys still get\nno expiry unless the caller passes one explicitly — existing\ndeployments are unaffected until an operator opts in.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "apikey_hash_pepper": {
+          "description": "P-api-key-hashing (D-112, revised by D-118) — HMAC-SHA256 pepper ring\nfor `api_key.secret_hash`, superseding per-request Argon2 for\napi-key secrets only (user passwords stay Argon2, `password.rs`,\nuntouched). The *current* pepper — every newly issued key and every\nrehash-on-use conversion writes with this one. Unconditionally\n`check_secret`-validated in `validate()` below — unlike\n`mfa_encryption_key`/`s2s.key_encryption_key`, there is no feature flag\ngating this: every deployment authenticates api-key requests, so an\nunset/short pepper is always a boot error (D-038), never a silent\nunkeyed-hash fallback. `#[serde(default)]` (empty string) only so a\nconfig file that omits it still deserializes — `validate()` is what\nactually enforces the requirement.",
+          "type": "string",
+          "writeOnly": true
+        },
+        "apikey_hash_pepper_id": {
+          "default": 0,
+          "description": "Id of `apikey_hash_pepper` above, stored inline in\n`api_key.secret_hash` as `hmac256:v{id}$<hex>`. **The very first\npepper a deployment ever sets must use id 0** — id 0 doubles as the\nfallback for the original, pre-rotation D-112 rollout's unversioned\n`hmac256$<hex>` rows (see `attome_auth::apikey_hash`'s module doc), so a\ndeployment that skips straight to id 1+ on its very first boot with no\n`hmac256$`-format rows in the database is fine, but one migrating\nforward from the original rollout MUST keep id 0 resolvable (either\n`apikey_hash_pepper_id = 0` or an `apikey_hash_previous_peppers` entry\nwith `id = 0`) or its existing keys stop verifying. `validate()` below\nonly enforces the id-collision/duplicate checks it can prove\nstatically — it cannot know whether unversioned rows exist in a given\ndatabase, so this precondition is operator-enforced, documented here\nand in D-112's revision entry, not boot-checked.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "apikey_hash_previous_peppers": {
+          "description": "Retired pepper(s), keyed by id, kept only long enough to verify\nalready-issued keys that haven't rehashed to the current id yet —\nsame \"current + previous\" dual-key-slot shape `s2s.key_encryption_key`\nalready uses for the same reason. Empty (the default) means no\nrotation has ever happened. A row referencing an id present in\nneither this list nor `apikey_hash_pepper_id` fails closed (same\n\"wrong secret\" outcome as any other verify failure) rather than\nerroring — do not remove an id from this list while any\n`api_key` row might still reference it.",
+          "items": {
+            "$ref": "#/$defs/ApiKeyPepper"
+          },
+          "type": "array"
+        },
+        "breach_check_online": {
+          "default": false,
+          "description": "Z4-T9: also ask an online k-anonymity range service when a password\nis set at registration or reset (off by default; only the first five\nhex characters of the password's SHA-1 are sent).",
+          "type": "boolean"
+        },
+        "breach_list_file": {
+          "default": null,
+          "description": "Q7-T1: an offline set of breached passwords (the Have I Been Pwned\nSHA-1 download, `HASH` or `HASH:COUNT` per line), checked locally\nwhen a password is set. Unset, only the small built-in list applies.\nReplace the file and restart to update it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "breach_range_url": {
+          "default": null,
+          "description": "Z4-T9: the range service, the five-character prefix appended (Have I\nBeen Pwned's when unset).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jwt_audience": {
+          "default": "",
+          "description": "P-key-rotation-and-jwt (c) — the `aud` claim every session/pending\ntoken carries and is validated against. Empty (the default) means\n\"use `jwt_issuer`\" (`AppConfig::jwt_audience`) — a deployment only\nneeds to set this explicitly if it wants a distinct audience string.",
+          "type": "string"
+        },
+        "jwt_issuer": {
+          "type": "string"
+        },
+        "jwt_secret": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "P-key-rotation-and-jwt (a)/(c): a `KeyRing` rather than a bare secret —\nsee that type's doc. A plain config-file string still deserializes\n(wrapped into a single active/legacy entry), so an existing deployment\nthat never touches this field sees zero behavior change. `kid` in\nevery minted JWT's header names which ring entry signed it; a second\n(retired) entry left in the ring is accepted for verification during a\nrotation's overlap window and rejected once removed.",
+          "writeOnly": true
+        },
+        "jwt_signing_keys": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Z4-T3: Ed25519 signing keys for session and pending tokens, each a\n32-byte seed as 64 hex characters, by key id. When the ring has an\nactive key, new tokens are signed EdDSA under it; `jwt_secret` keeps\nverifying the HS256 tokens already issued until they expire, so the\ncut-over logs nobody out. Empty (the default) keeps HS256.",
+          "writeOnly": true
+        },
+        "kdf": {
+          "$ref": "#/$defs/KdfSection",
+          "description": "attome-auth plan BAU-15a (hardening 2.7) — the KDF executor and password\npolicy, formerly constants in `attome_auth::password`. Defaults equal\nthose constants, so a config without the block behaves as before.\nFloors and ceilings are enforced by `AppConfig::validate`."
+        },
+        "mfa_challenge_max_attempts": {
+          "default": 5,
+          "description": "P-mfa-challenge-hardening: per-challenge attempt ceiling enforced\natomically against the `mfa:pending:{jti}` Redis marker (see\n`attome_auth::mfa`) — reaching it kills the challenge outright (the\nclient must re-authenticate with the password for a fresh\n`pending_token`), independent of the general per-IP/user\n`rate_limit.categories.mfa` budget. Default `5`, same \"additive,\ndefault-safe\" posture as every other new config field in this\nsection — a deployment that never touches this sees a sane default,\nnot a behavior change requiring opt-in.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mfa_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "P2.8 step 7 — AES-256-GCM master key(s) (64 hex chars each) encrypting\n`base_user_mfa.secret_encrypted` at rest, same pattern as\n`s2s.key_encryption_key` (`xrm_s2s::crypto`) but a dedicated key: TOTP\nsecrets and S2S client secrets are separate trust domains and must\nnot share a key. Only required (`check_secret`-validated) when\n`mfa_policy != \"off\"`. P-key-rotation-and-jwt (a): a `KeyRing` — see\nthat type's doc for the bare-string back-compat shape and how\nrotation works.",
+          "writeOnly": true
+        },
+        "mfa_policy": {
+          "default": "off",
+          "description": "P2.8 step 7 — one of `\"off\"`/`\"optional\"`/`\"required\"` (see\n`VALID_MFA_POLICIES` in `validate()`). `\"off\"` (the default) is\ntoday's behavior unchanged. `\"optional\"` challenges only accounts\nthat have self-enrolled TOTP; `\"required\"` blocks a password login\nfor an unenrolled account until it completes enrollment\n(`attome_auth::mfa`/D-068). Same string-enum convention as\n`database.ssl_mode` — deliberately a plain `String`, not a Rust enum.",
+          "type": "string"
+        },
+        "oauth_google_client_id": {
+          "default": "",
+          "type": "string"
+        },
+        "oauth_google_client_secret": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "refresh_absolute_lifetime_days": {
+          "default": 30,
+          "description": "D-504 — absolute lifetime of a refresh family, in days. A family ends\nthis long after the credential verification that started it, however\noften it rotates. Default 30. `AppConfig::validate` requires 1 to 365;\nmigration 0462's fallback anchor for an inconsistent lineage relies on\nthat ceiling to be expired.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "refresh_token_expiry_days": {
+          "default": 30,
+          "description": "Idle lifetime of one `base_refresh_token` row, in days: how long a\nrefresh token stays valid without being rotated.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "registration_mode": {
+          "default": "disabled",
+          "description": "P-registration-gating — one of `\"public\"`/`\"invite\"`/`\"disabled\"` (see\n`VALID_REGISTRATION_MODES` in `validate()`). Default `\"disabled\"` —\ndeliberately secure-by-default (D-128): a deployment upgrading without\ntouching config loses public self-registration, not the other way\naround. `\"public\"` is today's pre-P-registration-gating behavior\n(anyone can `POST /api/v1/auth/register`); `\"disabled\"` rejects every\nregistration attempt with `AppError::Forbidden` before any DB work;\n`\"invite\"` additionally requires a valid, unconsumed\n`base_invitation_token` bearer matching the submitted email (Phase 2).\nSame plain-`String` string-enum convention as `mfa_policy`/\n`database.ssl_mode` — not a Rust enum.",
+          "type": "string"
+        },
+        "require_verified_email": {
+          "default": false,
+          "description": "P-account-lifecycle — when true, `attome_auth::accounts::login` rejects\n(403) a local password account whose `email_verified` is still false.\nDefault false so air-gapped/no-SMTP deployments are unaffected; only\nturn this on once `email.enabled` is also true, or every local account\nlocks itself out with no way to receive a verification link.",
+          "type": "boolean"
+        },
+        "secure_cookies": {
+          "default": true,
+          "description": "Gates the `Secure` flag on both auth cookies (Plan 1.6a). Default true —\nonly `config.debug.json` sets this false, so plain-http local dev keeps\nworking. `SameSite=Strict`/`HttpOnly` apply unconditionally either way.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "jwt_secret",
+        "jwt_issuer"
+      ],
+      "type": "object"
+    },
+    "BackupSection": {
+      "properties": {
+        "dir": {
+          "default": null,
+          "description": "Where archives go. Unset: a `backups` folder next to the\nconfiguration file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled": {
+          "default": true,
+          "description": "Run the daily backup. On by default.",
+          "type": "boolean"
+        },
+        "files": {
+          "default": true,
+          "description": "Copy the object store's files (attachments, brand assets) beside\neach database backup. On by default.",
+          "type": "boolean"
+        },
+        "hour": {
+          "default": 2,
+          "description": "The hour of the day (UTC, 0–23) the backup runs.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "keep": {
+          "default": 7,
+          "description": "How many archives to keep, newest first. At least 1.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pg_dump": {
+          "default": null,
+          "description": "The `pg_dump` program. Unset: `pg_dump` on the PATH.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CacheBackend": {
+      "description": "Where the platform keeps its shared, short-lived state: rate-limit\nwindows, replay nonces, revocation markers, caches and doorbells.\n`docs/solo-memory-backend.md` is the design.",
+      "oneOf": [
+        {
+          "const": "redis",
+          "description": "Redis or Dragonfly (Standard and Cluster, and Solo if one is\nconfigured). The default.",
+          "type": "string"
+        },
+        {
+          "const": "memory",
+          "description": "Process memory. For Solo: one server process, no Redis to install. A\nrestart clears it, as a Redis restart without persistence would; every\nvalue in it is short-lived or reconstructable. It is not a cross-node\nsource of truth, so a multi-node deployment must not use it.",
+          "type": "string"
+        }
+      ]
+    },
+    "CacheRoleOverride": {
+      "properties": {
+        "connection_pool_size": {
+          "default": 16,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "db": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "host": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sentinel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CacheSentinelConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "P-redis-sentinel-config — see `CacheSection::sentinel`'s doc comment;\nsame meaning, scoped to this role's own endpoint."
+        },
+        "timeout": {
+          "default": 2000,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tls_ca_path": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tls_enabled": {
+          "default": false,
+          "description": "P-datastore-tls — see `CacheSection::tls_enabled`. A role override\ncan point at a differently-secured endpoint than the base block.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "host",
+        "port"
+      ],
+      "type": "object"
+    },
+    "CacheRoles": {
+      "description": "P1.15 — role-specific Redis endpoint overrides, generalizing `CacheSection`\nfrom one host/port to \"one base block, optionally overridden per role.\"\nWiden this struct (never replace the base block) when a new role needs its\nown override.",
+      "properties": {
+        "coordination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CacheRoleOverride"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "S2S nonce replay guard, S2S + general HTTP sliding-window rate limits,\nand the idempotency `SET NX` gate — the \"coordination-critical\" keys\ncallable out in P1.15. A deployment can point these at a dedicated\nRedis instance, isolated from general cache traffic (metadata pub/sub,\nauthz L2 cache), once its load demands it. Omit to keep everything on\nthe base `cache` block (today's default, unaffected)."
+        }
+      },
+      "type": "object"
+    },
+    "CacheSection": {
+      "properties": {
+        "backend": {
+          "$ref": "#/$defs/CacheBackend",
+          "description": "`redis` (the default) or `memory`. With `memory`, `host`, `port`,\n`password` and `db` are not used and may be left at any value."
+        },
+        "connection_pool_size": {
+          "default": 32,
+          "description": "Pool size — plausibly scales with hardware/load. Has a default so a\ndeployment that hasn't tuned it can omit the key entirely.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "db": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "encryption_key": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "properties": {
+                    "active_key_id": {
+                      "type": "string"
+                    },
+                    "keys": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              ],
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Z3-T3: the key ring a cache declared `EncryptedInRedis` seals its\nvalues with before they reach Redis (AES-256-GCM, tagged with the key\nid so a rotation keeps old entries readable). Required when such a\ncache runs over Redis; such a cache refuses to start without it."
+        },
+        "host": {
+          "default": "",
+          "type": "string"
+        },
+        "metadata_poll_interval_secs": {
+          "default": 5,
+          "description": "Y8-T2: how often a node checks the metadata change log for a change\nwhose doorbell it missed (a crash between commit and publish, a Redis\nblip). The check is one indexed `MAX(id)`; 5 seconds bounds how stale\na node can be after a lost doorbell. At least 1.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "metadata_registry_enabled": {
+          "default": true,
+          "description": "Rollback switch for Plan 1.2 (kept for one release, not deleted): when\n`false`, `resolve_entity` falls back to the pre-1.2 direct Postgres\nquery path instead of the arc-swap metadata registry.",
+          "type": "boolean"
+        },
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "port": {
+          "default": 0,
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "roles": {
+          "$ref": "#/$defs/CacheRoles",
+          "description": "P1.15 — optional per-role endpoint overrides. `None` (the default)\nmeans every role shares this base block, identical to pre-P1.15\nbehavior. See `CacheRole`/`AppConfig::redis_url_for_role`."
+        },
+        "sentinel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CacheSentinelConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "P-redis-sentinel-config — closes the self-host HA tier's documented\napp-wiring gap (scale-out-ops skill / P-ha-failover-hardening):\n`create_redis_pool` previously only spoke a fixed `host:port`, so a\nSentinel-fronted deployment needed an operator-managed proxy/VIP in\nfront of Sentinel's resolved master. `None` (the default) is\nbyte-for-byte today's centralized-connection behavior. Set this to\nconnect via fred's `redis-sentinel://` scheme instead, whose documented\ncontract is to re-resolve the current master through the sentinel quorum\non every (re)connect — `host`/`port` above then name the first known\nsentinel node, not the Redis server itself.\n\n**Unproven here (BCA-55).** Re-resolving *a* master is fred's behaviour,\nnot something this repo has ever exercised: no test or drill has failed\na Sentinel quorum over and confirmed the pool follows, which is why\nD-153's \"not verified\" item 3 still stands and scale-out-ops does not\nyet present Sentinel as a supported recipe. Treat a Sentinel deployment\nas unvalidated until BCA-55 records a failover result; the plain-restart\nhalf (reconnect without a process restart) is proven — BCA-01/BCA-01b."
+        },
+        "timeout": {
+          "default": 2000,
+          "description": "Connect/command timeout in milliseconds — plausibly varies with\nnetwork latency.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tls_ca_path": {
+          "default": null,
+          "description": "P-datastore-tls — path to a CA certificate file (PEM) to pin, instead\nof trusting the system/default root store. Only meaningful when\n`tls_enabled` is true.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tls_enabled": {
+          "default": false,
+          "description": "P-datastore-tls — connect via `rediss://` (fred's TLS-enabled scheme)\ninstead of `redis://`. Default false — byte-for-byte identical to\npre-TLS behavior when unset.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "CacheSentinelConfig": {
+      "description": "Sentinel-mode connection details for a `CacheSection`/`CacheRoleOverride`\nblock (P-redis-sentinel-config). The enclosing block's `host`/`port`\nname the first known sentinel node; `nodes` lists any additional sentinel\nnodes for quorum. The enclosing block's `password` still authenticates to\nthe resolved master/replica (unchanged meaning) — `sentinel_username`/\n`sentinel_password` here are separate credentials for the sentinel nodes\nthemselves, only honored under fred's `sentinel-auth` feature (enabled\nworkspace-wide, see root `Cargo.toml`). Leave them unset when the\nsentinel nodes require no auth of their own, which most deployments do\n(Sentinel exposes no customer data — see `deploy/ha/sentinel.conf.example`).",
+      "properties": {
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/CacheSentinelNode"
+          },
+          "type": "array"
+        },
+        "sentinel_password": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "writeOnly": true
+        },
+        "sentinel_username": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "service_name": {
+          "description": "Fred's `sentinelServiceName` — the name Sentinel knows the monitored\nmaster by (often `mymaster`). Required whenever `sentinel` is set.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_name"
+      ],
+      "type": "object"
+    },
+    "CacheSentinelNode": {
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "host",
+        "port"
+      ],
+      "type": "object"
+    },
+    "CapabilitySection": {
+      "properties": {
+        "enforcement_enabled": {
+          "default": true,
+          "description": "Whether a confirmed-unavailable capability actually rejects requests\non the routes that declare it, or is only reported.\n\nDefaults **on**, deliberately unlike most flags in this config tree:\nthe finding D-344 answers is that the platform currently accepts work\nit cannot complete, and shipping the fix dark would not fix it. The\nblast radius is bounded by construction — only the handful of routes\nthat name `attome_server::capability::Available<C>`, only after\n[`Self::failure_threshold`] *consecutive* failed probes, cleared by a\nsingle success. Setting this to `false` (with `probe_enabled = true`)\nis the intended rollout mode for an operator who wants to watch\n`/health/dependencies`'s `capabilities` block for a while first, and\nis also the kill switch if a probe ever proves flaky against a\nparticular backend.",
+          "type": "boolean"
+        },
+        "failure_threshold": {
+          "default": 2,
+          "description": "Consecutive failed probes before a capability flips to\n`unavailable`. 2 (i.e. up to ~60s at the default interval) rather than\n1: a single dropped connection to S3 or a relay is normal background\nnoise and must not start rejecting uploads. A single success clears\nthe counter immediately — slow to trip, fast to recover.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "probe_enabled": {
+          "default": true,
+          "description": "Whether `xrm_server::spawn_capability_refresh` should run at all.\n`false` leaves every capability at `unknown` forever, which the gate\ntreats as \"pass\" — byte-identical to the behavior before D-344, same\n\"nothing happens unless the poll task is spawned\" posture as\n`audit.ingest_backlog_threshold`'s breaker.",
+          "type": "boolean"
+        },
+        "probe_interval_secs": {
+          "default": 30,
+          "description": "Seconds between probe rounds. 30s, not the 15s a readiness probe\nwould use: this drives a route gate, not traffic routing, and the SMTP\nprobe opens a real TCP+TLS connection to the relay each round — a\ntighter loop is a connection-rate cost paid against every deployment's\nmail provider for no decision-making benefit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "worker_stale_after_secs": {
+          "default": 90,
+          "description": "How stale (`apalis.workers.last_seen`, via\n`attome_jobs::worker_last_seen_age_seconds`) a queue's worker heartbeat\nmay be before that queue counts as a failed probe. 90s matches the\n`ApalisWorkerStale` alert rule's own expression\n(`observability/alerts.yml`) — 3 missed 30s `keep_alive` beats — so\nthe gate and the alert can never disagree about what \"the worker is\ndown\" means.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "CaptchaConfig": {
+      "properties": {
+        "pow_difficulty": {
+          "default": 18,
+          "description": "Q20-T3: leading zero bits a proof-of-work answer needs, 1 to 24.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "provider": {
+          "$ref": "#/$defs/CaptchaProvider"
+        },
+        "secret": {
+          "description": "The provider's server-side secret, `${VAR}`-expanded.",
+          "type": "string",
+          "writeOnly": true
+        },
+        "timeout_ms": {
+          "default": 3000,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "CaptchaProvider": {
+      "oneOf": [
+        {
+          "enum": [
+            "none",
+            "turnstile",
+            "hcaptcha"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "pow",
+          "description": "Q20-T3: a self-hosted proof-of-work challenge\n(`attome_auth::pow`); no outside service and no secret to configure.",
+          "type": "string"
+        }
+      ]
+    },
+    "ChangeFeedSection": {
+      "properties": {
+        "retention_days": {
+          "default": 30,
+          "description": "Floor for `PlatformJob::PruneChangeFeed`: how long a fully-processed\n`xrm_core_entity_change_event` row is kept before it becomes eligible\nfor deletion. This is a floor, not a target — `xrm_foundation::\nchange_feed::prune` additionally never deletes a row the slowest\nregistered consumer cursor has not passed, however old it is, so\nraising this only ever makes pruning MORE conservative, never less.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ChangesetLayer": {
+      "description": "The four owner layers (D-785 rule 2), lowest first. The wire and column\nform is [`Self::as_str`].",
+      "enum": [
+        "platform",
+        "product",
+        "project",
+        "customer"
+      ],
+      "type": "string"
+    },
+    "ChangesetMode": {
+      "description": "`metadata.changesets.mode`.",
+      "enum": [
+        "required",
+        "auto"
+      ],
+      "type": "string"
+    },
+    "ChangesetsSection": {
+      "description": "`metadata.changesets`.",
+      "properties": {
+        "auto_layer": {
+          "$ref": "#/$defs/ChangesetLayer",
+          "description": "The layer of automatic changesets. Phase 1 accepts only `project`;\nPhase 3 adds `customer` together with its authoring rules."
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChangesetMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "`required`: a metadata admin write with no open changeset is refused\n(409 `changeset_required`). `auto`: each request's writes become one\nclosed automatic changeset. Unset means `auto` on every profile, so a\nconfig written before changesets existed (the production templates,\nevery hand-written test config) keeps working unchanged; a\ndevelopment deployment opts into `required` explicitly, as\n`config.example.json` does. Read it through [`Self::effective_mode`],\nnever this field directly."
+        }
+      },
+      "type": "object"
+    },
+    "CorsSection": {
+      "properties": {
+        "allowed_origins": {
+          "default": [],
+          "description": "Explicit allow-list of origins (scheme + host + port), e.g.\n\"https://app.example.com\". Never a wildcard alongside credentials.\nWhen empty, `AppConfig::allowed_origins` derives a dev-only default\nfrom `app.frontend_host`/`app.frontend_port` (always `http://` — set\nthis explicitly for any deployment behind TLS).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "DatabasePoolSize": {
+      "description": "One pool's size override; `max_connections` is validated to `1..=1000`.",
+      "properties": {
+        "max_connections": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_connections"
+      ],
+      "type": "object"
+    },
+    "DatabasePools": {
+      "description": "attome-db hardening Phase 2.3 — `database.pools`: optional per-pool sizes.\nA pool with no entry is sized from `DatabaseSection::connection_number`.",
+      "properties": {
+        "long": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabasePoolSize"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "AB6-T6: the long pool reports and exports read through (the\n`attome_readonly` role on the primary), so they never take a\nconnection an interactive request needs."
+        },
+        "migrator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabasePoolSize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "readonly": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabasePoolSize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "readonly_primary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabasePoolSize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runtime": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabasePoolSize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "DatabaseSection": {
+      "properties": {
+        "connection_number": {
+          "default": 10,
+          "description": "Pool size — plausibly scales with hardware/load. Has a default so a\ndeployment that hasn't tuned it can omit the key entirely.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "dbname": {
+          "type": "string"
+        },
+        "direct_url": {
+          "default": null,
+          "description": "P1.12 — a raw `postgres://` URL used ONLY for schema bootstrap +\nmigrations (`attome_db::create_direct_pool`), bypassing whatever\n`host`/`port` above point at. Set this when `host`/`port` point at a\ntransaction-mode pgbouncer, since `sqlx::migrate!`'s internal\nsession-level advisory lock is unsafe under transaction pooling.\n`None` (the default — no pgbouncer in front of this deployment) falls\nback to `database_url()`, i.e. identical to today's behavior. Stays\non `user`/`password` even when `migrator` above is configured — see\n`AppConfig::direct_database_url`'s doc comment (P-db-privilege-\nseparation) for why.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disable_statement_cache": {
+          "default": false,
+          "description": "P1.12 — disables sqlx's client-side prepared-statement cache. Found\nnecessary while actually load-testing the pgbouncer recipe (P1.8d\nstep 5, 2026-07-21, D-106): a transaction-mode pgbouncer without\nprotocol-level prepared-statement support (added in pgbouncer 1.21)\ncan hand a client's logical connection a different real backend\nbetween transactions, so a statement sqlx cached as prepared on one\nbackend does not exist on the next — surfacing as `prepared\nstatement \"sqlx_s_N\" already exists` or \"does not exist\" under real\nconcurrent load. D-171: `pgbouncer/Dockerfile` (this platform's\nreference recipe) moved off the Debian bookworm apt package (1.18)\nonto a maintained >=1.21 image, so this flag is no longer needed for\nthat recipe by default — it remains a general escape hatch for any\ndeployment fronted by a pre-1.21 pooler. Set this `true` whenever\n`database.host`/`port` point at such a pooler; `false` (the default —\nno behavior change for a direct-to-Postgres deployment) keeps the\ncache on.",
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "max_server_connections": {
+          "default": null,
+          "description": "Z2-T2: PostgreSQL's (or pgbouncer's) `max_connections`, when known.\n`None` assumes 100 once sizing applies.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "migrate_on_boot": {
+          "default": true,
+          "description": "P-db-privilege-separation follow-up (§1's \"move migrations to a\none-shot deployment job\"). `true` (the default — today's behavior,\nunchanged) keeps `main.rs`'s inline `ensure_schema`, `run_migrations`,\nand role-password-seed sequence on every server boot, same as before\nthis flag existed. Set `false` once a deployment's release process\nruns the dedicated `migrate` binary (`crates/server/src/bin/migrate.rs`,\nsame `direct_database_url()` bootstrap identity, same migration set)\nas its own one-shot step ahead of starting/rolling any `server`\nprocess — the point being that the long-lived web process no longer\nneeds to hold `CREATE ROLE`/DDL-capable bootstrap credentials at all\nonce its deploy pipeline guarantees migrations already ran. `server`\ndoes not verify the schema is current when this is `false`; an\noperator who flips it without wiring the `migrate` step first will see\nordinary runtime queries fail against a stale schema, not a boot error.",
+          "type": "boolean"
+        },
+        "migrator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MigratorDbCredentials"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "P-db-privilege-separation / D-117 — DDL-capable identity for runtime\nentity/attribute provisioning (`xrm-entity::provision`) and boot-time\nentity seeding, reusing this section's host/port/dbname/schema, only\nthe credentials differ (same shape as `readonly`). Deliberately NOT\nused for schema bootstrap/`sqlx::migrate!` — see\n`AppConfig::direct_database_url`'s doc comment for why that stays on\n`user`/`password` forever. `None` (the default) falls back to\n`user`/`password` above — today's behavior, unchanged. Set this once\n`migrations/0042_migrator_runtime_roles.sql`'s `attome_migrator` role\nexists and has had a login password applied\n(`server::db_role_seed::seed_migrator`).\n\nFail-closed follow-up (supersedes D-117's original \"additive, not\nfail-closed\" framing — see DECISIONS.md): `main.rs` now refuses to\nboot with this unset outside `APP_ENV=debug`, same posture as\n`readonly` above (D-038). This field stays genuinely optional for\nlocal dev; the fallback above just isn't reachable in production\nwithout an explicit `APP_ENV=debug` opt-out anymore."
+        },
+        "node_count": {
+          "default": 1,
+          "description": "Z2-T2: how many processes share this database. With more than one,\nor with `max_server_connections` set, a pool with no\n`database.pools` entry is sized from PostgreSQL's connection budget\nsplit across the nodes instead of from `connection_number`.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "password": {
+          "description": "P-bootstrap-credential-scoping (D-204) — the schema-bootstrap/\n`CREATE ROLE`-capable identity (`database_url()`/`direct_database_url()`),\nneeded ONLY by the one-shot `migrate` binary and, when\n`migrate_on_boot = true`, by the inline bootstrap sequence in\n`boot::init`. `server`/`worker` never legitimately reach either code\npath once `migrate_on_boot = false` and `migrator`/`runtime` below are\nconfigured (D-148) — so a deployment that renders those two\nprocesses' `config.json` without this field (and without `DB_PASSWORD`\nin their `.env`) keeps the bootstrap credential out of their container\nenvironment and out of the `AppState` they hold in memory for the\nlife of the process, instead of it merely going unused. `None` is\nvalid whenever nothing in this process can reach `database_url()`;\n`validate()` enforces `Some` when `migrate_on_boot = true`, and\n`bin/migrate.rs` independently requires `Some` unconditionally (that\nbinary is not gated by `migrate_on_boot` — see its own module doc).",
+          "type": [
+            "string",
+            "null"
+          ],
+          "writeOnly": true
+        },
+        "pools": {
+          "$ref": "#/$defs/DatabasePools",
+          "description": "attome-db hardening Phase 2.3 — optional per-pool sizes. A pool with no\nentry here is sized from `connection_number`, so omitting the whole\nblock keeps today's behavior. Each value must be `1..=1000`\n(`AppConfig::validate`). The direct pool (schema bootstrap and\nmigrations) keeps its fixed size of 2 and has no entry."
+        },
+        "port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "readonly": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReadonlyDbCredentials"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "SELECT-only role for `/api/v1/query/execute` (P1.1e) — reuses this\nsection's host/port/dbname/schema, only the credentials differ."
+        },
+        "replica_max_lag_secs": {
+          "default": null,
+          "description": "P-ha-failover-hardening item (e), D-125 — consumed by\n`AppState::route_if_lag_ok` (P-read-your-writes-lsn) as an\nunconditional circuit breaker: whenever\n`replica_watermark::ReplicaWatermark.lag_seconds` (the always-on\npoller's cached value, `AppState.replica_watermark`) exceeds this\nthreshold, every routed read falls back to the primary regardless of\nany specific user's pin. Also widens `pin_write_with_lsn`'s effective\nTTL to `max(sticky_primary_ttl_secs, replica_max_lag_secs)` so the\npin never expires before this policy's own declared lag tolerance\n(`P-read-your-writes-lsn.md` §4(6)). `None` (the default) means \"no\nmax-lag policy configured\" — today's behavior, unchanged: no circuit\nbreaker, and the TTL formula reduces to `sticky_primary_ttl_secs`\nalone.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "runtime": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDbCredentials"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "P-db-privilege-separation / D-117 — DML-only identity for ordinary\nrequest-time record CRUD (`attome_db::create_pool`, the pool\n`AppState.db`/entity_crud.rs uses). Same shape as `readonly`/\n`migrator`. `None` (the default) falls back to `user`/`password` —\ntoday's behavior, unchanged. This is a separate optional field, not a\nrepurposing of `user`/`password` themselves, specifically so\n`user`/`password` can stay the schema-bootstrap identity\n(`direct_database_url()`, needs DDL/`CREATE ROLE` for migrations like\n0042 itself) while this identity is locked down to DML — the two\nrequirements are incompatible on one shared credential. Set this once\nmigration 0042's `attome_runtime` role exists and has had a login\npassword applied (`server::db_role_seed::seed_runtime`).\n\nFail-closed follow-up (supersedes D-117's original \"additive, not\nfail-closed\" framing — see DECISIONS.md): `main.rs` now refuses to\nboot with this unset outside `APP_ENV=debug`, same posture as\n`readonly` above (D-038). This field stays genuinely optional for\nlocal dev; the fallback above just isn't reachable in production\nwithout an explicit `APP_ENV=debug` opt-out anymore."
+        },
+        "schema": {
+          "type": "string"
+        },
+        "ssl_mode": {
+          "default": "prefer",
+          "description": "P-datastore-tls — one of Postgres's six `sslmode` values: \"disable\",\n\"allow\", \"prefer\" (the default — matches sqlx's own default, so\nunset is byte-for-byte identical to pre-TLS behavior), \"require\",\n\"verify-ca\", \"verify-full\". Validated against this fixed set at boot\n(`AppConfig::validate`, D-038) — `attome-db` parses the validated\nstring into `sqlx::postgres::PgSslMode`, kept out of this crate to\navoid a `sqlx` dependency here (attome-config stays DB-agnostic).",
+          "type": "string"
+        },
+        "ssl_root_cert": {
+          "default": null,
+          "description": "P-datastore-tls — path to a CA certificate file (PEM) used by\n\"verify-ca\"/\"verify-full\" modes. Deployment-provided (D-002: one\ncustomer, one set of certs) — no CA machinery lives in this platform.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statement_classes": {
+          "$ref": "#/$defs/StatementClassOverrides",
+          "description": "Z2-T5: per statement class, the statement, lock and\nidle-in-transaction timeouts that replace the class defaults. A class\nleft out keeps its defaults."
+        },
+        "sticky_primary_ttl_secs": {
+          "default": 5,
+          "description": "P1.12 — TTL (seconds) of the Redis \"just wrote\" pin\n(`attome-db:rw-pin:{user_id}`) that `AppState::read_pool` checks before\nrouting a read to `readonly` instead of the primary. Widen this if a\ndeployment's replica routinely lags past the default window.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timeout": {
+          "default": 5.0,
+          "description": "Pool **acquire** timeout in seconds, fractional allowed (`0.5` is\n500ms): how long a caller waits for a pooled connection, which\nincludes opening a new one. Also bounds the connect of attome-db's\nunpooled direct/migrator connections. `AppConfig::validate` requires a\nfinite value in `(0, 120]`.",
+          "format": "double",
+          "type": "number"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "port",
+        "dbname",
+        "user",
+        "schema"
+      ],
+      "type": "object"
+    },
+    "DeploymentSection": {
+      "description": "Declares the region this deployment's data is contractually/\nregulatorily supposed to stay in (e.g. `\"bh-1\"`, `\"eu-west-1\"`) — a\nresidency *claim*, not itself an enforcement mechanism. Paired with\n`AppConfig::validate`'s boot-time check, which asserts this matches\n`storage.s3_region`: the platform's per-customer dedicated data-plane\nmodel (D-001/D-002) already places a customer's whole stack in-region, so\nthis doesn't enforce residency itself — it only catches the declared\nregion silently drifting out of sync with where the object store/backup\nendpoint actually is. Also consumed by\n`xrm_foundation::assert_transfer_allowed` (via `state.base.config`) as\nthe \"deployment_region\" side of the cross-border transfer-restriction\ngate on every export path.\n\n`None` (the default) means no residency claim is configured — both the\nboot-time validator and the transfer gate are then a no-op, \"ships dark\"\nlike every other opt-in section added this session\n(`retention`/`idempotency`/`approval`).\n\n`bundle_ref`/`bundle_signing_public_key` (P-environment-promotion §5 step\n23 — the F273 `APP_VERTICAL` loader generalized) declare a signed\n`attome-bundle/v1` artifact this deployment pulls and applies: `bundle_ref`\nis a file path or `https://` URL to `{ \"bundle\": <canonical bundle JSON>,\n\"signature\": \"<base64 Ed25519 over the canonical bundle bytes>\" }`, and\n`bundle_signing_public_key` is the base64 Ed25519 public key that artifact\nmust verify against (same key-format/verify primitives\n`xrm-license::verifier` uses, so an artifact `bundle-tool` signs verifies\nwith the identical machinery a license does). Both `None` (the default) is\n\"not configured\" — `bundle::pull::fetch_and_verify` is then a no-op and\nnothing changes about boot. Configuring one without the other is a boot\nerror (`AppConfig::validate`): a bundle without a key could never be\nverified, and a key with nothing to verify configures nothing.",
+      "properties": {
+        "bundle_ref": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bundle_signing_public_key": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data_region": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "portal_hosts": {
+          "default": [],
+          "description": "D-585: the hosts web portals (`/{keyword}/...`) answer on, disjoint\nfrom `staff_hosts`. Empty means portals answer on any host outside\nthe production profile, and on **no** host in it.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "read_only_at_database_bytes": {
+          "default": null,
+          "description": "AB5-T6: when the database reaches this many bytes the deployment\nturns read-only, before the disk fills. Absent means no ceiling.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sovereign": {
+          "default": false,
+          "description": "U1-T5, the sovereign preset: when true, boot refuses any configured\ndestination outside this deployment (object store, SMTP relay, model\nservers, identity providers, trace collector, render service) and any\noutside AI provider, so the deployment makes no outbound connection\nits operator did not name. See `AppConfig::sovereign_violations`.",
+          "type": "boolean"
+        },
+        "sovereign_allowed_hosts": {
+          "default": [],
+          "description": "Host names a sovereign deployment may still reach although they are\nnot on its own network: the organisation's own mail relay or identity\nprovider, for example. Exact, lowercase host names.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "staff_hosts": {
+          "default": [],
+          "description": "D-585: the hosts the staff app and `/api/v1` answer on. Empty means\n\"any host\" (today's behaviour), and is refused once `portal_hosts` is\nset: a portal host must never also serve the staff API.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "DocgenSection": {
+      "properties": {
+        "max_html_bytes": {
+          "default": 5000000,
+          "description": "Cap on the merged HTML document sent to the sidecar — bounds both the\nrequest body and the amount of markup the SSRF-shaped external-URL\nscan (`xrm_docgen::ssrf`) has to walk.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_response_bytes": {
+          "default": 25000000,
+          "description": "Cap on the rendered PDF response read back from the sidecar.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "render_service_url": {
+          "default": "http://localhost:3000",
+          "type": "string"
+        },
+        "request_timeout_secs": {
+          "default": 20,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "EinvoiceSection": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "key_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "writeOnly": true
+        }
+      },
+      "type": "object"
+    },
+    "EmailProviders": {
+      "description": "Z8-T1: `email.providers`. `by_sender` maps a From address (any case) to\na provider name; every other address takes `default`, SMTP when unset.\nA provider named here needs its own block below.",
+      "properties": {
+        "by_sender": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "default": {
+          "default": null,
+          "description": "`\"smtp\"`, `\"ses\"` or `\"sendgrid\"`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sendgrid": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SendGridSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ses": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SesSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "EmailSection": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "P-account-lifecycle — this section existed but nothing consumed it\n(dead config, audit finding E). `enabled` is the explicit opt-in: when\nfalse, `attome-email` is never constructed and reset/verification\nrequests return 503 `feature_unavailable` instead of silently trying\n(and failing) to reach an SMTP host that was never meant to be live —\nsame \"ships dark behind a flag\" pattern as `audit.chainer_enabled`.",
+          "type": "boolean"
+        },
+        "providers": {
+          "$ref": "#/$defs/EmailProviders",
+          "description": "Z8-T1: which provider sends a message: SMTP (the fields above, the\ndefault), Amazon SES or SendGrid, chosen per sender identity."
+        },
+        "smtp_from_address": {
+          "type": "string"
+        },
+        "smtp_from_name": {
+          "type": "string"
+        },
+        "smtp_host": {
+          "type": "string"
+        },
+        "smtp_password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "smtp_port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "smtp_use_tls": {
+          "default": null,
+          "description": "**Deprecated** (BEM-5): `true` = implicit TLS, `false` = plaintext.\nSuperseded by [`Self::tls_mode`], which wins when both are set; kept\ndeserializable for one release so an existing `config.json` keeps\nbooting, and warned about by `validate()` so operators migrate.\n`Option` rather than `bool` so \"absent\" is distinguishable from an\nexplicit `false` — the old key was mandatory, so an absent one means\nthe file was written after the `tls_mode` rename.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "smtp_user": {
+          "type": "string"
+        },
+        "test_mode_catch_all": {
+          "default": null,
+          "description": "Z8-T6: test mode. When set, every email goes to this one address\ninstead of its recipients (named in an `X-Attome-Original-To`\nheader), so a development or copied deployment never mails a real\nperson.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tls_mode": {
+          "default": null,
+          "description": "The SMTP transport security mode (BEM-5, attome-email plan §4.3):\n`\"implicit\"` (SMTPS, the default), `\"starttls\"` (upgrade required —\nlettre aborts if the relay does not offer it), or `\"none\"` (plaintext,\nrefused outside `APP_ENV=debug`). Validated by `validate()`.\n\nA `String`, not an enum: the value crosses the `attome-config` boundary\ninto `attome-email`'s transport builder, and this section's module is\n`pub(crate)` — a new public enum would need a re-export in\n`config/mod.rs` and `lib.rs`, which BEM-5 does not own.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "smtp_host",
+        "smtp_port",
+        "smtp_user",
+        "smtp_password",
+        "smtp_from_address",
+        "smtp_from_name"
+      ],
+      "type": "object"
+    },
+    "EventsSection": {
+      "properties": {
+        "dispatch_batch_size": {
+          "default": 200,
+          "description": "Bound on how many outbox events one dispatcher tick reads per active\nsubscription (M62 plan §3 \"Bounded batch\").",
+          "format": "int64",
+          "type": "integer"
+        },
+        "webhook_signing_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "P-key-rotation-and-jwt (a) trust domain for signing outbound webhook\ndeliveries, deliberately **separate** from `s2s.key_encryption_key`\n(D-069's \"machine-auth secrets and human/other secrets are separate\ntrust domains; a compromise or rotation of one key must never\nimplicate the other\" — S2S authenticates *inbound* machine calls,\nthis key signs *outbound* payloads sent to a subscriber-controlled\nURL, so the two must be independently rotatable).",
+          "writeOnly": true
+        },
+        "webhooks_enabled": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "FleetSection": {
+      "properties": {
+        "changesets_dir": {
+          "default": "changesets",
+          "description": "Where closed `attome-changeset/v1` files are read from (the developer\nruns the source tree, design §6.4).",
+          "type": "string"
+        },
+        "credential_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Encrypts each customer's rollout S2S secret at rest. Required (and\nchecked) only when the console is requested with\n`ATTOME_FLEET_CONSOLE=1`; well formed whenever it is set.",
+          "writeOnly": true
+        },
+        "notify_user_refs": {
+          "default": [],
+          "description": "Who the F3 notifications go to. Empty: every active `system.admin`\nholder of the developer's database.",
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "poll_interval_secs": {
+          "default": 900,
+          "description": "How often the gated `FleetPoll` scheduler syncs every customer.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request_timeout_secs": {
+          "default": 10,
+          "description": "Bound on one outbound call to a customer server.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleAiSection": {
+      "description": "Only `api_key` is a real per-deployment credential today — no engine\ncrate calls the Gemini API yet, so\n`base_url`/`default_model`/`timeout_seconds` were dropped (D-099-era\nscaffolding for a feature that was never wired up); reintroduce them\nalongside whatever crate actually builds the client once one exists.",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "api_key"
+      ],
+      "type": "object"
+    },
+    "IdempotencySection": {
+      "properties": {
+        "bulk_retention_hours": {
+          "default": 168,
+          "description": "S9-T2: how long a bulk job's durable record is kept (a bulk job may\nbe retried days later). Seven days by default.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "durable_retention_hours": {
+          "default": 24,
+          "description": "How long a completed `base_idempotency_record` row is kept before\n`PlatformJob::PruneIdempotencyRecords` soft-deletes it. Same default\nwindow as the Redis tier's TTL (`idempotency.rs::TTL_SECS`).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mandatory_operations": {
+          "default": [],
+          "description": "Operation-name strings (`\"{METHOD} {route-template}\"`, e.g.\n`\"POST /api/v1/{entity}/bulk\"` — the same string\n`attome_server::middleware::idempotency::operation_name` derives via\naxum's `MatchedPath`) that must go through the durable Postgres tier\n(`base_idempotency_record`, migration `0066`) instead of the default\nRedis-only gate, and must require `X-Idempotency-Key` outright (a\nmissing header on a listed route is `422 Validation`, not a silent\nskip). Empty by default — a deployment opts in explicitly.\n\nValidated at boot, not here: `AppConfig::validate()` has no\nvisibility into the router (route templates are assembled in\n`crates/server`/`xrm-server`, several layers above `attome-config`), so\n`server::boot::init`'s `validate_operation_registries` (the\ncomposition root, which depends on both this crate and `xrm-server`)\nchecks every entry here against `xrm_server::bulk::\nMANDATORY_TIER_OPERATIONS` and fails the boot closed on an\nunrecognized one, instead of silently never matching. D-327: the same\nfunction also fails boot closed when `app.deployment_profile =\n\"production\"` and this list is empty or missing any\n`MANDATORY_TIER_OPERATIONS` entry — `config.production.example.json`\nships with the full list already filled in for exactly this reason.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "replay_max_bytes": {
+          "default": 1048576,
+          "description": "Largest successful response body the Redis idempotency gate stores\nfor replay. A larger response still reaches the client in full, but a\nsame-key retry gets `idempotency_replay_unavailable` instead of a\nreplay. Bounds how much a single cached response can put on the\ncoordination Redis. Must be at least 1.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "response_encryption_key": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "properties": {
+                    "active_key_id": {
+                      "type": "string"
+                    },
+                    "keys": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              ],
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "S9-T3: the key ring that seals a durable record's stored response\n(AES-256-GCM, tagged with the key id, bound to the record's id). Unset\nstores responses as they are; set it on any deployment whose\nresponses carry personal data. Keep a retired key in the ring until\nthe records it sealed are past `bulk_retention_hours`."
+        }
+      },
+      "type": "object"
+    },
+    "InferenceEndpoint": {
+      "description": "One model endpoint. Both the generation server and the embedding server\nspeak the same OpenAI-compatible HTTP surface (D-360 ruling 3), so one\nshape describes either.",
+      "properties": {
+        "api_key": {
+          "description": "Optional bearer token. Local serving processes normally need none;\nthis exists for a deployment fronting them with an authenticating\nproxy, and for the config-gated external-provider case below.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "writeOnly": true
+        },
+        "base_url": {
+          "default": "",
+          "description": "Base URL of the serving process, e.g. `http://127.0.0.1:8000/v1`.\nEmpty means \"not configured\", which the client reports as unavailable\nrather than attempting a request to an empty host.",
+          "type": "string"
+        },
+        "model": {
+          "default": "",
+          "description": "The model id to request. Recorded on every suggestion as provenance\n(`model_id`), so an auditor can answer \"which model wrote this\" — see\nTODO-054.",
+          "type": "string"
+        },
+        "request_timeout_secs": {
+          "default": 60,
+          "description": "Per-request timeout. Generation is slow by nature and a bare default\nwould either cut off a legitimate long answer or hang a request thread\nfor minutes; naming it per endpoint lets the embedding endpoint keep a\ntight bound while generation gets a loose one.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "InferenceSection": {
+      "properties": {
+        "ai": {
+          "$ref": "#/$defs/AiEnablement",
+          "description": "The kill-switch. See [`AiEnablement`]."
+        },
+        "allow_external_provider": {
+          "default": false,
+          "description": "Whether [`Self::generation`]/[`Self::embedding`] may point outside the\ndata plane.\n\n**Default false, and load-bearing.** With local inference a prompt\nnever leaves the customer's plane and no classification event is\nraised. Pointing the same client at a third-party API means every\nprompt — case notes, customer names, whatever the record holds — is\ncustomer data leaving the plane, classified under the existing\n`0087`/`0088` scheme and audited at the moment it is enabled. An\nair-gapped deployment must fail at boot if this is true, not at first\nuse: \"we discovered we were sending case notes to a third party\" is\nnot an acceptable way to find out.",
+          "type": "boolean"
+        },
+        "caller_token_budget_per_min": {
+          "default": null,
+          "description": "BIN-D7 — deprecated: accepted and ignored, nothing enforces it (the\nper-caller budget lives in `xrm-ai`'s budget guard). Kept for one\nrelease so an existing config still loads; boot warns when it is set\n(`AppConfig::deprecated_keys`), then the field goes.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "embedding": {
+          "$ref": "#/$defs/InferenceEndpoint",
+          "description": "Embeddings. Separate serving process from generation by design — one\nvLLM instance serves one task, so the VRAM split is a deployment\nsizing decision rather than a runtime surprise (D-360 ruling 3)."
+        },
+        "embedding_document_prefix": {
+          "default": null,
+          "description": "Prefix prepended to every **document** text before it is embedded.\nSee [`Self::embedding_query_prefix`].",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "embedding_query_prefix": {
+          "default": null,
+          "description": "Prefix prepended to every **query** text before it is embedded,\noverriding the model-family heuristic (BIN-D6/BIN-G5).\n\nAsymmetric embedding models (E5, Qwen3) need one prefix for a query and\nanother for a document, and getting it wrong degrades recall silently\nrather than erroring. The heuristic here recognises the families it\nknows; this key makes the answer explicit for any model it does not,\nand an explicit empty string means \"no prefix\" — which is how a\ndeployment turns the heuristic off. Lives on the section rather than on\n[`InferenceEndpoint`] because only embedding has prefixes, and because\nan endpoint is also built in code where an exhaustive literal exists.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "$ref": "#/$defs/InferenceEndpoint",
+          "description": "Generation (chat/completions)."
+        },
+        "knowledge_article_data_source": {
+          "default": null,
+          "description": "The Data Source (UUID, as text) new drafts are filed under.\n\nRequired only when the target article entity is the Knowledge Base item,\nwhose `data_source_ref` lookup is required. A draft is filed by\nconfiguration rather than by the model, because \"which container does\nthis belong in\" is a governance decision an operator makes once, not a\nmodel makes per draft. Left unset, a draft against the KB item fails\nwith a validation error naming this key rather than writing an orphan.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "knowledge_article_entity": {
+          "default": "knowledge_data_item",
+          "description": "The entity `article.draft` writes into (TODO-060).\n\nConfiguration rather than a constant because entities are\n**provisioned at runtime through the admin API** (I-8), so a deployment\nis free to name its own article entity.\n\n**Defaults to `xrm_knowledge_data_item`** — the entity D-489 makes the\ncanonical Knowledge Base article, whose chunks the `xrm-search` drain\nprojects. Before D-489 the default was `None`, so `article.draft`\nrefused to run on a stock deployment; now the case→draft loop works\nout of the box. Setting it to `null` still disables the action.\n\nA deployment *can* override the name, but only where `article.draft`\nwrites changes: the chunking drain and gap-queue retrieval are\nhardcoded to the canonical entity's own columns, not to this value, so\nan override to anything other than `xrm_knowledge_data_item` gets\ndrafts written but never chunked or retrievable — `boot.rs`'s\n`warn_if_knowledge_article_entity_diverges` logs exactly this at\nstartup rather than failing silently.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_output_tokens": {
+          "default": 2048,
+          "description": "Maximum tokens one request may generate. Bounds a runaway loop and\nmakes latency predictable enough to set a timeout against.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ocr": {
+          "$ref": "#/$defs/InferenceEndpoint",
+          "description": "Reading text from images (N21-T1): a vision-language model behind an\nOpenAI-compatible chat endpoint. Documents are customer data, so it\nmust be inside the deployment. Empty `base_url` means OCR is off."
+        },
+        "provider_credential_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Encrypts `xrm_ai_provider_credential.secret_encrypted` at rest — the\nAPI key an operator gives an `xrm_ai_provider` record so the platform\ncan list that provider's models.\n\nIts own [`KeyRing`] and its own trust domain (D-069), deliberately\nseparate from `integration.credential_encryption_key`: both hold \"a\nthird party's secret\", but connector credentials and AI provider keys\nare held by different operators and rotated on different schedules, so\na compromise or rotation of one must not implicate the other. Never\nused to sign or verify anything.\n\nEmpty by default: a deployment that never sets a provider API key\nnever needs this configured, and the credential route refuses with an\noperator-actionable error rather than encrypting under an absent key.",
+          "writeOnly": true
+        },
+        "rerank": {
+          "$ref": "#/$defs/InferenceEndpoint",
+          "description": "Reranking knowledge passages (N15-T1): a cross-encoder behind TEI's\n`/rerank`. Inside the deployment only. Empty `base_url`: no reranking,\npassages keep their fused order."
+        },
+        "speech": {
+          "$ref": "#/$defs/InferenceEndpoint",
+          "description": "Speech to text (N22-T1): an OpenAI-compatible transcription server.\nRecordings are customer data, so it must be inside the deployment.\nEmpty `base_url` means transcription is off."
+        },
+        "spend": {
+          "$ref": "#/$defs/SpendSection",
+          "description": "N24-T1 — money budgets for generation. Empty by default: no prices,\nno money budgets, only the token budgets apply."
+        },
+        "task_models": {
+          "additionalProperties": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "default": {},
+          "description": "N25-T1 — which approved catalogue model (`ai_model` id) a task runs\non, by action id (or `agent.turn` for chat and agent turns). A task\nnot listed runs on `generation`.",
+          "type": "object"
+        },
+        "translation": {
+          "$ref": "#/$defs/TranslationSection",
+          "description": "N20-T1 — the deployment's translation glossary."
+        }
+      },
+      "type": "object"
+    },
+    "IntegrationSection": {
+      "properties": {
+        "credential_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "writeOnly": true
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "request_timeout_secs": {
+          "default": 15,
+          "description": "Bound on how long the REST adapter's outbound HTTP client waits for a\npull/push/health call to an external system, mirroring\n`WebcrawlSection::request_timeout_secs`'s per-feature timeout\nconvention rather than a shared global constant.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "JobsSection": {
+      "properties": {
+        "batch_worker_concurrency": {
+          "default": 3,
+          "description": "P-job-queue-hardening (D-165) — max in-flight jobs the *batch* queue's\nworker processes concurrently. The batch set is exactly the variants\n`PlatformJob::is_batch` returns `true` for — the open-ended,\nrecord-count-proportional kinds (`BulkEntityOperation`,\n`ApplyStagedImport`, `RewrapSecrets`, `ApplySchemaChangePlan`,\n`ApplyMetadataBundle`, `CrawlWebsite`, `CascadeDeactivateDependents`,\n`DataExport`, `DataProfile`, `DataBulkTransform`,\n`RollbackMigrationRun`, `ReportRun`, `LegalMatterCollect`,\n`LegalMatterRelease`). That\nmethod is the authority; this list is a reading aid, not a second copy\nto keep in sync.\nLower default than the fast queue's: these are individually heavier\nper unit of concurrency.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "dead_letter_retention_days": {
+          "default": 90,
+          "description": "BJB-15 (attome-jobs plan) — how long a dead-lettered (`Killed`)\n`apalis.jobs` row is kept before `PlatformJob::PruneApalisJobHistory`\ndeletes it. The same sweep, a longer window: a `Done` row is history,\nbut an untriaged dead letter is the operator's only record that a job\nkept failing, so it outlives the history window and its deletion is\nlogged with a count. Every dead letter the sweep deletes is a row an\noperator never replayed, discarded or investigated (BJB-F9).\n\nPlain serde default; no production-profile rule belongs in\n`loader.rs` for it — the value is neither a secret nor a\nsafety-critical switch, so it is not validated there.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "history_retention_days": {
+          "default": 30,
+          "description": "P-job-queue-hardening (D-165) — how long a terminal (`Done`/`Killed`)\n`apalis.jobs` row is kept before `PlatformJob::PruneApalisJobHistory`\ndeletes it. Keeps the dead-letter admin list and the table itself\nbounded; apalis never vacuums a finished job on its own.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "run_worker_inline": {
+          "default": true,
+          "description": "P-worker-process-split — `true` (default, today's behavior unchanged)\nruns the apalis job `Monitor` inline inside the `server` process, same\nas before this flag existed. A deployment that has split the worker\nout into its own process/container (`crates/server/src/bin/worker.rs`,\nscaled and deployed independently of the HTTP tier) sets this `false`\nso `server` never builds/runs the `Monitor` or spawns the partition/\nupload-session maintenance schedulers — those move to `worker`\nentirely, avoiding double-enqueue from two schedulers ticking at once.\nSame \"off by default until an operator opts in\" posture as\n`database.migrate_on_boot`.",
+          "type": "boolean"
+        },
+        "worker_concurrency": {
+          "default": 10,
+          "description": "Max in-flight `PlatformJob`s the fast-queue worker processes\nconcurrently. Tuned against `database.connection_number` (§14.1) —\nthe remaining fast-queue work is low-volume and low-CPU, not a pool\nhog. (The API-key/S2S \"touch\" writes that used to be the bulk of it\nmoved off apalis onto the Redis stream / coalescing-hash path in\nD-164.)",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "workflow_payload_retention_days": {
+          "default": 30,
+          "description": "M3-T4 — how long a finished workflow step keeps its recorded input\nand output before the daily prune clears them (the step's summary\nstays).",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "KdfSection": {
+      "description": "`auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the\nrelease-build benchmark in `document/base/auth/kdf-benchmark-2026-09-14.md`\nchose; raise the Argon2 costs only with a new measurement.",
+      "properties": {
+        "acquire_timeout_ms": {
+          "default": 2000,
+          "description": "How long a request waits for a KDF permit before a 503 (100..=30000).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "argon2_m_cost": {
+          "default": 19456,
+          "description": "Argon2id memory cost in KiB for new hashes. OWASP floor 19456.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "argon2_t_cost": {
+          "default": 2,
+          "description": "Argon2id passes for new hashes. OWASP floor 2.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hard_cap": {
+          "default": 6,
+          "description": "Upper bound on concurrent KDF operations whatever the host (1..=64).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "memory_budget_bytes": {
+          "default": 268435456,
+          "description": "Memory all concurrent KDF operations may use together; must fit at\nleast one operation.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "password_min_length": {
+          "default": 12,
+          "description": "Minimum password length in characters (floor 12, security contract I2).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "MetadataSection": {
+      "description": "`metadata` — additive, every field defaulted, so a config file without it\nkeeps today's behaviour: an unset mode is `auto` (see\n[`ChangesetsSection::mode`]).",
+      "properties": {
+        "backfill_batch_max": {
+          "default": null,
+          "description": "Y12-T6: the largest batch a backfill grows to. Unset is 50,000.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "changesets": {
+          "$ref": "#/$defs/ChangesetsSection"
+        },
+        "quiet_hours": {
+          "default": null,
+          "description": "Y12-T6: the local hours (`\"01-05\"`, end not included) when a\nbackfill may grow its batches. Unset is 01:00 to 05:00.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recovery_archive_key_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Solution 7 Phase 2 (D-788 rule 9): the key-encryption-key ring of the\n30-day recovery archive (`xrm_core_recovery_archive`), its own trust\ndomain (D-069). Empty (the default) means \"not configured\": every\noperation that would archive a value (a field delete with values, a\ntype change that nulls values) is refused with `archive_key_missing`\n(fail closed). When set, every entry must be 64 hex chars (a boot\nerror otherwise). `KeyRing`'s `Debug` redacts the values.",
+          "writeOnly": true
+        },
+        "release_report": {
+          "$ref": "#/$defs/ReleaseReportSection",
+          "description": "Solution 7 Phase 2 (design §10.5): the post-apply release-report\nnotification."
+        },
+        "storage_tuning_enabled": {
+          "default": false,
+          "description": "Y2-T9: the daily table-health job also sets each entity table's fill\nfactor from its measured updates (80 for a table whose updates miss\nheap-only updates, 100 for an append-only one). Off by default.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "MigratorDbCredentials": {
+      "description": "P-db-privilege-separation / D-117 — same shape as `ReadonlyDbCredentials`,\nfor the DDL-capable `attome_migrator` role.",
+      "properties": {
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user",
+        "password"
+      ],
+      "type": "object"
+    },
+    "ModelPrice": {
+      "additionalProperties": false,
+      "description": "One model's price per million tokens.",
+      "properties": {
+        "completion_per_million": {
+          "format": "double",
+          "type": "number"
+        },
+        "prompt_per_million": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "prompt_per_million",
+        "completion_per_million"
+      ],
+      "type": "object"
+    },
+    "NotificationSection": {
+      "description": "Notification recipient retention is deliberately opt-in. A zero value\ndisables pruning, matching the audit retention convention while avoiding\nan unexpected destructive default for existing deployments.",
+      "properties": {
+        "email_from": {
+          "default": null,
+          "description": "M51 Phase 1 — the \"From\" header notification-engine email should\nappear to come from (e.g. `\"Notifications <notifications@example.com>\"`),\ndistinct from the account-lifecycle \"From\" in `email.smtp_from_name`/\n`smtp_from_address`. `None` (default) falls back to that same\ndeployment-wide address -- this section reuses `config.email`'s SMTP\ntransport (host/port/credentials/`enabled`) unconditionally; it never\ngrows its own SMTP block.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recipient_retention_days": {
+          "default": 0,
+          "description": "How many days recipient rows remain before old partitions are removed.\n`0` disables pruning.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ObservabilitySection": {
+      "properties": {
+        "alert_emails": {
+          "default": [],
+          "description": "AB10-T2: who hears about a built-in alert firing or resolving, by\nemail (sent through the job queue and the `email` section's relay).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "alert_webhooks": {
+          "default": [],
+          "description": "AB10-T2: incoming-webhook URLs (Slack, Teams, any service that takes\n`{\"text\": ...}`) told about a built-in alert firing or resolving.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "builtin_store": {
+          "default": null,
+          "description": "U4-T1: sample this process's metrics into `ops_metric_sample` every\nminute, kept 30 days. Unset: on for Solo (`cache.backend = \"memory\"`),\noff otherwise (several servers use Prometheus).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "enable_distributed_tracing": {
+          "description": "P-observability-completion — the enable switch for an OTLP trace\nexporter. `false` (every config file's value today) is byte-identical\nto today's tracing_subscriber::fmt()-only behavior: no OTel layer\ninstalled, no listener bound, no span exported anywhere.\n\nNOTE ON CURRENT IMPLEMENTATION STATE (be skeptical of any doc that\nclaims this is fully wired — verify against `crates/server/src/main.rs`\nand this crate's Cargo.toml before trusting it): as of this comment,\nthis flag and `otlp_endpoint` below are validated at boot (see\n`validate()`) and the W3C `traceparent` header is extracted/recorded\non the request span by `attome_server::middleware::trace_context`\n(wired into `apply_outer_layers` unconditionally, since it degrades to\na no-op when no `traceparent` header is present — which is every\nrequest today, since nothing yet sends one) — but `main.rs` does NOT\nyet install a real `tracing-opentelemetry` layer or ship any span to\n`otlp_endpoint`. That exporter wiring, and forwarding `traceparent` on\nthe two outbound HTTP call sites (`attome_auth::oidc`'s discovery/JWKS\nfetch) and into `PlatformJob` enqueue call sites, remain unimplemented\n— see DECISIONS.md's P-observability-completion entry for the exact\nremaining scope and why it was deferred (unverifiable third-party\ncrate/version surface in an environment with no Rust toolchain to\ncompile against).",
+          "type": "boolean"
+        },
+        "metrics_port": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "otlp_endpoint": {
+          "default": null,
+          "description": "P-observability-completion — the OTLP collector this deployment's own\nexporter would send spans to (Grafana Tempo / Jaeger / the OpenTelemetry\nCollector — a per-deployment adoption decision, never a hosted/shared\nendpoint per D-002). Required (fail-closed, see `validate()`) whenever\n`enable_distributed_tracing = true`; `None` otherwise. Currently\nvalidated but not yet read by any exporter — see\n`enable_distributed_tracing`'s doc comment above.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profiler_enabled": {
+          "default": false,
+          "description": "attome-profiler: live per-probe call count/avg/min/max dashboard (the\nAngular \"Profiler\" admin page). Default false — byte-identical\nbehavior (no profiler middleware layer, no Redis writes) until a\ndeployment opts in, same \"dark unless configured\" posture as\n`metrics_port == 0`.",
+          "type": "boolean"
+        },
+        "trace_sampling_rate": {
+          "description": "P-observability-completion — `TraceIdRatioBased` sampler ratio once\n`enable_distributed_tracing = true`. Meaningless (and unread) while\nthat flag is false, same \"declared but inert until its gate flips\"\nshape as most other flag-gated fields in this file.",
+          "format": "double",
+          "type": "number"
+        },
+        "worker_health_port": {
+          "default": 9091,
+          "description": "P-worker-process-split follow-up (the TODO `crates/server/src/bin/\nworker.rs` shipped with) — the dedicated `worker` binary has no HTTP\nlistener at all today, so a split deployment's compose/k8s healthcheck\ncan only prove the process exists (`pgrep`), not that it can actually\nreach Postgres/Redis. Unlike `metrics_port` (dark by default: every\nexisting config has it at 0), this defaults **on** — a worker\nreadiness probe should exist out of the box, not require every\ndeployment to opt in. `0` still disables it, same \"0 = off\" convention\nas `metrics_port`, for a bare-metal/host-networking deployment that\ngenuinely wants it off. Read by `crates/server/src/bin/worker.rs`\nonly — `main.rs` never binds this (its own `/health/ready` already\ncovers the inline-worker case via `app.port`).",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "metrics_port",
+        "trace_sampling_rate",
+        "enable_distributed_tracing"
+      ],
+      "type": "object"
+    },
+    "OidcProviderConfig": {
+      "properties": {
+        "client_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "description": "`${VAR}`-expanded like every other secret in this file (D-038) — never\ncommit a real value. Length-checked by `AppConfig::validate` same as\n`auth.jwt_secret`/`s2s.key_encryption_key`.",
+          "type": "string",
+          "writeOnly": true
+        },
+        "display_name": {
+          "description": "Shown on the Angular login page's provider button.",
+          "type": "string"
+        },
+        "email_claim": {
+          "default": "email",
+          "description": "ID-token claim carrying the user's email — almost always \"email\"; a\nknob only for a provider with a non-standard claim map.",
+          "type": "string"
+        },
+        "issuer": {
+          "description": "Issuer URL, no trailing slash, e.g.\n\"https://login.microsoftonline.com/{tenant}/v2.0\" or\n\"https://accounts.google.com\". `{issuer}/.well-known/openid-configuration`\nMUST resolve (OIDC discovery, RFC 8414).",
+          "type": "string"
+        },
+        "require_email_verified_claim": {
+          "default": true,
+          "description": "Enterprise-audit remediation (Phase 2.2, revised): when `true`, a\nmissing `email_verified` claim is rejected (`Unauthorized`) instead\nof defaulting to accepted. **On by default** — an omitted\n`email_verified` claim is indistinguishable at the protocol level\nfrom an IdP that never verifies email at all, so defaulting to\n\"accept\" fails open on exactly the ambiguity this flag exists to\nclose. A provider whose IdP is confirmed to reliably omit the claim\nwhile still being fully trustworthy (`verify_claims`'s original\nreasoning) must opt back out explicitly\n(`\"require_email_verified_claim\": false`) rather than relying on a\nsilent default.",
+          "type": "boolean"
+        },
+        "scopes": {
+          "default": [
+            "openid",
+            "email",
+            "profile"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "display_name",
+        "issuer",
+        "client_id",
+        "client_secret"
+      ],
+      "type": "object"
+    },
+    "OidcSection": {
+      "properties": {
+        "providers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OidcProviderConfig"
+          },
+          "description": "Keyed by an operator-chosen provider key (e.g. \"entra\", \"okta\",\n\"keycloak\", \"google\") — becomes the `{provider}` path segment in\n`/api/v1/auth/oidc/{provider}/login|callback` and the `provider_key`\nstored in `xrm_core_user_identity`. Empty (the default) means no OIDC\nprovider is configured — those routes 404 for any key looked up here.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "PortalSection": {
+      "properties": {
+        "captcha": {
+          "$ref": "#/$defs/CaptchaConfig"
+        },
+        "oidc_providers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OidcProviderConfig"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "QuerySection": {
+      "properties": {
+        "cursor_default": {
+          "default": true,
+          "description": "`true` (default): `query/execute` requests with neither `after_id`\nnor `include_total: true` run in keyset/cursor mode from the start of\nthe result set, instead of OFFSET. Set `false` to restore the pre-P-\nstored-query-containment default (plain OFFSET, no total) for one\nrelease as a rollback switch (§7 of the plan) — `include_total: true`\nalways gets `COUNT(*) OVER()` totals regardless of this flag.",
+          "type": "boolean"
+        },
+        "max_offset_rows": {
+          "default": 10000,
+          "description": "AA4-T3: the deepest row an offset page may start at. OFFSET reads and\nthrows away every row before it, so a deep page costs as much as\nreading them all; past this a request is refused with a pointer to\n`after_id` (keyset paging), which costs the same at any depth.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "timeouts_ms": {
+          "$ref": "#/$defs/QueryTimeouts",
+          "description": "AA4-T7: how long a query may run, by kind of request. A query past\nits limit answers `504 query_timeout` with a hint to run it as an\nexport."
+        },
+        "trigram_index_min_rows": {
+          "default": 100000,
+          "description": "AA4-T5: a filterable text attribute gets a trigram (GIN) index, so a\n`contains` filter is index-backed, once its table's estimated row\ncount reaches this. At least 1; default 100,000.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "validate_on_execute": {
+          "default": false,
+          "description": "Phase 2's rollback switch: `query/execute` skips the per-request\n`EXPLAIN` cost check by default, trusting the cost estimate captured\nonce in `xrm_core_sql_query_version` at publish time. `true` restores the\npre-phase-2 behavior of re-running `EXPLAIN` on every execute call\n(defense against runtime plan drift the cached estimate can't see) —\na kill switch, not a recommended steady-state setting.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "QueryTimeouts": {
+      "description": "AA4-T7: statement time limits in milliseconds, by kind of request.",
+      "properties": {
+        "interactive": {
+          "default": 500,
+          "description": "A person waiting on a list or a view (default 500).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "report": {
+          "default": 5000,
+          "description": "A stored query flagged as a report (default 5000).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "RateLimitCategoryLimits": {
+      "description": "Independent anonymous/authenticated budgets for one rate-limit category\n(P-rate-limit-atomicity §4.3). A category absent from `categories` falls\nback to `RateLimitSection`'s own top-level `anonymous_rpm`/\n`authenticated_rpm` — an upgrading deployment that never touches this\nblock is unaffected except for the categories this plan deliberately\ntightens (credential/mfa/password_reset ship a lower default than the\nblanket `api` number).",
+      "properties": {
+        "anonymous_rpm": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "authenticated_rpm": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "anonymous_rpm",
+        "authenticated_rpm"
+      ],
+      "type": "object"
+    },
+    "RateLimitSection": {
+      "properties": {
+        "anonymous_rpm": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "authenticated_rpm": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "categories": {
+          "additionalProperties": {
+            "$ref": "#/$defs/RateLimitCategoryLimits"
+          },
+          "description": "P-rate-limit-atomicity: keyed by category name (`credential`, `mfa`,\n`password_reset`, `api`, `export`, `expensive_query`, ...), resolved\nagainst `attome_server::middleware::rate_limit::RATE_LIMIT_CATEGORIES`'\ncompile-time (method, route-template) → category table. Replaces the\nold `per_endpoint_limits` map outright — that map only ever changed\nwhich number was checked against one shared identity-only bucket, it\nnever isolated a per-endpoint budget the way its name implied (see\nD-145). A deployment with a leftover `per_endpoint_limits` key fails\nto boot (below) rather than silently losing an override it believes\nstill applies.",
+          "type": "object"
+        },
+        "ipv6_bucket_prefix": {
+          "default": 64,
+          "description": "BSV-F16 (B6) — both per-IP limiters bucket an IPv6 client by this\nprefix length rather than its full /128, because one host usually\ncontrols a whole /64 and could otherwise rotate addresses inside it to\ndodge the limit. IPv4 is always bucketed per address. Range 32..=128;\n128 restores per-address buckets.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pre_auth_rpm": {
+          "default": 1000,
+          "description": "Coarse, IP-only limit applied by `pre_auth_rate_limit` — the layer that\nruns before `s2s_authn`/`authn` so a flood of garbage JWTs/HMAC\nsignatures gets rejected before burning crypto + a Redis\ndenylist/nonce lookup per request. Deliberately looser than\n`anonymous_rpm` (a blunt pre-crypto backstop, not a business-logic\nlimit) — an unmeasured starting guess; tune against real traffic once\navailable.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "anonymous_rpm",
+        "authenticated_rpm"
+      ],
+      "type": "object"
+    },
+    "ReadonlyDbCredentials": {
+      "properties": {
+        "host": {
+          "default": null,
+          "description": "P-ha-failover-hardening follow-up / D-155 — closes the gap D-125\nflagged (\"`ReadonlyDbCredentials` only overrides user/password, there\nis no host/port override for the readonly role\"): lets the readonly\npool point at a genuinely different endpoint than\n`database.host`/`.port` — e.g. a Patroni HAProxy replica-routing\nlistener (`deploy/ha/haproxy.cfg`'s `postgres_replicas`, port 5433)\nor a pgbouncer `attome_ro` alias on its own port. `None` (the\ndefault) falls back to `database.host` — today's behavior, unchanged.\nUnlike `readonly` itself (required outside debug, D-038), leaving\nthis unset is never a boot error: a deployment sharing one endpoint\nfor both roles (today's default topology) is still fully supported.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "port": {
+          "default": null,
+          "description": "See `host` above — same override, for the port. `None` falls back to\n`database.port`.",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user",
+        "password"
+      ],
+      "type": "object"
+    },
+    "ReleaseReportSection": {
+      "description": "`metadata.release_report`.",
+      "properties": {
+        "notify_roles": {
+          "default": null,
+          "description": "Who the post-apply notification goes to. Unset (the default) keeps\ntoday's recipients: the active holders of the admin privilege. Set,\nthe notification goes to the active holders of these roles (by role\n`name`) instead; the recipient cap is unchanged. When none of the\nnamed roles has an active holder the notification falls back to the\nadmin holders (logged at `warn`), so a stale name never silences it.\nA set list must be non-empty, without blanks or duplicates, at most\n[`MAX_NOTIFY_ROLES`] names (a boot error otherwise).",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "RetentionSection": {
+      "description": "P-retention-archive-completion §3a — policy-driven partition archive/drop,\nentity-record purge, and legal hold. Config-driven per D-002's\nsingle-deployment-per-customer model: every field below is one\ndeployment's own `config.json`, never a cross-customer policy table.\n\nEvery window defaults to `None` (\"keep forever\") and `dry_run` defaults\n`true`, so a fresh deployment with no `retention` block behaves exactly as\ntoday — zero automatic archive/drop/purge behavior until an operator\nexplicitly configures a window **and** flips `dry_run` off **and**\napproves a specific proposed action (§3a/§3d/§3e; two independent gates,\nneither sufficient alone).",
+      "properties": {
+        "audit_days": {
+          "default": null,
+          "description": "Age (in days) past which a `xrm_audit_header`/`xrm_audit_detail`/\n`xrm_audit_snapshot` partition becomes archive/drop-eligible.\n`None` (default) = keep forever, today's behavior.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "disposition_action": {
+          "default": "purge",
+          "description": "M23 Records Management (D-456) — which disposition outcome the daily\nsweep proposes for a record past `entity_purge_grace_days`:\n`\"purge\"` (default — today's behavior, crypto-shred + field-scrub, no\nevidence kept) or `\"archive\"` (export to `attome-storage` first,\nevidence kept in `xrm_core_archive_record`, then the same\nfield-scrub — see `xrm_compliance::archive::execute_entity_archive`).\nDeployment-wide, same D-002 single-deployment-per-customer convention\nas every other field in this section — not a per-record or\nper-entity policy table. An unrecognized value falls back to\n`\"purge\"` with a warning rather than failing the sweep (see\n`xrm_entity::purge::propose_purge_actions`), the same fail-safe\nposture `dry_run`'s default takes.",
+          "type": "string"
+        },
+        "dry_run": {
+          "default": true,
+          "description": "Safety default. While `true` (the default), the propose step always\nruns and always writes `xrm_audit_retention_action` rows so an operator can\nsee exactly what a live run *would* do, but approve/execute are\nrefused outright with a message naming this flag. Must be explicitly\nflipped to `false` before any partition can be dropped or any record\npurged.",
+          "type": "boolean"
+        },
+        "entity_purge_grace_days": {
+          "default": null,
+          "description": "How long (in days) a provisioned entity record may sit\n`is_active = false` before it becomes purge-eligible (crypto-shred +\nfield-scrub, never a hard `DELETE` — see `xrm_entity::purge`).\n`None` (default) disables entity purge entirely.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "legal_hold": {
+          "default": false,
+          "description": "Deployment-wide kill switch (D-002: a litigation hold on a\nself-hosted, one-customer-per-deployment platform is realistically an\nall-or-nothing freeze for that deployment, not a per-record flag).\nWhile `true`, no archive/drop/purge action may execute regardless of\nhow far past its window a partition or record is — proposals still\ncompute, for visibility, but approve/execute are refused outright.",
+          "type": "boolean"
+        },
+        "propose_interval_secs": {
+          "default": 86400,
+          "description": "How often the daily proposal sweep re-checks (enqueues\n`PlatformJob::ProposeRetentionActions`), in seconds. Idempotent\neither way — a shorter interval only means more no-op re-checks once\ncaught up, never duplicate proposals (migration 0067's partial unique\nindex makes the insert idempotent).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "s2s_access_log_days": {
+          "default": null,
+          "description": "Age (in days) past which a `xrm_s2s_access_log` partition becomes\narchive/drop-eligible. `None` (default) = keep forever.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "RuntimeDbCredentials": {
+      "description": "P-db-privilege-separation / D-117 — same shape as `ReadonlyDbCredentials`,\nfor the DML-only `attome_runtime` role.",
+      "properties": {
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user",
+        "password"
+      ],
+      "type": "object"
+    },
+    "S2SSection": {
+      "properties": {
+        "access_log_enabled": {
+          "default": true,
+          "description": "Write every S2S request to xrm_s2s_access_log. Default: true.",
+          "type": "boolean"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Enable S2S HMAC authentication. When false the middleware is a no-op.",
+          "type": "boolean"
+        },
+        "failure_alert_threshold": {
+          "default": 100,
+          "description": "Number of 401 failures from one client in 5 minutes that triggers\nthe admin failure alert. Default: 100.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "key_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "64-hex-char AES-256 master key(s) used to encrypt HMAC secrets at\nrest. Required when enabled = true. Generate with: openssl rand -hex 32.\nP-key-rotation-and-jwt (a): a `KeyRing` — see that type's doc.",
+          "writeOnly": true
+        },
+        "seeded_clients": {
+          "description": "D-771: S2S clients declared here are reconciled at every boot (client,\none key with a fixed `public_id`, permission rows), so a machine\ncaller's credential survives a database reset and is rotated by\nediting `.env`. Empty by default.",
+          "items": {
+            "$ref": "#/$defs/S2sSeededClient"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "S2sSeededClient": {
+      "description": "One config-declared S2S client (D-771). `secret` is a `${VAR}` reference;\nblank or unresolved means \"not configured here\" and the client is skipped.",
+      "properties": {
+        "client_id": {
+          "description": "Client slug, as `POST /admin/s2s/clients` takes it.",
+          "type": "string"
+        },
+        "description": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_concurrent": {
+          "default": null,
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "permissions": {
+          "description": "Entity ceiling rows (D-766); empty leaves the client unbounded.",
+          "items": {
+            "$ref": "#/$defs/S2sSeededPermission"
+          },
+          "type": "array"
+        },
+        "public_id": {
+          "description": "Stable key id the caller sends; must start with `s2s_`.",
+          "type": "string"
+        },
+        "rate_limit_rpm": {
+          "default": null,
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "secret": {
+          "description": "64 hex chars (32 bytes), e.g. `openssl rand -hex 32`.",
+          "type": "string",
+          "writeOnly": true
+        },
+        "service_user_email": {
+          "description": "The existing system user the client acts as. Never created here.",
+          "type": "string"
+        },
+        "slot": {
+          "default": "primary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "service_user_email",
+        "public_id"
+      ],
+      "type": "object"
+    },
+    "S2sSeededPermission": {
+      "properties": {
+        "bulk": {
+          "default": false,
+          "type": "boolean"
+        },
+        "create": {
+          "default": false,
+          "type": "boolean"
+        },
+        "delete": {
+          "default": false,
+          "type": "boolean"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "export": {
+          "default": false,
+          "type": "boolean"
+        },
+        "read": {
+          "default": false,
+          "type": "boolean"
+        },
+        "update": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "entity"
+      ],
+      "type": "object"
+    },
+    "SecuritySection": {
+      "properties": {
+        "csp_enforce": {
+          "default": true,
+          "description": "P-frontend-hardening §4(d)/step 7 — report-only kill switch for the\nresponse `Content-Security-Policy` header, mirroring `csrf_enforce`'s\npattern above. `true` (default) sends a real, enforcing\n`Content-Security-Policy`; `false` sends\n`Content-Security-Policy-Report-Only` instead (observe violations,\nblock nothing) — the plan's own rollout guidance is to set this\n`false` as the *first* step in any real deployment, watch for\nviolations during a burn-in period, then flip it on, precisely\nbecause (unlike `csrf_enforce`, which is safely additive against\nexisting behavior) there was no prior CSP at all for this to be\nlayered on top of. See `attome_server::middleware::security_headers`\nfor the header value itself.",
+          "type": "boolean"
+        },
+        "csrf_enforce": {
+          "default": true,
+          "description": "P-cookie-csrf-hardening kill switch for the Origin/Fetch-Metadata CSRF\nmiddleware (`attome_server::middleware::csrf`). Default true — the check\nonly ever rejects a *cookie-authenticated* unsafe-method (POST/PUT/\nPATCH/DELETE) request whose `Sec-Fetch-Site`/`Origin` don't match this\ndeployment, so \"on\" is the safe default; S2S/ApiKey/no-cookie traffic\nis unaffected either way. Set false only to diagnose a reverse proxy\nthat strips `Origin`/`Sec-Fetch-*` headers — false is log-only\n(rejections are `tracing::warn!`'d but the request still proceeds),\nnever a silent bypass; remove the flag once burned in, never leave it\noff in a real deployment.",
+          "type": "boolean"
+        },
+        "external_effects_enabled": {
+          "default": false,
+          "description": "I-7's deployment-wide air-gap switch: whether any `Effect::External`\ncapability (`xrm-ai`'s `GateInputs::external_effects_enabled`) is\nallowed to reach outside this deployment at all. Default **false** —\nan air-gapped or freshly-provisioned deployment refuses every\nexternal-effect action until an operator opts in explicitly, the\nsame fail-safe-closed posture every other toggle in this section\ndocuments.\n\nBefore this field existed, every one of `xrm-ai`'s three call\nsites (`engine.rs::gate_inputs`, `server::omnichannel`,\n`xrm-workflow::scheduler`) hardcoded `external_effects_enabled:\nfalse` with a comment noting no `Effect::External` action existed\nyet to make the gap visible — verified live 2026-09-09, grepping\nevery call site in the workspace. This field is what those three now\nread instead of the literal `false`, and it is also the flag\n`trd-engine`'s execution pipeline reads directly (see that crate's\n`broker_submitter.rs`) to decide whether the router/adapter stage\nmay submit a real broker order — **not** through\n`xrm_ai::dispatch`, because that path's `Initiator` is `User`/\n`Agent` only (I-3) and a LIVE strategy's automated order is neither\n(`document/TRADING-PLATFORM-PLAN.md` §6 rule 5, `Initiator::System`).\nReusing this one config flag for both, rather than inventing a\nsecond air-gap switch, is what makes \"I-7's deployment flag gates\nwhether any external routing is enabled at all\" (plan Phase 4) an\nhonest sentence.",
+          "type": "boolean"
+        },
+        "hsts_include_subdomains": {
+          "default": false,
+          "description": "Appends `; includeSubDomains` to the header above.\n\nDefaults to **false**, unlike every other security toggle in this\nsection, and deliberately so: HSTS is cached by the browser for the\nfull `max-age`, so switching this on while any sibling subdomain is\nstill served over plain http makes that subdomain unreachable for up\nto a year, with no server-side way to undo it. Turn it on once every\nsubdomain of the deployment's origin is confirmed TLS-only — that is\nthe stronger posture and the recommended end state, just not a safe\nthing to inherit silently from a default.\n\n`preload` is deliberately not offered as a toggle: submitting to the\nbrowser preload list is an out-of-band, effectively irreversible\naction that must not be reachable by editing a config file.",
+          "type": "boolean"
+        },
+        "hsts_max_age_secs": {
+          "default": 31536000,
+          "description": "`max-age` (seconds) for the response `Strict-Transport-Security`\nheader; `0` omits the header entirely. Default one year.\n\nAudit finding: HSTS previously appeared nowhere in `crates/` or\n`deploy/`. The assumption was that the separate TLS-edge nginx (D-099\n— the one repo that stays outside this monorepo) set it, but nothing\nin audited scope pinned or tested that, which made it a control with\nno owner. Setting it here gives it one: this process emits it on\nevery response it serves, exactly the way it already emits CSP, and\n`deploy/frontend/nginx.conf` emits the matching header for the static\nSPA responses this process never touches.\n\nSafe to leave on in local dev: RFC 6797 §8.1 requires a user agent to\n**ignore** an HSTS header received over a non-secure transport, so the\nplain-http `:7865` dev server is unaffected.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "strict_privileged_authz": {
+          "default": true,
+          "description": "P-authz-revocation-epoch (D-116): always-on synchronous epoch\nre-check (fail-closed, `redis_coordination`, 300ms timeout) ahead of\nthe privileged/admin-gated route bundles (`admin`, `license_admin`,\n`s2s_admin`, `schema`, `sidebar`, plus xrm-security's own grant/revoke\nadmin routes) — a just-revoked admin cannot keep using a still-live\nL1 cache entry to perform further privileged operations for the rest\nof the ordinary 60s TTL. Default true; false is the emergency\nrollback to pre-epoch behavior for exactly those bundles (kill\nswitch — remove after one release of burn-in per the plan's rollout\nsection).",
+          "type": "boolean"
+        },
+        "strict_revocation": {
+          "default": true,
+          "description": "P-record-level-security item (b), implemented as a mode of this same\nepoch mechanism rather than a second implementation: when true, EVERY\n`SecurityContext` resolve — not just the privileged-bundle class\nabove — pays the fail-closed epoch re-check, so even an ordinary CRUD\nrequest sees a revoked grant on its very next request instead of\nwithin the 60s TTL. Enabled by default for the enterprise security\nposture; development deployments may explicitly set it false when the\nper-request Redis round trip is unsuitable.",
+          "type": "boolean"
+        },
+        "trusted_proxy_cidrs": {
+          "default": [],
+          "description": "The only TCP peers allowed to supply a client address through\n`X-Forwarded-For`. Leave empty for direct deployments: forwarding\nheaders are then ignored and the socket peer is used for rate limiting\nand audit IPs. Entries must be IPv4/IPv6 CIDRs, for example\n`\"172.20.0.0/16\"` or `\"fd00:dead:beef::/64\"`. An IPv4-mapped IPv6 peer\n(a dual-stack bind) is matched as its IPv4 address.\n\nBSV-F18 (B7) — the proxies listed here **must** overwrite what the\nclient sent: nginx `proxy_set_header X-Forwarded-For\n$proxy_add_x_forwarded_for;` (appends the real peer, which is the hop\nthis crate trusts, walking from the last header line) and\n`proxy_set_header X-Forwarded-Host $host;` (replaces any client value;\nthe last line wins). A trusted proxy is also the only peer whose\ninbound `traceparent` becomes the request's trace parent (BSV-D10), so\nthe edge should strip or set that header too.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "SendGridSettings": {
+      "description": "Z8-T1: SendGrid (v3 API) credentials.",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "endpoint": {
+          "default": null,
+          "description": "Overrides `https://api.sendgrid.com` (the EU region, a test double).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "api_key"
+      ],
+      "type": "object"
+    },
+    "SesSettings": {
+      "description": "Z8-T1: Amazon SES (v2 API) credentials.",
+      "properties": {
+        "access_key_id": {
+          "type": "string"
+        },
+        "endpoint": {
+          "default": null,
+          "description": "Overrides `https://email.{region}.amazonaws.com` (a VPC endpoint, a\ntest double).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region": {
+          "description": "e.g. `\"eu-west-1\"`.",
+          "type": "string"
+        },
+        "secret_access_key": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "session_token": {
+          "description": "A temporary credential's session token.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "region",
+        "access_key_id",
+        "secret_access_key"
+      ],
+      "type": "object"
+    },
+    "ShedPermits": {
+      "description": "Slots per request class.",
+      "properties": {
+        "ai": {
+          "default": 8,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "background": {
+          "default": 4,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "export": {
+          "default": 4,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "report": {
+          "default": 8,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ShedSection": {
+      "properties": {
+        "interactive_high_water": {
+          "default": 200,
+          "description": "Interactive requests in flight above which the other classes shrink\nto one at a time.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "permits": {
+          "$ref": "#/$defs/ShedPermits"
+        }
+      },
+      "type": "object"
+    },
+    "SpendSection": {
+      "additionalProperties": false,
+      "description": "N24-T1 — what generation may cost per rolling month (30 days), in the\nunit the prices are written in (the deployment's currency).\n\nEvery cap is optional and applies only when the generation model has a\nprice: a model with no price is never counted against a money budget\n(the token budgets still apply). Each cap is a separate window: the\nwhole deployment, each person (`caller_monthly`), each agent\n(`agent_monthly`, for sessions started with an agent) and each feature\n(`feature_monthly`, by action id such as `record.summarize`, or\n`agent.turn` for chat and agent turns). Once any window passes\n`degrade_at_percent` of its cap, generations are shortened to\n`degraded_max_output_tokens`; at the cap they are refused (429) before\nanything is spent.",
+      "properties": {
+        "agent_monthly": {
+          "default": null,
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "caller_monthly": {
+          "default": null,
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "degrade_at_percent": {
+          "default": 80,
+          "description": "Percent of a cap at which generations are shortened.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "degraded_max_output_tokens": {
+          "default": null,
+          "description": "The output ceiling near a cap; unset leaves generations unshortened.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deployment_monthly": {
+          "default": null,
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "feature_monthly": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "prices": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ModelPrice"
+          },
+          "description": "Price per million tokens, by model id (`inference.generation.model`).",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "StatementClassOverrides": {
+      "additionalProperties": false,
+      "description": "Z2-T5: `database.statement_classes`, one optional override per class.",
+      "properties": {
+        "admin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatementClassTimeouts"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fast": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatementClassTimeouts"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatementClassTimeouts"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "standard": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatementClassTimeouts"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "StatementClassTimeouts": {
+      "additionalProperties": false,
+      "description": "Z2-T5: one statement class's timeouts in milliseconds; each must be\nabove 0.",
+      "properties": {
+        "idle_in_transaction_timeout_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "lock_timeout_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "statement_timeout_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "statement_timeout_ms",
+        "lock_timeout_ms",
+        "idle_in_transaction_timeout_ms"
+      ],
+      "type": "object"
+    },
+    "StorageSection": {
+      "properties": {
+        "clamd_address": {
+          "default": "",
+          "description": "`host:port` of a ClamAV `clamd` daemon (INSTREAM protocol) the async\nscan job submits uploaded bytes to. Empty (the default) means no\nscanner is configured — the scan job then fails closed (rejects,\nnever promotes) rather than silently skipping malware scanning.",
+          "type": "string"
+        },
+        "max_deployment_storage_bytes": {
+          "default": null,
+          "description": "Soft cap on the whole deployment's promoted (`clean`) file storage —\nmeaningful because D-099's data-plane model is one dedicated\ndeployment per customer, so this is that customer's total quota, not\na cross-customer figure. `None` (the default) disables the check,\nsame reasoning and TODO as `max_user_storage_bytes` above.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_upload_size_bytes": {
+          "default": 26214400,
+          "description": "Max `declared_size_bytes` an upload session may declare; enforced at\nfinalize (HEAD-verified against what was actually PUT), not at\npresign time (§4.2's documented limitation).\n\nTODO(item 26): true presign-time enforcement — S3 itself refusing an\noversized PUT before it ever lands in quarantine storage — is still\nnot possible with this crate. Confirmed against `object_store` 0.14's\n`Signer` trait (`attome-storage/src/presign.rs`): `signed_url(method,\npath, expires_in)` takes no content-length/policy constraint, so\nthere is no signed header or condition this code can attach to the\npresigned PUT URL to make S3/RustFS reject a too-large body itself.\nClosing this fully needs an architecture change — either switching\nupload sessions to presigned POST-policy uploads (S3's\n`content-length-range` condition), which changes the client contract\n(`create_upload_session`'s response shape and the Angular\n`file-upload.service.ts` PUT flow both), or a storage client that\nexposes SigV4 signed-header control — not attempted here per\nguidelines' scope-discipline (\"implement a safe containment... report\nthe remaining work\"). What *is* implemented as containment: the\n`max_user_storage_bytes`/`max_deployment_storage_bytes` quotas below\nbound how much quarantine exposure one user (or the deployment as a\nwhole) can accumulate before finalize/orphan-sweep clears it, and the\n`presign` rate-limit category\n(`attome-server/middleware/rate_limit.rs`) bounds how fast a single\ncaller can mint new quarantine capacity.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_user_storage_bytes": {
+          "default": null,
+          "description": "Soft cap on one user's total upload-session footprint: the sum of\n`declared_max_size_bytes` across their non-terminal sessions\n(`pending`/`uploaded`/`scanning`) plus `actual_size_bytes` across\ntheir `clean` ones. Checked in `create_upload_session` before a new\nsession is created (item 26 remediation — a per-user quota). `None`\n(the default) disables the check: an unmeasured cap would be a guess,\nnot evidence (guidelines §14) — TODO(item 26): pick a real number\nwith the ops/customer team once there is usage data, then set this in\neach deployment's `config.json`.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "s3_access_key": {
+          "type": "string"
+        },
+        "s3_bucket": {
+          "type": "string"
+        },
+        "s3_endpoint": {
+          "type": "string"
+        },
+        "s3_public_endpoint": {
+          "default": "",
+          "description": "Endpoint embedded in presigned upload/download URLs, which browsers\n(or any other client) request directly. SigV4 signs the `Host`, so the\nURL must be signed for the address the client will actually contact;\na proxy rewriting the host afterwards invalidates the signature.\n\nWhen set, it must be reachable by those clients, serve this same\n`s3_bucket`, route path-style `/{bucket}/{key}` requests with path and\nquery preserved, and accept the `Host` it was signed for. It never\nreplaces `s3_endpoint`: server-side reads and writes always use\n`s3_endpoint`. Empty (the default) signs presigned URLs for\n`s3_endpoint`, which is right whenever that address is already\nclient-reachable (e.g. AWS S3 proper).",
+          "type": "string"
+        },
+        "s3_region": {
+          "type": "string"
+        },
+        "s3_secret_key": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "s3_verify_ssl": {
+          "default": true,
+          "description": "Whether HTTPS certificates from the S3 endpoints are verified. It does\nnot choose the transport: the endpoint's scheme does (`http://` is\nplaintext whatever this says; `https://`, or empty for AWS S3, is TLS).\n`false` accepts any certificate on a TLS endpoint. Production refuses\n`false`.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "s3_endpoint",
+        "s3_region",
+        "s3_access_key",
+        "s3_secret_key",
+        "s3_bucket"
+      ],
+      "type": "object"
+    },
+    "TranslationSection": {
+      "additionalProperties": false,
+      "description": "N20-T1 — how `text.translate` renders the deployment's own terms:\n`glossary` maps a term to its translation per language code, e.g.\n`{ \"Purchase order\": { \"ar\": \"أمر شراء\" } }`. A term found in the text\nis given to the model with its required translation.",
+      "properties": {
+        "glossary": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "default": {},
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "WebchatSection": {
+      "properties": {
+        "agent_definition_id": {
+          "default": null,
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daily_token_cap": {
+          "default": null,
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deployment_daily_token_cap": {
+          "default": null,
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "session_token_cap": {
+          "default": null,
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "WebcrawlSection": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "max_depth": {
+          "default": 6,
+          "description": "Default crawl depth when `POST /targets` doesn't specify one — each\ncrawl can override this per request (clamped to a sane range by the\nhandler), stored on its own `xrm_webcrawl_target.max_depth` row.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_page_bytes": {
+          "default": 5000000,
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_pages": {
+          "default": 50,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request_timeout_secs": {
+          "default": 15,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "app": {
+      "$ref": "#/$defs/AppSection"
+    },
+    "approval": {
+      "$ref": "#/$defs/ApprovalSection",
+      "description": "D-195 / P-four-eyes-approval — which `attome_approval` action_type\nstrings require dual-control approval instead of executing inline.\nEmpty by default (opt-in, same \"ships dark behind a flag\" posture as\n`idempotency`/`audit.chainer_enabled`) — a deployment names an action\nhere only once a customer's security policy or compliance framework\nactually requires it (the backlog's own trigger condition)."
+    },
+    "audit": {
+      "$ref": "#/$defs/AuditSection"
+    },
+    "auth": {
+      "$ref": "#/$defs/AuthSection"
+    },
+    "backup": {
+      "$ref": "#/$defs/BackupSection",
+      "description": "U6-T1 — the daily local database backup. On by default."
+    },
+    "cache": {
+      "$ref": "#/$defs/CacheSection"
+    },
+    "capability": {
+      "$ref": "#/$defs/CapabilitySection",
+      "description": "D-344 (amends D-167) — the durability-capability gate. Governs a\n*route-level* 503 for operations that cannot durably complete\n(upload, bulk import, mail resend), never node readiness. See\n`CapabilitySection`'s doc comment for why `enforcement_enabled`\ndefaults on where most flags in this tree ship dark."
+    },
+    "change_feed": {
+      "$ref": "#/$defs/ChangeFeedSection",
+      "description": "M01 §7 C-04 — how long a change-feed row that every registered\nconsumer has passed is kept before `PlatformJob::PruneChangeFeed`\ndeletes it. See `ChangeFeedSection`'s doc comment."
+    },
+    "cors": {
+      "$ref": "#/$defs/CorsSection"
+    },
+    "database": {
+      "$ref": "#/$defs/DatabaseSection"
+    },
+    "deployment": {
+      "$ref": "#/$defs/DeploymentSection",
+      "description": "P-data-protection-governance §4 — data-residency declaration; see\n`DeploymentSection`'s doc comment."
+    },
+    "docgen": {
+      "$ref": "#/$defs/DocgenSection",
+      "description": "M57 Phase 1 — Document Generation. The isolated render sidecar's\naddress plus its explicit timeout/size caps. See `DocgenSection`'s\ndoc comment."
+    },
+    "einvoice": {
+      "$ref": "#/$defs/EinvoiceSection",
+      "description": "AG2 — e-invoicing. Ships dark (`enabled: false`): see\n`EinvoiceSection`'s doc comment."
+    },
+    "email": {
+      "$ref": "#/$defs/EmailSection"
+    },
+    "events": {
+      "$ref": "#/$defs/EventsSection",
+      "description": "M62 Phase 1 — Event Bus subscriptions/webhook delivery. Ships dark\n(`webhooks_enabled: false`). See `EventsSection`'s doc comment."
+    },
+    "fleet": {
+      "$ref": "#/$defs/FleetSection",
+      "description": "D-792 — the fleet console (developer machine only). Empty by default;\nrefused on the production profile. See `FleetSection`'s doc comment."
+    },
+    "google_ai": {
+      "$ref": "#/$defs/GoogleAiSection"
+    },
+    "idempotency": {
+      "$ref": "#/$defs/IdempotencySection",
+      "description": "P-idempotency-hardening §4.4/§4.5 — the durable-tier\nmandatory-operation policy. Additive/opt-in (empty by default): a\ndeployment must explicitly name routes here before any request starts\nrequiring `X-Idempotency-Key`, matching `audit.chainer_enabled`'s\n\"ships dark behind a flag\" precedent. D-327: that \"empty by default\"\nposture is deliberately narrowed under `app.deployment_profile =\n\"production\"` — `server::boot::init`'s `validate_operation_registries`\nadditionally requires every `xrm_server::bulk::\nMANDATORY_TIER_OPERATIONS` entry to be present here before a\nproduction process boots. `attome-config` can't express that floor\nitself (zero xrm-* knowledge, guidelines §1), so it isn't part of\n`validate_production_profile` below despite living right next to\nevery other production-only requirement enforced there."
+    },
+    "inference": {
+      "$ref": "#/$defs/InferenceSection",
+      "description": "D-360 / P-inference — model endpoints and the AI kill-switch\n(TODO-055). Ships dark: every surface defaults off, so a deployment\nthat upgrades into a build containing AI code gets no AI behaviour and\nno model traffic until an operator opts in."
+    },
+    "integration": {
+      "$ref": "#/$defs/IntegrationSection",
+      "description": "M59 Phase 1 — Integration & Connectors. Ships dark (`enabled: false`):\nsee `IntegrationSection`'s doc comment."
+    },
+    "jobs": {
+      "$ref": "#/$defs/JobsSection"
+    },
+    "metadata": {
+      "$ref": "#/$defs/MetadataSection",
+      "description": "Solution 7 Phase 1 (D-785) — how metadata admin writes are recorded\nas changesets. See `ChangesetsSection`'s doc comment."
+    },
+    "notification": {
+      "$ref": "#/$defs/NotificationSection",
+      "description": "In-app notification inbox lifecycle policy. Kept separate from audit\nretention because notification rows have different ownership."
+    },
+    "observability": {
+      "$ref": "#/$defs/ObservabilitySection"
+    },
+    "oidc": {
+      "$ref": "#/$defs/OidcSection"
+    },
+    "portal": {
+      "$ref": "#/$defs/PortalSection",
+      "description": "D-588 — external-audience web portals: the OIDC providers they may\noffer and the signup CAPTCHA. See `PortalSection`'s doc comment."
+    },
+    "query": {
+      "$ref": "#/$defs/QuerySection"
+    },
+    "rate_limit": {
+      "$ref": "#/$defs/RateLimitSection"
+    },
+    "retention": {
+      "$ref": "#/$defs/RetentionSection",
+      "description": "P-retention-archive-completion — partition archive/drop, entity\npurge, and legal hold policy. See `RetentionSection`'s doc comment."
+    },
+    "s2s": {
+      "$ref": "#/$defs/S2SSection"
+    },
+    "security": {
+      "$ref": "#/$defs/SecuritySection"
+    },
+    "shed": {
+      "$ref": "#/$defs/ShedSection",
+      "description": "AB5-T7 — priority load shedding: slots per request class."
+    },
+    "storage": {
+      "$ref": "#/$defs/StorageSection"
+    },
+    "webchat": {
+      "$ref": "#/$defs/WebchatSection",
+      "description": "D-558 — the public web-chat assistant (chatbot plan C9). Ships dark\n(`enabled: false`), and enabling it requires an agent definition and\nboth spend caps. See `WebchatSection`'s doc comment."
+    },
+    "webcrawl": {
+      "$ref": "#/$defs/WebcrawlSection",
+      "description": "D-365 — Web Crawling for Knowledge Base. Ships dark (`enabled: false`):\nthe platform's first feature that makes an outbound HTTP request to an\narbitrary, user-supplied URL. See `WebcrawlSection`'s doc comment."
+    }
+  },
+  "required": [
+    "app",
+    "database",
+    "cache",
+    "storage",
+    "auth",
+    "rate_limit",
+    "observability",
+    "email",
+    "google_ai"
+  ],
+  "title": "AppConfig",
+  "type": "object"
+}

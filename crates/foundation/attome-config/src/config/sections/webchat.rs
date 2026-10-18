@@ -29,7 +29,7 @@
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct WebchatSection {
     pub enabled: bool,

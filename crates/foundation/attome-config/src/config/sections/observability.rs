@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::Secret;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct ObservabilitySection {
     pub metrics_port: u16,
     /// P-observability-completion — `TraceIdRatioBased` sampler ratio once
@@ -86,7 +86,7 @@ fn default_worker_health_port() -> u16 {
     9091
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct EmailSection {
     /// P-account-lifecycle — this section existed but nothing consumed it
     /// (dead config, audit finding E). `enabled` is the explicit opt-in: when
@@ -137,7 +137,7 @@ pub struct EmailSection {
 /// Z8-T1: `email.providers`. `by_sender` maps a From address (any case) to
 /// a provider name; every other address takes `default`, SMTP when unset.
 /// A provider named here needs its own block below.
-#[derive(Clone, Default, Deserialize)]
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
 pub struct EmailProviders {
     /// `"smtp"`, `"ses"` or `"sendgrid"`.
     #[serde(default)]
@@ -151,7 +151,7 @@ pub struct EmailProviders {
 }
 
 /// Z8-T1: Amazon SES (v2 API) credentials.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct SesSettings {
     /// e.g. `"eu-west-1"`.
     pub region: String,
@@ -167,7 +167,7 @@ pub struct SesSettings {
 }
 
 /// Z8-T1: SendGrid (v3 API) credentials.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct SendGridSettings {
     pub api_key: Secret,
     /// Overrides `https://api.sendgrid.com` (the EU region, a test double).
@@ -248,7 +248,7 @@ impl std::fmt::Debug for EmailSection {
 /// `base_url`/`default_model`/`timeout_seconds` were dropped (D-099-era
 /// scaffolding for a feature that was never wired up); reintroduce them
 /// alongside whatever crate actually builds the client once one exists.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct GoogleAiSection {
     pub api_key: Secret,
 }

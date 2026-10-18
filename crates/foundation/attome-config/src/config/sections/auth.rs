@@ -17,7 +17,7 @@ use crate::config::helpers::{
 };
 use crate::keyring::KeyRing;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct AuthSection {
     /// P-key-rotation-and-jwt (a)/(c): a `KeyRing` rather than a bare secret —
     /// see that type's doc. A plain config-file string still deserializes
@@ -188,7 +188,7 @@ pub struct AuthSection {
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
 /// release-build benchmark in `document/base/auth/kdf-benchmark-2026-09-14.md`
 /// chose; raise the Argon2 costs only with a new measurement.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 pub struct KdfSection {
     /// Upper bound on concurrent KDF operations whatever the host (1..=64).
     #[serde(default = "default_kdf_hard_cap")]
@@ -295,7 +295,7 @@ impl std::fmt::Debug for AuthSection {
 }
 
 /// One retired entry in `auth.apikey_hash_previous_peppers`.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct ApiKeyPepper {
     pub id: u32,
     pub secret: Secret,
@@ -329,13 +329,13 @@ fn default_registration_mode() -> String {
 /// block is unaffected except for the categories this plan deliberately
 /// tightens (credential/mfa/password_reset ship a lower default than the
 /// blanket `api` number).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct RateLimitCategoryLimits {
     pub anonymous_rpm: u32,
     pub authenticated_rpm: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct RateLimitSection {
     pub anonymous_rpm: u32,
     pub authenticated_rpm: u32,
@@ -407,7 +407,7 @@ impl std::fmt::Debug for S2SSection {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct S2SSection {
     /// Enable S2S HMAC authentication. When false the middleware is a no-op.
     #[serde(default)]
@@ -438,7 +438,7 @@ pub struct S2SSection {
 
 /// One config-declared S2S client (D-771). `secret` is a `${VAR}` reference;
 /// blank or unresolved means "not configured here" and the client is skipped.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct S2sSeededClient {
     /// Client slug, as `POST /admin/s2s/clients` takes it.
     pub client_id: String,
@@ -486,7 +486,7 @@ impl std::fmt::Debug for S2sSeededClient {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct S2sSeededPermission {
     pub entity: String,
     #[serde(default)]
@@ -530,7 +530,7 @@ impl Default for S2SSection {
 
 // ── Security section ──────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct SecuritySection {
     /// The only TCP peers allowed to supply a client address through
     /// `X-Forwarded-For`. Leave empty for direct deployments: forwarding
@@ -696,7 +696,7 @@ pub(crate) fn default_hsts_max_age_secs() -> u64 {
 // ── OIDC section (P2.8 — D-065: config-driven, not a core_identity_provider
 // admin-CRUD table; see that decision for why) ──────────────────────────────
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 pub struct OidcSection {
     /// Keyed by an operator-chosen provider key (e.g. "entra", "okta",
     /// "keycloak", "google") — becomes the `{provider}` path segment in
@@ -707,7 +707,7 @@ pub struct OidcSection {
     pub providers: HashMap<String, OidcProviderConfig>,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct OidcProviderConfig {
     /// Shown on the Angular login page's provider button.
     pub display_name: String,

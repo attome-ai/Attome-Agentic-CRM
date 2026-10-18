@@ -40,7 +40,7 @@ use crate::keyring::KeyRing;
 /// `scripts/audit/anchor-immutability-drill.sh` proves the retention half
 /// against the real bucket. The boot check's job is to make "we forgot to
 /// provision it" a loud failure rather than a silent one.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct AnchorStoreSection {
     /// S3-compatible endpoint holding the anchor bucket. May be the same
     /// endpoint as `storage.s3_endpoint` (one RustFS/MinIO deployment, two
@@ -136,7 +136,7 @@ impl std::fmt::Debug for AnchorStoreSection {
 
 // ── Audit section (P1.5b) ──────────────────────────────────────────────────────
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct AuditSection {
     /// Sign every audit chain event's (prev_hash||event_hash) with a
     /// dedicated Ed25519 keypair (D-016 — unrelated to the license
@@ -371,7 +371,7 @@ fn default_ingest_backlog_threshold() -> i64 {
 /// Notification recipient retention is deliberately opt-in. A zero value
 /// disables pruning, matching the audit retention convention while avoiding
 /// an unexpected destructive default for existing deployments.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
 pub struct NotificationSection {
     /// How many days recipient rows remain before old partitions are removed.
     /// `0` disables pruning.
@@ -402,7 +402,7 @@ pub struct NotificationSection {
 /// explicitly configures a window **and** flips `dry_run` off **and**
 /// approves a specific proposed action (§3a/§3d/§3e; two independent gates,
 /// neither sufficient alone).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct RetentionSection {
     /// Age (in days) past which a `xrm_audit_header`/`xrm_audit_detail`/
     /// `xrm_audit_snapshot` partition becomes archive/drop-eligible.

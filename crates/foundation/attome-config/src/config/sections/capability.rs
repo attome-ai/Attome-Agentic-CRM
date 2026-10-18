@@ -14,7 +14,7 @@
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct CapabilitySection {
     /// Whether `xrm_server::spawn_capability_refresh` should run at all.
     /// `false` leaves every capability at `unknown` forever, which the gate

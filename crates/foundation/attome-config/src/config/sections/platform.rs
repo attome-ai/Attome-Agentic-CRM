@@ -8,7 +8,7 @@ use crate::config::helpers::default_true;
 
 // ── CORS section (Plan 1.3a) ────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 pub struct CorsSection {
     /// Explicit allow-list of origins (scheme + host + port), e.g.
     /// "https://app.example.com". Never a wildcard alongside credentials.
@@ -21,7 +21,7 @@ pub struct CorsSection {
 
 // ── Jobs section (P1.4) ─────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct JobsSection {
     /// Max in-flight `PlatformJob`s the fast-queue worker processes
     /// concurrently. Tuned against `database.connection_number` (§14.1) —
@@ -128,7 +128,7 @@ fn default_jobs_workflow_payload_retention_days() -> i64 {
 
 // ── Idempotency section (P-idempotency-hardening §4.4/§4.5) ────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct IdempotencySection {
     /// Operation-name strings (`"{METHOD} {route-template}"`, e.g.
     /// `"POST /api/v1/{entity}/bulk"` — the same string
@@ -213,7 +213,7 @@ fn default_idempotency_replay_max_bytes() -> usize {
 
 // ── Approval section (D-195 / P-four-eyes-approval) ─────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct ApprovalSection {
     /// `action_type` strings (e.g. `"security.rewrap"`,
     /// `"security.role_grant"`; `xrm_server::KNOWN_ACTION_TYPES` is the list
@@ -263,7 +263,7 @@ fn default_approval_ttl_hours() -> i64 {
 
 // ── Query section (P-stored-query-containment / D-126) ─────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct QuerySection {
     /// Phase 2's rollback switch: `query/execute` skips the per-request
     /// `EXPLAIN` cost check by default, trusting the cost estimate captured
@@ -304,7 +304,7 @@ fn default_trigram_index_min_rows() -> i64 {
 }
 
 /// AA4-T7: statement time limits in milliseconds, by kind of request.
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, schemars::JsonSchema)]
 pub struct QueryTimeouts {
     /// A person waiting on a list or a view (default 500).
     #[serde(default = "default_interactive_timeout_ms")]
@@ -353,7 +353,7 @@ fn default_query_max_offset_rows() -> i64 {
 
 // ── Change feed section (M01 §7 C-04 — outbox retention) ────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 pub struct ChangeFeedSection {
     /// Floor for `PlatformJob::PruneChangeFeed`: how long a fully-processed
     /// `xrm_core_entity_change_event` row is kept before it becomes eligible

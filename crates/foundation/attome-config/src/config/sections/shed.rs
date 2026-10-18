@@ -6,7 +6,7 @@
 use serde::Deserialize;
 
 /// Slots per request class.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct ShedPermits {
     pub report: usize,
@@ -26,7 +26,7 @@ impl Default for ShedPermits {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct ShedSection {
     pub permits: ShedPermits,

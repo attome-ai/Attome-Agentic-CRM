@@ -36,7 +36,7 @@ use crate::Secret;
 /// new surface field cannot accidentally default it to `true` — the derive
 /// gives every `bool` `false`, which is the ships-dark answer, and there is no
 /// hand-maintained list to forget to update.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
 pub struct AiEnablement {
     /// Master switch. `false` disables **every** AI surface regardless of the
     /// per-surface flags below — an operator reaching for the kill-switch
@@ -93,7 +93,7 @@ impl AiEnablement {
 /// One model endpoint. Both the generation server and the embedding server
 /// speak the same OpenAI-compatible HTTP surface (D-360 ruling 3), so one
 /// shape describes either.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct InferenceEndpoint {
     /// Base URL of the serving process, e.g. `http://127.0.0.1:8000/v1`.
     /// Empty means "not configured", which the client reports as unavailable
@@ -155,7 +155,7 @@ impl std::fmt::Debug for InferenceSection {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct InferenceSection {
     /// The kill-switch. See [`AiEnablement`].
     #[serde(default)]
@@ -348,7 +348,7 @@ impl Default for InferenceSection {
 /// `degrade_at_percent` of its cap, generations are shortened to
 /// `degraded_max_output_tokens`; at the cap they are refused (429) before
 /// anything is spent.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SpendSection {
     /// Price per million tokens, by model id (`inference.generation.model`).
@@ -374,7 +374,7 @@ pub struct SpendSection {
 /// `glossary` maps a term to its translation per language code, e.g.
 /// `{ "Purchase order": { "ar": "أمر شراء" } }`. A term found in the text
 /// is given to the model with its required translation.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TranslationSection {
     #[serde(default)]
@@ -382,7 +382,7 @@ pub struct TranslationSection {
 }
 
 /// One model's price per million tokens.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ModelPrice {
     pub prompt_per_million: f64,

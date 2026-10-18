@@ -23,14 +23,14 @@ use crate::Secret;
 
 use super::auth::OidcProviderConfig;
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct PortalSection {
     pub oidc_providers: BTreeMap<String, OidcProviderConfig>,
     pub captcha: CaptchaConfig,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CaptchaProvider {
     #[default]
@@ -45,7 +45,7 @@ pub enum CaptchaProvider {
 /// Q20-T3: the default proof-of-work difficulty, in leading zero bits.
 pub const DEFAULT_POW_DIFFICULTY: u8 = 18;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct CaptchaConfig {
     pub provider: CaptchaProvider,

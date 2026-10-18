@@ -53,6 +53,21 @@ impl<'de> Deserialize<'de> for Secret {
     }
 }
 
+/// Z1-T4: a string, marked `writeOnly`; the schema never carries a value.
+impl schemars::JsonSchema for Secret {
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Secret".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({ "type": "string", "writeOnly": true })
+    }
+}
+
 /// Constant-time over the shorter length: how long two equal-length secrets
 /// take to compare does not depend on where they first differ.
 impl PartialEq for Secret {

@@ -1,3 +1,52 @@
 {
-  "dependencies": []
+  "dependencies": [
+    {
+      "ecosystem": "cargo",
+      "name": "schemars",
+      "reason": "Z1-T4: derives the configuration file's JSON Schema (config.schema.json) and reference page from the typed sections in attome-config.",
+      "licence": "MIT",
+      "maintenance": "Active; 1.x stable line, widely used (utoipa and axum ecosystems).",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "schemars_derive",
+      "reason": "Z1-T4: the derive macro of schemars.",
+      "licence": "MIT",
+      "maintenance": "Released in lock-step with schemars.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "serde_derive_internals",
+      "reason": "Z1-T4: used by schemars_derive to read serde attributes, so the schema follows serde's renames and defaults.",
+      "licence": "MIT OR Apache-2.0",
+      "maintenance": "Part of the serde project.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "dyn-clone",
+      "reason": "Z1-T4: a schemars dependency (cloneable schema transforms).",
+      "licence": "MIT OR Apache-2.0",
+      "maintenance": "Maintained by dtolnay; small and stable.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "ref-cast",
+      "reason": "Z1-T4: a schemars dependency (safe reference casts for its Schema type).",
+      "licence": "MIT OR Apache-2.0",
+      "maintenance": "Maintained by dtolnay; small and stable.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "ref-cast-impl",
+      "reason": "Z1-T4: the derive macro of ref-cast.",
+      "licence": "MIT OR Apache-2.0",
+      "maintenance": "Released in lock-step with ref-cast.",
+      "windows_native": true
+    }
+  ]
 }

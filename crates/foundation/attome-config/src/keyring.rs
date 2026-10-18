@@ -77,6 +77,37 @@ impl KeyRing {
     }
 }
 
+/// Z1-T4: what `Deserialize` accepts (see the module doc), marked
+/// `writeOnly`.
+impl schemars::JsonSchema for KeyRing {
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "KeyRing".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "writeOnly": true,
+            "anyOf": [
+                { "type": "string" },
+                {
+                    "type": "object",
+                    "properties": {
+                        "keys": {
+                            "type": "object",
+                            "additionalProperties": { "type": "string" }
+                        },
+                        "active_key_id": { "type": "string" }
+                    }
+                }
+            ]
+        })
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum KeyRingRepr {
