@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: query budgets (Z2-T10). `attome_testkit::query_counter` (feature `query-counter`)
+  counts the SQL statements a task runs; `attome-testapp`'s `query_budget` holds GET one record
+  and a 50-row list to a statement budget and fails when a list's count grows with its page size.
 - Operations: query tags (Z2-T8). The generic record queries, `query/execute` and the job queue
   start their SQL with a `/* class */` comment (`entity.merge`, `query.execute`, `jobs.queue`), so
   `pg_stat_statements`, the slow-query log and `pg_stat_activity` show which engine and operation

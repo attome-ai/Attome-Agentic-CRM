@@ -35,6 +35,11 @@
 
 use std::sync::OnceLock;
 
+/// Z2-T10: counting the SQL statements a request runs (feature
+/// `query-counter`).
+#[cfg(feature = "query-counter")]
+pub mod query_counter;
+
 use sqlx::Connection;
 use sqlx::postgres::{PgConnection, PgPoolOptions};
 use uuid::Uuid;

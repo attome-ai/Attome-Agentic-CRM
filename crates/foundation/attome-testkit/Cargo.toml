@@ -14,10 +14,15 @@ publish.workspace      = true
 attome-config   = { workspace = true, optional = true }
 sqlx.workspace  = true
 tokio.workspace = true
+tracing            = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
 url.workspace   = true
 uuid.workspace  = true
 
 [features]
+# Z2-T10: `query_counter`, the per-task SQL statement count behind the query
+# budget tests.
+query-counter = ["dep:tracing", "dep:tracing-subscriber"]
 # `point_config_at`, for tests that build an `AppConfig`; optional so the
 # crates below attome-config can use this crate without a cycle.
 app-config = ["dep:attome-config"]

@@ -1955,6 +1955,8 @@ dependencies = [
  "attome-config",
  "sqlx",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "url",
  "uuid",
 ]

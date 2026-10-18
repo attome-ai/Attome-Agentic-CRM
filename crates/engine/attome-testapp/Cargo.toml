@@ -28,7 +28,7 @@ attome-sales.workspace    = true
 attome-security.workspace = true
 attome-server.workspace   = true
 attome-storage.workspace  = true
-attome-testkit            = { workspace = true, features = ["app-config"] }
+attome-testkit            = { workspace = true, features = ["app-config", "query-counter"] }
 attome-types.workspace    = true
 axum.workspace            = true
 base64.workspace          = true
