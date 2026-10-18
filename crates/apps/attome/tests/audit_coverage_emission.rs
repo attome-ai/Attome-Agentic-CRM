@@ -3455,6 +3455,18 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
         "GET /api/v1/admin/audit/export" => {
             request("GET", "/api/v1/admin/audit/export?format=jsonl", t, None)
         }
+        "POST /api/v1/admin/audit/evidence-packs" => {
+            let now = chrono::Utc::now();
+            request(
+                "POST",
+                "/api/v1/admin/audit/evidence-packs",
+                t,
+                Some(json!({
+                    "from": (now - chrono::Duration::minutes(5)).to_rfc3339(),
+                    "to": now.to_rfc3339(),
+                })),
+            )
+        }
         // ── data protection ─────────────────────────────────────────────────
         "POST /api/v1/admin/dsr/requests/{id}/fulfill-erasure" => {
             let subject = uniq("dsr-subject");

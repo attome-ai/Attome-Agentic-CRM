@@ -58,10 +58,10 @@ use attome_types::{
 use axum::{
     Json, Router,
     body::Body,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::{StatusCode, header},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -627,12 +627,88 @@ async fn export(
         .into_response())
 }
 
+// ── proofs and evidence packs (Q16-T3) ───────────────────────────────────────
+
+/// An audit event's inclusion proof.
+///
+/// The Merkle path from the event's hash to its sealed batch's signed root,
+/// with the signature, the signing key's public half and the anchor key, so
+/// the event can be checked without the database (see `crate::proof`).
+#[utoipa::path(
+    get,
+    operation_id = "audit_event_proof",
+    path = "/api/v1/admin/audit/events/{id}/proof",
+    tag = "admin-audit",
+    params(("id" = Uuid, Path, description = "The audit event (audit_header) id")),
+    responses(
+        (status = 200, description = "The inclusion proof", body = crate::proof::InclusionProof),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such audit event", body = ErrorResponse),
+        (status = 409, description = "The event is not sealed into a batch yet", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn event_proof(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<crate::proof::InclusionProof>, AppError> {
+    crate::proof::proof_for(&state.base.db, id).await.map(Json)
+}
+
+/// Builds an audit evidence pack.
+///
+/// Every sealed event in a time range or of one record (at most 2,000),
+/// each with its inclusion proof, the public signing keys and the steps to
+/// verify them offline. Building one is itself audited.
+#[utoipa::path(
+    post,
+    operation_id = "audit_evidence_pack",
+    path = "/api/v1/admin/audit/evidence-packs",
+    tag = "admin-audit",
+    request_body = crate::proof::EvidencePackRequest,
+    extensions(("x-audit" = json!(crate::security::x_audit(&[(crate::AuditCategory::Security, crate::AuditOperation::Download)])))),
+    responses(
+        (status = 200, description = "The evidence pack", body = crate::proof::EvidencePack),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "No range or record, or more than 2,000 events", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn evidence_pack(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<crate::proof::EvidencePackRequest>,
+) -> Result<Json<crate::proof::EvidencePack>, AppError> {
+    // Like an export: the download is a mandatory event, written (or the
+    // pack refused) before anything leaves.
+    crate::security::SecurityAuditor::from_state(&state)
+        .write(
+            crate::security::SecurityEvent::new(
+                crate::security::MandatoryCategory::Security,
+                crate::AuditOperation::Download,
+                ctx.user_id,
+                "audit_header",
+                None,
+            )
+            .named("audit.evidence_pack"),
+        )
+        .await?;
+    crate::proof::evidence_pack(&state.base.db, &body)
+        .await
+        .map(Json)
+}
+
 // ── routes ───────────────────────────────────────────────────────────────────
 
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/audit/search", get(search))
         .route("/api/v1/admin/audit/export", get(export))
+        .route("/api/v1/admin/audit/events/{id}/proof", get(event_proof))
+        .route("/api/v1/admin/audit/evidence-packs", post(evidence_pack))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -641,7 +717,17 @@ pub fn routes() -> Router<EngineState> {
 /// varies by `format` and is streamed) — same convention `files.rs`'s
 /// binary-download routes use.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(search, export))]
+#[openapi(
+    paths(search, export, event_proof, evidence_pack),
+    components(schemas(
+        crate::proof::InclusionProof,
+        crate::proof::ProofStep,
+        crate::proof::ProofSide,
+        crate::proof::EvidencePack,
+        crate::proof::EvidencePackRequest,
+        crate::proof::PackKey
+    ))
+)]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {

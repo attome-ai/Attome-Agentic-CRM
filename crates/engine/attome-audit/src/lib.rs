@@ -14,6 +14,8 @@ pub mod erasure_ledger;
 pub mod initiator;
 mod model;
 pub mod policy_resolver;
+/// Q16-T3 — inclusion proofs and evidence packs.
+pub mod proof;
 /// Phase 4 item 4.1: ambient per-request context (correlation id, IP, UA),
 /// read by `AuditService::write_in_tx_with_extras` — see its module doc.
 /// Internal: nothing outside this crate calls it directly.

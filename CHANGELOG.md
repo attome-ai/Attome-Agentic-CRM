@@ -81,6 +81,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Audit inclusion proofs and evidence packs (Q16-T3): `GET /api/v1/admin/audit/events/{id}/proof`
+  returns an event's Merkle path to its sealed batch's signed root, with the signature, the
+  signing key's public half and the anchor key. `POST /api/v1/admin/audit/evidence-packs` (audited
+  as a download) returns every sealed event of a time range or one record, at most 2,000, with
+  their proofs, the public keys and the steps to verify them offline.
 - Index-backed `contains` filters on large tables (AA4-T5): a filterable text attribute gets a
   trigram (GIN, `pg_trgm`) index, built `CONCURRENTLY` by the index-build job, once its table's
   estimated row count reaches `query.trigram_index_min_rows` (default 100,000). A daily
