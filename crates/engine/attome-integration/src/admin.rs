@@ -94,8 +94,10 @@ struct RotateCredentialBody {
 #[derive(Serialize, ToSchema)]
 struct RotateCredentialResponse {
     system_id: Uuid,
-    /// "configured, ending in ****1234" — never the full value (D-424).
-    secret_last4: Option<String>,
+    /// Q18-T6: a credential is stored; no part of it is returned.
+    is_set: bool,
+    /// When the stored credential was set.
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -309,7 +311,8 @@ async fn rotate_credential(
 
     Ok(Json(RotateCredentialResponse {
         system_id: id,
-        secret_last4: meta.secret_last4,
+        is_set: true,
+        updated_at: meta.created_at,
     }))
 }
 

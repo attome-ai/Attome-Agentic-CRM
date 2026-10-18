@@ -48,9 +48,11 @@ pub struct SetCredentialBody {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SetCredentialResponse {
     pub provider_id: Uuid,
-    /// `"****1234"`-style hint, or `null` for a key shorter than four
-    /// characters (where the hint would be the key).
-    pub secret_last4: Option<String>,
+    /// Q18-T6: a key is stored. The key itself, or any part of it, is never
+    /// returned.
+    pub is_set: bool,
+    /// When the stored key was set.
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -175,7 +177,8 @@ async fn set_credential(
 
     Ok(Json(SetCredentialResponse {
         provider_id: id,
-        secret_last4: meta.secret_last4,
+        is_set: true,
+        updated_at: meta.created_at,
     }))
 }
 

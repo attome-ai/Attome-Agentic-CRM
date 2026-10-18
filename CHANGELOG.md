@@ -1474,6 +1474,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- Stored secrets are write-only (Q18-T6): `POST /api/v1/admin/ai/providers/{id}/credential` and
+  `POST /api/v1/admin/integrations/systems/{id}/credential` answer `is_set` and `updated_at`
+  instead of `secret_last4`; no part of a user-supplied secret is returned. The AI provider form
+  says the key is stored. A test now refuses any secret-looking response property without a listed
+  reason (generated secrets shown once at creation, presence flags, references).
 - Error bodies are RFC 9457 problem details (Z14-T1): served as `application/problem+json`, with
   `type`, `title`, `status`, `detail`, `code`, `retryable`, `instance` and, for field failures,
   `errors` beside the existing `error`, `message`, `request_id` and `details`, which keep their

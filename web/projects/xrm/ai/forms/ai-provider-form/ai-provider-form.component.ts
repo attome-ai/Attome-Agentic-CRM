@@ -24,7 +24,9 @@ interface FetchModelsResponse {
 
 interface SetCredentialResponse {
   provider_id:   string;
-  secret_last4:  string | null;
+  /** Q18-T6: a key is stored; no part of it comes back. */
+  is_set:        boolean;
+  updated_at:    string;
 }
 
 /**
@@ -89,8 +91,8 @@ export class AiProviderFormComponent extends EngineFormBase {
   readonly apiKey     = signal('');
   readonly savingKey  = signal(false);
   readonly keyError   = signal<string | null>(null);
-  /** Set from the save response; `null` until this session stores a key. */
-  readonly keyLast4   = signal<string | null>(null);
+  /** When this session stored a key (from the save response); `null` until then. */
+  readonly keySavedAt = signal<string | null>(null);
 
   /**
    * Whether a key is already stored. Read from `credential_ref` on the loaded
@@ -146,7 +148,7 @@ export class AiProviderFormComponent extends EngineFormBase {
     this.api.post<SetCredentialResponse>(`/api/v1/admin/ai/providers/${id}/credential`, { api_key: key })
       .subscribe({
         next: result => {
-          this.keyLast4.set(result.secret_last4);
+          this.keySavedAt.set(result.is_set ? result.updated_at : null);
           // Clear the input as soon as the key is stored: leaving a live
           // secret sitting in a DOM input for the rest of the session is
           // exactly the exposure the write-only endpoint exists to avoid.

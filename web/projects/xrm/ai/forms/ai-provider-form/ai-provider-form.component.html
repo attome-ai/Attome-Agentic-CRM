@@ -39,9 +39,9 @@
                  [value]="apiKey()"
                  (input)="apiKey.set($any($event.target).value)" />
           <p class="xf-helper" aria-live="polite">
-            @if (keyLast4()) {
+            @if (keySavedAt()) {
               <i class="las la-check-circle"></i>
-              {{ 'aiProviderForm.apiKeySavedEnding' | translate:{ last4: keyLast4()! } }}
+              {{ 'aiProviderForm.apiKeySaved' | translate }}
             } @else if (keyConfigured()) {
               <i class="las la-check-circle"></i> {{ 'aiProviderForm.apiKeyConfigured' | translate }}
             } @else {

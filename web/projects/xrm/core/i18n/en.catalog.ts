@@ -520,7 +520,7 @@ export const xrmEn = {
     apiKeyReplace: 'Paste a new key to replace the current one',
     apiKeyConfigured: 'A key is configured for this provider.',
     apiKeyNotConfigured: 'No key configured yet. Leave empty for a provider that needs none.',
-    apiKeySavedEnding: 'Saved. The key ends in {last4}.',
+    apiKeySaved: 'Saved. The key is stored and cannot be shown; type a new one to replace it.',
     models: 'Models',
     modelsHelp: 'Ask this provider which models it offers, using its Base URL, API protocol and stored key.',
     fetchModels: 'Fetch available models',
