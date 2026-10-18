@@ -1,0 +1,126 @@
+{
+  "author": "packs",
+  "checksum": "sha256:70f6b8330f7128e4f73d162b79ac873f408a7d0bfd65f75c0709965c416f3822",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Billing in the sidebar (F4-T16): invoices, the receivables ageing (with each account's statement) and invoice schedules.",
+  "format": "attome-changeset/v1",
+  "id": "01a14c87-7ffa-735e-8f5c-23200c8c4953",
+  "layer": "product",
+  "name": "billing-sidebar",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 110,
+          "entity": null,
+          "icon": "la-file-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Billing"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Billing"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 0,
+          "entity": null,
+          "icon": "la-file-pdf",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Billing",
+            "Invoices"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/invoice/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Billing/Invoices"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-clock",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Billing",
+            "Receivables Ageing"
+          ],
+          "privileges": [],
+          "route": "/xrm/billing/ageing"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Billing/Receivables Ageing"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-redo",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Billing",
+            "Invoice Schedules"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/invoice_schedule/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Billing/Invoice Schedules"
+      },
+      "seq": 4
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 12,
+  "title": "Pack: billing in the sidebar"
+}

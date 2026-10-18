@@ -191,6 +191,23 @@ export const xrmAr = {
       email: 'البريد', models: 'نماذج الذكاء الاصطناعي', other: 'أخرى',
     },
   },
+  billingStatement: {
+    title: 'كشف حساب العميل',
+    from: 'من', to: 'إلى', show: 'عرض', print: 'طباعة',
+    date: 'التاريخ', document: 'المستند', reference: 'المرجع', amount: 'المبلغ',
+    opening: 'الرصيد الافتتاحي', closing: 'الرصيد الختامي',
+    empty: 'لم يصدر شيء لهذا الحساب حتى هذا اليوم.',
+    kind: {
+      invoice: 'فاتورة', credit_note: 'إشعار دائن', debit_note: 'إشعار مدين', deposit: 'فاتورة دفعة مقدمة',
+      payment: 'دفعة', write_off: 'شطب',
+    },
+  },
+  billingAgeing: {
+    title: 'أعمار الذمم المدينة',
+    asOf: 'في تاريخ', account: 'الحساب', currency: 'العملة', total: 'الإجمالي', allAccounts: 'كل الحسابات',
+    bucket: { current: 'لم يستحق بعد', days_1_30: '١–٣٠ يومًا', days_31_60: '٣١–٦٠ يومًا', days_61_90: '٦١–٩٠ يومًا', over_90: 'أكثر من ٩٠ يومًا' },
+    empty: 'لا مبالغ مستحقة.', pages: 'الصفحات', previous: 'السابق', next: 'التالي',
+  },
   battlecards: {
     title: 'المنافسون وبطاقات المنافسة',
     proposed: 'منافسون ذُكروا في الرسائل والملاحظات',

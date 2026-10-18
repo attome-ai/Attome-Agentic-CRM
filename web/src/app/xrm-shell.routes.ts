@@ -641,6 +641,18 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // F4-T16: the receivables ageing and an account's statement (the
+            // API answers only accounts the caller may read).
+            path: 'billing/ageing',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/billing').then(m => m.AgeingReportComponent),
+          },
+          {
+            path: 'billing/accounts/:id/statement',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/billing').then(m => m.AccountStatementComponent),
+          },
+          {
             // AI4-T7: my follow-ups (the API lists only the caller's own).
             path: 'ai/follow-ups',
             canActivate: [authGuard],

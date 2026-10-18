@@ -211,6 +211,23 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  billingStatement: {
+    title: 'Account statement',
+    from: 'From', to: 'To', show: 'Show', print: 'Print',
+    date: 'Date', document: 'Document', reference: 'Reference', amount: 'Amount',
+    opening: 'Opening balance', closing: 'Closing balance',
+    empty: 'Nothing was issued to this account up to this day.',
+    kind: {
+      invoice: 'Invoice', credit_note: 'Credit note', debit_note: 'Debit note', deposit: 'Deposit invoice',
+      payment: 'Payment', write_off: 'Write-off',
+    },
+  },
+  billingAgeing: {
+    title: 'Receivables ageing',
+    asOf: 'As of', account: 'Account', currency: 'Currency', total: 'Total', allAccounts: 'All accounts',
+    bucket: { current: 'Not yet due', days_1_30: '1–30 days', days_31_60: '31–60 days', days_61_90: '61–90 days', over_90: 'Over 90 days' },
+    empty: 'Nothing is owed.', pages: 'Pages', previous: 'Previous', next: 'Next',
+  },
   battlecards: {
     title: 'Competitors and battle cards',
     proposed: 'Competitors named in emails and notes',

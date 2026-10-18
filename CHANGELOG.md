@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing screens: the receivables ageing (`/xrm/billing/ageing`: five buckets per account and
+  currency with per-currency totals) and an account's statement
+  (`/xrm/billing/accounts/{id}/statement`: a period picker that also shows the Hijri dates for
+  viewers who read them, a printable layout), both right to left in Arabic and with each currency's
+  decimals (three for KWD, BHD, OMR, JOD). The billing pack adds a Billing sidebar group.
 - After an invoice is issued, its bilingual PDF (Arabic and English side by side, seller and buyer
   VAT numbers, Gregorian and Hijri issue date) is rendered through the docgen sidecar and attached to
   the new `invoice.document` field, then emailed to the invoice's contact, which moves it to `sent`;
