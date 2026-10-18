@@ -96,8 +96,10 @@ impl RegistrationPassword {
     /// Security contract I2: the policy is enforced here, before any hashing,
     /// so no caller can skip it.
     pub async fn prepare(password: &str) -> Result<Self, AppError> {
-        let password = crate::password::NewPassword::validate(password)?;
-        let password_hash = crate::password::hash_password_async(password).await?;
+        let checked = crate::password::NewPassword::validate(password)?;
+        // Z4-T9: the optional online check, after the local policy.
+        crate::password_policy::check_online(password).await?;
+        let password_hash = crate::password::hash_password_async(checked).await?;
         Ok(Self { password_hash })
     }
 }

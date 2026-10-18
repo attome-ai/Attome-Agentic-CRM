@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Optional online breached-password check (Z4-T9): with `auth.breach_check_online`, registration
+  and password reset also ask a k-anonymity range service (`auth.breach_range_url`, Have I Been
+  Pwned's by default); only the first five hex characters of the password's SHA-1 leave the
+  server, the answer is matched locally, and an unreachable service is logged and skipped (the
+  offline list still applies). Off by default.
 - Sign-in honours a role's concurrent-session limit (`role_auth_policy.max_sessions`, Q8-T6): at the
   limit it ends the person's least recently active sessions, or with `max_sessions_mode =
   refuse_new` refuses with `409 conflict` (`session_limit_reached`) and audits the refusal. Agent

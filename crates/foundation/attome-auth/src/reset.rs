@@ -223,6 +223,8 @@ async fn confirm_inner(
     // Unauthorized whatever password came with it.
     let plain_password = new_password;
     let new_password = crate::password::NewPassword::validate(new_password)?;
+    // Z4-T9: the optional online check, after the local policy.
+    crate::password_policy::check_online(plain_password).await?;
 
     // Deliberately does NOT filter `used_at IS NULL` here — an already-used
     // token must still be found and its secret verified so the guarded

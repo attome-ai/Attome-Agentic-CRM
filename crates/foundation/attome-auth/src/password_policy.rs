@@ -10,6 +10,13 @@
 //! [`crate::password::validate_policy`] runs the check, so every path that
 //! sets a password goes through it.
 //!
+//! **Online (Z4-T9), off unless the customer turns it on.** With
+//! `auth.breach_check_online`, registration and reset also ask a k-anonymity
+//! range service (Have I Been Pwned's by default, `auth.breach_range_url`):
+//! only the first five hex characters of the password's SHA-1 leave the
+//! server, and the answer is matched here. The call has a short timeout and
+//! fails open, logged: the offline set still applies.
+//!
 //! **Reused.** A password reset may not reuse the current password or any of
 //! the [`HISTORY_DEPTH`] before it: [`reused`] checks them, and
 //! [`remember`] keeps the replaced hash, inside the reset's transaction.
@@ -100,6 +107,95 @@ pub fn is_breached(password: &str) -> bool {
     active().contains(password)
 }
 
+/// Z4-T9: Have I Been Pwned's range API, the default online source.
+pub const DEFAULT_RANGE_URL: &str = "https://api.pwnedpasswords.com/range/";
+
+/// How long the online check waits for the range service.
+const ONLINE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+
+#[derive(Debug)]
+struct OnlineCheck {
+    range_url: String,
+    client: reqwest::Client,
+}
+
+static ONLINE: OnceLock<Option<OnlineCheck>> = OnceLock::new();
+
+/// Turns the online check on with `range_url` (the prefix is appended), or
+/// leaves it off with `None`. Call once at boot; false when it was already
+/// fixed.
+pub fn configure_online(range_url: Option<&str>) -> bool {
+    let check = range_url.and_then(|url| {
+        match reqwest::Client::builder().timeout(ONLINE_TIMEOUT).build() {
+            Ok(client) => Some(OnlineCheck {
+                range_url: url.to_owned(),
+                client,
+            }),
+            Err(error) => {
+                tracing::warn!(%error, "breached password online check: no HTTP client; it stays off");
+                None
+            }
+        }
+    });
+    ONLINE.set(check).is_ok()
+}
+
+/// The upper-case hex SHA-1 of `password`, split into the five characters
+/// sent and the 35 kept.
+fn range_parts(password: &str) -> (String, String) {
+    let digest = Sha1::digest(password.as_bytes());
+    let hex: String = digest.iter().map(|b| format!("{b:02X}")).collect();
+    let (prefix, suffix) = hex.split_at(5);
+    (prefix.to_owned(), suffix.to_owned())
+}
+
+/// Whether a range response (`SUFFIX:COUNT` per line) lists `suffix` with a
+/// count above zero (padding entries have count 0).
+fn range_lists(body: &str, suffix: &str) -> bool {
+    body.lines().any(|line| {
+        let mut parts = line.trim().splitn(2, ':');
+        let found = parts.next().unwrap_or_default();
+        let count = parts
+            .next()
+            .and_then(|c| c.trim().parse::<u64>().ok())
+            .unwrap_or(1);
+        found.eq_ignore_ascii_case(suffix) && count > 0
+    })
+}
+
+/// Z4-T9: refuses `password` when the online check is on and the range
+/// service lists it. Off, or when the service cannot be reached, it passes
+/// (logged); the offline check in [`crate::password::validate_policy`] has
+/// already run.
+pub async fn check_online(password: &str) -> Result<(), AppError> {
+    let Some(Some(check)) = ONLINE.get() else {
+        return Ok(());
+    };
+    let (prefix, suffix) = range_parts(password);
+    let url = format!("{}{prefix}", check.range_url);
+    let answer = check
+        .client
+        .get(&url)
+        .header("Add-Padding", "true")
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status);
+    let body = match answer {
+        Ok(response) => response.text().await,
+        Err(error) => Err(error),
+    };
+    match body {
+        Ok(body) if range_lists(&body, &suffix) => Err(AppError::Validation(
+            "this password appears in lists of breached passwords; choose another".to_string(),
+        )),
+        Ok(_) => Ok(()),
+        Err(error) => {
+            tracing::warn!(%error, "breached password online check failed; the offline check applied");
+            Ok(())
+        }
+    }
+}
+
 /// Whether `password` is the user's current password or one of the
 /// [`HISTORY_DEPTH`] before it. Each comparison is a full KDF verify, run off
 /// the async threads by [`crate::password::verify_password_async`].
@@ -155,6 +251,23 @@ pub async fn remember(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_range_prefix_is_five_hex_characters() {
+        // SHA-1("password") = 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8.
+        let (prefix, suffix) = range_parts("password");
+        assert_eq!(prefix, "5BAA6");
+        assert_eq!(suffix, "1E4C9B93F3F0682250B6CF8331B7EE68FD8");
+    }
+
+    #[test]
+    fn a_range_answer_is_matched_locally() {
+        let body = "0018A45C4D1DEF81644B54AB7F969B88D65:3\r\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:9659365\r\n";
+        assert!(range_lists(body, "1E4C9B93F3F0682250B6CF8331B7EE68FD8"));
+        assert!(!range_lists(body, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"));
+        // A padding entry has count 0 and is not a breach.
+        assert!(!range_lists("ABCDEF:0", "ABCDEF"));
+    }
 
     #[test]
     fn password_policy_refuses_a_shipped_breached_password() {

@@ -347,6 +347,18 @@ pub async fn init(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Error>
             .map_err(|e| format!("auth.breach_list_file ({path}): {e}"))?;
         tracing::info!(count, "breached password set loaded");
     }
+    // Z4-T9: the online range check, only when the customer turned it on.
+    if config.auth.breach_check_online {
+        let url = config
+            .auth
+            .breach_range_url
+            .as_deref()
+            .unwrap_or(attome_auth::password_policy::DEFAULT_RANGE_URL);
+        attome_auth::password_policy::configure_online(Some(url));
+        tracing::info!(url, "breached password online check on");
+    } else {
+        attome_auth::password_policy::configure_online(None);
+    }
     // BPR-32 (BPR-F7): the profiler's posture was invisible at runtime; one
     // line per boot names it, next to the `profiler_enabled` gauge.
     tracing::info!(

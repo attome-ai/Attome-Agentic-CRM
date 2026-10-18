@@ -167,6 +167,15 @@ pub struct AuthSection {
     /// Replace the file and restart to update it.
     #[serde(default)]
     pub breach_list_file: Option<String>,
+    /// Z4-T9: also ask an online k-anonymity range service when a password
+    /// is set at registration or reset (off by default; only the first five
+    /// hex characters of the password's SHA-1 are sent).
+    #[serde(default)]
+    pub breach_check_online: bool,
+    /// Z4-T9: the range service, the five-character prefix appended (Have I
+    /// Been Pwned's when unset).
+    #[serde(default)]
+    pub breach_range_url: Option<String>,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
