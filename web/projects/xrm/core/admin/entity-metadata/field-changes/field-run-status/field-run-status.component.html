@@ -18,13 +18,49 @@
       }
     </ul>
   } @else {
-    <p>{{ 'fieldChange.run.running' | translate }}</p>
+    @if (status(); as s) {
+      <p role="status" data-testid="run-state">{{ 'fieldChange.run.state.' + s.status | translate }}</p>
+      @if (percent() !== null) {
+        <progress class="frs-progress" max="100" [value]="percent()"
+                  [attr.aria-label]="'fieldChange.run.progress' | translate: { percent: percent() }"></progress>
+      }
+      <p class="frs-muted" data-testid="rows">
+        {{ 'fieldChange.run.rows' | translate: { done: s.rows_scanned, total: s.rows_total ?? '?' } }}
+      </p>
+      @if (etaMinutes() !== null) {
+        <p data-testid="eta">{{ 'fieldChange.run.eta' | translate: { minutes: etaMinutes() } }}</p>
+      }
+      @if (s.error_message) {
+        <p class="frs-muted">{{ s.error_message }}</p>
+      }
+    } @else {
+      <p>{{ 'fieldChange.run.running' | translate }}</p>
+      <p class="frs-muted">{{ 'fieldChange.run.noStatus' | translate }}</p>
+    }
     <p class="frs-muted frs-mono" dir="ltr">{{ 'fieldChange.run.runId' | translate: { id: runId() } }}</p>
-    <p class="frs-muted">{{ 'fieldChange.run.noStatus' | translate }}</p>
-    <button type="button" class="btn-danger-outline btn-sm" data-testid="abandon"
-            [disabled]="busy()" (click)="abandon()">
-      {{ (busy() ? 'fieldChange.dialog.working' : 'fieldChange.run.abandon') | translate }}
-    </button>
+    <div class="frs-actions">
+      @if (canPause()) {
+        <button type="button" class="btn-secondary btn-sm" data-testid="pause" [disabled]="busy()" (click)="pause()">
+          {{ 'fieldChange.run.pause' | translate }}
+        </button>
+      }
+      @if (canResume()) {
+        <button type="button" class="btn-secondary btn-sm" data-testid="resume" [disabled]="busy()" (click)="resume()">
+          {{ 'fieldChange.run.resume' | translate }}
+        </button>
+      }
+      @if (live()) {
+        <button type="button" class="btn-danger-outline btn-sm" data-testid="cancel" [disabled]="busy()" (click)="cancel()">
+          {{ 'fieldChange.run.cancel' | translate }}
+        </button>
+      }
+      @if (canAbandon()) {
+        <button type="button" class="btn-danger-outline btn-sm" data-testid="abandon"
+                [disabled]="busy()" (click)="abandon()">
+          {{ (busy() ? 'fieldChange.dialog.working' : 'fieldChange.run.abandon') | translate }}
+        </button>
+      }
+    </div>
   }
   @if (error()) {
     <p class="error-msg" role="alert" data-testid="run-error">{{ error() }}</p>

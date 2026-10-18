@@ -31,3 +31,15 @@
 .frs-mono {
   font-family: var(--font-mono, monospace);
 }
+
+.frs-progress {
+  inline-size: 100%;
+  block-size: 8px;
+  margin-block-end: 6px;
+}
+
+.frs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

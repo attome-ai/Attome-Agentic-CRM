@@ -126,6 +126,9 @@ export interface AddChoiceInput {
 
 export type AbandonedFieldRun = ApiComponents['schemas']['AbandonedFieldRun'];
 
+/** Y12-T5: a data step run's progress. */
+export type DataStepRunStatus = ApiComponents['schemas']['DataStepRunStatus'];
+
 /** `field_deleted | conversion_nulled`. */
 export const ARCHIVE_REASONS = ['field_deleted', 'conversion_nulled'] as const;
 export type ArchiveReason = typeof ARCHIVE_REASONS[number];
@@ -223,6 +226,18 @@ export class FieldChangeService {
   }
 
   /** Abandons a FAILED batched run (`run_not_failed` otherwise). */
+  /** Y12-T5: a run's status, counts and ETA. */
+  runStatus(runId: string): Observable<DataStepRunStatus> {
+    return this.api.get<DataStepRunStatus>(`/api/v1/admin/data-step-runs/${encodeURIComponent(runId)}`);
+  }
+
+  /** Y12-T5: pause, resume or cancel a run; answers its new status. */
+  controlRun(runId: string, action: 'pause' | 'resume' | 'cancel'): Observable<DataStepRunStatus> {
+    return this.api.post<DataStepRunStatus>(
+      `/api/v1/admin/data-step-runs/${encodeURIComponent(runId)}/${action}`, {},
+    );
+  }
+
   abandonRun(entityId: string, fieldId: string, runId: string): Observable<AbandonedFieldRun> {
     return this.api.post<AbandonedFieldRun>(
       `${this.fieldPath(entityId, fieldId)}/runs/${encodeURIComponent(runId)}/abandon`, {},

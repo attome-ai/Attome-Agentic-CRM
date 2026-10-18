@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Web: a field change's background run shows its state, a progress bar, rows done and the time
+  left, polled every five seconds, with Pause, Resume and Cancel (asking first), and Abandon once
+  it has failed, in English and Arabic (Y12-T13).
 - Data: backfills follow the load (Y12-T6). A retype or archive run sizes each batch from what the
   last one saw: it halves and pauses under pressure (a batch over two seconds, a replica over ten
   seconds behind, most connections busy) and doubles in quiet hours (`metadata.quiet_hours`,

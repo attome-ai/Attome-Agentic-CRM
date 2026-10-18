@@ -142,6 +142,7 @@ export {
 export type {
   ConvertibleFieldType, FieldReference, FieldBlocker, FieldReportDraft, FieldChangeOp,
   FieldChangeResult, FieldChangeOutcome, ConversionInput, AddChoiceInput, AbandonedFieldRun,
+  DataStepRunStatus,
   ArchiveReason, ArchiveRow, ArchiveFilter,
 } from './services/field-change.service';
 export { structureErrorText } from './services/structure-error-text';

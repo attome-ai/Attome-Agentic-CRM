@@ -6,9 +6,21 @@ import { ConfirmService } from '@attome/base/dialog';
 import { FieldChangeService } from '@attome/xrm/core/admin/data';
 import { FieldRunStatusComponent } from './field-run-status.component';
 
+function runStatus(status: string, extra: Record<string, unknown> = {}) {
+  return {
+    id: 'run1', kind: 'retype', entity: 'deal', status, rows_total: 1000, rows_scanned: 250,
+    rows_written: 250, rows_nulled: 0, started_at: null, finished_at: null, error_message: null,
+    eta_secs: null, ...extra,
+  };
+}
+
 describe('FieldRunStatusComponent', () => {
   let fixture: ComponentFixture<FieldRunStatusComponent>;
-  let svc: { abandonRun: ReturnType<typeof vi.fn> };
+  let svc: {
+    abandonRun: ReturnType<typeof vi.fn>;
+    runStatus: ReturnType<typeof vi.fn>;
+    controlRun: ReturnType<typeof vi.fn>;
+  };
   let confirm: { confirm: ReturnType<typeof vi.fn> };
 
   async function render() {
@@ -36,6 +48,9 @@ describe('FieldRunStatusComponent', () => {
         run_id: 'run1', kind: 'retype', status: 'abandoned', shadow_dropped: true,
         archive_rows_removed: 2, conversion_completed: false, labels: [],
       })),
+      // No progress to read: the run is shown as running, as before Y12-T13.
+      runStatus: vi.fn().mockReturnValue(throwError(() => ({ status: 404 }))),
+      controlRun: vi.fn().mockReturnValue(of(runStatus('paused'))),
     };
     confirm = { confirm: vi.fn().mockResolvedValue(true) };
   });
@@ -65,5 +80,27 @@ describe('FieldRunStatusComponent', () => {
     await fixture.componentInstance.abandon();
     fixture.detectChanges();
     expect(el().querySelector('[data-testid="run-error"]')?.textContent).toContain('structureErrors.run_not_failed');
+  });
+
+  it('shows eta', async () => {
+    svc.runStatus.mockReturnValue(of(runStatus('running', { eta_secs: 125 })));
+    await render();
+    expect(el().querySelector('[data-testid="eta"]')).not.toBeNull();
+    expect(fixture.componentInstance.etaMinutes()).toBe(3);
+    expect(fixture.componentInstance.percent()).toBe(25);
+    expect(el().querySelector('[data-testid="pause"]')).not.toBeNull();
+    expect(el().querySelector('[data-testid="abandon"]')).toBeNull();
+  });
+
+  it('cancel asks for confirmation', async () => {
+    svc.runStatus.mockReturnValue(of(runStatus('running')));
+    confirm.confirm.mockResolvedValue(false);
+    await render();
+    await fixture.componentInstance.cancel();
+    expect(confirm.confirm).toHaveBeenCalled();
+    expect(svc.controlRun).not.toHaveBeenCalled();
+    confirm.confirm.mockResolvedValue(true);
+    await fixture.componentInstance.cancel();
+    expect(svc.controlRun).toHaveBeenCalledWith('run1', 'cancel');
   });
 });
