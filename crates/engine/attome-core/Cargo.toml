@@ -46,6 +46,11 @@ uuid.workspace            = true
 
 [dev-dependencies]
 attome-testkit = { workspace = true, features = ["app-config"] }
+criterion.workspace = true
+
+[[bench]]
+name = "query_build"
+harness = false
 
 [lints]
 workspace = true

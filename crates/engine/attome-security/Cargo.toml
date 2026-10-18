@@ -39,7 +39,12 @@ uuid.workspace            = true
 
 [dev-dependencies]
 attome-testkit.workspace = true
+criterion.workspace      = true
 proptest.workspace       = true
+
+[[bench]]
+name = "permission"
+harness = false
 
 [lints]
 workspace = true

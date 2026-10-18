@@ -18,7 +18,12 @@ thiserror.workspace = true
 uuid.workspace      = true
 
 [dev-dependencies]
+criterion.workspace = true
 proptest.workspace = true
+
+[[bench]]
+name = "eval"
+harness = false
 
 [lints]
 workspace = true

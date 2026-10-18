@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: criterion micro-benchmarks for the hot paths (AA14-T1): rules evaluation (`attome-rules`
+  bench `eval`), the record-access predicate (`attome-security` bench `permission`) and list-query
+  SQL building (`attome-core` bench `query_build`); `cargo bench -p <crate> --bench <name>`.
+  `criterion` is a dev-dependency only.
 - Billing: customer payments (F5) summarised: `/api/v1/billing/payments*` (record, reverse, refund),
   `/api/v1/billing/payment-links`, the public `/api/v1/pay/{token}` page API, and
   `/api/v1/billing/gateways/{system}/webhook`; gateways, links, saved-card charges and
