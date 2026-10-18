@@ -36,6 +36,12 @@ pub(crate) async fn reject_declared_oversized_body(
         .get(CONTENT_LENGTH)
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse::<usize>().ok());
+    // Z5-T3: a route's own, smaller limit from the route policy table.
+    let max_bytes = req
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .and_then(|path| crate::route_policy::body_limit_for(req.method().as_str(), path.as_str()))
+        .map_or(max_bytes, |limit| limit.min(max_bytes));
 
     if let Some(len) = declared_len
         && len > max_bytes

@@ -78,6 +78,15 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // `config.observability` directly.
     let config = AppConfig::from_file()?;
     config.validate()?;
+    // Z5-T3: the per-route policy table, from the same document the API
+    // publishes; the body-limit layer reads it by matched route.
+    let policy_table = attome_server::route_policy::RoutePolicyTable::from_document(
+        &serde_json::to_value(&*attome::openapi::document())
+            .map_err(|e| format!("failed to serialize OpenAPI document: {e}"))?,
+        config.app.max_body_size_bytes,
+    )
+    .map_err(|e| format!("route policy table: {e}"))?;
+    attome_server::route_policy::install(policy_table);
     let tracing_guard =
         attome::observability::init_tracing(&config.observability, env!("CARGO_PKG_VERSION"));
     // BCF-10 — one WARN per unknown config key (never a boot failure: an N-1

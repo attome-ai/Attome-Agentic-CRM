@@ -18,6 +18,8 @@ pub mod middleware;
 pub mod openapi;
 pub mod read_only;
 pub mod replica_watermark;
+/// Z5-T3 — per-route policy read from the API document.
+pub mod route_policy;
 pub mod secrets;
 pub mod security;
 pub mod session_activity;

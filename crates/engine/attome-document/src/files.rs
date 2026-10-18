@@ -534,7 +534,14 @@ async fn check_storage_quota(
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::Delegated, Some("files_scan.rs / entity_crud update"), "only records upload intent; the eventual scan result (FileScanned) and field promotion (Entity/Update) are audited on their own paths")))),
+    extensions(
+        ("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::Delegated, Some("files_scan.rs / entity_crud update"), "only records upload intent; the eventual scan result (FileScanned) and field promotion (Entity/Update) are audited on their own paths"))),
+        // Z5-T3: the request is a small JSON description; the file itself
+        // goes straight to the object store.
+        ("x-body-limit" = json!(65_536)),
+        ("x-auth" = json!("session")),
+        ("x-idempotent" = json!(false)),
+    ),
 )]
 async fn create_upload_session(
     State(state): State<EngineState>,
