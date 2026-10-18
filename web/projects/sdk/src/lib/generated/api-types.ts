@@ -8777,6 +8777,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoices/{id}/einvoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_einvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoices/{id}/issue": {
         parameters: {
             query?: never;
@@ -19121,6 +19137,27 @@ export interface components {
             /** Format: int64 */
             size_bytes?: number | null;
             source_field?: string | null;
+        };
+        /** @description An invoice's e-invoice as people and the billing engine see it. */
+        DocumentState: {
+            /** Format: int32 */
+            attempts: number;
+            /** Format: int64 */
+            icv: number;
+            /** Format: uuid */
+            id: string;
+            invoice_hash: string;
+            /** Format: uuid */
+            invoice_id: string;
+            last_error?: string | null;
+            /** @description `standard` or `simplified`. */
+            profile: string;
+            /** @description The QR code (base64 TLV) to print. */
+            qr: string;
+            /** @description `pending`, `cleared`, `reported`, `rejected` or `failed`. */
+            status: string;
+            /** @description ZATCA's validation results, as it sent them. */
+            validation: Record<string, never>;
         };
         DomainDsrRequest: {
             /** Format: date-time */
@@ -62677,6 +62714,56 @@ export interface operations {
             };
             /** @description No reason, no lines, or a line without a positive quantity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_einvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invoice's e-invoice: status, ZATCA's validation results and the QR code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The invoice has no e-invoice */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

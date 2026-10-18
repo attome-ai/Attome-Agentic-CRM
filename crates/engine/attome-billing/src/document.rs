@@ -8,15 +8,17 @@
 //!   attaches the PDF to the invoice's `document` field as the person who
 //!   issued it. An invoice that already has its document is left alone, so
 //!   a retried job does not render twice.
-//! - [`SendHook`] (order 90) emails the PDF to the invoice's contact and
-//!   moves the invoice from `issued` to `sent` in the same transaction as
-//!   the queued email. It waits for e-invoicing: while `einvoice_status` is
-//!   `pending` or `submitted` it fails, so the job retries later; a
-//!   `rejected` or `failed` invoice is never sent. Without a contact email
-//!   it leaves the invoice issued for a person to send.
+//! - [`SendHook`] (order 90) emails the PDF (and the e-invoice XML once
+//!   cleared or reported) to the invoice's contact and moves the invoice
+//!   from `issued` to `sent` in the same transaction as the queued email. It
+//!   waits for e-invoicing: while `einvoice_status` is `pending` it does
+//!   nothing, and the e-invoicing sweep runs the hooks again once ZATCA
+//!   clears or reports the invoice; a `rejected` or `failed` invoice is never
+//!   sent. Without a contact email it leaves the invoice issued for a person
+//!   to send.
 //!
-//! The e-invoicing hook (AG2) registers before both with a lower order, and
-//! adds the QR code and the XML these hooks then carry.
+//! The e-invoicing hook (AG2, [`crate::einvoice`]) runs first; the document
+//! prints its QR code and sending attaches its XML.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -37,10 +39,32 @@ pub const SELLER_NAME_SETTING: &str = "billing.seller_name";
 /// The deployment's VAT registration number, printed as the seller's.
 pub const SELLER_VAT_SETTING: &str = "billing.seller_vat_number";
 
-/// Registers the document and send hooks (at boot).
-pub fn register_hooks(renderer: Arc<dyn PdfRenderer>) {
+/// Registers the e-invoicing, document and send hooks (at boot).
+pub fn register_hooks(
+    renderer: Arc<dyn PdfRenderer>,
+    zatca: Arc<dyn attome_einvoice::zatca::api::Transport>,
+) {
+    crate::issue::register_issue_hook(Arc::new(crate::einvoice::EinvoiceHook { transport: zatca }));
     crate::issue::register_issue_hook(Arc::new(DocumentHook { renderer }));
     crate::issue::register_issue_hook(Arc::new(SendHook));
+}
+
+/// The e-invoice's QR code as an inline SVG, when the invoice has one.
+async fn qr_svg(state: &EngineState, invoice_id: Uuid) -> Result<Option<String>, AppError> {
+    let Some(document) = attome_einvoice::document::for_invoice(state, invoice_id).await? else {
+        return Ok(None);
+    };
+    let code = qrcode::QrCode::new(document.qr.as_bytes()).map_err(|e| {
+        AppError::internal(format!("the e-invoice QR code could not be drawn: {e}"))
+    })?;
+    Ok(Some(
+        code.render::<qrcode::render::svg::Color<'_>>()
+            .min_dimensions(160, 160)
+            .build()
+            // Inline in the page: no XML declaration.
+            .trim_start_matches(r#"<?xml version="1.0" standalone="yes"?>"#)
+            .to_owned(),
+    ))
 }
 
 fn setting_text(state: &EngineState, key: &str) -> Option<String> {
@@ -164,6 +188,7 @@ fn html(
     seller: &str,
     seller_vat: &str,
     hijri: Option<String>,
+    qr_svg: Option<&str>,
 ) -> String {
     let e = |s: &str| escape_html(s);
     let (en_title, ar_title) = title(&inv.kind);
@@ -197,7 +222,7 @@ fn html(
          .parties{{display:flex;justify-content:space-between;gap:24px}}\
          .totals td:first-child{{font-weight:bold}}</style></head><body>\
          <h1>{title}</h1>\
-         <p>{number_label}: <b dir=\"ltr\">{number}</b></p>\
+         {qr}<p>{number_label}: <b dir=\"ltr\">{number}</b></p>\
          <p>{issued_label}: <span dir=\"ltr\">{issued}</span>{hijri}</p>\
          <p>{due_label}: <span dir=\"ltr\">{due}</span></p>\
          <div class=\"parties\"><div><h3>{seller_label}</h3><p>{seller}</p><p>{vat_label}: <span dir=\"ltr\">{seller_vat}</span></p></div>\
@@ -209,6 +234,11 @@ fn html(
          <tr><td>{grand_label}</td><td class=\"n\">{grand} {currency}</td></tr></table>\
          </body></html>",
         title = both(en_title, ar_title),
+        // Drawn by the qrcode crate from the e-invoice's TLV: no outside
+        // input reaches the markup.
+        qr = qr_svg
+            .map(|svg| format!("<div class=\"qr\">{svg}</div>"))
+            .unwrap_or_default(),
         number_label = both("Invoice number", "رقم الفاتورة"),
         number = e(&inv.number),
         issued_label = both("Issue date", "تاريخ الإصدار"),
@@ -298,7 +328,8 @@ impl IssueHook for DocumentHook {
             });
             let seller = setting_text(state, SELLER_NAME_SETTING).unwrap_or_default();
             let seller_vat = setting_text(state, SELLER_VAT_SETTING).unwrap_or_default();
-            let document = html(&inv, &lines, &seller, &seller_vat, hijri);
+            let qr = qr_svg(state, invoice_id).await?;
+            let document = html(&inv, &lines, &seller, &seller_vat, hijri, qr.as_deref());
             let label = if inv.number.is_empty() {
                 "invoice".to_owned()
             } else {
@@ -371,9 +402,9 @@ impl IssueHook for SendHook {
             }
             match einvoice.as_deref() {
                 Some("pending" | "submitted") => {
-                    return Err(AppError::Conflict(
-                        "the invoice waits for e-invoicing clearance before it is sent",
-                    ));
+                    // The e-invoicing sweep runs the hooks again once ZATCA
+                    // has cleared or reported it.
+                    return Ok(());
                 }
                 Some("rejected" | "failed") => {
                     tracing::warn!(%invoice_id, "billing: an invoice e-invoicing refused is not sent");
@@ -416,6 +447,24 @@ impl IssueHook for SendHook {
                 ));
             }
             let number = number.unwrap_or_default();
+            let mut attachments = vec![attome_email::EmailAttachment {
+                filename: format!("{number}.pdf"),
+                content_type: "application/pdf".into(),
+                content_base64: base64::Engine::encode(
+                    &base64::engine::general_purpose::STANDARD,
+                    &bytes,
+                ),
+            }];
+            if let Some(xml) = attome_einvoice::document::shareable_xml(state, invoice_id).await? {
+                attachments.push(attome_email::EmailAttachment {
+                    filename: format!("{number}.xml"),
+                    content_type: "application/xml".into(),
+                    content_base64: base64::Engine::encode(
+                        &base64::engine::general_purpose::STANDARD,
+                        xml.as_bytes(),
+                    ),
+                });
+            }
             let message = attome_email::EmailMessage {
                 to: email,
                 subject: format!("Invoice {number} | فاتورة {number}"),
@@ -429,14 +478,7 @@ impl IssueHook for SendHook {
                 in_reply_to: None,
                 references: None,
                 communication_id: None,
-                attachments: vec![attome_email::EmailAttachment {
-                    filename: format!("{number}.pdf"),
-                    content_type: "application/pdf".into(),
-                    content_base64: base64::Engine::encode(
-                        &base64::engine::general_purpose::STANDARD,
-                        &bytes,
-                    ),
-                }],
+                attachments,
             };
             let mut tx = attome_db::tx::begin(&state.base.db).await?;
             let moved = sqlx::query(
@@ -516,6 +558,7 @@ mod tests {
             "Attome Co",
             "310000000000003",
             Some("1448-04-26 AH".into()),
+            Some("<svg id=\"qr\"></svg>"),
         );
         assert!(doc.contains("Tax Invoice") && doc.contains("فاتورة ضريبية"));
         assert!(doc.contains("INV-2026-000001"));
@@ -523,6 +566,7 @@ mod tests {
         assert!(doc.contains("310000000000003") && doc.contains("300000000000003"));
         assert!(!doc.contains("<script>"), "the buyer name was not escaped");
         assert!(doc.contains("Setup &amp; support"));
+        assert!(doc.contains("<div class=\"qr\"><svg id=\"qr\"></svg></div>"));
         assert_eq!(title("credit_note").1, "إشعار دائن");
     }
 }

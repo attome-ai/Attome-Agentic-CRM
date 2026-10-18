@@ -54,6 +54,11 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoices/{id}/cancel",
                 post(crate::notes::post_cancel),
             )
+            // AG2-T3: the invoice's e-invoice.
+            .route(
+                "/api/v1/billing/invoices/{id}/einvoice",
+                get(crate::einvoice::get_einvoice),
+            )
             // F4-T12: writing off a balance.
             .route(
                 "/api/v1/billing/invoices/{id}/write-off",

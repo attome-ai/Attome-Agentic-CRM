@@ -256,3 +256,239 @@ fn einvoice_device_onboards_through_zatca() {
         );
     });
 }
+
+const PACKS: [&str; 7] = [
+    "crm",
+    "sales",
+    "finance",
+    "regions",
+    "vendor-supplier",
+    "contract-management",
+    "billing",
+];
+
+async fn install(app: &TestApp) {
+    for pack in PACKS {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../packs")
+            .join(pack)
+            .join("changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+    }
+}
+
+/// An onboarded device (onboarding through recorded answers).
+async fn onboarded_device(app: &TestApp) {
+    seller_settings(app).await;
+    let (_, body) = app
+        .request(
+            Method::POST,
+            "/api/v1/einvoice/devices",
+            Some(json!({
+                "name": format!("EGS-{}", Uuid::now_v7().simple()),
+                "environment": "simulation",
+                "organization_unit": "Riyadh Branch",
+                "location": "RRRD2929",
+                "industry": "Software",
+            })),
+        )
+        .await;
+    let id: Uuid = body["id"].as_str().unwrap().parse().unwrap();
+    let token = sample_token();
+    let csid = json!({"requestID": 1, "binarySecurityToken": token, "secret": "c"}).to_string();
+    let checked = r#"{"validationResults":{"status":"PASS"},"reportingStatus":"REPORTED"}"#;
+    let mut answers = vec![(200, csid)];
+    answers.extend(std::iter::repeat_n((200, checked.to_owned()), 6));
+    answers.push((
+        200,
+        json!({"requestID": 2, "binarySecurityToken": token, "secret": "p"}).to_string(),
+    ));
+    let ctx = attome_security::resolve_uncached(app.db(), app.admin.id)
+        .await
+        .unwrap();
+    attome_einvoice::device::onboard(&app.state, &ctx, id, "123345", &Recorded::new(answers))
+        .await
+        .expect("onboarded");
+}
+
+/// An issued invoice of one standard-rated line to an account that is a
+/// business (`vat`) or a consumer.
+async fn issued(app: &TestApp, vat: Option<&str>) -> Uuid {
+    let account: Uuid = sqlx::query_scalar(
+        "INSERT INTO account (name, vat_number, billing_street, billing_building_number, \
+             billing_district, billing_city, billing_postal_zone, billing_country_code) \
+         VALUES ('Buyer Co', $1, 'Salah Al-Din', '1111', 'Al-Murooj', 'Riyadh', '12222', 'SA') \
+         RETURNING id",
+    )
+    .bind(vat)
+    .fetch_one(app.db())
+    .await
+    .unwrap();
+    let invoice: Uuid = sqlx::query_scalar(
+        "INSERT INTO invoice (id, status, kind, currency, account_ref, payment_terms_days, \
+             series_key, is_active, row_version) \
+         VALUES ($1, 'draft', 'invoice', 'SAR', $2, 30, 'TEI', true, 0) RETURNING id",
+    )
+    .bind(Uuid::now_v7())
+    .bind(account)
+    .fetch_one(app.db())
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO invoice_line (id, invoice_ref, description, quantity, unit_price, \
+             vat_category, is_active, row_version) \
+         VALUES ($1, $2, 'Setup', 2, 100, 'standard', true, 0)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(invoice)
+    .execute(app.db())
+    .await
+    .unwrap();
+    let (status, body) = app
+        .request(
+            Method::POST,
+            &format!("/api/v1/billing/invoices/{invoice}/issue"),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    invoice
+}
+
+async fn einvoice_status(app: &TestApp, invoice: Uuid) -> String {
+    sqlx::query_scalar::<_, Option<String>>("SELECT einvoice_status FROM invoice WHERE id = $1")
+        .bind(invoice)
+        .fetch_one(app.db())
+        .await
+        .unwrap()
+        .unwrap_or_default()
+}
+
+fn text_after<'a>(xml: &'a str, after: &str, open: &str) -> &'a str {
+    let at = xml.find(after).unwrap();
+    let rest = &xml[at..];
+    let start = rest.find(open).unwrap() + open.len();
+    &rest[start..start + rest[start..].find('<').unwrap()]
+}
+
+const CLEARED: &str = r#"{"validationResults":{"status":"PASS","infoMessages":[],"warningMessages":[],"errorMessages":[]},"clearanceStatus":"CLEARED","clearedInvoice":"PEludm9pY2UvPg=="}"#;
+const REPORTED: &str = r#"{"validationResults":{"status":"PASS"},"reportingStatus":"REPORTED"}"#;
+const REJECTED: &str = r#"{"validationResults":{"status":"ERROR","errorMessages":[{"type":"ERROR","code":"BR-KSA-37","message":"The seller address building number must contain 4 digits","status":"ERROR"}]},"clearanceStatus":"NOT_CLEARED"}"#;
+
+// feature: AG2
+#[test]
+fn issued_invoices_clear_or_report_in_one_chain() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        onboarded_device(&app).await;
+
+        // A business buyer: cleared at once.
+        let b2b = issued(&app, Some("399999999800003")).await;
+        let zatca = Recorded::new(vec![(200, CLEARED.to_owned())]);
+        let doc = attome_billing::einvoice::einvoice_invoice(&app.state, b2b, &zatca)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(doc.profile, "standard");
+        assert_eq!(doc.status, "cleared");
+        assert_eq!(einvoice_status(&app, b2b).await, "cleared");
+        assert!(zatca.paths.lock().unwrap()[0].ends_with("/invoices/clearance/single"));
+        let (xml, hash): (String, String) = sqlx::query_as(
+            "SELECT xml, invoice_hash FROM einvoice_document WHERE invoice_ref = $1",
+        )
+        .bind(b2b)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        // The stamped document hashes to what was signed.
+        assert_eq!(
+            attome_einvoice::zatca::hash::invoice_hash(&xml).unwrap(),
+            hash
+        );
+        assert!(xml.contains("<cbc:InvoiceTypeCode name=\"0100000\">388</cbc:InvoiceTypeCode>"));
+        // Run again: nothing more is sent.
+        let again = Recorded::new(vec![]);
+        attome_billing::einvoice::einvoice_invoice(&app.state, b2b, &again)
+            .await
+            .unwrap();
+        assert!(again.paths.lock().unwrap().is_empty());
+
+        // A consumer: ZATCA is down, then the sweep reports it.
+        let b2c = issued(&app, None).await;
+        let down = Recorded::new(vec![(503, "unavailable".to_owned())]);
+        let doc2 = attome_billing::einvoice::einvoice_invoice(&app.state, b2c, &down)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(doc2.profile, "simplified");
+        assert_eq!(doc2.status, "pending");
+        assert_eq!(einvoice_status(&app, b2c).await, "pending");
+        // The chain: the next counter value, the previous document's hash.
+        assert_eq!(doc2.icv, doc.icv + 1);
+        let xml2: String =
+            sqlx::query_scalar("SELECT xml FROM einvoice_document WHERE invoice_ref = $1")
+                .bind(b2c)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(
+            text_after(&xml2, "<cbc:ID>PIH</cbc:ID>", "mimeCode=\"text/plain\">"),
+            hash
+        );
+        sqlx::query("UPDATE einvoice_document SET next_attempt_at = now() WHERE invoice_ref = $1")
+            .bind(b2c)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let up = Recorded::new(vec![(200, REPORTED.to_owned())]);
+        let settled = attome_billing::einvoice::sweep(&app.state, &up)
+            .await
+            .unwrap();
+        assert!(settled >= 1);
+        assert_eq!(einvoice_status(&app, b2c).await, "reported");
+        let rerun: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM apalis.jobs WHERE job->>'variant' = 'BillingAfterIssue' \
+               AND job::text LIKE $1",
+        )
+        .bind(format!("%{b2c}%"))
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert!(rerun >= 1, "the after-issue hooks run again once reported");
+
+        // Refused: rejected with ZATCA's messages, never retried.
+        let refused = issued(&app, Some("399999999800003")).await;
+        let no = Recorded::new(vec![(400, REJECTED.to_owned())]);
+        let doc3 = attome_billing::einvoice::einvoice_invoice(&app.state, refused, &no)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(doc3.status, "rejected");
+        assert_eq!(einvoice_status(&app, refused).await, "rejected");
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/billing/invoices/{refused}/einvoice"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["validation"]["errorMessages"][0]["code"], "BR-KSA-37");
+        assert!(!body["qr"].as_str().unwrap().is_empty());
+    });
+}

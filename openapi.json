@@ -45864,6 +45864,76 @@
         }
       }
     },
+    "/api/v1/billing/invoices/{id}/einvoice": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_einvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The invoice's e-invoice: status, ZATCA's validation results and the QR code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The invoice has no e-invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/billing/invoices/{id}/issue": {
       "post": {
         "tags": [
@@ -86345,6 +86415,64 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "DocumentState": {
+        "type": "object",
+        "description": "An invoice's e-invoice as people and the billing engine see it.",
+        "required": [
+          "id",
+          "invoice_id",
+          "profile",
+          "status",
+          "icv",
+          "invoice_hash",
+          "qr",
+          "attempts",
+          "validation"
+        ],
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "icv": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_hash": {
+            "type": "string"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "profile": {
+            "type": "string",
+            "description": "`standard` or `simplified`."
+          },
+          "qr": {
+            "type": "string",
+            "description": "The QR code (base64 TLV) to print."
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `cleared`, `reported`, `rejected` or `failed`."
+          },
+          "validation": {
+            "type": "object",
+            "description": "ZATCA's validation results, as it sent them."
           }
         }
       },

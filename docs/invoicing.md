@@ -35,8 +35,15 @@ Tax rates are the regions pack's `region_tax_rate` (country, category, rate, eff
 
 ## After issue
 
-The `BillingAfterIssue` job runs the issue hooks in order: e-invoicing (AG2, when built), then the
-document, then sending. Each is safe to repeat.
+The `BillingAfterIssue` job runs the issue hooks in order: e-invoicing, then the document, then
+sending. Each is safe to repeat.
+
+- **E-invoicing (ZATCA).** With `einvoice.enabled` and an onboarded device (see below), the issued
+  document is written as ZATCA's UBL invoice, stamped on the device (its counter and hash chain kept
+  under a row lock) and cleared when the buyer has a VAT number, reported otherwise.
+  `invoice.einvoice_status` follows: `pending`, `cleared`, `reported` or `rejected` (ZATCA's
+  messages on `GET /api/v1/billing/invoices/{id}/einvoice`). A pending document is retried every
+  five minutes, and the next hooks run once it clears or reports.
 
 - **Document.** The invoice in Arabic and English side by side, with seller (`billing.seller_name`,
   `billing.seller_vat_number`) and buyer VAT numbers and the issue date in Gregorian and Hijri, is
@@ -44,6 +51,17 @@ document, then sending. Each is safe to repeat.
 - **Sending.** The PDF is emailed to the invoice's contact and the invoice moves to `sent`. While
   e-invoicing is `pending` or `submitted` the send waits; a `rejected` or `failed` invoice is never
   sent; without a contact email the invoice stays `issued` for a person to send.
+
+## E-invoicing devices
+
+`POST /api/v1/einvoice/devices` (`einvoice.manage`, Finance Manager) creates a device (EGS unit)
+with its signing key and certificate request, from the seller settings (`billing.seller_name`,
+`billing.seller_vat_number`, `billing.seller_crn` and the seller's national address).
+`POST /api/v1/einvoice/devices/{id}/onboard` with the Fatoora portal's OTP gets the compliance
+CSID, passes one compliance check per document kind and gets the production CSID. Keys and secrets
+are encrypted under `einvoice.key_encryption_key`. Buyers on standard (B2B) invoices need their
+national address on the account (`billing_street`, `billing_building_number`, `billing_district`,
+`billing_city`, `billing_postal_zone`).
 
 ## Corrections
 

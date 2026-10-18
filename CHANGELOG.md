@@ -34,6 +34,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- E-invoicing in the issue step (AG2-T3): with `einvoice.enabled`, every issued invoice, credit and
+  debit note and deposit invoice is written as ZATCA's UBL invoice, stamped on the oldest onboarded
+  device (its hash chain kept under a row lock) and cleared (buyer with a VAT number) or reported
+  (consumer) at once; `invoice.einvoice_status` follows (`pending`, `cleared`, `reported`,
+  `rejected`). A five-minute sweep retries what ZATCA could not take and then runs the after-issue
+  hooks again. The invoice PDF prints the QR code, sending waits for clearance and attaches the
+  XML, and `GET /api/v1/billing/invoices/{id}/einvoice` shows the status and ZATCA's messages.
 - E-invoicing devices (AG2-T3): `GET/POST /api/v1/einvoice/devices` and
   `POST /api/v1/einvoice/devices/{id}/onboard` (`einvoice.manage`, granted to Finance Manager by the
   billing pack) create a device with its key and CSR from the new seller settings

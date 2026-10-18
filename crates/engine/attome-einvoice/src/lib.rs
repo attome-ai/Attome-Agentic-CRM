@@ -6,6 +6,7 @@
 pub mod asn1;
 pub mod crypto;
 pub mod device;
+pub mod document;
 pub mod model;
 pub(crate) mod routes;
 pub mod zatca;

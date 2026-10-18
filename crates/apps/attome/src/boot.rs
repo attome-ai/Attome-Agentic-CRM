@@ -1010,9 +1010,14 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     let t_system_build = std::time::Instant::now();
     // F4-T13: an issued invoice's PDF (through the docgen render sidecar)
     // and its sending, run by the `BillingAfterIssue` job.
-    attome_billing::document::register_hooks(std::sync::Arc::new(
-        attome_docgen::generate::SidecarRenderer,
-    ));
+    // AG2-T3: e-invoicing runs first, through ZATCA's API.
+    let zatca =
+        attome_einvoice::zatca::api::HttpTransport::new(attome_billing::einvoice::ZATCA_TIMEOUT)
+            .map_err(|e| e.to_string())?;
+    attome_billing::document::register_hooks(
+        std::sync::Arc::new(attome_docgen::generate::SidecarRenderer),
+        std::sync::Arc::new(zatca),
+    );
     let system = register_engines(EngineSystem::builder(state))
         .build()
         .await?;

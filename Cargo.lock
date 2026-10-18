@@ -574,6 +574,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-docgen",
+ "attome-einvoice",
  "attome-email",
  "attome-html",
  "attome-jobs",
@@ -588,6 +589,7 @@ dependencies = [
  "chrono",
  "moka",
  "object_store",
+ "qrcode",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -4772,6 +4774,12 @@ dependencies = [
  "idna",
  "psl-types",
 ]
+
+[[package]]
+name = "qrcode"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d68782463e408eb1e668cf6152704bd856c78c5b6417adaee3203d8f4c1fc9ec"
 
 [[package]]
 name = "quanta"

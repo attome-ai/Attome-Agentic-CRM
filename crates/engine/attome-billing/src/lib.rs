@@ -6,6 +6,7 @@
 
 pub mod deposit;
 pub mod document;
+pub mod einvoice;
 pub mod invoice;
 pub mod issue;
 pub mod lookup;
@@ -40,5 +41,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<requests::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<statements::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<writeoff::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<einvoice::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

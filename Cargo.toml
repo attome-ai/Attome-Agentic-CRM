@@ -184,6 +184,7 @@ regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 rsa           = "0.9"
 k256          = { version = "0.13", features = ["pem"] }
+qrcode        = { version = "0.14", default-features = false, features = ["svg"] }
 quick-xml     = "0.41"
 rust_decimal  = { version = "1.36", features = ["serde-with-str"] }
 rust_xlsxwriter = "0.100"
