@@ -18,7 +18,7 @@ use uuid::Uuid;
 use attome_core::EngineState;
 use attome_types::AppError;
 
-use crate::rrule::Rrule;
+use attome_calendar::rrule::Rrule;
 
 #[derive(Debug, Default)]
 pub struct SweepStats {

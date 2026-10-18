@@ -21,7 +21,6 @@ pub mod auth;
 pub mod model;
 pub mod render;
 pub mod report_admin;
-pub mod rrule;
 pub mod run;
 pub mod schedule_admin;
 pub mod scheduler;

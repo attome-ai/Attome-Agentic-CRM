@@ -1607,6 +1607,7 @@ dependencies = [
  "attome-audit",
  "attome-auth",
  "attome-cache",
+ "attome-calendar",
  "attome-config",
  "attome-core",
  "attome-db",

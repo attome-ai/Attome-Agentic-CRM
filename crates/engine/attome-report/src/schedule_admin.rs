@@ -5,7 +5,7 @@
 //! generically-CRUD-able entity (`seed.rs`), and this is the intended write
 //! path because two things generic CRUD cannot express live here:
 //!
-//! - `rrule` must parse under this pass's RRULE subset (`crate::rrule`) —
+//! - `rrule` must parse (`attome_calendar::rrule`, without `COUNT`) —
 //!   checked here, and used to compute the `next_run_at` the scheduler
 //!   sweep (`crate::scheduler`) reads.
 //! - `run_as` must name a real, active, **non-admin** user — D-440's core
@@ -41,7 +41,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::auth::{ScheduleCreate, ScheduleUpdate};
-use crate::rrule::Rrule;
+use attome_calendar::rrule::Rrule;
 
 const ENTITY: &str = "report_schedule";
 
@@ -120,6 +120,12 @@ async fn validate_run_as(state: &EngineState, run_as: Uuid) -> Result<(), AppErr
 /// rather than silently creating a schedule that will never fire.
 fn compute_next_run_at(rrule: &str) -> Result<chrono::DateTime<Utc>, AppError> {
     let rule = Rrule::parse(rrule).map_err(AppError::Validation)?;
+    // A report schedule keeps no occurrence count, so COUNT could never stop it.
+    if rule.count().is_some() {
+        return Err(AppError::Validation(
+            "COUNT is not supported for report schedules; use UNTIL".into(),
+        ));
+    }
     let now = Utc::now();
     rule.next_after(now, now).ok_or_else(|| {
         AppError::Validation("rrule produces no future occurrences (check UNTIL)".into())

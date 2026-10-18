@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendar: the recurrence engine moved to `attome_calendar::rrule` (Z12-T9) and grew `COUNT`,
+  `BYMONTH`, `BYMONTHDAY` (negative from the end), ordinal `BYDAY` (`2TU`, `-1FR`), exception
+  dates, and `RSCALE=ISLAMIC-UMALQURA` with `SKIP=FORWARD` (Hijri months and days). Report
+  schedules still refuse `COUNT`, since they keep no occurrence count.
 - Email: the reset, verification, invitation and notification emails are written in the template
   language (Z8-T7), in English and Arabic (`password_reset_in("ar", ...)` and the like; the Arabic
   HTML is right to left), each with an HTML and a plain-text part. A link in `href` is now
