@@ -42,6 +42,8 @@ pub mod auth;
 pub mod generate;
 pub mod merge;
 pub mod model;
+/// Z13-T7 — try a template against a real record.
+pub mod preview;
 pub mod render;
 pub mod render_client;
 pub mod ssrf;
@@ -51,5 +53,7 @@ pub use model::DocgenModel;
 /// P-api-contract Phase 1 — this crate's slice of the workspace OpenAPI
 /// document, merged in by `server::openapi::document`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    render::openapi_fragment()
+    let mut doc = render::openapi_fragment();
+    doc.merge(preview::openapi_fragment());
+    doc
 }

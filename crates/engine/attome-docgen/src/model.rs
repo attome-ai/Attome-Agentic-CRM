@@ -31,6 +31,6 @@ impl EngineModel for DocgenModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::render::routes()
+        crate::render::routes().merge(crate::preview::routes())
     }
 }
