@@ -115,6 +115,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "empty",
     ),
     (
+        "crates/engine/attome-records/src/query_exec.rs",
+        "records:query_repeat:{user_id}:{change position}:{request hash}",
+        "the stored query's tables, read with the caller's access",
+        "5 s",
+        "the entity change feed's newest id is in the key",
+        "process-local only; no position runs the query",
+        "empty; bounded at 64 MiB",
+    ),
+    (
         "crates/engine/attome-search/src/access_cache.rs",
         "search access map {user_id}:{epoch}",
         "PostgreSQL role_mm_entity_access and the privilege grants",

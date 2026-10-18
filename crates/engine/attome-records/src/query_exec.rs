@@ -1317,12 +1317,95 @@ fn plan_rows(plan: &Value) -> i64 {
 /// any caller holding that key, and only a query with none falls back to
 /// requiring admin. Typing this handler `Admin` would collapse both arms into
 /// admin-only.
+///
+/// AA4-T9: an identical repeat of the same caller's query within five
+/// seconds is answered from [`REPEATS`], unless it asks for a total or sends
+/// `Cache-Control: no-cache`.
 async fn execute(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped>,
+    headers: axum::http::HeaderMap,
     Json(body): Json<ExecuteQueryRequest>,
-) -> Result<Json<ExecResponse>, AppError> {
-    execute_stored_query(&state, &ctx, body).await.map(Json)
+) -> Result<Json<Value>, AppError> {
+    let no_cache = headers
+        .get(axum::http::header::CACHE_CONTROL)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.contains("no-cache"));
+    let run = |body: ExecuteQueryRequest| {
+        let state = state.clone();
+        async move {
+            let response = execute_stored_query(&state, &ctx, body).await?;
+            serde_json::to_value(response).map_err(AppError::internal)
+        }
+    };
+    let Some(cache) = REPEATS
+        .as_ref()
+        .filter(|_| !no_cache && !body.include_total)
+    else {
+        return run(body).await.map(Json);
+    };
+    let key = match repeat_key(&state, &body).await {
+        Ok(key) => key,
+        // The cache is a convenience: without a position, run the query.
+        Err(_) => return run(body).await.map(Json),
+    };
+    cache
+        .get_or_load_for(&ctx.user_id.to_string(), &key, run(body))
+        .await
+        .map(Json)
+}
+
+/// AA4-T9: identical repeat queries within a short window.
+///
+/// - Source of truth: the stored query's tables, read through
+///   [`execute_stored_query`] with the caller's own access.
+/// - Key: `records:query_repeat:{user_id}:{change position}:{request hash}`,
+///   per user because the rows are filtered by record-level access.
+/// - TTL: five seconds.
+/// - Invalidation: the entity change feed's newest event id is in the key,
+///   so any recorded write starts a new key.
+/// - Failure: process-local only, never Redis; no change position means the
+///   query simply runs.
+/// - Cold start: empty. Bounded at 64 MiB of serialized responses.
+static REPEAT_SPEC: attome_cache::spec::CacheSpec = attome_cache::spec::CacheSpec {
+    name: "records:query_repeat",
+    crate_name: "records",
+    purpose: "query_repeat",
+    source_of_truth: "the stored query's tables, read with the caller's access",
+    ttl: std::time::Duration::from_secs(5),
+    jitter_pct: 0,
+    l1_capacity: 2_000,
+    partition: attome_cache::spec::Partition::PerUser,
+    sensitivity: attome_cache::spec::CacheSensitivity::LocalOnly,
+    failure: attome_cache::spec::FailureMode::FallBackToSource,
+    invalidation: "the change-feed position is part of the key; five-second TTL",
+    cold_start: "empty",
+    warm_on_start: false,
+};
+
+static REPEATS: std::sync::LazyLock<Option<attome_cache::tiered::TieredCache<Value>>> =
+    std::sync::LazyLock::new(|| {
+        attome_cache::tiered::TieredCache::new(&REPEAT_SPEC, None)
+            .ok()
+            .map(|cache| cache.with_quota(64 * 1024 * 1024))
+    });
+
+/// The change-feed position and a hash of the whole request.
+async fn repeat_key(state: &EngineState, body: &ExecuteQueryRequest) -> Result<String, AppError> {
+    use sha2::{Digest, Sha256};
+    let position: Option<Uuid> = sqlx::query_scalar("SELECT max(id) FROM entity_change_event")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    let request = serde_json::to_string(body).map_err(AppError::internal)?;
+    let hash: String = Sha256::digest(request.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    Ok(format!(
+        "{}:{hash}",
+        position.map_or_else(|| "none".to_owned(), |p| p.to_string())
+    ))
 }
 
 /// Running a stored query, with every transport concern removed.
