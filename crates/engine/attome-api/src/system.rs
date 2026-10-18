@@ -1206,6 +1206,36 @@ impl EngineSystemBuilder {
             });
         }
         {
+            // Y8-T6: the metadata-pin layer reads the change-log watermark
+            // and starts this node's catch-up through these.
+            let pending = debounce_pending.clone();
+            let entities = state.entities.clone();
+            let db = state.base.db.clone();
+            let redis = state.base.redis.clone();
+            let watermark = last_applied.clone();
+            let watermark_db = state.base.db.clone();
+            attome_server::middleware::metadata_pin::install(
+                &state.base,
+                attome_server::middleware::metadata_pin::MetadataHooks {
+                    watermark: Box::new(
+                        move || -> attome_server::middleware::metadata_pin::WatermarkFuture {
+                            let db = watermark_db.clone();
+                            Box::pin(async move { attome_core::log_watermark(&db).await })
+                        },
+                    ),
+                    catch_up: Box::new(move || {
+                        spawn_debounced_catch_up(
+                            pending.clone(),
+                            entities.clone(),
+                            db.clone(),
+                            redis.clone(),
+                            watermark.clone(),
+                        );
+                    }),
+                },
+            );
+        }
+        {
             // Y8-T1: the Postgres doorbell. `append_change_log` rings
             // `METADATA_CHANGE_CHANNEL` in the writer's transaction, so this
             // fires on commit with or without Redis, into the same debounced

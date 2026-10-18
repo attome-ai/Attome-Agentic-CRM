@@ -585,6 +585,28 @@ async fn notify_triggers_catch_up_without_redis() {
     eprintln!("node B applied the write {elapsed:?} after commit, through LISTEN/NOTIFY");
 }
 
+/// Y8-T6: a builder's next request sees their own metadata write on another
+/// node at once: the write pins them to its change-log id, and node B,
+/// whose poll is set to an hour, catches up before answering (or answers
+/// 503) instead of serving the old model.
+#[tokio::test]
+async fn builder_sees_own_write_on_second_node() {
+    let node_a = skip_if_no_db!(test_node().await);
+    let node_b = skip_if_no_db!(test_node_with(test_config_polling(3600)).await);
+    let cookie = seed_admin(&node_a).await;
+    let app_a = full_app(node_a);
+    let app_b = full_app(node_b);
+    let logicalname = fresh_logicalname();
+
+    let (status, _) = create_entity_via_api(&app_a, &cookie, &logicalname).await;
+    assert_eq!(status, StatusCode::CREATED);
+    // The same builder, straight to node B, with no wait.
+    assert!(
+        registry_knows(&app_b, &cookie, &logicalname).await,
+        "node B must serve the builder's own write on their very next request"
+    );
+}
+
 // ── Crash window 3: a subscriber killed mid-catch-up ────────────────────────
 
 /// `catch_up` swaps the registry, advances `last_applied`, then saves the
