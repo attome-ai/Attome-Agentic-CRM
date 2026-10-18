@@ -72,6 +72,9 @@ let (status, _) = app.request_as(&user.cookie, Method::GET, "/api/v1/admin/setti
   `test-support`) answers OpenAI-compatible requests in order and records them
   (`fake.requests()`); set the inference base URL to `fake.base_url()`. No test calls a real model
   provider.
+- **An inbox:** `attome_email::testing::FakeInbox::start()` (feature `test-support`) is a loopback SMTP
+  server that keeps every message; send with `inbox.config()` as the email section and read back with
+  `inbox.messages_to("someone@example.invalid")` (subject, body, envelope). No test uses a real relay.
 
 Every change that adds behaviour adds the test that proves it, tagged as above: a new mutating
 route ships with its `negative:` test and a fix with its `regression:` test.

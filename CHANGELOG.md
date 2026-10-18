@@ -34,6 +34,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: `attome_email::testing::FakeInbox` (feature `test-support`, Z15-T6), an in-process SMTP
+  inbox that keeps every message sent through `attome_email::send`, readable by recipient.
 - Settings: `customer_tests.require_pass_before_publish` (off by default, Z15-T14). When on, a
   changeset apply, a model publish and a blueprint apply first run every active blocking customer
   test and are refused with the new `422 customer_tests_failed` (failing names in `tests`).

@@ -37,6 +37,8 @@ mod message;
 mod sender;
 pub mod suppression;
 pub mod templates;
+#[cfg(feature = "test-support")]
+pub mod testing;
 
 pub use delivery::DeliveryStatus;
 pub use error::SendError;
