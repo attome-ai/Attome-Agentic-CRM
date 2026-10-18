@@ -2190,6 +2190,18 @@ pub async fn sweep_expired_report_with(
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
     batch: i64,
 ) -> Result<SweepOutcome, AppError> {
+    sweep_expired_report_at(pool, hook, batch, &attome_types::SystemClock).await
+}
+
+/// Z15-T5: [`sweep_expired_report_with`] with "now" from `clock`, bound into
+/// the due-ness predicate, so a test advances a fake clock past `expires_at`
+/// instead of sleeping or editing rows.
+pub async fn sweep_expired_report_at(
+    pool: &PgPool,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+    batch: i64,
+    clock: &dyn attome_types::Clock,
+) -> Result<SweepOutcome, AppError> {
     let batch = batch.clamp(1, EXPIRY_SWEEP_BATCH);
     let mut outcome = SweepOutcome::default();
     // Ids this sweep has already refused: excluded from the next candidate
@@ -2197,7 +2209,7 @@ pub async fn sweep_expired_report_with(
     let mut skipped: Vec<Uuid> = Vec::new();
 
     for _ in 0..batch {
-        match expire_one(pool, hook, &skipped).await? {
+        match expire_one(pool, hook, &skipped, clock.now()).await? {
             SweepStep::Expired(_request) => outcome.expired += 1,
             SweepStep::Done => break,
             SweepStep::Failed(id, error) => {
@@ -2232,15 +2244,17 @@ async fn expire_one(
     pool: &PgPool,
     hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
     skipped: &[Uuid],
+    now: chrono::DateTime<Utc>,
 ) -> Result<SweepStep, AppError> {
     let mut tx = attome_db::tx::begin(pool).await?;
     let row: Option<ApprovalRequestRow> = sqlx::query_as(&format!(
         "SELECT {REQUEST_COLUMNS} FROM approval_request \
-          WHERE status = 'pending' AND expires_at <= NOW() AND NOT (id = ANY($1)) \
+          WHERE status = 'pending' AND expires_at <= $2 AND NOT (id = ANY($1)) \
           ORDER BY expires_at ASC LIMIT 1 \
           FOR UPDATE SKIP LOCKED"
     ))
     .bind(skipped)
+    .bind(now)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -2322,18 +2336,28 @@ async fn expire_one(
 /// call and that one is still safe — this function only ever narrows what
 /// gets attempted.
 pub async fn list_due_step_timeouts(pool: &PgPool, limit: i64) -> Result<Vec<Uuid>, AppError> {
+    list_due_step_timeouts_at(pool, limit, &attome_types::SystemClock).await
+}
+
+/// Z15-T5: [`list_due_step_timeouts`] with "now" from `clock`.
+pub async fn list_due_step_timeouts_at(
+    pool: &PgPool,
+    limit: i64,
+    clock: &dyn attome_types::Clock,
+) -> Result<Vec<Uuid>, AppError> {
     let rows: Vec<(Uuid,)> = sqlx::query_as(
         "SELECT id FROM approval_request \
          WHERE status = 'pending' AND plan IS NOT NULL AND step_started_at IS NOT NULL \
            AND step_started_at \
                  + CASE WHEN (plan->'steps'->step->>'sla_minutes') ~ '^[0-9]{1,9}$' \
                         THEN make_interval(mins => (plan->'steps'->step->>'sla_minutes')::int) \
-                   END <= NOW() \
+                   END <= $2 \
            AND NOT (COALESCE(plan->'steps'->step->>'on_timeout', 'escalate') = 'escalate' \
                     AND escalated_at IS NOT NULL) \
          ORDER BY step_started_at ASC LIMIT $1",
     )
     .bind(limit.clamp(1, i64::MAX))
+    .bind(clock.now())
     .fetch_all(pool)
     .await
     .map_err(AppError::internal)?;
@@ -2369,6 +2393,18 @@ pub async fn apply_step_timeout_with(
     request_id: Uuid,
     hook: &dyn attome_db::BeforeCommit<(ApprovalRequest, TimeoutOutcome)>,
 ) -> Result<Option<(ApprovalRequest, TimeoutOutcome)>, AppError> {
+    apply_step_timeout_at(pool, request_id, hook, &attome_types::SystemClock).await
+}
+
+/// Z15-T5: [`apply_step_timeout_with`] with "now" from `clock` (the due-ness
+/// re-check and the times it records).
+pub async fn apply_step_timeout_at(
+    pool: &PgPool,
+    request_id: Uuid,
+    hook: &dyn attome_db::BeforeCommit<(ApprovalRequest, TimeoutOutcome)>,
+    clock: &dyn attome_types::Clock,
+) -> Result<Option<(ApprovalRequest, TimeoutOutcome)>, AppError> {
+    let now = clock.now();
     let mut tx = attome_db::tx::begin(pool).await?;
 
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
@@ -2435,7 +2471,7 @@ pub async fn apply_step_timeout_with(
     let Some(started) = current.step_started_at else {
         return Ok(None);
     };
-    if Utc::now() < started + Duration::minutes(sla) {
+    if now < started + Duration::minutes(sla) {
         return Ok(None);
     }
 
@@ -2450,7 +2486,7 @@ pub async fn apply_step_timeout_with(
                     current.status,
                     current.step,
                     current.step_started_at,
-                    Some(Utc::now()),
+                    Some(now),
                     None,
                 )
             }
@@ -2459,7 +2495,7 @@ pub async fn apply_step_timeout_with(
                     (
                         ApprovalStatus::Pending,
                         current.step + 1,
-                        Some(Utc::now()),
+                        Some(now),
                         None,
                         Some(Decision::Approve),
                     )

@@ -354,3 +354,43 @@ async fn an_out_of_range_ttl_is_a_validation_error() {
     .expect_err("an out-of-range ttl must be refused");
     assert!(matches!(err, AppError::Validation(_)), "got {err:?}");
 }
+
+/// Z15-T5: the step-timeout sweep reads "now" from a clock, so a test moves
+/// a fake one past the SLA instead of sleeping or backdating rows. Driven on
+/// this test's own request only (`apply_step_timeout_at` by id), so
+/// advancing the clock touches no other test's rows.
+#[tokio::test]
+async fn sweep_expires_after_fake_clock_advance() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let id = submit_plan_started_minutes_ago(&pool, plan_with_sla(Some(30)), 0).await;
+    let clock = attome_types::FakeClock::new(chrono::Utc::now());
+
+    let due = attome_approval::list_due_step_timeouts_at(&pool, 10_000, &clock)
+        .await
+        .expect("list due");
+    assert!(!due.contains(&id), "not due before the SLA");
+    assert!(
+        attome_approval::apply_step_timeout_at(&pool, id, &attome_db::NoHook, &clock)
+            .await
+            .expect("apply")
+            .is_none()
+    );
+
+    clock.advance(Duration::minutes(31));
+    let due = attome_approval::list_due_step_timeouts_at(&pool, 10_000, &clock)
+        .await
+        .expect("list due");
+    assert!(due.contains(&id), "due once the clock passes the SLA");
+    let (after, _) = attome_approval::apply_step_timeout_at(&pool, id, &attome_db::NoHook, &clock)
+        .await
+        .expect("apply")
+        .expect("the timeout applies");
+    // Recorded at the fake time (Postgres keeps microseconds).
+    let escalated = after.escalated_at.expect("escalated");
+    assert!((escalated - clock_now(&clock)).num_milliseconds().abs() < 1);
+}
+
+fn clock_now(clock: &attome_types::FakeClock) -> chrono::DateTime<chrono::Utc> {
+    use attome_types::Clock;
+    clock.now()
+}

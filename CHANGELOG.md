@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: `attome_types::Clock` with `SystemClock` and `FakeClock` (Z15-T5). The approval expiry
+  sweep and step-timeout sweep have `_at` variants taking a clock, its time bound into their
+  due-ness SQL, so a test advances a fake clock instead of sleeping; production passes the
+  system clock. The job scheduler keeps the database's time (its slot claim needs one clock
+  across nodes).
 - API: `GET /api/v1/openapi/deployment.json` (Y9-T2), an OpenAPI 3.1 document of this
   deployment's own entities: typed list, get, create, update and delete per entity, schemas from
   the attributes, only the entities the caller may read; built once per metadata snapshot.

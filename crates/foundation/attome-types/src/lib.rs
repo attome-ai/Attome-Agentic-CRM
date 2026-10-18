@@ -26,6 +26,8 @@
 //! itself out of this crate. Treat that split as deliberate, not an
 //! oversight to "fix" by pulling infrastructure error types down here.
 
+/// Z15-T5: the time a decision reads (a fake one in tests).
+pub mod clock;
 pub mod error;
 pub mod error_codes;
 pub mod request_scope;
@@ -33,5 +35,6 @@ pub mod text;
 pub mod types;
 pub mod w3c_trace;
 
+pub use clock::{Clock, FakeClock, SystemClock};
 pub use error::AppError;
 pub use types::*;
