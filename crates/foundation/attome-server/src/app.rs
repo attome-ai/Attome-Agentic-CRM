@@ -469,8 +469,9 @@ async fn timeout_response(err: BoxError) -> Response {
     }
 }
 
-/// Applies the inner, identity-aware stack (outermost first): authn → CSRF →
-/// authz → RateLimit → Idempotency → MetadataPin (Y8-T6). CSRF (`csrf::csrf_protect`,
+/// Applies the inner, identity-aware stack (outermost first): CachePolicy
+/// (AA7-T1) → authn → CSRF → authz → RateLimit → Idempotency → MetadataPin
+/// (Y8-T6). CSRF (`csrf::csrf_protect`,
 /// P-cookie-csrf-hardening) sits right after authn because it needs to know
 /// whether the request carries a session cookie at all — the same signal
 /// `authn` already resolved into `SessionClaims`/a rejection — and must run
@@ -482,6 +483,11 @@ async fn timeout_response(err: BoxError) -> Response {
 pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
     router.layer(
         ServiceBuilder::new()
+            // AA7-T1: outermost of this stack, so a rejection by any layer
+            // below also says how it may be cached.
+            .layer(middleware::from_fn(
+                crate::middleware::cache_policy::cache_policy,
+            ))
             .layer(middleware::from_fn_with_state(state.clone(), auth::authn))
             .layer(middleware::from_fn_with_state(
                 state.clone(),

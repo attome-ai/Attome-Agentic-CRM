@@ -2,6 +2,8 @@ pub mod auth;
 pub mod authoring_gate;
 pub mod body_limit;
 pub mod bypass;
+/// AA7-T1 — every API response says how it may be cached.
+pub mod cache_policy;
 pub mod client_ip;
 pub mod csrf;
 pub mod deprecation;

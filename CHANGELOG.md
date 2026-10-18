@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Every API response now says how it may be cached (AA7-T1): writes and every read of
+  credentials, tokens, keys, sessions, secrets or exports answer `Cache-Control: no-store`; other
+  API reads answer `private, no-cache` with `Vary: Authorization, Cookie`; a handler's own
+  `Cache-Control` still wins.
 - Revoked session tokens stay revoked across a restart without Redis (Z4-T5): with
   `cache.backend = memory` the token denylist lives in Postgres (`auth_jti_denylist`, migration
   0114) instead of process memory, still failing closed on a database error; the auth token prune
