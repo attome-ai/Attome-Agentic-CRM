@@ -98399,6 +98399,13 @@
           "password"
         ],
         "properties": {
+          "captcha_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q20-T2: a CAPTCHA token, needed only while the caller's address is\nchallenged for a password spray (a `429` says so)."
+          },
           "email": {
             "type": "string"
           },

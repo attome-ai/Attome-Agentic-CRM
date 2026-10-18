@@ -22513,6 +22513,11 @@ export interface components {
             password: string;
         };
         LoginRequest: {
+            /**
+             * @description Q20-T2: a CAPTCHA token, needed only while the caller's address is
+             *     challenged for a password spray (a `429` says so).
+             */
+            captcha_token?: string | null;
             email: string;
             password: string;
         };
