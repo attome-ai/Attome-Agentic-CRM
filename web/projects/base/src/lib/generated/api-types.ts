@@ -8,6 +8,28 @@
  */
 
 export interface paths {
+    "/.well-known/jwks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public token-signing keys.
+         * @description The Ed25519 keys this deployment signs session tokens with
+         *     (`auth.jwt_signing_keys`), public halves only, each with its `kid`.
+         *     Cacheable for five minutes; a rotated-in key appears here before it signs.
+         */
+        get: operations["get_jwks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/a2a/agents": {
         parameters: {
             query?: never;
@@ -34030,6 +34052,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_jwks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A JSON Web Key Set (RFC 7517) of the public signing keys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     list_agents: {
         parameters: {
             query?: never;
