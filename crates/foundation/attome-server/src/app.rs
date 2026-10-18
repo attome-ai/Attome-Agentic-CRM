@@ -356,12 +356,13 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
             .layer(RequestBodyLimitLayer::new(max_bytes))
             .layer(HandleErrorLayer::new(timeout_response))
             .layer(TimeoutLayer::new(config.request_timeout()))
+            .layer(compression_layer())
             // AB6-T2: inside the timeout, so the deadline outside calls see
-            // always ends before it.
+            // always ends before it; below compression, whose body type a
+            // `from_fn` layer cannot wrap.
             .layer(middleware::from_fn(move |req, next| {
                 crate::middleware::deadline::with_request_deadline(request_timeout, req, next)
-            }))
-            .layer(compression_layer()),
+            })),
     );
 
     let header_values = security_headers::SecurityHeaderValues::new(
