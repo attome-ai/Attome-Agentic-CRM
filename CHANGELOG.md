@@ -355,6 +355,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Operations: reports and exports read through their own small pool (AB6-T6), `attome-long`: the
+  `attome_readonly` role on the primary, sized by `database.pools.long` (at most 4 by default, 5% of
+  the connection budget when sized from it), so a minutes-long export or a report never holds a
+  connection an interactive request needs. Exports now read as the read-only role.
 - Operations: a limits screen at `/xrm/admin/limits` (AA9-T8, English and Arabic): every limit with
   its value, range, seven-day peak as a bar and a warning chip; a runtime limit is raised in place
   within its floor and ceiling through the audited settings route, and a boot-config limit says it

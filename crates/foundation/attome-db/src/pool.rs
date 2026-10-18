@@ -37,6 +37,8 @@ enum PoolRole {
     ReadonlyPrimary,
     Migrator,
     Direct,
+    /// AB6-T6: reports and exports, on the read-only role.
+    Long,
 }
 
 impl PoolRole {
@@ -55,6 +57,7 @@ impl PoolRole {
             PoolRole::ReadonlyPrimary => "attome-readonly-primary",
             PoolRole::Migrator => "attome-migrator",
             PoolRole::Direct => "attome-direct",
+            PoolRole::Long => "attome-long",
         }
     }
 }
@@ -72,6 +75,9 @@ const SIZED_MIGRATOR_CONNECTIONS: u32 = 2;
 /// The runtime pool never drops below this, however many nodes share the
 /// budget.
 const SIZED_RUNTIME_FLOOR: u32 = 5;
+/// AB6-T6: the long pool's size when `database.pools.long` does not set it:
+/// a few connections, enough for the reports and exports a node runs at once.
+const LONG_POOL_CONNECTIONS: u32 = 4;
 
 /// Z2-T2: `role`'s share of the database's connection budget. 80% of the
 /// server's `max_connections` (the rest stays free for administration,
@@ -92,6 +98,8 @@ fn sized_max_connections(role: PoolRole, node_count: u32, server_max: Option<u32
         PoolRole::ReadonlyPrimary => share(0.1, 1),
         PoolRole::Migrator => SIZED_MIGRATOR_CONNECTIONS,
         PoolRole::Direct => DIRECT_POOL_MAX_CONNECTIONS,
+        // 5% of the budget (the 10% the shares above leave), at most four.
+        PoolRole::Long => share(0.05, 1).min(LONG_POOL_CONNECTIONS),
     }
 }
 
@@ -126,6 +134,17 @@ fn pool_max_connections(role: PoolRole, config: &AppConfig) -> u32 {
             .readonly_primary
             .map_or(fallback, |size| size.max_connections),
         PoolRole::Migrator => pools.migrator.map_or(fallback, |size| size.max_connections),
+        // Never as large as the other pools: a handful is the point.
+        PoolRole::Long => pools.long.map_or_else(
+            || {
+                if budget_sizing(config) {
+                    fallback
+                } else {
+                    fallback.min(LONG_POOL_CONNECTIONS)
+                }
+            },
+            |size| size.max_connections,
+        ),
     }
 }
 
@@ -178,9 +197,11 @@ fn pool_options(role: PoolRole, config: &AppConfig) -> Result<PgPoolOptions, sql
                 Ok(())
             })
         }),
-        PoolRole::Runtime | PoolRole::Readonly | PoolRole::ReadonlyPrimary | PoolRole::Migrator => {
-            options
-        }
+        PoolRole::Runtime
+        | PoolRole::Readonly
+        | PoolRole::ReadonlyPrimary
+        | PoolRole::Migrator
+        | PoolRole::Long => options,
     })
 }
 
@@ -296,6 +317,19 @@ pub async fn create_readonly_primary_pool(
     build_pool(PoolRole::ReadonlyPrimary, &url, config)
         .await
         .map(Some)
+}
+
+/// AB6-T6 — the long pool: the same SELECT-only `attome_readonly` role and
+/// primary host as [`create_readonly_primary_pool`], sized small and kept
+/// apart, so a report or an export that holds a connection for minutes
+/// never takes one an interactive request needs. Primary, not replica: a
+/// report or export run right after a write sees it. `Ok(None)` when
+/// `database.readonly` is not configured; callers then keep their own pool.
+pub async fn create_long_pool(config: &AppConfig) -> Result<Option<PgPool>, sqlx::Error> {
+    let Some(url) = config.readonly_primary_database_url() else {
+        return Ok(None);
+    };
+    build_pool(PoolRole::Long, &url, config).await.map(Some)
 }
 
 /// P-ha-failover-hardening follow-up (D-156) — the residual gap left open by
@@ -873,7 +907,8 @@ fn pool_capacity_summary(
         pools.push((PoolRole::Readonly, url));
     }
     if let Some(url) = config.readonly_primary_database_url() {
-        pools.push((PoolRole::ReadonlyPrimary, url));
+        pools.push((PoolRole::ReadonlyPrimary, url.clone()));
+        pools.push((PoolRole::Long, url));
     }
 
     let mut by_endpoint: std::collections::BTreeMap<String, Vec<(PoolRole, u32)>> =
@@ -1009,8 +1044,8 @@ mod tests {
         }));
         assert_eq!(
             pool_capacity_summary(&config, None, None),
-            "localhost:5555 = 30 (attome-runtime 20, attome-migrator 5, \
-             attome-readonly-primary 5); replica:5433 = 5 (attome-readonly 5)"
+            "localhost:5555 = 34 (attome-runtime 20, attome-migrator 5, \
+             attome-readonly-primary 5, attome-long 4); replica:5433 = 5 (attome-readonly 5)"
         );
     }
 
@@ -1043,12 +1078,13 @@ mod tests {
     // attome-db hardening Phase 2.2 — each role's connections carry their own
     // application_name, and the name is the only thing a role adds to the
     // connection target.
-    const ALL_ROLES: [PoolRole; 5] = [
+    const ALL_ROLES: [PoolRole; 6] = [
         PoolRole::Runtime,
         PoolRole::Readonly,
         PoolRole::ReadonlyPrimary,
         PoolRole::Migrator,
         PoolRole::Direct,
+        PoolRole::Long,
     ];
 
     #[test]
@@ -1061,6 +1097,7 @@ mod tests {
             (PoolRole::ReadonlyPrimary, "attome-readonly-primary"),
             (PoolRole::Migrator, "attome-migrator"),
             (PoolRole::Direct, "attome-direct"),
+            (PoolRole::Long, "attome-long"),
         ];
         for (role, name) in expected {
             let options = pool_connect_options(role, &url, &config).expect("options must build");
@@ -1163,6 +1200,35 @@ mod tests {
             let options = pool_options(role, &config).expect("options must build");
             assert_eq!(options.get_max_connections(), max_connections, "{role:?}");
         }
+    }
+
+    // AB6-T6 — the long pool stays small: at most four connections from
+    // `connection_number` or the budget, unless `database.pools.long` says.
+    #[test]
+    fn the_long_pool_is_small_unless_configured() {
+        let max = |config: &AppConfig| {
+            pool_options(PoolRole::Long, config)
+                .expect("options must build")
+                .get_max_connections()
+        };
+        let config = config_with_database(serde_json::json!({ "connection_number": 7 }));
+        assert_eq!(max(&config), 4, "capped at four");
+        let config = config_with_database(serde_json::json!({ "connection_number": 2 }));
+        assert_eq!(max(&config), 2, "never above connection_number");
+        let config = config_with_database(serde_json::json!({
+            "connection_number": 7,
+            "pools": { "long": { "max_connections": 9 } },
+        }));
+        assert_eq!(max(&config), 9, "a pools entry wins");
+        assert_eq!(
+            crate::pool::sized_max_connections(PoolRole::Long, 1, Some(100)),
+            4
+        );
+        assert_eq!(
+            crate::pool::sized_max_connections(PoolRole::Long, 10, Some(100)),
+            1,
+            "a node's share of a small budget"
+        );
     }
 
     // BDB-F12 (4.3) — the pool lifecycle options are chosen, not inherited:

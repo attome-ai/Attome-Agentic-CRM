@@ -31,6 +31,11 @@ pub struct AppState {
     /// `with_readonly_primary`. `readonly_query_pool` is the only intended
     /// reader; do not use this directly from a handler.
     pub db_readonly_primary: Option<DbPool>,
+    /// AB6-T6 — the long pool (`attome_db::create_long_pool`): reports and
+    /// exports read through it so they never hold an interactive request's
+    /// connection. `None` until `with_long_pool` attaches it (or when
+    /// `database.readonly` is unset); read it through [`Self::long_pool`].
+    pub db_long: Option<DbPool>,
     /// P-db-privilege-separation / D-117 — DDL-capable pool
     /// (`attome_db::create_migrator_pool`) for schema/entity provisioning
     /// (`xrm-entity::provision`) and boot-time seeding. Falls back to the
@@ -219,6 +224,7 @@ impl AppState {
             db,
             db_readonly,
             db_readonly_primary: None,
+            db_long: None,
             db_migrator,
             redis: redis.into(),
             redis_coordination: redis_coordination.into(),
@@ -264,6 +270,19 @@ impl AppState {
     pub fn with_readonly_primary(mut self, db_readonly_primary: Option<DbPool>) -> Self {
         self.db_readonly_primary = db_readonly_primary;
         self
+    }
+
+    /// AB6-T6: attaches the long pool, same post-construction pattern as
+    /// `with_readonly_primary`.
+    pub fn with_long_pool(mut self, db_long: Option<DbPool>) -> Self {
+        self.db_long = db_long;
+        self
+    }
+
+    /// AB6-T6: the pool a report or an export reads through: the long pool
+    /// when it is attached, else `fallback` (the pool the caller used before).
+    pub fn long_pool<'a>(&'a self, fallback: &'a DbPool) -> &'a DbPool {
+        self.db_long.as_ref().unwrap_or(fallback)
     }
 
     /// Attaches `expected_schema_version` after construction, same reasoning

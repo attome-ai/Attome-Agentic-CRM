@@ -893,7 +893,9 @@ async fn run_query_and_stream(
     for p in &plan.params {
         q = q.bind(p.clone());
     }
-    let row_stream = q.fetch(&state.base.db);
+    // AB6-T6: the long pool, so a minutes-long stream never holds an
+    // interactive request's connection.
+    let row_stream = q.fetch(state.base.long_pool(&state.base.db));
 
     let row_counter = std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0));
     let counter_for_map = row_counter.clone();
@@ -965,7 +967,7 @@ async fn export_xlsx(
         q = q.bind(p.clone());
     }
     let rows: Vec<String> = q
-        .fetch_all(&state.base.db)
+        .fetch_all(state.base.long_pool(&state.base.db))
         .await
         .map_err(AppError::internal)?;
     if rows.len() as i64 > MAX_EXPORT_ROWS {

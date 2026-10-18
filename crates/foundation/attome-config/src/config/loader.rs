@@ -1095,6 +1095,7 @@ impl AppConfig {
                 pools.readonly_primary,
             ),
             ("database.pools.migrator.max_connections", pools.migrator),
+            ("database.pools.long.max_connections", pools.long),
         ] {
             if let Some(size) = size
                 && !(1..=MAX_DATABASE_CONNECTION_NUMBER).contains(&size.max_connections)

@@ -365,6 +365,11 @@ pub struct DatabasePools {
     pub readonly_primary: Option<DatabasePoolSize>,
     #[serde(default)]
     pub migrator: Option<DatabasePoolSize>,
+    /// AB6-T6: the long pool reports and exports read through (the
+    /// `attome_readonly` role on the primary), so they never take a
+    /// connection an interactive request needs.
+    #[serde(default)]
+    pub long: Option<DatabasePoolSize>,
 }
 
 /// Z2-T5: `database.statement_classes`, one optional override per class.

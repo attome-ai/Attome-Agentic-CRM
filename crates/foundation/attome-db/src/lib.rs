@@ -82,9 +82,9 @@ pub use migrate::{
     schema_state,
 };
 pub use pool::{
-    create_direct_pool, create_migrator_connection, create_migrator_pool, create_pool,
-    create_readonly_pool, create_readonly_primary_pool, create_runtime_session, log_pool_capacity,
-    runtime_session_options, verify_connection_identity, verify_pool_identity,
+    create_direct_pool, create_long_pool, create_migrator_connection, create_migrator_pool,
+    create_pool, create_readonly_pool, create_readonly_primary_pool, create_runtime_session,
+    log_pool_capacity, runtime_session_options, verify_connection_identity, verify_pool_identity,
     verify_readonly_identity,
 };
 pub use schema::ensure_schema;

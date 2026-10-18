@@ -69,7 +69,8 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
                 "host": "{db_host}", "port": {db_port}, "dbname": "{db_name}",
                 "user": "{db_user}", "password": "{db_password}", "schema": "attome_dev",
                 "connection_number": 5, "timeout": 5.0,
-                "migrator": {{ "user": "{db_user}", "password": "{db_password}" }}
+                "migrator": {{ "user": "{db_user}", "password": "{db_password}" }},
+                "readonly": {{ "user": "attome_readonly", "password": "{readonly_password}" }}
             }},
             "cache": {{
                 "host": "{redis_host}", "port": {redis_port}, "password": "",
@@ -78,7 +79,7 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
                 "metadata_registry_enabled": false
             }},
             "storage": {{
-                "s3_endpoint": "http://localhost:9000", "s3_public_endpoint": "",
+                "s3_endpoint": "{s3_endpoint}", "s3_public_endpoint": "",
                 "s3_region": "us-east-1", "s3_access_key": "{s3_access_key}", "s3_secret_key": "{s3_secret_key}",
                 "s3_bucket": "attome-test", "s3_use_path_style": true, "s3_verify_ssl": false
             }},
@@ -114,11 +115,29 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
         db_name = db.dbname,
         db_user = db.user,
         db_password = db.password,
+        readonly_password = READONLY_PASSWORD,
+        // `TEST_S3_ENDPOINT` moves the object store off the dev store's port.
+        s3_endpoint =
+            std::env::var("TEST_S3_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".into()),
         s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
         s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
     );
 
     serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+}
+
+/// The `attome_readonly` login this suite sets, for the long pool (AB6-T6).
+const READONLY_PASSWORD: &str = "test-only-readonly-password";
+
+/// Gives `attome_readonly` a login with [`READONLY_PASSWORD`] (the role
+/// exists from the migrations; only its password is per test database).
+async fn synchronize_readonly_login(db: &attome_db::DbPool) {
+    sqlx::query(&format!(
+        "ALTER ROLE attome_readonly WITH LOGIN PASSWORD '{READONLY_PASSWORD}'"
+    ))
+    .execute(db)
+    .await
+    .expect("give attome_readonly a test login");
 }
 
 async fn test_system() -> Option<EngineSystem> {
@@ -144,6 +163,11 @@ async fn test_system() -> Option<EngineSystem> {
 
     let db_readonly = db.clone();
     let db_migrator = db.clone();
+    // AB6-T6: exports read through the long pool, as at boot.
+    synchronize_readonly_login(&db).await;
+    let db_long = attome_db::create_long_pool(&config)
+        .await
+        .expect("connect the long pool");
     let base = AppState::new(
         config,
         db,
@@ -152,7 +176,8 @@ async fn test_system() -> Option<EngineSystem> {
         redis,
         redis_coordination,
         storage,
-    );
+    )
+    .with_long_pool(db_long);
     let state = EngineState::new(base);
 
     let system = EngineSystem::builder(state)
@@ -466,6 +491,87 @@ async fn export_never_includes_a_field_the_caller_lacks_field_read_grant_for() {
         !content.contains("secret") && !content.contains("Hidden Value"),
         "an is_sensitive field with no field-read grant must never appear in the exported \
          file, neither its name nor its value: {content}"
+    );
+}
+
+/// AB6-T6: an export streams its rows through the long pool (the read-only
+/// role, `attome-long`), so it holds no interactive connection while it
+/// uploads. It completes with every row through that pool; with the long
+/// pool closed, the same export fails, so the rows come from nowhere else.
+#[tokio::test]
+async fn export_uses_long_pool() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let state = system.state().clone();
+    let (admin_id, _email, admin_cookie) = seed_user(&system, true).await;
+    let app = full_app(system);
+    let (logicalname, _entity_id) =
+        provision_entity_with_sensitive_field(&app, &admin_cookie, "dm_long").await;
+    for n in 0..3 {
+        sqlx::query(&format!(
+            "INSERT INTO \"{logicalname}\" (title) VALUES ($1)"
+        ))
+        .bind(format!("Row {n}"))
+        .execute(&db)
+        .await
+        .expect("insert fixture record");
+    }
+    let export = |app: axum::Router| {
+        let state = state.clone();
+        let logicalname = logicalname.clone();
+        let admin_cookie = admin_cookie.clone();
+        async move {
+            let res = app
+                .oneshot(req(
+                    "POST",
+                    &format!("/api/v1/{logicalname}/export"),
+                    &admin_cookie,
+                    Some(&json!({ "format": "csv", "columns": [], "filter": [] })),
+                ))
+                .await
+                .expect("enqueue export");
+            assert_eq!(res.status(), StatusCode::ACCEPTED, "enqueue export");
+            let export_id: Uuid = body_json(res).await["id"]
+                .as_str()
+                .unwrap()
+                .parse()
+                .unwrap();
+            attome_api::data_export::process(
+                &state,
+                attome_core::jobs::DataExportPayload {
+                    export_id,
+                    entity_logicalname: logicalname,
+                    format: "csv".to_string(),
+                    columns: vec![],
+                    filters: vec![],
+                    user_id: admin_id,
+                },
+            )
+            .await
+            .expect("run export job");
+            sqlx::query_as::<_, (String, Option<i64>)>(
+                "SELECT status, row_count FROM data_export WHERE id = $1",
+            )
+            .bind(export_id)
+            .fetch_one(&state.base.db)
+            .await
+            .expect("read the export row")
+        }
+    };
+
+    let (status, rows) = export(app.clone()).await;
+    assert_eq!((status.as_str(), rows), ("completed", Some(3)));
+
+    let long = state
+        .base
+        .db_long
+        .clone()
+        .expect("the long pool is attached");
+    long.close().await;
+    let (status, _) = export(app).await;
+    assert_eq!(
+        status, "failed",
+        "with the long pool closed the export has nowhere to read from"
     );
 }
 

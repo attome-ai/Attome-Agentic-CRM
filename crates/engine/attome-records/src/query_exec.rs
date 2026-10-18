@@ -2049,6 +2049,14 @@ pub async fn execute_stored_query_with_definition(
         .checked_mul(page_size)
         .ok_or_else(|| AppError::Validation("pagination offset is too large".into()))?;
 
+    // AB6-T6: a report runs on the long pool (the same read-only role, on
+    // the primary, so a just-written row is visible), never taking one of
+    // the interactive pool's connections for its seconds-long statement.
+    let db = if qrow.is_report {
+        state.base.long_pool(db)
+    } else {
+        db
+    };
     // The stored SQL actually runs inside a transaction on the same
     // pinned-aware pool `db` resolved to above, so we can bound it with SET
     // LOCAL statement_timeout — a fast-read 500ms default, 5s for queries

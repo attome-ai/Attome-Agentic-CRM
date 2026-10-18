@@ -235,6 +235,10 @@ async fn build_test_system() -> Option<EngineSystem> {
         .await
         .expect("build storage client");
     let db_migrator = db.clone();
+    // AB6-T6: reports read through the long pool, as at boot.
+    let db_long = attome_db::create_long_pool(&config)
+        .await
+        .expect("connect the long pool");
 
     let base = AppState::new(
         config,
@@ -244,7 +248,8 @@ async fn build_test_system() -> Option<EngineSystem> {
         redis,
         redis_coordination,
         storage,
-    );
+    )
+    .with_long_pool(db_long);
     let state = EngineState::new(base);
 
     let system = EngineSystem::builder(state)
@@ -668,6 +673,31 @@ fn execute_runs_on_the_readonly_role_not_the_app_owner() {
         assert_eq!(
             current_user, "attome_readonly",
             "query/execute must run on the attome_readonly role, not the application's full-privilege owner"
+        );
+    })
+}
+
+/// AB6-T6: a report runs on the long pool (its connections say
+/// `attome-long`), still as the read-only role; an ordinary query does not.
+#[test]
+fn reports_run_on_the_long_pool() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let sql = "SELECT current_setting('application_name') AS id, current_user AS role";
+        let report = seed_query(&system, sql, None, true).await;
+        let ordinary = seed_query(&system, sql, None, false).await;
+        let app = full_app(system);
+
+        let body = execute_query_body(app.clone(), &admin_cookie, report).await;
+        let row = &body["data"]["records"][0];
+        assert_eq!(row["id"], "attome-long", "{body}");
+        assert_eq!(row["role"], "attome_readonly", "{body}");
+
+        let body = execute_query_body(app, &admin_cookie, ordinary).await;
+        assert_ne!(
+            body["data"]["records"][0]["id"], "attome-long",
+            "an interactive query keeps its own pool: {body}"
         );
     })
 }

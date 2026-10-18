@@ -689,6 +689,13 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     if let (Some(pool), Some(readonly)) = (&db_readonly_primary, &config.database.readonly) {
         attome_db::verify_pool_identity(pool, &readonly.user, &config.database.dbname).await?;
     }
+    // AB6-T6 — reports and exports read through their own small pool on the
+    // same attome_readonly role, so they never hold an interactive request's
+    // connection; same identity check as db_readonly_primary.
+    let db_long = attome_db::create_long_pool(config).await?;
+    if let (Some(pool), Some(readonly)) = (&db_long, &config.database.readonly) {
+        attome_db::verify_pool_identity(pool, &readonly.user, &config.database.dbname).await?;
+    }
     attome_profiler::record("boot.pool_readonly", t_pool_readonly.elapsed());
     // Base-db hardening Phase 2.4: one structured `db.pool.capacity` line with
     // how many connections this process's pools may open, per endpoint.
@@ -740,6 +747,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         storage,
     )
     .with_readonly_primary(db_readonly_primary)
+    .with_long_pool(db_long)
     .with_expected_schema_version(Some(expected_schema_version))
     // D-344 — the configured flap threshold. Enforcement itself is set by
     // `spawn_capability_refresh`, which is also the only thing that ever
