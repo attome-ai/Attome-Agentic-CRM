@@ -58880,6 +58880,7 @@
           "query"
         ],
         "summary": "P-api-contract Phase 0: like-for-like migration of the retired\n`openapi/query-v1.json` hand file onto generated utoipa annotations — see\n`openapi_contract_keeps_query_v1_compatibility_points` below for the\ncompatibility points this reproduces, and `Filter`'s doc comment for the\none disclosed fidelity gap (`op`'s `enum` constraint).\nRecordScoped, not Admin: the gate in [`execute_stored_query`] is\nper-stored-query — a query carrying a `required_privilege` is reachable by\nany caller holding that key, and only a query with none falls back to\nrequiring admin. Typing this handler `Admin` would collapse both arms into\nadmin-only.",
+        "description": "AA4-T9: an identical repeat of the same caller's query within five\nseconds is answered from [`REPEATS`], unless it asks for a total or sends\n`Cache-Control: no-cache`.",
         "operationId": "execute",
         "requestBody": {
           "content": {
@@ -73320,7 +73321,10 @@
           "reason": "delegated",
           "via": "files_scan.rs / entity_crud update"
         },
+        "x-auth": "session",
+        "x-body-limit": 65536,
         "x-cache": "no-store",
+        "x-idempotent": false,
         "x-rate-class": "presign"
       }
     },

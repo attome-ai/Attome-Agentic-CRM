@@ -11130,6 +11130,9 @@ export interface paths {
          *     any caller holding that key, and only a query with none falls back to
          *     requiring admin. Typing this handler `Admin` would collapse both arms into
          *     admin-only.
+         * @description AA4-T9: an identical repeat of the same caller's query within five
+         *     seconds is answered from [`REPEATS`], unless it asks for a total or sends
+         *     `Cache-Control: no-cache`.
          */
         post: operations["execute"];
         delete?: never;
