@@ -12856,7 +12856,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["list_records"];
         put?: never;
         post: operations["create_record"];
         delete?: never;
@@ -19048,6 +19048,17 @@ export interface components {
                 /** @description Short, human-readable description of the event. */
                 summary: string;
             }[];
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_Value: {
+            items: unknown[];
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -77532,6 +77543,73 @@ export interface operations {
             };
             /** @description Dispatch is overloaded or a dependency is unavailable; the dead letter is kept */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_records: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated attributes to return. */
+                select?: string;
+                /** @description `field` ascending, `-field` descending. */
+                sort?: string;
+                /** @description 1 to 200; 50 when absent. */
+                page_size?: number;
+                /** @description The previous page's `next_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of records; next_cursor continues it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_Value"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read this entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or it has no default view */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A malformed filter, sort or select */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
