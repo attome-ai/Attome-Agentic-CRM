@@ -10,6 +10,10 @@
 //! (the retired `kid` stays acceptable for verification as long as it stays
 //! in the ring — same overlap-window mechanism as `envelope.rs`'s `KeyRing`
 //! use elsewhere, deliberately the same shape per plan §4).
+//!
+//! Z4-T3: a deployment may now sign with Ed25519 instead (EdDSA, keys in
+//! `auth.jwt_signing_keys`); see the EdDSA section below. HS256 stays the
+//! default and keeps verifying the tokens issued before a cut-over.
 
 use std::sync::{Arc, PoisonError, RwLock};
 
