@@ -21,6 +21,7 @@
     reason = "test support: a failed setup step should stop the test with its message"
 )]
 
+pub mod faults;
 pub mod fixtures;
 
 use attome_api::EngineSystem;
@@ -196,8 +197,11 @@ impl std::fmt::Debug for TestApp {
 static SHARED: tokio::sync::OnceCell<Option<TestApp>> = tokio::sync::OnceCell::const_new();
 
 async fn build() -> Option<TestApp> {
+    build_with(test_config()).await
+}
+
+async fn build_with(config: AppConfig) -> Option<TestApp> {
     attome_testkit::migrated_db_url()?;
-    let config = test_config();
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect the test database");
@@ -255,6 +259,15 @@ impl TestApp {
     /// The shared app, or `None` when no test database is configured.
     pub async fn start() -> Option<TestApp> {
         SHARED.get_or_init(build).await.clone()
+    }
+
+    /// An app of its own (not the shared one) with `edit` applied to the
+    /// test configuration: a fault test points the object store at a fake
+    /// (`faults::FakeS3`). `None` when no test database is configured.
+    pub async fn start_with(edit: impl FnOnce(&mut AppConfig)) -> Option<TestApp> {
+        let mut config = test_config();
+        edit(&mut config);
+        build_with(config).await
     }
 
     /// The database pool.

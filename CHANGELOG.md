@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: fault injection (Z15-T7). `attome_testapp::faults` has a fake S3 endpoint that fails or
+  slows down on a `FaultPlan`, and a dead Redis URL; `TestApp::start_with` builds an app of its own
+  with an edited configuration. `faults.rs` proves an upload whose store fails answers a masked 5xx
+  at once.
 - Tests: `attome test mutants` (AC5-T9) runs cargo-mutants over the scope in `.cargo/mutants.toml`
   (the security and rules engines, and the record engine's access plan and query execution), scores
   each crate as caught over caught plus missed (unviable and timed-out mutants listed, not counted),
