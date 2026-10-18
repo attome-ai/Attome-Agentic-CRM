@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { LangService, TranslatePipe } from '@attome/base';
 import {
@@ -6,6 +7,8 @@ import {
 } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { FieldSchema } from '@attome/xrm';
+
+type EinvoiceStatusModule = typeof import('@attome/xrm/verticals/billing/einvoice-status');
 
 /**
  * F4-T15: the billing pack extends `invoice` (kind, buyer, amounts, notes,
@@ -27,12 +30,24 @@ import type { FieldSchema } from '@attome/xrm';
   selector:   'xrm-invoice-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe],
+  imports: [NgComponentOutlet, ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe],
   styleUrls:  ['../../../../styles/xrm-form.css', './invoice-form.component.css'],
   templateUrl: './invoice-form.component.html',
 })
 export class InvoiceFormComponent extends EngineFormBase {
   private readonly lang = inject(LangService);
+
+  /** The e-invoice compliance panel (AG2-T4), loaded on its own; it hides
+   *  itself when the invoice has no e-invoice. */
+  protected readonly einvoicePanel = signal<EinvoiceStatusModule | null>(null);
+
+  constructor() {
+    super();
+    import('@attome/xrm/verticals/billing/einvoice-status').then(
+      m => this.einvoicePanel.set(m),
+      () => this.einvoicePanel.set(null),
+    );
+  }
 
   protected override defineTabs(): XrmFormTabDef[] {
     return [

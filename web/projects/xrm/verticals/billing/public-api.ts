@@ -10,3 +10,5 @@ export {
 } from './data/billing.service';
 export { formatAmount, minorUnits } from './data/money';
 export { registerBillingEntityForms } from './provide-billing-entity-forms';
+export { ZatcaOnboardingComponent, canOnboard } from './zatca/zatca-onboarding.component';
+export type { EinvoiceDevice, NewEinvoiceDevice } from './zatca/zatca-onboarding.component';

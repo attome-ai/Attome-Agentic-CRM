@@ -88,5 +88,8 @@
         </div>
       </section>
     }
+    @if (einvoicePanel(); as m) {
+      <ng-container *ngComponentOutlet="m.EinvoiceStatusComponent; inputs: { invoiceId: id() }" />
+    }
   </ng-template>
 </xrm-base-form>

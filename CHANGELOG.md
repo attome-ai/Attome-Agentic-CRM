@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- E-invoicing screens (AG2-T4): `/xrm/billing/einvoice` lists the ZATCA devices with their state and
+  counter, adds a device and onboards it with the Fatoora portal's OTP (ZATCA's reason shown when a
+  step fails); the invoice form shows the invoice's e-invoice status with ZATCA's errors and
+  warnings. Billing > E-invoicing in the sidebar for holders of `einvoice.manage`.
 - E-invoicing in the issue step (AG2-T3): with `einvoice.enabled`, every issued invoice, credit and
   debit note and deposit invoice is written as ZATCA's UBL invoice, stamped on the oldest onboarded
   device (its hash chain kept under a row lock) and cleared (buyer with a VAT number) or reported

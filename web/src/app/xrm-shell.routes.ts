@@ -648,6 +648,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/verticals/billing').then(m => m.AgeingReportComponent),
           },
           {
+            // AG2-T4: ZATCA e-invoicing devices (the API needs einvoice.manage).
+            path: 'billing/einvoice',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/billing').then(m => m.ZatcaOnboardingComponent),
+          },
+          {
             path: 'billing/accounts/:id/statement',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/verticals/billing').then(m => m.AccountStatementComponent),

@@ -1,0 +1,51 @@
+{
+  "author": "packs",
+  "checksum": "sha256:3b1c0c948d4baba9af4cbcf904936d9152890e9b88287cc96f44d5bca08e7742",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "E-invoicing in the sidebar (AG2-T4): the ZATCA devices page, for those who manage e-invoicing.",
+  "format": "attome-changeset/v1",
+  "id": "01a14cd9-54d0-71ee-90cb-fe09c842d055",
+  "layer": "product",
+  "name": "billing-einvoice-sidebar",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-certificate",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Billing",
+            "E-invoicing"
+          ],
+          "privileges": [
+            "einvoice.manage"
+          ],
+          "route": "/xrm/billing/einvoice"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "path": "Billing/E-invoicing"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 14,
+  "title": "Pack: e-invoicing in the sidebar"
+}
