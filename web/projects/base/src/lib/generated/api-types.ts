@@ -11133,6 +11133,10 @@ export interface paths {
          * @description AA4-T9: an identical repeat of the same caller's query within five
          *     seconds is answered from [`REPEATS`], unless it asks for a total or sends
          *     `Cache-Control: no-cache`.
+         *
+         *     AA7-T3: a query over one entity answers with an ETag ([`query_etag`]); a
+         *     request whose `If-None-Match` names the current one gets `304` without
+         *     the query running.
          */
         post: operations["execute"];
         delete?: never;
@@ -71641,7 +71645,10 @@ export interface operations {
     execute: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description AA7-T3: the ETag of an earlier answer; 304 when nothing it depends on has changed */
+                "If-None-Match"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -71651,7 +71658,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description A bounded query page */
+            /** @description A bounded query page, with its ETag when the query is over one entity */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -71659,6 +71666,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ExecResponse"];
                 };
+            };
+            /** @description AA7-T3: unchanged since the ETag in If-None-Match */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Invalid filter, ordering, or pagination contract */
             422: {
