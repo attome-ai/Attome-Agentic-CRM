@@ -647,7 +647,8 @@ fn checkout_of(invoice: MoyasarInvoice) -> Result<Checkout, GatewayError> {
         .filter(|u| u.starts_with("https://") || u.starts_with("http://"))
         .ok_or_else(|| GatewayError::Unavailable("Moyasar's invoice has no payment page".into()))?;
     Ok(Checkout {
-        redirect_url: url,
+        redirect_url: Some(url),
+        widget: None,
         gateway_reference: invoice.id,
     })
 }

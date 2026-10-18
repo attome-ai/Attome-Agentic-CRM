@@ -17,6 +17,7 @@
 //!   in memory beyond it; nothing here logs a secret or a full token. No
 //!   adapter call happens inside a database transaction.
 
+pub mod hyperpay;
 pub mod moyasar;
 
 use std::future::Future;
@@ -63,11 +64,24 @@ pub struct CheckoutRequest {
     pub methods: Vec<Method>,
 }
 
-/// A hosted checkout the payer is sent to.
+/// A checkout the payer completes: a hosted page they are sent to
+/// (Moyasar), or a payment form Attome's pay page embeds (HyperPay's
+/// COPYandPAY widget). Exactly one of the two is set.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Checkout {
-    pub redirect_url: String,
+    pub redirect_url: Option<String>,
+    pub widget: Option<CheckoutWidget>,
     pub gateway_reference: String,
+}
+
+/// A gateway's payment form, embedded by the pay page: the script, its
+/// subresource-integrity hash when the gateway gives one, and the brands
+/// the form offers. The form posts back to the checkout's `return_url`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CheckoutWidget {
+    pub script_url: String,
+    pub integrity: Option<String>,
+    pub brands: String,
 }
 
 /// Where a payment stands at the gateway.
@@ -260,7 +274,7 @@ impl GatewayHttp {
 pub fn gateway_for(name: &str, http: GatewayHttp) -> Option<Box<dyn PaymentGateway>> {
     match name {
         "moyasar" => Some(Box::new(moyasar::MoyasarGateway::new(http))),
-        // F5-T6 adds the HyperPay adapter here.
+        "hyperpay" => Some(Box::new(hyperpay::HyperPayGateway::new(http))),
         _ => None,
     }
 }

@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: the HyperPay payment gateway adapter — COPYandPAY checkouts returned as an embeddable
+  widget (with its integrity hash; mada on its own entity, never mixed with other methods), status
+  by merchant transaction id across entities, merchant-initiated token charges and refunds that a
+  retry never repeats, payouts from settlement reports, and AES-256-GCM webhooks that must decrypt
+  and authenticate. `Checkout` now carries either a `redirect_url` or a `widget` (F5-T6).
 - Billing: the Moyasar payment gateway adapter — hosted checkout through a Moyasar invoice, payment
   status, token charges that never charge twice for one idempotency key (`given_id`), refunds that
   never refund twice, payouts from Moyasar transfers, webhooks verified by their secret token in

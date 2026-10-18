@@ -570,6 +570,7 @@ dependencies = [
 name = "attome-billing"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "attome-audit",
  "attome-billing",
  "attome-core",
@@ -589,6 +590,7 @@ dependencies = [
  "axum",
  "base64 0.23.1",
  "chrono",
+ "hex",
  "moka",
  "object_store",
  "qrcode",

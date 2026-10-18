@@ -11,6 +11,7 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+aes-gcm.workspace = true
 attome-audit.workspace = true
 attome-core.workspace = true
 attome-db.workspace = true
@@ -31,6 +32,7 @@ qrcode.workspace = true
 reqwest.workspace = true
 base64.workspace = true
 chrono.workspace = true
+hex.workspace = true
 moka.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true

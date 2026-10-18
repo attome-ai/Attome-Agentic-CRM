@@ -234,6 +234,8 @@ async fn moyasar_paid_maps_to_succeeded() {
     assert!(
         checkout
             .redirect_url
+            .as_deref()
+            .unwrap()
             .starts_with("https://checkout.moyasar.com/")
     );
     assert_eq!(
