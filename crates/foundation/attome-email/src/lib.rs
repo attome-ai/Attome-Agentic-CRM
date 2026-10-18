@@ -1,4 +1,5 @@
-//! SMTP email sending — the platform's one outbound email transport.
+//! Outbound email: SMTP by default, or Amazon SES or SendGrid per sender
+//! identity (Z8-T1, [`provider`]).
 //!
 //! **Charter.** This crate owns: the SMTP transport and its TLS mode
 //! (`implicit`/`starttls`/`none`), the send-outcome classification and the
@@ -34,6 +35,8 @@ pub mod delivery;
 mod error;
 pub mod health;
 mod message;
+/// Z8-T1 — SMTP, Amazon SES and SendGrid behind one provider trait.
+pub mod provider;
 mod sender;
 pub mod suppression;
 pub mod templates;

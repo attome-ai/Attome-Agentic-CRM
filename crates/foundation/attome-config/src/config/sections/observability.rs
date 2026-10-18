@@ -128,6 +128,84 @@ pub struct EmailSection {
     /// `config/mod.rs` and `lib.rs`, which BEM-5 does not own.
     #[serde(default)]
     pub tls_mode: Option<String>,
+    /// Z8-T1: which provider sends a message: SMTP (the fields above, the
+    /// default), Amazon SES or SendGrid, chosen per sender identity.
+    #[serde(default)]
+    pub providers: EmailProviders,
+}
+
+/// Z8-T1: `email.providers`. `by_sender` maps a From address (any case) to
+/// a provider name; every other address takes `default`, SMTP when unset.
+/// A provider named here needs its own block below.
+#[derive(Clone, Default, Deserialize)]
+pub struct EmailProviders {
+    /// `"smtp"`, `"ses"` or `"sendgrid"`.
+    #[serde(default)]
+    pub default: Option<String>,
+    #[serde(default)]
+    pub by_sender: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    pub ses: Option<SesSettings>,
+    #[serde(default)]
+    pub sendgrid: Option<SendGridSettings>,
+}
+
+/// Z8-T1: Amazon SES (v2 API) credentials.
+#[derive(Clone, Deserialize)]
+pub struct SesSettings {
+    /// e.g. `"eu-west-1"`.
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: Secret,
+    /// A temporary credential's session token.
+    #[serde(default)]
+    pub session_token: Option<Secret>,
+    /// Overrides `https://email.{region}.amazonaws.com` (a VPC endpoint, a
+    /// test double).
+    #[serde(default)]
+    pub endpoint: Option<String>,
+}
+
+/// Z8-T1: SendGrid (v3 API) credentials.
+#[derive(Clone, Deserialize)]
+pub struct SendGridSettings {
+    pub api_key: Secret,
+    /// Overrides `https://api.sendgrid.com` (the EU region, a test double).
+    #[serde(default)]
+    pub endpoint: Option<String>,
+}
+
+/// Hand-rolled: the secret key is never printed.
+impl std::fmt::Debug for SesSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SesSettings")
+            .field("region", &self.region)
+            .field("access_key_id", &self.access_key_id)
+            .field("secret_access_key", &"[REDACTED]")
+            .field("endpoint", &self.endpoint)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Hand-rolled: the API key is never printed.
+impl std::fmt::Debug for SendGridSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SendGridSettings")
+            .field("api_key", &"[REDACTED]")
+            .field("endpoint", &self.endpoint)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for EmailProviders {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EmailProviders")
+            .field("default", &self.default)
+            .field("by_sender", &self.by_sender)
+            .field("ses", &self.ses)
+            .field("sendgrid", &self.sendgrid)
+            .finish()
+    }
 }
 
 impl EmailSection {
@@ -160,6 +238,7 @@ impl std::fmt::Debug for EmailSection {
             .field("smtp_from_name", &self.smtp_from_name)
             .field("smtp_use_tls", &self.smtp_use_tls)
             .field("tls_mode", &self.tls_mode)
+            .field("providers", &self.providers)
             .finish()
     }
 }

@@ -99,6 +99,7 @@ fn test_config(port: u16) -> AppConfig {
         smtp_use_tls: None,
         tls_mode: Some("none".to_string()),
         test_mode_catch_all: None,
+        providers: Default::default(),
     };
     config
 }

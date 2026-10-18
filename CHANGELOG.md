@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Email providers (Z8-T1): besides SMTP, mail can leave through Amazon SES (v2 API, SigV4) or
+  SendGrid (v3 mail send), chosen per sender identity with `email.providers.by_sender` and
+  `email.providers.default` (SMTP when unset). Every provider classifies its answers into the same
+  configuration, transient, permanent and unknown outcomes. See `docs/email.md`.
 - Metadata changes ring a Postgres doorbell (Y8-T1): `append_change_log` runs
   `pg_notify('attome_metadata_change', id)` in the writer's transaction, and every node listens on
   one runtime-identity connection to the `database.direct_url` endpoint and catches up on each

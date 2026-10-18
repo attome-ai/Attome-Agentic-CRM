@@ -49,7 +49,10 @@ pub use sections::integration::IntegrationSection;
 pub use sections::metadata::{
     ChangesetLayer, ChangesetMode, ChangesetsSection, MetadataSection, ReleaseReportSection,
 };
-pub use sections::observability::{EmailSection, GoogleAiSection, ObservabilitySection};
+pub use sections::observability::{
+    EmailProviders, EmailSection, GoogleAiSection, ObservabilitySection, SendGridSettings,
+    SesSettings,
+};
 pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
 pub use sections::storage::{S3Target, StorageSection};
 pub use sections::webchat::WebchatSection;

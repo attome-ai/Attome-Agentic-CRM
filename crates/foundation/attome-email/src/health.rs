@@ -130,6 +130,19 @@ async fn probe(cfg: &EmailSection, timeout: Duration, with_credentials: bool) ->
         };
     }
 
+    // Z8-T1: only an SMTP relay is probed. An HTTPS provider has no
+    // credential-free probe, so it reports enabled and unprobed.
+    let provider = crate::provider::provider_name(cfg, &cfg.smtp_from_address);
+    if !provider.eq_ignore_ascii_case(crate::provider::SMTP) {
+        return EmailHealth {
+            enabled: true,
+            reachable: None,
+            latency_ms: None,
+            error: None,
+            detail: Some(format!("provider {provider}: not probed")),
+        };
+    }
+
     let transport = if with_credentials {
         build_transport(cfg)
     } else {
@@ -245,6 +258,7 @@ mod tests {
             // The scripted peer speaks plaintext on loopback.
             tls_mode: Some("none".to_string()),
             test_mode_catch_all: None,
+            providers: Default::default(),
         }
     }
 

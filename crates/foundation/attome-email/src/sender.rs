@@ -6,7 +6,7 @@ use attome_config::EmailSection;
 use attome_types::text::normalize_email;
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
-    message::{Attachment, MultiPart, SinglePart, header::ContentType},
+    message::{Attachment, Mailbox, MultiPart, SinglePart, header::ContentType},
     transport::smtp::Error as SmtpError,
     transport::smtp::authentication::Credentials,
 };
@@ -143,12 +143,21 @@ pub fn catch_all(cfg: &EmailSection) -> Option<&str> {
 const ORIGINAL_TO: lettre::message::header::HeaderName =
     lettre::message::header::HeaderName::new_from_ascii_str("X-Attome-Original-To");
 
+/// The message's From header: its override, else the deployment's sender.
+fn from_header(cfg: &EmailSection, msg: &EmailMessage) -> String {
+    msg.from_override
+        .clone()
+        .unwrap_or_else(|| format!("{} <{}>", cfg.smtp_from_name, cfg.smtp_from_address))
+}
+
+fn mailbox(text: &str) -> Result<Mailbox, SendError> {
+    text.parse()
+        .map_err(|e: lettre::address::AddressError| SendError::InvalidAddress(e.to_string()))
+}
+
 fn build_email(cfg: &EmailSection, msg: &EmailMessage) -> Result<Message, SendError> {
     let to = catch_all(cfg).unwrap_or(&msg.to);
-    let from = msg
-        .from_override
-        .clone()
-        .unwrap_or_else(|| format!("{} <{}>", cfg.smtp_from_name, cfg.smtp_from_address));
+    let from = from_header(cfg, msg);
     let mut builder =
         Message::builder()
             .from(from.parse().map_err(|e: lettre::address::AddressError| {
@@ -390,14 +399,13 @@ pub(crate) async fn deliver(cfg: &EmailSection, email: Message) -> Result<(), Se
 /// (D-166): a failed suppression write is `warn!`ed and downgraded, so the
 /// job records a real failure instead of a false suppression (BEM-3).
 async fn settle_outcome(
-    cfg: &EmailSection,
     db: &attome_db::DbPool,
     recipient: &str,
-    email: Message,
+    attempt: impl std::future::Future<Output = Result<(), SendError>>,
     delivery_id: Option<uuid::Uuid>,
     deadline: Duration,
 ) -> Result<(), SendError> {
-    let attempt = tokio::time::timeout(deadline, deliver(cfg, email)).await;
+    let attempt = tokio::time::timeout(deadline, attempt).await;
     let err = match attempt {
         Ok(Ok(())) => return Ok(()),
         Ok(Err(e)) => e,
@@ -406,8 +414,8 @@ async fn settle_outcome(
         Err(_elapsed) => {
             return Err(SendError::Unknown {
                 message: format!(
-                    "no SMTP outcome within {}s — the relay accepted the connection but the \
-                     session did not complete; not retried, because a duplicate delivery is \
+                    "no send outcome within {}s — the provider accepted the connection but the \
+                     send did not complete; not retried, because a duplicate delivery is \
                      worse than a gap",
                     deadline.as_secs()
                 ),
@@ -494,6 +502,11 @@ async fn send_in_span(
     }
 
     let email = build_email(cfg, &msg)?;
+    // Z8-T1: the provider this sender identity uses; a misconfigured one
+    // fails before any lookup or network attempt.
+    let from = mailbox(&from_header(cfg, &msg))?;
+    let to = mailbox(catch_all(cfg).unwrap_or(&msg.to))?;
+    let provider = crate::provider::select(cfg, &from.email.to_string())?;
 
     // Z8-T6: in test mode the catch-all is the one recipient.
     let recipient = normalize_email(catch_all(cfg).unwrap_or(&msg.to));
@@ -506,12 +519,28 @@ async fn send_in_span(
     }
 
     let started = std::time::Instant::now();
-    let result = settle_outcome(cfg, db, &recipient, email, msg.delivery_id, SEND_DEADLINE).await;
+    let outgoing = crate::provider::OutgoingEmail {
+        message: &msg,
+        mime: &email,
+        from: &from,
+        to: &to,
+        original_to: catch_all(cfg).map(|_| msg.to.as_str()),
+    };
+    let attempt = async {
+        let id = provider.send(&outgoing).await?;
+        tracing::debug!(provider = provider.name(), provider_message_id = ?id.0, "email: provider id");
+        Ok::<(), SendError>(())
+    };
+    let result = settle_outcome(db, &recipient, attempt, msg.delivery_id, SEND_DEADLINE).await;
     metrics::histogram!("email_send_duration_seconds").record(started.elapsed().as_secs_f64());
 
     match &result {
-        Ok(()) => tracing::info!("email: accepted by the relay"),
+        Ok(()) => tracing::info!(
+            provider = provider.name(),
+            "email: accepted by the provider"
+        ),
         Err(e) => tracing::warn!(
+            provider = provider.name(),
             outcome = e.label(),
             error = %e.redacted_message(),
             "email: send failed"
@@ -541,6 +570,7 @@ mod tests {
             smtp_use_tls: None,
             tls_mode: None,
             test_mode_catch_all: None,
+            providers: Default::default(),
         }
     }
 
@@ -962,10 +992,9 @@ mod tests {
         let recipient = "user@example.invalid";
 
         let result = settle_outcome(
-            &cfg,
             &unreachable_pool(),
             recipient,
-            email,
+            deliver(&cfg, email),
             None,
             Duration::from_millis(300),
         )
@@ -997,10 +1026,9 @@ mod tests {
         let email = build_email(&cfg, &test_message()).expect("build message");
 
         let result = settle_outcome(
-            &cfg,
             &unreachable_pool(),
             "user@example.invalid",
-            email,
+            deliver(&cfg, email),
             None,
             Duration::from_secs(10),
         )
