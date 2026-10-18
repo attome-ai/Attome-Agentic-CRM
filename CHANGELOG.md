@@ -34,6 +34,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Invoicing (F4) is documented in `docs/invoicing.md`: records, issue and numbering, the
+  after-issue document and sending, corrections, requests and schedules, payment status,
+  statements, ageing, write-offs, roles and agent tools. No breaking change to `/api/v1`.
 - Billing forms: the invoice form shows the billing pack's buyer, amounts, corrections and document
   sections when the pack is installed, and `invoice_line`, `invoice_schedule` and `region_tax_rate`
   have their own forms, labelled in Arabic and English.
