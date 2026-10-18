@@ -1205,6 +1205,7 @@ pub async fn run_field_run(state: &EngineState, run_id: Uuid) -> Result<(), AppE
     let outcome = match run.kind.as_str() {
         "archive" => continue_delete(state, &run).await,
         "retype" => continue_retype(state, &run).await,
+        "orphan_scan" => crate::admin::orphans::continue_scan(state, &run).await,
         other => Err(AppError::internal(format!(
             "field run {run_id}: kind {other} has no executor in this release"
         ))),

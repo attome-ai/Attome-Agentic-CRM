@@ -20,6 +20,8 @@ mod ddl_log;
 #[cfg(debug_assertions)]
 mod dev_scaffold;
 mod entity;
+/// Y2-T4: lookup values that point at no record.
+pub(crate) mod orphans;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day recovery archive routes.
 mod recovery_archive;
 /// Solution 7 Phase 2 (D-788 Topic 14, D-791) — the release report routes.
@@ -149,6 +151,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(attribute::openapi_fragment());
     doc.merge(recovery_archive::openapi_fragment());
     doc.merge(ddl_log::openapi_fragment());
+    doc.merge(orphans::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
     // Gated like every other reference to this module (lines 18/36/178): the
     // scaffold is physically absent from release binaries, so an unconditional
@@ -215,6 +218,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .merge(recovery_archive::routes())
         .merge(ddl_log::routes())
+        .merge(orphans::routes())
         .merge(release_report::routes());
 
     // Physically absent from release binaries — see dev_scaffold.rs's module

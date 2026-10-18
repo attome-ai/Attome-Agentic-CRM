@@ -337,6 +337,10 @@ const EXCLUDED: &[(&str, &str)] = &[
         "writes Angular files in a debug build; no metadata (§1.3)",
     ),
     (
+        "POST /api/v1/admin/entities/{entity_id}/orphans/scan",
+        "queues a read-only orphan scan (Y2-T4); no metadata changes",
+    ),
+    (
         "POST /api/v1/admin/queries/describe",
         "describes a draft query's columns; reads only",
     ),

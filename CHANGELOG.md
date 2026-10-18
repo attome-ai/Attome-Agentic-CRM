@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: the orphan scan (Y2-T4). `GET /api/v1/admin/entities/{entity_id}/orphans` counts, per
+  lookup field, the rows whose value names no record of the target; a table over 10,000 rows
+  answers from its latest finished scan, which `POST .../orphans/scan` queues as a durable
+  `orphan_scan` data-step run (migration 0110). The scan never changes a value.
 - Tests: a fuzz target for the column-filter compiler (`crates/engine/attome-core/fuzz`) and
   `scripts/fuzz-all.ps1`, which runs every fuzz target for a set time and fails on a crash
   (Y13-T5; nightly and Linux or WSL).
