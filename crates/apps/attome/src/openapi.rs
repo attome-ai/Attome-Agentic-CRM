@@ -85,6 +85,8 @@ fn build() -> utoipa::openapi::OpenApi {
     // entry can name a path mounted by any layer, so this can't run any
     // earlier than the point where every layer's paths are already present.
     attome_server::middleware::deprecation::apply_to_openapi(&mut doc);
+    // S2-T2: every operation says how it is authenticated.
+    declare_security(&mut doc);
     // S2-T8: the document names the release it describes.
     doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
     // Z14-T2: every error code, as one enum the SDK can generate.
@@ -99,6 +101,58 @@ fn build() -> utoipa::openapi::OpenApi {
 }
 
 /// The assembled document. Cheap after the first call.
+/// S2-T2: the security requirement of an operation whose annotation names
+/// none, from the same rules the router enforces: a bypass-listed path
+/// (`attome_server::middleware::bypass::is_bypass`) and a web portal's
+/// sign-in flows are public (an empty requirement); the portal's account
+/// and second-factor routes need its session; the S2S web-portal API needs
+/// S2S signing; any other route takes a session, an API key or S2S signing,
+/// since `s2s_authn` runs before `authn` on every non-bypass route.
+fn security_for(path: &str) -> Vec<utoipa::openapi::security::SecurityRequirement> {
+    use utoipa::openapi::security::SecurityRequirement;
+    let scheme = |name: &str| SecurityRequirement::new(name, Vec::<String>::new());
+    if attome_server::middleware::bypass::is_bypass(path) {
+        return vec![SecurityRequirement::default()];
+    }
+    if let Some(portal) = path.strip_prefix("/{keyword}/api/v1/") {
+        if portal.starts_with("auth/") && !portal.starts_with("auth/mfa/") {
+            return vec![SecurityRequirement::default()];
+        }
+        return vec![scheme("portal_session")];
+    }
+    if path.starts_with("/api/v1/s2s/webportals/") {
+        return vec![scheme("s2s_hmac")];
+    }
+    vec![
+        scheme("session_cookie"),
+        scheme("api_key"),
+        scheme("s2s_hmac"),
+    ]
+}
+
+/// S2-T2: fills in [`security_for`] on every operation that declares none.
+fn declare_security(doc: &mut utoipa::openapi::OpenApi) {
+    for (path, item) in doc.paths.paths.iter_mut() {
+        for operation in [
+            &mut item.get,
+            &mut item.put,
+            &mut item.post,
+            &mut item.delete,
+            &mut item.options,
+            &mut item.head,
+            &mut item.patch,
+            &mut item.trace,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            if operation.security.is_none() {
+                operation.security = Some(security_for(path));
+            }
+        }
+    }
+}
+
 pub fn document() -> Arc<utoipa::openapi::OpenApi> {
     Arc::clone(&DOCUMENT)
 }
@@ -137,6 +191,58 @@ mod tests {
     fn document_version_is_package_version() {
         assert_eq!(super::document().info.version, env!("CARGO_PKG_VERSION"));
         assert!(super::document().info.license.is_some());
+    }
+
+    /// S2-T2: every operation declares how it is authenticated, a public
+    /// one with an explicit empty requirement.
+    #[test]
+    fn every_operation_declares_security() {
+        let doc = serde_json::to_value(&*super::document()).unwrap();
+        let mut missing = Vec::new();
+        for (path, item) in doc["paths"].as_object().unwrap() {
+            for (method, operation) in item.as_object().unwrap() {
+                if operation.get("responses").is_some() && operation.get("security").is_none() {
+                    missing.push(format!("{} {path}", method.to_uppercase()));
+                }
+            }
+        }
+        assert!(missing.is_empty(), "{missing:#?}");
+    }
+
+    /// S2-T2: the rules [`super::security_for`] applies.
+    #[test]
+    fn security_follows_the_router() {
+        let names = |path: &str| -> Vec<String> {
+            serde_json::to_value(super::security_for(path))
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|r| r.as_object().unwrap().keys().cloned().collect::<Vec<_>>())
+                .collect()
+        };
+        assert!(names("/api/v1/auth/login").is_empty(), "public");
+        assert!(names("/health").is_empty(), "public");
+        assert!(
+            names("/{keyword}/api/v1/auth/login").is_empty(),
+            "portal sign-in is public"
+        );
+        assert_eq!(
+            names("/{keyword}/api/v1/auth/mfa/enroll"),
+            ["portal_session"]
+        );
+        assert_eq!(
+            names("/{keyword}/api/v1/records/{entity}"),
+            ["portal_session"]
+        );
+        assert_eq!(
+            names("/api/v1/s2s/webportals/{keyword}/login"),
+            ["s2s_hmac"]
+        );
+        assert_eq!(
+            names("/api/v1/query/execute"),
+            ["session_cookie", "api_key", "s2s_hmac"]
+        );
     }
 
     /// Every operation has its own `operationId`. utoipa takes the handler's
