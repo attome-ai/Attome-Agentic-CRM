@@ -1,3 +1,5 @@
+/// S8-T1 — which API version a request is answered at.
+pub mod api_version;
 pub mod auth;
 pub mod authoring_gate;
 pub mod body_limit;

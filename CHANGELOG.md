@@ -51,6 +51,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- API versions (S8-T1): a request may name the version it was written for in an `Attome-Version`
+  header (today `2026-10`, the only one); an API key or S2S client that sends none is answered at
+  its `pinned_api_version` (migration 0116), a browser session at the current version. Every
+  response echoes the version it was answered at; an unknown version is a 400
+  `unsupported_api_version` listing the supported ones.
 - Limit hit counts (AA9-T5): every refusal by a rate limit, the body limit or a named limit adds to
   `limit_hits_total{limit, principal_kind}` and to a daily table, `limit_usage_daily` (migration
   0115), with hits and the peak value per limit and caller, flushed by each node every five

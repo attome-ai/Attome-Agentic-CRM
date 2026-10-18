@@ -161,6 +161,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "unsupported_api_version",
+        "The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.",
+        false,
+    ),
+    code(
         "internal_error",
         "An unexpected error; the request id finds it in the logs.",
         true,

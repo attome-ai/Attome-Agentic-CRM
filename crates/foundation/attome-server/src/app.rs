@@ -471,7 +471,7 @@ async fn timeout_response(err: BoxError) -> Response {
 
 /// Applies the inner, identity-aware stack (outermost first): CachePolicy
 /// (AA7-T1) → authn → CSRF → authz → RateLimit → Idempotency → MetadataPin
-/// (Y8-T6). CSRF (`csrf::csrf_protect`,
+/// (Y8-T6) → ApiVersion (S8-T1). CSRF (`csrf::csrf_protect`,
 /// P-cookie-csrf-hardening) sits right after authn because it needs to know
 /// whether the request carries a session cookie at all — the same signal
 /// `authn` already resolved into `SessionClaims`/a rejection — and must run
@@ -505,8 +505,13 @@ pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
             // Y8-T6: innermost, so a throttled or replayed request never
             // waits on a catch-up.
             .layer(middleware::from_fn_with_state(
-                state,
+                state.clone(),
                 crate::middleware::metadata_pin::metadata_pin,
+            ))
+            // S8-T1: the caller is known here, so its pinned version is too.
+            .layer(middleware::from_fn_with_state(
+                state,
+                crate::middleware::api_version::api_version,
             )),
     )
 }

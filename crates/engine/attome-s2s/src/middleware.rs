@@ -424,6 +424,11 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
 
     let mut req = Request::from_parts(parts, Body::from(body_bytes));
     req.extensions_mut().insert(s2s_claims);
+    // S8-T1: the client whose pinned API version applies.
+    req.extensions_mut()
+        .insert(attome_server::middleware::api_version::S2sClientRef(
+            record.client_db_id,
+        ));
     if let Some(ceiling) = ceiling {
         req.extensions_mut().insert(ceiling);
     }

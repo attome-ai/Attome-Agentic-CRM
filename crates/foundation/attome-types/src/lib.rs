@@ -27,6 +27,8 @@
 //! oversight to "fix" by pulling infrastructure error types down here.
 
 /// Z15-T5: the time a decision reads (a fake one in tests).
+/// S8-T1 — the API's dated versions.
+pub mod api_version;
 pub mod clock;
 pub mod error;
 pub mod error_codes;
