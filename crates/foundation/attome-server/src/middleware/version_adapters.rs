@@ -78,6 +78,25 @@ impl AdapterChain {
         }
     }
 
+    /// S8-T5: the chain as published in the OpenAPI document's
+    /// `x-version-adapters`, oldest step first: `{from, to, operations}`.
+    /// The release gate reads it to require an adapter for every breaking
+    /// change.
+    pub fn describe(&self) -> Value {
+        Value::Array(
+            self.adapters
+                .iter()
+                .map(|a| {
+                    serde_json::json!({
+                        "from": a.from_version(),
+                        "to": a.to_version(),
+                        "operations": a.operations(),
+                    })
+                })
+                .collect(),
+        )
+    }
+
     /// Whether any step from `version` up rewrites `operation`.
     pub fn applies(&self, version: &str, operation: &str) -> bool {
         self.steps_from(version)

@@ -94,9 +94,18 @@ fn build() -> utoipa::openapi::OpenApi {
     // S2-T12: the webhook a subscription receives, as OpenAPI 3.1's
     // top-level `webhooks`. utoipa has no field for it; `extensions` is
     // flattened into the document's top level when it is serialised.
-    doc.extensions
-        .get_or_insert_with(Default::default)
-        .insert("webhooks".to_owned(), webhooks());
+    let top = doc.extensions.get_or_insert_with(Default::default);
+    top.insert("webhooks".to_owned(), webhooks());
+    // S8-T5: the dated API version and the adapters that keep older ones
+    // working, for the release gate's contract diff.
+    top.insert(
+        "x-api-version".to_owned(),
+        serde_json::Value::from(attome_types::api_version::CURRENT),
+    );
+    top.insert(
+        "x-version-adapters".to_owned(),
+        attome_server::middleware::version_adapters::chain().describe(),
+    );
     // S2-T8: the document names the release it describes.
     doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
     // Z14-T2: every error code, as one enum the SDK can generate.

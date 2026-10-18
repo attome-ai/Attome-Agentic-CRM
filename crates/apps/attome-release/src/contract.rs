@@ -11,6 +11,14 @@
 //! - a property removed from a success response;
 //! - a request or success-response property whose `type` changed.
 //!
+//! S8-T5: every breaking change also needs a version adapter. The document
+//! publishes the server's adapter chain as `x-version-adapters`
+//! (`[{from, to, operations}]`, operations as `"{METHOD} {path}"`) and its
+//! dated version as `x-api-version`; a change is adapted when a step from
+//! the earlier document's version upward lists its operation. The gate
+//! fails on a change that is not, and the release writes
+//! `docs/api-versions/v{version}.md` listing every break and its adapter.
+//!
 //! Additions (a new path, a new optional property, a new status) are not
 //! breaking. A `### Breaking` line announces a change by naming its path or
 //! its operation id (roadmap Y9-T5). Schemas are compared after resolving `$ref`s into
@@ -262,6 +270,73 @@ pub fn unannounced<'a>(changes: &'a [Breaking], changelog: &str) -> Vec<&'a Brea
         .collect()
 }
 
+/// S8-T5: the adapter step (`"{from} -> {to}"`) that covers `change`, from
+/// the new document's `x-version-adapters`, starting at the old document's
+/// `x-api-version` (every step, when the old document names none).
+pub fn adapter_for(change: &Breaking, old: &Value, new: &Value) -> Option<String> {
+    let steps = new
+        .get("x-version-adapters")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    let start = old
+        .get("x-api-version")
+        .and_then(Value::as_str)
+        .and_then(|version| steps.iter().position(|s| s["from"] == version))
+        .unwrap_or(0);
+    let operation = format!("{} {}", change.method, change.path);
+    steps[start..].iter().find_map(|step| {
+        let lists = step["operations"].as_array().is_some_and(|ops| {
+            ops.iter().filter_map(Value::as_str).any(|op| {
+                op == operation || change.operation_id.as_deref().is_some_and(|id| op == id)
+            })
+        });
+        lists.then(|| {
+            format!(
+                "{} -> {}",
+                step["from"].as_str().unwrap_or("?"),
+                step["to"].as_str().unwrap_or("?")
+            )
+        })
+    })
+}
+
+/// S8-T5: the breaking changes no adapter covers.
+pub fn unadapted<'a>(changes: &'a [Breaking], old: &Value, new: &Value) -> Vec<&'a Breaking> {
+    changes
+        .iter()
+        .filter(|change| adapter_for(change, old, new).is_none())
+        .collect()
+}
+
+/// S8-T5: `docs/api-versions/v{version}.md` from the gate's
+/// `contract-diff.json` (`{base, breaking: [{method, path, change,
+/// adapter}]}`).
+pub fn versions_page(version: &str, diff: &Value) -> String {
+    let base = diff["base"].as_str().unwrap_or("the previous release");
+    let mut page = format!("# API changes in v{version}\n\nCompared with {base}.\n\n");
+    let breaks = diff["breaking"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    if breaks.is_empty() {
+        page.push_str("No breaking changes.\n");
+        return page;
+    }
+    page.push_str("| Operation | Change | Adapter |\n|---|---|---|\n");
+    for change in breaks {
+        let cell = |key: &str| change[key].as_str().unwrap_or("").replace('|', "\\|");
+        page.push_str(&format!(
+            "| `{} {}` | {} | {} |\n",
+            cell("method"),
+            cell("path"),
+            cell("change"),
+            cell("adapter")
+        ));
+    }
+    page
+}
+
 /// Whether `text` holds `word` as a whole identifier (so `list_things`
 /// does not announce `list_things_admin`).
 fn names_word(text: &str, word: &str) -> bool {
@@ -402,6 +477,81 @@ mod tests {
             unannounced(&changes, other).len(),
             1,
             "a longer id is another operation"
+        );
+    }
+
+    fn with_adapters(mut document: Value, version: &str, steps: Value) -> Value {
+        document["x-api-version"] = json!(version);
+        document["x-version-adapters"] = steps;
+        document
+    }
+
+    #[test]
+    fn contract_breaking_without_adapter_fails() {
+        let old = with_adapters(
+            doc(json!({ "/api/v1/things": { "get": op(None, "Thing", &[]) } })),
+            "2026-10",
+            json!([]),
+        );
+        let new = with_adapters(doc(json!({})), "2026-11", json!([]));
+        let changes = breaking_changes(&old, &new);
+        assert_eq!(unadapted(&changes, &old, &new).len(), 1);
+    }
+
+    #[test]
+    fn contract_breaking_with_adapter_passes() {
+        let old = with_adapters(
+            doc(json!({ "/api/v1/things": { "get": op(None, "Thing", &[]) } })),
+            "2026-10",
+            json!([]),
+        );
+        let new = with_adapters(
+            doc(json!({ "/api/v1/things": { "get": op(None, "ThingSmall", &[]) } })),
+            "2026-11",
+            json!([{ "from": "2026-10", "to": "2026-11", "operations": ["GET /api/v1/things"] }]),
+        );
+        let changes = breaking_changes(&old, &new);
+        assert!(!changes.is_empty());
+        assert!(unadapted(&changes, &old, &new).is_empty());
+        assert_eq!(
+            adapter_for(&changes[0], &old, &new).as_deref(),
+            Some("2026-10 -> 2026-11")
+        );
+    }
+
+    #[test]
+    fn contract_adapter_before_the_old_version_does_not_count() {
+        let old = with_adapters(
+            doc(json!({ "/api/v1/things": { "get": op(None, "Thing", &[]) } })),
+            "2026-11",
+            json!([]),
+        );
+        let new = with_adapters(
+            doc(json!({})),
+            "2026-12",
+            json!([
+                { "from": "2026-10", "to": "2026-11", "operations": ["GET /api/v1/things"] },
+                { "from": "2026-11", "to": "2026-12", "operations": [] }
+            ]),
+        );
+        let changes = breaking_changes(&old, &new);
+        assert_eq!(unadapted(&changes, &old, &new).len(), 1);
+    }
+
+    #[test]
+    fn contract_versions_page_lists_breaks_and_adapters() {
+        let page = versions_page(
+            "1.2.0",
+            &json!({ "base": "v1.1.0", "breaking": [{
+                "method": "GET", "path": "/api/v1/things",
+                "change": "operation removed", "adapter": "2026-10 -> 2026-11"
+            }] }),
+        );
+        assert!(page.contains("# API changes in v1.2.0"));
+        assert!(page.contains("| `GET /api/v1/things` | operation removed | 2026-10 -> 2026-11 |"));
+        assert!(
+            versions_page("1.2.0", &json!({ "base": "v1.1.0", "breaking": [] }))
+                .contains("No breaking changes.")
         );
     }
 }

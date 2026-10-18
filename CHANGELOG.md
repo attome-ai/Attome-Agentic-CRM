@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The release gate requires a version adapter for every breaking change (S8-T5): the OpenAPI document
+  publishes `x-api-version` and the adapter chain as `x-version-adapters`, `attome release --check` fails on a
+  break no adapter step covers, and `attome release --tag` writes `docs/api-versions/v{version}.md` listing
+  every break and its adapter.
 - The OpenAPI document describes outbound webhooks (S2-T12): a top-level `webhooks.entityChanged` with the
   `WebhookPayload` body, the `X-Attome-Signature` header (HMAC-SHA256 over `<t>.<body>`), the
   `Idempotency-Key` header and the retry schedule.

@@ -720,6 +720,13 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
     let areas = notes::sections(&changelog, version).map_err(|error| (2u8, error))?;
     let notes_en = format!("release-notes/v{version}.en.md");
     let notes_ar = format!("release-notes/v{version}.ar.md");
+    // S8-T5: every break in this version and its adapter, from the gate's
+    // contract diff (absent when there was no earlier tag to compare with).
+    let api_versions = format!("docs/api-versions/v{version}.md");
+    let api_page = std::fs::read_to_string(gate_dir(&root).join("contract-diff.json"))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .map(|diff| contract::versions_page(version, &diff));
 
     let write = |rel: &str, text: &str| {
         let path = root.join(rel);
@@ -733,6 +740,9 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
     write(release::LEDGER, &ledger)?;
     write(notes_en.as_str(), &notes::english(version, &today, &areas))?;
     write(notes_ar.as_str(), &notes::arabic(version, &today, &areas))?;
+    if let Some(page) = &api_page {
+        write(api_versions.as_str(), page)?;
+    }
 
     let git = |args: &[&str], what: &str| {
         run(Command::new("git").args(args), &root, what).map_err(|error| (1u8, error))
@@ -748,6 +758,9 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
         ],
         "git add",
     )?;
+    if api_page.is_some() {
+        git(&["add", api_versions.as_str()], "git add")?;
+    }
     git(
         &["commit", "-q", "-m", &format!("release: {name}")],
         "git commit",
@@ -783,7 +796,16 @@ fn contract_step(root: &Path) -> Result<(), String> {
 
     let diff = serde_json::json!({
         "base": tag,
-        "breaking": changes.iter().map(contract::Breaking::to_json).collect::<Vec<_>>(),
+        "breaking": changes
+            .iter()
+            .map(|change| {
+                let mut entry = change.to_json();
+                entry["adapter"] = serde_json::Value::from(
+                    contract::adapter_for(change, &old, &new).unwrap_or_default(),
+                );
+                entry
+            })
+            .collect::<Vec<_>>(),
     });
     let dir = root.join("target").join("release-gate");
     std::fs::create_dir_all(&dir)
@@ -794,18 +816,33 @@ fn contract_step(root: &Path) -> Result<(), String> {
         .map_err(|error| format!("cannot write the contract diff: {error}"))?;
 
     let changelog = std::fs::read_to_string(root.join("CHANGELOG.md")).unwrap_or_default();
+    let describe = |list: &[&contract::Breaking]| {
+        list.iter()
+            .map(|change| format!("{} {}: {}", change.method, change.path, change.what))
+            .collect::<Vec<_>>()
+            .join("; ")
+    };
+    let mut problems = Vec::new();
     let silent = contract::unannounced(&changes, &changelog);
-    if silent.is_empty() {
-        return Ok(());
+    if !silent.is_empty() {
+        problems.push(format!(
+            "breaking API changes since {tag} not named under `### Breaking` in CHANGELOG.md [Unreleased]: {}",
+            describe(&silent)
+        ));
     }
-    let list: Vec<String> = silent
-        .iter()
-        .map(|change| format!("{} {}: {}", change.method, change.path, change.what))
-        .collect();
-    Err(format!(
-        "breaking API changes since {tag} not named under `### Breaking` in CHANGELOG.md [Unreleased]: {}",
-        list.join("; ")
-    ))
+    // S8-T5: and each one has a version adapter.
+    let unadapted = contract::unadapted(&changes, &old, &new);
+    if !unadapted.is_empty() {
+        problems.push(format!(
+            "breaking API changes since {tag} with no version adapter (attome_server::middleware::version_adapters): {}",
+            describe(&unadapted)
+        ));
+    }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(problems.join("\n"))
+    }
 }
 
 /// The web app's gate: every build, lint and unit-test script, in order.
