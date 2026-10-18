@@ -300,6 +300,19 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
     ),
 ];
 
+/// Y11-T10: the platform's keys, parsed once from the compiled bundles (a
+/// bundle that does not parse leaves the set empty and is logged; boot's own
+/// stamp step refuses it loudly).
+pub fn platform_keys() -> &'static PlatformKeys {
+    static KEYS: std::sync::OnceLock<PlatformKeys> = std::sync::OnceLock::new();
+    KEYS.get_or_init(|| {
+        PlatformKeys::from_platform_bundles().unwrap_or_else(|error| {
+            tracing::error!(%error, "platform keys: a platform bundle does not parse");
+            PlatformKeys::default()
+        })
+    })
+}
+
 /// The logical keys a platform definition declares, per metadata table.
 /// Ordered sets, so the gate version and the bound arrays are deterministic.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Metadata: reserved names and layer locks (Y11-T10). Through the admin routes a new entity or
+  field may not take a platform name or the prefixes `attome_` and `xrm_`; an item a layer locked
+  in `metadata_lock` refuses changes (409 `metadata_locked`), and an add-only one takes additions
+  (a new field, a new choice value) but refuses changing or removing what it has (409
+  `metadata_add_only`). An entity's lock covers its fields.
 - Performance: with no read replica (`database.readonly` without its own `host` or `port`),
   writes no longer capture an LSN and pin the writer, and reads no longer look the pin up: every
   read is on the primary already (Z2-T6). With a replica, the pin works without Redis on one

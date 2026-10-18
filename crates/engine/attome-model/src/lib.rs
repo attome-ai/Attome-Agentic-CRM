@@ -18,6 +18,8 @@ pub mod commands;
 pub mod contract;
 pub mod cooker;
 pub mod files;
+/// Y11-T10: reserved names and layer locks.
+pub mod guard;
 pub mod identity;
 pub mod kind;
 pub mod kinds;

@@ -545,6 +545,22 @@ pub(crate) async fn do_create_attribute_recorded(
             provision::MAX_IDENTIFIER_LEN
         )));
     }
+    // Y11-T10: the platform's field names on this entity and the reserved
+    // prefixes stay the platform's; a locked entity takes no new field.
+    let platform_fields: std::collections::BTreeSet<String> =
+        crate::changeset::layers::platform_keys()
+            .attributes
+            .iter()
+            .filter(|(entity, _)| *entity == entity_logicalname)
+            .map(|(_, field)| field.clone())
+            .collect();
+    attome_model::guard::refuse_reserved(&logicalname, &platform_fields)?;
+    attome_model::guard::check_entity(
+        &state.base.db_migrator,
+        &entity_logicalname,
+        attome_model::guard::ChangeKind::Add,
+    )
+    .await?;
     // P-provisioning-hardening item (a): checked BEFORE any metadata write
     // (the attribute_info INSERT happens inside ensure_attribute below,
     // outside this handler's own transaction — see the comment at the
@@ -985,6 +1001,14 @@ pub(super) async fn update_attribute(
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(raw_body): Json<Value>,
 ) -> Result<Response, AppError> {
+    // Y11-T10: the entity's and the field's locks.
+    attome_model::guard::check_attribute(
+        &state.base.db_migrator,
+        entity_id,
+        attr_id,
+        attome_model::guard::ChangeKind::Set,
+    )
+    .await?;
     let is_dry_run = raw_body
         .get("dry_run")
         .and_then(Value::as_bool)
@@ -1780,6 +1804,14 @@ pub(super) async fn delete_attribute(
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     axum::extract::Query(query): axum::extract::Query<DryRunQuery>,
 ) -> Result<Response, AppError> {
+    // Y11-T10: the entity's and the field's locks.
+    attome_model::guard::check_attribute(
+        &state.base.db_migrator,
+        entity_id,
+        attr_id,
+        attome_model::guard::ChangeKind::Remove,
+    )
+    .await?;
     let body = serde_json::json!({ "dry_run": query.dry_run });
     structure_route(
         &state,
@@ -2145,6 +2177,14 @@ pub(super) async fn rename_attribute(
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<Value>,
 ) -> Result<Response, AppError> {
+    // Y11-T10: the entity's and the field's locks.
+    attome_model::guard::check_attribute(
+        &state.base.db_migrator,
+        entity_id,
+        attr_id,
+        attome_model::guard::ChangeKind::Set,
+    )
+    .await?;
     structure_route(
         &state,
         &ctx,
@@ -2192,6 +2232,14 @@ pub(super) async fn change_attribute_type(
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<Value>,
 ) -> Result<Response, AppError> {
+    // Y11-T10: the entity's and the field's locks.
+    attome_model::guard::check_attribute(
+        &state.base.db_migrator,
+        entity_id,
+        attr_id,
+        attome_model::guard::ChangeKind::Set,
+    )
+    .await?;
     structure_route(
         &state,
         &ctx,
@@ -2234,6 +2282,14 @@ pub(super) async fn add_attribute_choice(
     Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<Value>,
 ) -> Result<Response, AppError> {
+    // Y11-T10: the entity's and the field's locks.
+    attome_model::guard::check_attribute(
+        &state.base.db_migrator,
+        entity_id,
+        attr_id,
+        attome_model::guard::ChangeKind::Add,
+    )
+    .await?;
     structure_route(
         &state,
         &ctx,
@@ -2277,6 +2333,14 @@ pub(super) async fn remove_attribute_choice(
     Path((entity_id, attr_id, value)): Path<(Uuid, Uuid, String)>,
     axum::extract::Query(query): axum::extract::Query<DryRunQuery>,
 ) -> Result<Response, AppError> {
+    // Y11-T10: the entity's and the field's locks.
+    attome_model::guard::check_attribute(
+        &state.base.db_migrator,
+        entity_id,
+        attr_id,
+        attome_model::guard::ChangeKind::Remove,
+    )
+    .await?;
     let body = serde_json::json!({ "value": value, "dry_run": query.dry_run });
     structure_route(
         &state,

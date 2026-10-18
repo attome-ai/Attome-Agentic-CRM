@@ -309,6 +309,11 @@ pub(super) async fn create_entity(
             "an entity with this logicalname already exists",
         ));
     }
+    // Y11-T10: a platform name or a reserved prefix stays the platform's.
+    attome_model::guard::refuse_reserved(
+        &logicalname,
+        &crate::changeset::layers::platform_keys().entities,
+    )?;
 
     // P-environment-promotion §5 step 13: one implementation of "make this
     // entity match this description" — `reconcile_entity` with the `Admin`
@@ -526,6 +531,13 @@ pub(super) async fn update_entity(
         owner_layer,
     ) = cur.ok_or(AppError::NotFound)?;
     let old_logical = cur_logical.unwrap_or_default();
+    // Y11-T10: a locked or add-only entity keeps what it has.
+    attome_model::guard::check_entity(
+        &state.base.db_migrator,
+        &old_logical,
+        attome_model::guard::ChangeKind::Set,
+    )
+    .await?;
 
     // logicalname is immutable after creation (D-021): the physical table is
     // never renamed alongside entity_info, so a rename here would brick
@@ -848,6 +860,12 @@ pub(super) async fn delete_entity(
     if params.hard {
         return Err(AppError::Conflict(HARD_DELETE_NOT_RECORDABLE));
     }
+    attome_model::guard::check_entity_id(
+        &state.base.db_migrator,
+        entity_id,
+        attome_model::guard::ChangeKind::Remove,
+    )
+    .await?;
     recording.preflight(&state.base.db_migrator).await?;
 
     // Gated behind `approval.required_actions` (empty/off by default, the same
