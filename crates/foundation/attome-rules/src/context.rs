@@ -76,6 +76,13 @@ impl Schema {
         self
     }
 
+    /// Z11-T3: a related list `name` whose rows have `fields`; a rule reads
+    /// it with the list functions (`sum(lines)`, `any(lines, l => l.qty > 0)`).
+    #[must_use]
+    pub fn with_related_list(self, name: impl Into<String>, fields: Vec<(String, Type)>) -> Self {
+        self.with_field(name, Type::List(Box::new(Type::Record(fields))))
+    }
+
     pub fn field_type(&self, name: &str) -> Option<&Type> {
         self.fields.get(name)
     }
@@ -186,6 +193,21 @@ impl Context {
     pub fn with_field(mut self, name: impl Into<String>, value: Value) -> Self {
         self.fields.insert(name.into(), value);
         self
+    }
+
+    /// Z11-T3: the rows of a related list (the schema's
+    /// [`Schema::with_related_list`]); more rows than the budgets'
+    /// `max_list_len` is refused when a rule reads it.
+    #[must_use]
+    pub fn with_related_list(
+        self,
+        name: impl Into<String>,
+        rows: Vec<Vec<(String, Value)>>,
+    ) -> Self {
+        self.with_field(
+            name,
+            Value::List(rows.into_iter().map(Value::Record).collect()),
+        )
     }
 
     /// Z11-T8: this context's clock, zone and rates with no fields and no

@@ -38,6 +38,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rules: related lists and list functions (Z11-T3, V2): `sum`, `count`, `avg`, `first`, and
+  `any`/`all`/`filter`/`map` with a lambda (`lines, l => l.qty > 0`) over a related list the caller
+  supplies; lambdas nest two deep (`rules.budget.lambda_depth`) and each element costs a step.
 - Rules: user-defined functions (`attome_rules::FunctionLibrary`, `compile_with_library`, Z11-T8).
   Typed, pure V2 expressions over their own parameters; built once in call order, recursion
   (`rules.function.recursive`) and built-in names (`rules.function.invalid`) refused; at most 200

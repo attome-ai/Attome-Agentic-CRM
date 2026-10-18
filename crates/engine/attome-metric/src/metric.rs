@@ -785,6 +785,12 @@ fn collect_field_refs(expr: &attome_rules::Expr, out: &mut Vec<String>) -> Resul
                 collect_field_refs(arg, out)?;
             }
         }
+        // Z11-T3: a formula metric combines metric keys; it has no lists.
+        Expr::Lambda { .. } => {
+            return Err(AppError::Validation(
+                "formula metrics take no lambda (`x => ...`)".into(),
+            ));
+        }
         Expr::NullLit | Expr::BoolLit(_) | Expr::NumberLit(_) | Expr::StringLit(_) => {}
     }
     Ok(())

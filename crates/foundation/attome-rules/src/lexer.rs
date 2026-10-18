@@ -43,6 +43,8 @@ pub(crate) enum TokKind {
     Le,
     Gt,
     Ge,
+    /// Z11-T3: `=>`, a lambda's arrow.
+    Arrow,
     Eof,
 }
 
@@ -163,6 +165,9 @@ pub(crate) fn lex(src: &str) -> Result<Vec<Token>, RulesError> {
                 if cur.peek() == Some('=') {
                     cur.bump();
                     TokKind::EqEq
+                } else if cur.peek() == Some('>') {
+                    cur.bump();
+                    TokKind::Arrow
                 } else {
                     return Err(RulesError::Parse {
                         message: "unexpected '=' (did you mean '=='?)".to_owned(),

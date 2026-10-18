@@ -1479,6 +1479,13 @@ fn collect_field_refs(expr: &Expr, out: &mut Vec<(String, Option<String>)>) {
             collect_field_refs(rhs, out);
         }
         Expr::Call { args, .. } => args.iter().for_each(|a| collect_field_refs(a, out)),
+        // Z11-T3: a lambda's parameter is not a record field; its body may
+        // still read the record's own fields.
+        Expr::Lambda { param, body } => {
+            let mut inner = Vec::new();
+            collect_field_refs(body, &mut inner);
+            out.extend(inner.into_iter().filter(|(base, _)| base != param));
+        }
         Expr::NullLit | Expr::BoolLit(_) | Expr::NumberLit(_) | Expr::StringLit(_) => {}
     }
 }

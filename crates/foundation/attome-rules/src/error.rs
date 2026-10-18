@@ -39,6 +39,8 @@ pub enum BudgetKind {
     /// Z11-T9: a decision table with more rows or inputs than
     /// `decision_table::MAX_ROWS` / `MAX_INPUTS`.
     TableSize,
+    /// Z11-T3: a lambda nested inside two others.
+    LambdaDepth,
 }
 
 impl BudgetKind {
@@ -55,6 +57,7 @@ impl BudgetKind {
             Self::SourceLength => "rules.budget.source_length",
             Self::ListLength => "rules.budget.list_length",
             Self::TableSize => "rules.budget.table_size",
+            Self::LambdaDepth => "rules.budget.lambda_depth",
         }
     }
 }
@@ -70,6 +73,7 @@ impl fmt::Display for BudgetKind {
             Self::SourceLength => "max source length",
             Self::ListLength => "max list length",
             Self::TableSize => "max decision table size",
+            Self::LambdaDepth => "lambda nesting cap",
         };
         f.write_str(s)
     }
@@ -342,6 +346,7 @@ mod tests {
             BudgetKind::SourceLength,
             BudgetKind::ListLength,
             BudgetKind::TableSize,
+            BudgetKind::LambdaDepth,
         ] {
             all.push(RulesError::Budget(kind));
         }

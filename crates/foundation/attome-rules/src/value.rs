@@ -33,6 +33,9 @@ pub enum Value {
     Choice(String),
     Lookup(Uuid),
     List(Vec<Value>),
+    /// Z11-T3: one related row, its fields in order; a related list is a
+    /// `List` of these.
+    Record(Vec<(String, Value)>),
 }
 
 impl Value {
@@ -58,6 +61,12 @@ impl Value {
                 }
                 Type::List(Box::new(elem))
             }
+            Value::Record(fields) => Type::Record(
+                fields
+                    .iter()
+                    .map(|(name, value)| (name.clone(), value.ty()))
+                    .collect(),
+            ),
         }
     }
 
@@ -87,6 +96,16 @@ impl fmt::Display for Value {
                 }
                 write!(f, "]")
             }
+            Value::Record(fields) => {
+                write!(f, "{{")?;
+                for (i, (name, value)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{name}: {value}")?;
+                }
+                write!(f, "}}")
+            }
         }
     }
 }
@@ -107,6 +126,8 @@ pub enum Type {
     Choice,
     Lookup,
     List(Box<Type>),
+    /// Z11-T3: a related row's fields and their types, in order.
+    Record(Vec<(String, Type)>),
 }
 
 impl Type {
@@ -119,6 +140,19 @@ impl Type {
         match (self, other) {
             (Type::Null, t) | (t, Type::Null) => Some(t.clone()),
             (Type::List(a), Type::List(b)) => a.unify(b).map(|u| Type::List(Box::new(u))),
+            // Field by field, the names in the same order.
+            (Type::Record(a), Type::Record(b)) if a.len() == b.len() => a
+                .iter()
+                .zip(b)
+                .map(|((an, at), (bn, bt))| {
+                    if an == bn {
+                        at.unify(bt).map(|t| (an.clone(), t))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Option<Vec<_>>>()
+                .map(Type::Record),
             (a, b) if a == b => Some(a.clone()),
             _ => None,
         }
@@ -136,6 +170,16 @@ impl fmt::Display for Type {
             Type::Choice => write!(f, "choice"),
             Type::Lookup => write!(f, "lookup"),
             Type::List(t) => write!(f, "list<{t}>"),
+            Type::Record(fields) => {
+                write!(f, "record{{")?;
+                for (i, (name, ty)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{name}: {ty}")?;
+                }
+                write!(f, "}}")
+            }
         }
     }
 }

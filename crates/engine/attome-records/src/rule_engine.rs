@@ -148,6 +148,12 @@ pub fn json_from_rules_value(v: &RulesValue) -> Value {
         RulesValue::Choice(c) => Value::String(c.clone()),
         RulesValue::Lookup(id) => Value::String(id.to_string()),
         RulesValue::List(items) => Value::Array(items.iter().map(json_from_rules_value).collect()),
+        RulesValue::Record(fields) => Value::Object(
+            fields
+                .iter()
+                .map(|(name, value)| (name.clone(), json_from_rules_value(value)))
+                .collect(),
+        ),
     }
 }
 
@@ -202,6 +208,13 @@ fn walk(expr: &Expr, out: &mut HashSet<String>) {
             walk(rhs, out);
         }
         Expr::Call { args, .. } => args.iter().for_each(|e| walk(e, out)),
+        // Z11-T3: the parameter is the element, not a field of the record.
+        Expr::Lambda { param, body } => {
+            let mut inner = HashSet::new();
+            walk(body, &mut inner);
+            inner.remove(param);
+            out.extend(inner);
+        }
     }
 }
 

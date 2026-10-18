@@ -48,6 +48,7 @@ pub(crate) fn parse_with_spans(src: &str, budgets: &Budgets) -> Result<Parsed, R
         nodes: 0,
         max_nodes: budgets.max_ast_nodes.min(HARD_MAX_NODES),
         error_span: None,
+        lambda_depth: 0,
     };
     let spanned = match parser.parse_expr(0) {
         Ok(spanned) => spanned,
@@ -73,7 +74,15 @@ struct Parser {
     /// Set when an error has a span the token position alone cannot express
     /// (the one-hop lookup error, whose span is name.hop).
     error_span: Option<(usize, usize)>,
+    /// Z11-T3: lambdas open around the one being parsed.
+    lambda_depth: usize,
 }
+
+/// Z11-T3: the functions whose second argument may be a lambda.
+pub(crate) const LAMBDA_FUNCTIONS: &[&str] = &["any", "all", "filter", "map"];
+
+/// Z11-T3: lambdas may nest two deep; a third is refused.
+pub(crate) const MAX_LAMBDA_DEPTH: usize = 2;
 
 /// A node while parsing, with the span and subtree depth needed to enforce
 /// the bounds before the final Expr exists.
@@ -102,6 +111,10 @@ enum SpannedKind {
     Call {
         name: String,
         args: Vec<Spanned>,
+    },
+    Lambda {
+        param: String,
+        body: Box<Spanned>,
     },
 }
 
@@ -364,7 +377,14 @@ impl Parser {
                         let mut args = Vec::new();
                         if !matches!(self.peek(), TokKind::RParen) {
                             loop {
-                                args.push(self.parse_expr(depth)?);
+                                if args.len() == 1
+                                    && LAMBDA_FUNCTIONS.contains(&name.as_str())
+                                    && self.at_lambda()
+                                {
+                                    args.push(self.parse_lambda(depth)?);
+                                } else {
+                                    args.push(self.parse_expr(depth)?);
+                                }
                                 if matches!(self.peek(), TokKind::Comma) {
                                     self.bump();
                                 } else {
@@ -411,6 +431,40 @@ impl Parser {
         }
     }
 
+    /// `ident =>` ahead.
+    fn at_lambda(&self) -> bool {
+        matches!(self.peek(), TokKind::Ident(_))
+            && matches!(
+                self.tokens.get(self.pos + 1).map(|t| &t.kind),
+                Some(TokKind::Arrow)
+            )
+    }
+
+    /// `param => body` (Z11-T3).
+    fn parse_lambda(&mut self, depth: usize) -> Result<Spanned, RulesError> {
+        let start = self.peek_pos();
+        let param = self.expect_ident("a lambda parameter")?;
+        self.expect(&TokKind::Arrow, "'=>'")?;
+        if self.lambda_depth >= MAX_LAMBDA_DEPTH {
+            return Err(RulesError::Budget(BudgetKind::LambdaDepth));
+        }
+        self.lambda_depth += 1;
+        let depth = self.descend(depth)?;
+        let body = self.parse_expr(depth);
+        self.lambda_depth -= 1;
+        let body = body?;
+        let span = (start, body.span.1);
+        let tree_depth = body.depth + 1;
+        self.node(
+            span,
+            tree_depth,
+            SpannedKind::Lambda {
+                param,
+                body: Box::new(body),
+            },
+        )
+    }
+
     fn peek_is_ident(&self, want: &str) -> bool {
         matches!(self.peek(), TokKind::Ident(s) if s == want)
     }
@@ -455,6 +509,10 @@ fn to_expr(node: Spanned, spans: &mut Vec<(usize, usize)>) -> Expr {
         SpannedKind::Call { name, args } => Expr::Call {
             name,
             args: args.into_iter().map(|a| to_expr(a, spans)).collect(),
+        },
+        SpannedKind::Lambda { param, body } => Expr::Lambda {
+            param,
+            body: Box::new(to_expr(*body, spans)),
         },
     }
 }

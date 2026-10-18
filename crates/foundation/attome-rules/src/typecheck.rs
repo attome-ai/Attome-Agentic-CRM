@@ -120,7 +120,13 @@ fn typecheck_node(
             .map_err(RulesDiagnostic::without_span)
         }
         Expr::Binary { op, lhs, rhs } => typecheck_binary(*op, lhs, rhs, schema, cursor),
+        Expr::Call { name, args } if crate::parser::LAMBDA_FUNCTIONS.contains(&name.as_str()) => {
+            typecheck_lambda_call(name, args, schema, cursor)
+        }
         Expr::Call { name, args } => typecheck_call(name, args, schema, cursor),
+        Expr::Lambda { .. } => Err(RulesDiagnostic::without_span(type_err(
+            "a lambda (x => ...) is only the second argument of any, all, filter or map".into(),
+        ))),
     };
     result.map_err(|d| d.or_span(span))
 }
@@ -181,6 +187,60 @@ fn typecheck_binary(
         }
     };
     result.map_err(RulesDiagnostic::without_span)
+}
+
+/// Z11-T3: `any`, `all`, `filter` and `map`: a list, then `x => body` with
+/// `x` bound to an element (and `x.field` to a record element's field).
+fn typecheck_lambda_call(
+    name: &str,
+    args: &[Expr],
+    schema: &Schema,
+    cursor: &mut Cursor<'_>,
+) -> Result<Type, RulesDiagnostic> {
+    arity(name, args.len(), 2, 2).map_err(RulesDiagnostic::without_span)?;
+    let list = typecheck_node(&args[0], schema, cursor)?;
+    let elem = match &list {
+        Type::List(elem) => (**elem).clone(),
+        Type::Null => Type::Null,
+        other => {
+            return Err(RulesDiagnostic::without_span(type_err(format!(
+                "{name} takes a list, not {other}"
+            ))));
+        }
+    };
+    let Expr::Lambda { param, body } = &args[1] else {
+        return Err(RulesDiagnostic::without_span(type_err(format!(
+            "{name}'s second argument is a lambda: x => ..."
+        ))));
+    };
+    // The lambda node's own span, then its body's.
+    cursor.advance();
+    let mut inner = schema.clone().with_field(param.clone(), elem.clone());
+    if let Type::Record(fields) = &elem {
+        inner = inner.with_related(param.clone(), fields.iter().cloned().collect());
+    }
+    let body_type = typecheck_node(body, &inner, cursor)?;
+    match name {
+        "map" => Ok(Type::List(Box::new(body_type))),
+        _ => {
+            require(&body_type, &Type::Bool, &format!("{name}'s condition"))
+                .map_err(RulesDiagnostic::without_span)?;
+            Ok(if name == "filter" {
+                Type::List(Box::new(elem))
+            } else {
+                Type::Bool
+            })
+        }
+    }
+}
+
+/// Z11-T3: the element type of a list argument of `name`.
+fn list_elem(name: &str, t: &Type) -> Result<Type, RulesError> {
+    match t {
+        Type::List(elem) => Ok((**elem).clone()),
+        Type::Null => Ok(Type::Null),
+        other => Err(type_err(format!("{name} takes a list, not {other}"))),
+    }
 }
 
 fn typecheck_call(
@@ -405,6 +465,25 @@ fn typecheck_call(
             } else {
                 Err(RulesError::RegexNotLiteral)
             }
+        }
+        // Z11-T3: list functions over related lists.
+        "sum" | "avg" => {
+            arity(name, args.len(), 1, 1)?;
+            let elem = list_elem(name, &arg_types[0])?;
+            if elem.unify(&Type::Number).is_none() {
+                return Err(RulesDiagnostic::without_span(type_err(format!(
+                    "{name} takes a list of numbers, not of {elem}"
+                ))));
+            }
+            Ok(Type::Number)
+        }
+        "count" => {
+            arity(name, args.len(), 1, 1)?;
+            list_elem(name, &arg_types[0]).map(|_| Type::Number)
+        }
+        "first" => {
+            arity(name, args.len(), 1, 1)?;
+            list_elem(name, &arg_types[0])
         }
         other => match schema.user_function(other) {
             // Z11-T8: its arguments against its parameters.

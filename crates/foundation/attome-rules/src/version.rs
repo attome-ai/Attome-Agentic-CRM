@@ -52,6 +52,15 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     ("minor_units", LanguageVersion::V2),
     // Z11-T6: full-string pattern matching.
     ("matches", LanguageVersion::V2),
+    // Z11-T3: list functions over related lists.
+    ("sum", LanguageVersion::V2),
+    ("count", LanguageVersion::V2),
+    ("avg", LanguageVersion::V2),
+    ("any", LanguageVersion::V2),
+    ("all", LanguageVersion::V2),
+    ("filter", LanguageVersion::V2),
+    ("map", LanguageVersion::V2),
+    ("first", LanguageVersion::V2),
 ];
 
 /// The version a function needs.
@@ -77,6 +86,12 @@ pub(crate) fn check(expr: &Expr, version: LanguageVersion) -> Result<(), RulesEr
             check(rhs, version)
         }
         Expr::ListLit(items) => items.iter().try_for_each(|a| check(a, version)),
+        Expr::Lambda { body, .. } => {
+            if version < LanguageVersion::V2 {
+                return Err(RulesError::UnknownFunction("=>".to_owned()));
+            }
+            check(body, version)
+        }
         _ => Ok(()),
     }
 }

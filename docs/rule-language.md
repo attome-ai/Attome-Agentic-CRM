@@ -28,6 +28,43 @@ is an unknown function. V2 accepts every V1 expression unchanged.
 | `convert(amount, from, to)` | Converted through the rates the caller supplies on the evaluation context (each rate is the value of one unit in the base currency). A code the ISO table does not know is `rules.currency.unknown`; a missing rate is `rules.currency.no_rate`. |
 | `minor_units(code)` | The currency's number of decimal places. |
 | `matches(text, pattern)` | Whether the whole text matches the pattern. The pattern must be a text literal (`rules.regex.not_literal` otherwise); it is compiled once when the rule is saved, under a size limit (`rules.regex.invalid` when it is too large or does not compile), and runs in linear time, so no pattern can hang the server. |
+| `sum(list)`, `avg(list)` | Total and mean of a list of numbers; nulls are skipped, and `avg` of none is null. |
+| `count(list)` | The number of elements. |
+| `first(list)` | The first element, or null. |
+| `any(list, x => condition)`, `all(list, x => condition)` | Whether the condition holds for some, or every, element. |
+| `filter(list, x => condition)` | The elements for which it holds. |
+| `map(list, x => value)` | The value for each element. |
 
 Text results respect the string-length budget and number results must be finite, as for every
 function.
+
+## Related lists and lambdas (V2)
+
+A caller can give a rule a related list, such as an order's lines: `Schema::with_related_list("lines",
+fields)` and `Context::with_related_list("lines", rows)`. The list functions read it, and
+`x => ...` (a lambda) names each element: `sum(map(lines, l => l.qty * l.price)) > 1000`,
+`any(lines, l => l.qty == 0)`. A lambda is only the second argument of `any`, `all`, `filter` or
+`map` (anywhere else it is a parse error), lambdas nest at most two deep
+(`rules.budget.lambda_depth`), and every element visited costs an evaluation step, so a long list
+cannot escape the step budget. The language loads no rows itself: the caller supplies them.
+
+## User functions (V2)
+
+A deployment can define its own functions: a name, typed parameters, a result type and a V2
+expression over those parameters only (no record fields). `FunctionLibrary::build` checks them:
+a name is a lowercase letter then letters, digits or `_`, never a built-in name
+(`rules.function.invalid`); at most 200 functions of up to 8 parameters; a function may call
+built-ins and other user functions, but never itself, directly or through others
+(`rules.function.recursive`). A rule compiled with the library (`compile_with_library`) calls
+them like built-ins, its arguments checked against the parameters, and the steps a function takes
+count against the calling rule's budget.
+
+## Decision tables
+
+A decision table lists rows of conditions on named inputs and a result: each cell is a V2
+condition on its input, read as `it` (`it >= 100 and it < 500`, `it == "gold"`,
+`in(it, ["a", "b"])`), or empty for any value; each result is a V2 expression over the inputs.
+`First` answers the first matching row (null when none matches); `All` answers every matching
+row's result as a list. `check()` reports number ranges no row covers, pairs of rows that can both
+match, and cells of any other form as unchecked, never guessing about those. A table has at most
+500 rows and 10 inputs (`rules.budget.table_size`).

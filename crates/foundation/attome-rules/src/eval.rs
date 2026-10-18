@@ -95,6 +95,7 @@ fn run(
         steps: 0,
         start: Instant::now(),
         record_trace,
+        scope: Vec::new(),
     };
     let mut trace = Trace::default();
     let value = evaluator.eval(expr, &mut trace)?;
@@ -109,6 +110,8 @@ struct Evaluator<'a> {
     steps: usize,
     start: Instant,
     record_trace: bool,
+    /// Z11-T3: the lambda parameters in scope, innermost last.
+    scope: Vec<(String, Value)>,
 }
 
 impl Evaluator<'_> {
@@ -148,10 +151,27 @@ impl Evaluator<'_> {
                 }
                 Ok(Value::List(out))
             }
-            Expr::FieldRef(r) => match &r.hop {
-                None => self.context_value(&r.base, None),
-                Some(hop) => self.context_value(&r.base, Some(hop)),
-            },
+            Expr::FieldRef(r) => {
+                // Z11-T3: a lambda parameter, innermost first.
+                if let Some((_, bound)) = self.scope.iter().rev().find(|(p, _)| *p == r.base) {
+                    return match (&r.hop, bound) {
+                        (None, value) => Ok(value.clone()),
+                        (Some(_), Value::Null) => Ok(Value::Null),
+                        (Some(hop), Value::Record(fields)) => fields
+                            .iter()
+                            .find(|(name, _)| name == hop)
+                            .map(|(_, value)| value.clone())
+                            .ok_or_else(|| RulesError::UnknownField(format!("{}.{hop}", r.base))),
+                        (Some(hop), _) => {
+                            Err(RulesError::UnknownField(format!("{}.{hop}", r.base)))
+                        }
+                    };
+                }
+                match &r.hop {
+                    None => self.context_value(&r.base, None),
+                    Some(hop) => self.context_value(&r.base, Some(hop)),
+                }
+            }
             Expr::Unary { op, expr } => {
                 let v = self.eval(expr, trace)?;
                 match (op, v) {
@@ -163,6 +183,18 @@ impl Evaluator<'_> {
             }
             Expr::Binary { op, lhs, rhs } => self.eval_binary(*op, lhs, rhs, trace),
             Expr::Call { name, args } => self.eval_call(name, args, trace),
+            Expr::Lambda { .. } => Err(RulesError::Eval(
+                "a lambda is only the second argument of any, all, filter or map".into(),
+            )),
+        }
+    }
+
+    /// Z11-T3: a list argument's elements (none for `null`).
+    fn list_items(name: &str, value: Value) -> Result<Vec<Value>, RulesError> {
+        match value {
+            Value::List(items) => Ok(items),
+            Value::Null => Ok(Vec::new()),
+            other => Err(eval_type_err(name, "list", &other)),
         }
     }
 
@@ -664,6 +696,75 @@ impl Evaluator<'_> {
                     other => Err(eval_type_err(name, "text", other)),
                 }
             }
+            // Z11-T3: list functions; every element costs a step.
+            "sum" | "avg" | "count" | "first" => {
+                let mut v = self.eval_only(args, 1, name, trace)?;
+                let items = Self::list_items(name, v.remove(0))?;
+                for _ in &items {
+                    self.step()?;
+                }
+                match name {
+                    "count" => Ok(Value::Number(items.len() as f64)),
+                    "first" => Ok(items.into_iter().next().unwrap_or(Value::Null)),
+                    _ => {
+                        let mut total = 0.0;
+                        let mut counted = 0usize;
+                        for item in &items {
+                            match item {
+                                Value::Number(x) => {
+                                    total = finite(total + x)?;
+                                    counted += 1;
+                                }
+                                Value::Null => {}
+                                other => return Err(eval_type_err(name, "number", other)),
+                            }
+                        }
+                        if name == "sum" {
+                            Ok(Value::Number(total))
+                        } else if counted == 0 {
+                            Ok(Value::Null)
+                        } else {
+                            finite(total / counted as f64).map(Value::Number)
+                        }
+                    }
+                }
+            }
+            "any" | "all" | "filter" | "map" => {
+                if args.len() != 2 {
+                    return Err(arity_err(name, "2", args.len()));
+                }
+                let list = self.eval(&args[0], trace)?;
+                let Expr::Lambda { param, body } = &args[1] else {
+                    return Err(RulesError::Eval(format!(
+                        "{name}'s second argument is a lambda: x => ..."
+                    )));
+                };
+                let items = Self::list_items(name, list)?;
+                let mut out = Vec::new();
+                for item in items {
+                    self.step()?;
+                    self.scope.push((param.clone(), item.clone()));
+                    let result = self.eval(body, trace);
+                    self.scope.pop();
+                    let result = result?;
+                    if name == "map" {
+                        out.push(result);
+                        continue;
+                    }
+                    let holds = result == Value::Bool(true);
+                    match name {
+                        "any" if holds => return Ok(Value::Bool(true)),
+                        "all" if !holds => return Ok(Value::Bool(false)),
+                        "filter" if holds => out.push(item),
+                        _ => {}
+                    }
+                }
+                Ok(match name {
+                    "any" => Value::Bool(false),
+                    "all" => Value::Bool(true),
+                    _ => Value::List(out),
+                })
+            }
             other => match self.schema.user_function(other).cloned() {
                 Some(f) => self.eval_user(other, &f, args, trace),
                 None => Err(RulesError::UnknownFunction(other.to_owned())),
@@ -697,6 +798,7 @@ impl Evaluator<'_> {
             steps: self.steps,
             start: self.start,
             record_trace: self.record_trace,
+            scope: Vec::new(),
         };
         let value = inner.eval(expr, trace);
         self.steps = inner.steps;

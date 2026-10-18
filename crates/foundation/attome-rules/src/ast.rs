@@ -36,6 +36,12 @@ pub enum Expr {
         name: String,
         args: Vec<Expr>,
     },
+    /// Z11-T3 (V2): `param => body`, only as the second argument of `any`,
+    /// `all`, `filter` or `map`; `param.field` reads a field of the element.
+    Lambda {
+        param: String,
+        body: Box<Expr>,
+    },
 }
 
 impl Expr {
@@ -53,6 +59,7 @@ impl Expr {
             Expr::Unary { expr, .. } => expr.node_count(),
             Expr::Binary { lhs, rhs, .. } => lhs.node_count() + rhs.node_count(),
             Expr::Call { args, .. } => args.iter().map(Expr::node_count).sum(),
+            Expr::Lambda { body, .. } => body.node_count(),
         }
     }
 }
@@ -160,6 +167,7 @@ impl fmt::Display for Expr {
                 }
                 write!(f, ")")
             }
+            Expr::Lambda { param, body } => write!(f, "{param} => {body}"),
         }
     }
 }

@@ -89,6 +89,7 @@ fn calls(expr: &Expr, names: &BTreeSet<&str>, out: &mut BTreeSet<String>) {
             calls(rhs, names, out);
         }
         Expr::ListLit(items) => items.iter().for_each(|e| calls(e, names, out)),
+        Expr::Lambda { body, .. } => calls(body, names, out),
         _ => {}
     }
 }

@@ -88,6 +88,7 @@ fn collect_patterns(
             collect_patterns(rhs, out)
         }
         Expr::ListLit(items) => items.iter().try_for_each(|a| collect_patterns(a, out)),
+        Expr::Lambda { body, .. } => collect_patterns(body, out),
         _ => Ok(()),
     }
 }
