@@ -14,6 +14,7 @@ publish.workspace      = true
 arc-swap.workspace                    = true
 attome-auth.workspace                 = true
 attome-cache.workspace                = true
+attome-outbound.workspace             = true
 attome-config.workspace               = true
 attome-db.workspace                   = true
 attome-jobs.workspace                 = true

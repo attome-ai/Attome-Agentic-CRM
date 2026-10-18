@@ -120,6 +120,30 @@ impl<E: std::fmt::Display> std::fmt::Display for OutboundError<E> {
 
 impl<E: std::fmt::Debug + std::fmt::Display> std::error::Error for OutboundError<E> {}
 
+/// AB6-T7: what a caller's client sees. The service's name and address stay
+/// in the log, never in the answer: an open breaker is
+/// `capability_unavailable` naming the dependency's kind with a
+/// `Retry-After` of the time until it may try again, a full bulkhead is
+/// `overloaded`, a timeout is `server_timeout`, and the service's own error
+/// is masked as internal.
+impl<E: std::fmt::Display> From<OutboundError<E>> for attome_types::AppError {
+    fn from(error: OutboundError<E>) -> Self {
+        use attome_types::AppError;
+        match error {
+            OutboundError::Open { retry_after } => {
+                tracing::warn!(
+                    retry_after_secs = retry_after.as_secs(),
+                    "outbound: refused by an open breaker"
+                );
+                AppError::CapabilityUnavailable("dependency")
+            }
+            OutboundError::Busy => AppError::Overloaded("dependency"),
+            OutboundError::Timeout => AppError::ServerTimeout,
+            OutboundError::Failed(error) => AppError::internal(error),
+        }
+    }
+}
+
 /// One call to `svc`; see the crate doc.
 pub async fn call<T, E, F, Fut>(
     svc: &Service,
@@ -269,6 +293,25 @@ mod tests {
             .await;
         assert!(matches!(result, Err(OutboundError::Open { .. })));
         assert_eq!(called.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn outbound_errors_map_to_stable_codes() {
+        use attome_types::AppError;
+        let open: AppError = OutboundError::<String>::Open {
+            retry_after: Duration::from_secs(12),
+        }
+        .into();
+        assert!(matches!(
+            open,
+            AppError::CapabilityUnavailable("dependency")
+        ));
+        let busy: AppError = OutboundError::<String>::Busy.into();
+        assert!(matches!(busy, AppError::Overloaded("dependency")));
+        let timeout: AppError = OutboundError::<String>::Timeout.into();
+        assert!(matches!(timeout, AppError::ServerTimeout));
+        let failed: AppError = OutboundError::Failed("smtp.example.com refused".to_string()).into();
+        assert!(matches!(failed, AppError::Internal(_)));
     }
 
     #[tokio::test]

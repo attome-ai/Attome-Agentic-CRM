@@ -1397,6 +1397,7 @@ dependencies = [
 name = "attome-outbound"
 version = "0.1.0"
 dependencies = [
+ "attome-types",
  "tokio",
  "tracing",
 ]
@@ -1812,6 +1813,7 @@ dependencies = [
  "arc-swap",
  "attome-auth",
  "attome-cache",
+ "attome-outbound",
  "attome-config",
  "attome-db",
  "attome-jobs",

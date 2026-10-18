@@ -8,6 +8,8 @@ pub mod bypass;
 pub mod cache_policy;
 pub mod client_ip;
 pub mod csrf;
+/// AB6-T2 — a request's deadline for the outside calls it makes.
+pub mod deadline;
 pub mod deprecation;
 pub mod host_gate;
 pub mod idempotency;

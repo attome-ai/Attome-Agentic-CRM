@@ -319,6 +319,7 @@ pub fn request_span(request: &Request) -> Span {
 /// for why (Router::layer's last call becomes outermost).
 pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
     let max_bytes = config.app.max_body_size_bytes;
+    let request_timeout = config.request_timeout();
     let request_meta_config = std::sync::Arc::new(config.clone());
     let trace_context_config = request_meta_config.clone();
     // Q21-T4: wraps the router itself, so it runs inside every layer below
@@ -355,6 +356,11 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
             .layer(RequestBodyLimitLayer::new(max_bytes))
             .layer(HandleErrorLayer::new(timeout_response))
             .layer(TimeoutLayer::new(config.request_timeout()))
+            // AB6-T2: inside the timeout, so the deadline outside calls see
+            // always ends before it.
+            .layer(middleware::from_fn(move |req, next| {
+                crate::middleware::deadline::with_request_deadline(request_timeout, req, next)
+            }))
             .layer(compression_layer()),
     );
 
