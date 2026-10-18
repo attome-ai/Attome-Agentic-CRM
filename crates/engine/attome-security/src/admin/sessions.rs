@@ -45,7 +45,15 @@ pub(super) async fn revoke_session(
     // (`crates/server/src/auth/session.rs`) and the authn read
     // (`attome-server::middleware::auth`) — see that write's comment for why the
     // cache role cannot hold a fail-closed revocation record.
-    attome_auth::revocation::revoke(&state.base.redis_coordination, body.jti, ttl_secs).await?;
+    attome_auth::revocation::revoke(
+        attome_auth::revocation::RevocationStore::choose(
+            &state.base.redis_coordination,
+            &state.base.db,
+        ),
+        body.jti,
+        ttl_secs,
+    )
+    .await?;
 
     // Audit plan 3.4 (D-541 rule 7). The revocation is a Redis denylist entry,
     // not a database row, so there is no mutation transaction to share: the

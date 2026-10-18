@@ -203,7 +203,12 @@ pub(super) async fn logout(
         // write, the admin revoke in `attome-security`, and the authn read in
         // `attome-attome::middleware::auth` — because a write on one pool and a
         // read on the other is worse than either.
-        revocation::revoke(&state.redis_coordination, claims.jti, remaining).await?;
+        revocation::revoke(
+            revocation::RevocationStore::choose(&state.redis_coordination, &state.db),
+            claims.jti,
+            remaining,
+        )
+        .await?;
         access_subject = Some(claims.sub);
     }
     // A revoked refresh family and its `Logout` event commit together

@@ -271,7 +271,12 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 // policy or `FLUSHDB` is ever pointed at. The epoch check just
                 // below deliberately stays on `state.redis`: a miss there
                 // re-reads Postgres, so absence is safe.
-                if revocation::is_revoked(&state.redis_coordination, claims.jti).await {
+                if revocation::is_revoked(
+                    revocation::RevocationStore::choose(&state.redis_coordination, &state.db),
+                    claims.jti,
+                )
+                .await
+                {
                     // P-observability-completion — SecurityAnomalyRateHigh
                     // alert source; no-op if no recorder was ever installed.
                     metrics::counter!("security_rejection_total", "reason" => "revoked_token")

@@ -20,12 +20,40 @@
 //! (`crates/base/attome-server/src/middleware/auth.rs`) — move together.
 //! The epoch cache deliberately stays on the cache pool: a miss there re-reads
 //! Postgres, so absence is safe.
+//!
+//! **Without Redis (Z4-T5).** On the in-process store (`cache.backend =
+//! memory`) a restart would forget every entry and un-revoke the tokens they
+//! name, so the denylist lives in Postgres instead (`auth_jti_denylist`,
+//! migration 0114), still failing closed on any database error.
+//! [`RevocationStore::choose`] picks: Redis when the coordination store is
+//! Redis, Postgres otherwise. The three sites above choose the same way.
 
 use std::time::Duration;
 
 use attome_cache::Store;
+use attome_db::DbPool;
 use attome_types::AppError;
 use uuid::Uuid;
+
+/// Z4-T5: where the denylist lives.
+#[derive(Debug, Clone, Copy)]
+pub enum RevocationStore<'a> {
+    /// The coordination store (Redis in a cluster).
+    Store(&'a Store),
+    /// Postgres, for a deployment without Redis.
+    Postgres(&'a DbPool),
+}
+
+impl<'a> RevocationStore<'a> {
+    /// Redis when `coordination` is Redis; Postgres on the in-process
+    /// store, whose entries a restart would forget.
+    pub fn choose(coordination: &'a Store, db: &'a DbPool) -> Self {
+        match coordination {
+            Store::Redis(_) => Self::Store(coordination),
+            Store::Memory(_) => Self::Postgres(db),
+        }
+    }
+}
 
 /// Tight bound so a Redis blip can't hang an authenticated request (guidelines §10).
 const CHECK_TIMEOUT: Duration = attome_cache::timeouts::REQUEST_PATH;
@@ -40,13 +68,29 @@ fn key(jti: Uuid) -> String {
 /// with that `jti` was issued at most `ttl_secs` ago, so it cannot outlive a
 /// denylist entry with that TTL. A non-positive `ttl_secs` means the token is
 /// already expired on its own — nothing to denylist.
-pub async fn revoke(store: &Store, jti: Uuid, ttl_secs: i64) -> Result<(), AppError> {
+pub async fn revoke(store: RevocationStore<'_>, jti: Uuid, ttl_secs: i64) -> Result<(), AppError> {
     if ttl_secs <= 0 {
         return Ok(());
     }
-    store
-        .set(&key(jti), "1", Some(Duration::from_secs(ttl_secs as u64)))
+    match store {
+        RevocationStore::Store(store) => {
+            store
+                .set(&key(jti), "1", Some(Duration::from_secs(ttl_secs as u64)))
+                .await
+        }
+        RevocationStore::Postgres(db) => sqlx::query(
+            "INSERT INTO auth_jti_denylist (jti, expires_at) \
+             VALUES ($1, now() + make_interval(secs => $2::float8)) \
+             ON CONFLICT (jti) DO UPDATE \
+             SET expires_at = GREATEST(auth_jti_denylist.expires_at, EXCLUDED.expires_at)",
+        )
+        .bind(jti)
+        .bind(ttl_secs)
+        .execute(db)
         .await
+        .map(|_| ())
+        .map_err(AppError::internal),
+    }
 }
 
 /// Fail-closed revocation check: a store error or timeout is treated as
@@ -56,7 +100,11 @@ pub async fn revoke(store: &Store, jti: Uuid, ttl_secs: i64) -> Result<(), AppEr
 /// one no eviction policy is pointed at; see this module's doc. A miss on the
 /// cache pool after an eviction would read as "not revoked". (The in-process
 /// store has no eviction, so Solo is safe by construction.)
-pub async fn is_revoked(store: &Store, jti: Uuid) -> bool {
+pub async fn is_revoked(store: RevocationStore<'_>, jti: Uuid) -> bool {
+    let store = match store {
+        RevocationStore::Store(store) => store,
+        RevocationStore::Postgres(db) => return is_revoked_in_postgres(db, jti).await,
+    };
     match tokio::time::timeout(CHECK_TIMEOUT, store.get(&key(jti))).await {
         Ok(Ok(Some(_))) => true,
         Ok(Ok(None)) => false,
@@ -69,6 +117,47 @@ pub async fn is_revoked(store: &Store, jti: Uuid) -> bool {
             true
         }
     }
+}
+
+/// Z4-T5: the Postgres read, failing closed on any error or a slow answer.
+async fn is_revoked_in_postgres(db: &DbPool, jti: Uuid) -> bool {
+    let read = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (SELECT 1 FROM auth_jti_denylist WHERE jti = $1 AND expires_at > now())",
+    )
+    .bind(jti)
+    .fetch_one(db);
+    match tokio::time::timeout(CHECK_TIMEOUT, read).await {
+        Ok(Ok(revoked)) => revoked,
+        Ok(Err(e)) => {
+            tracing::warn!("auth denylist read (postgres) failed, failing closed: {e}");
+            true
+        }
+        Err(_) => {
+            tracing::warn!("auth denylist read (postgres) timed out, failing closed");
+            true
+        }
+    }
+}
+
+/// Z4-T5: deletes up to `max_rows` denylist entries whose token expired
+/// more than `retention_secs` ago; for the auth token prune job.
+pub async fn prune_expired(
+    db: &DbPool,
+    retention_secs: i64,
+    max_rows: i64,
+) -> Result<u64, AppError> {
+    sqlx::query(
+        "DELETE FROM auth_jti_denylist WHERE jti IN (
+             SELECT jti FROM auth_jti_denylist
+             WHERE expires_at < NOW() - make_interval(secs => $1::float8)
+             LIMIT $2)",
+    )
+    .bind(retention_secs)
+    .bind(max_rows)
+    .execute(db)
+    .await
+    .map(|done| done.rows_affected())
+    .map_err(AppError::internal)
 }
 
 #[cfg(test)]
@@ -88,16 +177,26 @@ mod tests {
     async fn the_in_process_store_denylists_and_reads_back() {
         let store = Store::memory();
         let jti = Uuid::now_v7();
-        assert!(!is_revoked(&store, jti).await);
-        revoke(&store, jti, 60).await.unwrap();
-        assert!(is_revoked(&store, jti).await);
+        assert!(!is_revoked(RevocationStore::Store(&store), jti).await);
+        revoke(RevocationStore::Store(&store), jti, 60)
+            .await
+            .unwrap();
+        assert!(is_revoked(RevocationStore::Store(&store), jti).await);
     }
 
     #[tokio::test]
     async fn revoke_is_a_no_op_when_ttl_is_zero_or_negative_without_touching_redis() {
         let redis = unconnected_pool();
-        assert!(revoke(&redis, Uuid::now_v7(), 0).await.is_ok());
-        assert!(revoke(&redis, Uuid::now_v7(), -1).await.is_ok());
+        assert!(
+            revoke(RevocationStore::Store(&redis), Uuid::now_v7(), 0)
+                .await
+                .is_ok()
+        );
+        assert!(
+            revoke(RevocationStore::Store(&redis), Uuid::now_v7(), -1)
+                .await
+                .is_ok()
+        );
     }
 
     #[test]

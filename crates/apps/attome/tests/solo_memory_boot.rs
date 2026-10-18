@@ -179,11 +179,18 @@ async fn solo_boots_on_postgres_alone_and_the_stores_work() {
 
     // Revocation: denylisted until its TTL, fail-closed semantics intact.
     let jti = uuid::Uuid::now_v7();
-    assert!(!attome_auth::revocation::is_revoked(&base.redis_coordination, jti).await);
-    attome_auth::revocation::revoke(&base.redis_coordination, jti, 60)
+    // Z4-T5: without Redis the denylist is Postgres, so it outlives a restart.
+    let store =
+        attome_auth::revocation::RevocationStore::choose(&base.redis_coordination, &base.db);
+    assert!(matches!(
+        store,
+        attome_auth::revocation::RevocationStore::Postgres(_)
+    ));
+    assert!(!attome_auth::revocation::is_revoked(store, jti).await);
+    attome_auth::revocation::revoke(store, jti, 60)
         .await
         .expect("revoke");
-    assert!(attome_auth::revocation::is_revoked(&base.redis_coordination, jti).await);
+    assert!(attome_auth::revocation::is_revoked(store, jti).await);
 
     // Rate limiting: a window admits its limit, then refuses.
     let key = format!("solo:test:{jti}");

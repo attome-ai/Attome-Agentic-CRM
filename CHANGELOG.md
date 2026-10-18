@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Revoked session tokens stay revoked across a restart without Redis (Z4-T5): with
+  `cache.backend = memory` the token denylist lives in Postgres (`auth_jti_denylist`, migration
+  0114) instead of process memory, still failing closed on a database error; the auth token prune
+  job deletes expired entries.
 - Optional online breached-password check (Z4-T9): with `auth.breach_check_online`, registration
   and password reset also ask a k-anonymity range service (`auth.breach_range_url`, Have I Been
   Pwned's by default); only the first five hex characters of the password's SHA-1 leave the

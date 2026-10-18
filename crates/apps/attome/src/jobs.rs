@@ -2016,11 +2016,18 @@ pub async fn prune_auth_tokens(
         attome_auth::invitation::prune_expired(db, retention, AUTH_TOKEN_PRUNE_BATCH)
     })
     .await?;
+    // Z4-T5: the Postgres denylist of a deployment without Redis. An entry
+    // is useless once its token has expired, so no retention applies.
+    let denylist = drain_prune("token denylist", || {
+        attome_auth::revocation::prune_expired(db, 0, AUTH_TOKEN_PRUNE_BATCH)
+    })
+    .await?;
     tracing::info!(
         refresh,
         reset,
         verification,
         invitation,
+        denylist,
         "auth token prune: run complete"
     );
     Ok(())
