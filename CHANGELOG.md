@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- API: `GET /api/v1/openapi/deployment.json` (Y9-T2), an OpenAPI 3.1 document of this
+  deployment's own entities: typed list, get, create, update and delete per entity, schemas from
+  the attributes, only the entities the caller may read; built once per metadata snapshot.
+  `openapi` is now a reserved entity name.
 - S2S: act as a user (S1-T10). A client granted `can_act_as_user` (admin client create/update,
   migration 0113) may send `x-attome-act-as: <user id>`; its value is a signed sixth line of the
   canonical message (requests without it sign as before). The request then runs as that user (an

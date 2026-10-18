@@ -35,6 +35,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::model_admin::openapi_fragment(),
         crate::model_health::openapi_fragment(),
         crate::table_health::openapi_fragment(),
+        crate::deployment_openapi::openapi_fragment(),
         crate::live::openapi_fragment(),
         crate::calendar_admin::openapi_fragment(),
         crate::app_admin::openapi_fragment(),

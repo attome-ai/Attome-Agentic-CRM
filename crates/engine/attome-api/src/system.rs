@@ -151,6 +151,7 @@ impl EngineSystem {
             .merge(crate::model_health::routes())
             // Y2-T8: table health from the statistics views (admin-gated).
             .merge(crate::table_health::routes())
+            .merge(crate::deployment_openapi::routes())
             // N30-T8/T9: approval figures and rubber-stamp warnings (admin-gated).
             .merge(crate::approval_metrics::routes())
             .merge(crate::live::routes())

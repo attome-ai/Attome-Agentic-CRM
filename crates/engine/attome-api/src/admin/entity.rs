@@ -243,7 +243,8 @@ pub(super) async fn list_entities(
 }
 
 /// S1-T7: logical names that clash with fixed `/api/v1/<name>` routes.
-const RESERVED_ENTITY_NAMES: &[&str] = &["composite", "query", "search", "graph", "schema"];
+const RESERVED_ENTITY_NAMES: &[&str] =
+    &["composite", "query", "search", "graph", "schema", "openapi"];
 
 #[utoipa::path(
     post,
