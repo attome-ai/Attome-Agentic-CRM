@@ -968,6 +968,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/audit/events/{id}/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An audit event's inclusion proof.
+         * @description The Merkle path from the event's hash to its sealed batch's signed root,
+         *     with the signature, the signing key's public half and the anchor key, so
+         *     the event can be checked without the database (see `crate::proof`).
+         */
+        get: operations["audit_event_proof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit/evidence-packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Builds an audit evidence pack.
+         * @description Every sealed event in a time range or of one record (at most 2,000),
+         *     each with its inclusion proof, the public signing keys and the steps to
+         *     verify them offline. Building one is itself audited.
+         */
+        post: operations["audit_evidence_pack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/audit/export": {
         parameters: {
             query?: never;
@@ -20750,6 +20794,25 @@ export interface components {
             /** Format: uuid */
             scenario_id: string;
         };
+        /** @description Events, their proofs, the public keys and how to check them offline. */
+        EvidencePack: {
+            events: Record<string, never>[];
+            /** Format: date-time */
+            generated_at: string;
+            how_to_verify: string[];
+            proofs: components["schemas"]["InclusionProof"][];
+            public_keys: components["schemas"]["PackKey"][];
+        };
+        /** @description What an evidence pack covers: a time range, or one record. */
+        EvidencePackRequest: {
+            entity_name?: string | null;
+            /** Format: date-time */
+            from?: string | null;
+            /** Format: uuid */
+            record_id?: string | null;
+            /** Format: date-time */
+            to?: string | null;
+        };
         EvidenceRow: {
             action_id: string;
             /** Format: uuid */
@@ -21971,6 +22034,26 @@ export interface components {
             data_source_ref: string;
             /** Format: int64 */
             imported_count: number;
+        };
+        /** @description One event's inclusion proof. */
+        InclusionProof: {
+            /** @description Where the batch root is anchored when external anchoring is on. */
+            anchor_key: string;
+            /** Format: uuid */
+            batch_id: string;
+            event_hash: string;
+            /** Format: uuid */
+            event_id: string;
+            leaf_count: number;
+            leaf_index: number;
+            merkle_root: string;
+            path: components["schemas"]["ProofStep"][];
+            prev_batch_hash: string;
+            /** @description Base64 public half of the signing key, from `audit_signing_key`. */
+            public_key?: string | null;
+            /** @description Base64 Ed25519 signature over `prev_batch_hash|merkle_root`. */
+            signature?: string | null;
+            signing_key_id?: string | null;
         };
         /** @description The advice for one entity. */
         IndexAdvice: {
@@ -23748,6 +23831,13 @@ export interface components {
             owner_type: string;
             /** Format: uuid */
             record_id: string;
+        };
+        /** @description A public signing key. */
+        PackKey: {
+            key_id: string;
+            public_key: string;
+            /** Format: date-time */
+            retired_at?: string | null;
         };
         PageDataResponse: {
             definition_source: components["schemas"]["DefinitionSource"];
@@ -28893,6 +28983,16 @@ export interface components {
             action_id: string;
             text: string;
             version: string;
+        };
+        /**
+         * @description Which side of the running hash a sibling sits on.
+         * @enum {string}
+         */
+        ProofSide: "left" | "right";
+        /** @description One step up the tree: the sibling's hash (hex) and its side. */
+        ProofStep: {
+            hash: string;
+            side: components["schemas"]["ProofSide"];
         };
         ProposeTriggered: {
             enqueued: boolean;
@@ -36832,6 +36932,116 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_event_proof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The audit event (audit_header) id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The inclusion proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InclusionProof"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such audit event */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The event is not sealed into a batch yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_evidence_pack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidencePackRequest"];
+            };
+        };
+        responses: {
+            /** @description The evidence pack */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidencePack"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No range or record, or more than 2,000 events */
             422: {
                 headers: {
                     [name: string]: unknown;

@@ -4503,6 +4503,177 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/audit/events/{id}/proof": {
+      "get": {
+        "tags": [
+          "admin-audit"
+        ],
+        "summary": "An audit event's inclusion proof.",
+        "description": "The Merkle path from the event's hash to its sealed batch's signed root,\nwith the signature, the signing key's public half and the anchor key, so\nthe event can be checked without the database (see `crate::proof`).",
+        "operationId": "audit_event_proof",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The audit event (audit_header) id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The inclusion proof",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InclusionProof"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such audit event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The event is not sealed into a batch yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/audit/evidence-packs": {
+      "post": {
+        "tags": [
+          "admin-audit"
+        ],
+        "summary": "Builds an audit evidence pack.",
+        "description": "Every sealed event in a time range or of one record (at most 2,000),\neach with its inclusion proof, the public signing keys and the steps to\nverify them offline. Building one is itself audited.",
+        "operationId": "audit_evidence_pack",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidencePackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The evidence pack",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidencePack"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No range or record, or more than 2,000 events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "download"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/audit/export": {
       "get": {
         "tags": [
@@ -96889,6 +97060,80 @@
           }
         }
       },
+      "EvidencePack": {
+        "type": "object",
+        "description": "Events, their proofs, the public keys and how to check them offline.",
+        "required": [
+          "generated_at",
+          "events",
+          "proofs",
+          "public_keys",
+          "how_to_verify"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "how_to_verify": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "proofs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InclusionProof"
+            }
+          },
+          "public_keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackKey"
+            }
+          }
+        }
+      },
+      "EvidencePackRequest": {
+        "type": "object",
+        "description": "What an evidence pack covers: a time range, or one record.",
+        "properties": {
+          "entity_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "EvidenceRow": {
         "type": "object",
         "required": [
@@ -99783,6 +100028,78 @@
           "imported_count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "InclusionProof": {
+        "type": "object",
+        "description": "One event's inclusion proof.",
+        "required": [
+          "event_id",
+          "event_hash",
+          "batch_id",
+          "leaf_index",
+          "leaf_count",
+          "path",
+          "merkle_root",
+          "prev_batch_hash",
+          "anchor_key"
+        ],
+        "properties": {
+          "anchor_key": {
+            "type": "string",
+            "description": "Where the batch root is anchored when external anchoring is on."
+          },
+          "batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_hash": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "leaf_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "leaf_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "merkle_root": {
+            "type": "string"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProofStep"
+            }
+          },
+          "prev_batch_hash": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Base64 public half of the signing key, from `audit_signing_key`."
+          },
+          "signature": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Base64 Ed25519 signature over `prev_batch_hash|merkle_root`."
+          },
+          "signing_key_id": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -104407,6 +104724,29 @@
           "record_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PackKey": {
+        "type": "object",
+        "description": "A public signing key.",
+        "required": [
+          "key_id",
+          "public_key"
+        ],
+        "properties": {
+          "key_id": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string"
+          },
+          "retired_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -118672,6 +119012,30 @@
           },
           "version": {
             "type": "string"
+          }
+        }
+      },
+      "ProofSide": {
+        "type": "string",
+        "description": "Which side of the running hash a sibling sits on.",
+        "enum": [
+          "left",
+          "right"
+        ]
+      },
+      "ProofStep": {
+        "type": "object",
+        "description": "One step up the tree: the sibling's hash (hex) and its side.",
+        "required": [
+          "hash",
+          "side"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "side": {
+            "$ref": "#/components/schemas/ProofSide"
           }
         }
       },
