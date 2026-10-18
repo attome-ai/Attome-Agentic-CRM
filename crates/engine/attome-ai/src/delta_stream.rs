@@ -76,9 +76,14 @@ pub struct Delta {
     pub text: String,
 }
 
+/// The most deltas queued for publishing at once; past it a delta is
+/// dropped (Y13-T3: every in-process queue is bounded). A turn's coalescing
+/// task drains it every [`COALESCE`].
+const DELTA_QUEUE: usize = 4096;
+
 /// Publishes one turn's text deltas.
 pub struct Publisher {
-    tx: mpsc::UnboundedSender<String>,
+    tx: mpsc::Sender<String>,
     task: tokio::task::JoinHandle<()>,
 }
 
@@ -95,7 +100,7 @@ impl Publisher {
     /// work is disposable and its loss harmless, and the task ends when the
     /// turn drops its sender.
     pub fn start(redis: Store, conversation_id: Uuid, turn_id: Uuid) -> Self {
-        let (tx, rx) = mpsc::unbounded_channel();
+        let (tx, rx) = mpsc::channel(DELTA_QUEUE);
         let task = tokio::spawn(run(redis, conversation_id, turn_id, rx));
         Self { tx, task }
     }
@@ -104,8 +109,9 @@ impl Publisher {
     pub fn sink(&self) -> impl FnMut(&str) + Send + use<> {
         let tx = self.tx.clone();
         move |text: &str| {
-            // A closed receiver means the publisher gave up; the turn goes on.
-            let _ = tx.send(text.to_owned());
+            // A closed receiver means the publisher gave up, and a full queue
+            // drops this delta (deltas are lossy, Y13-T3); the turn goes on.
+            let _ = tx.try_send(text.to_owned());
         }
     }
 
@@ -121,12 +127,7 @@ impl Publisher {
     }
 }
 
-async fn run(
-    redis: Store,
-    conversation_id: Uuid,
-    turn_id: Uuid,
-    mut rx: mpsc::UnboundedReceiver<String>,
-) {
+async fn run(redis: Store, conversation_id: Uuid, turn_id: Uuid, mut rx: mpsc::Receiver<String>) {
     let channel = channel(conversation_id);
     let mut broken = false;
     while let Some(first) = rx.recv().await {

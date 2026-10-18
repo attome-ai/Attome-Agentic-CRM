@@ -38,6 +38,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: `bounded_state` (Y13-T3) fails on an unbounded channel or a moka cache without
+  `max_capacity` in production code; the AI token-delta queue is now bounded (4,096, a full queue
+  drops the delta, which the stored answer supersedes).
 - Release: `attome perf record --release <v>` and `attome perf compare` (AA14-T5). A record
   (`docs/perf-history/<v>.json`, `attome-perf/v1`) keeps the machine, each SLO class's p95 per
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew

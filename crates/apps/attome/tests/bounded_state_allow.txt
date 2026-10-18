@@ -1,0 +1,3 @@
+# Y13-T3: reviewed exceptions to bounded_state.rs, one per line:
+#   <path from the workspace root> | <text the finding contains> | <why it may be unbounded>
+# None today.
