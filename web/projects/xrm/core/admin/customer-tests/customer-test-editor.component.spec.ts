@@ -31,7 +31,8 @@ describe('CustomerTestEditorComponent (Z15-T15)', () => {
 
   it('adds a given row', () => {
     const { fixture } = create();
-    fixture.componentInstance.addGiven();
+    // The first add button is the Given section's.
+    (fixture.nativeElement.querySelector('button.cte-add') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(fixture.componentInstance.draft.given.length).toBe(1);
     expect(fixture.nativeElement.querySelectorAll('[data-section="given"]').length).toBe(1);
