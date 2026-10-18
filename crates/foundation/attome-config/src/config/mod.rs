@@ -53,7 +53,7 @@ pub use sections::observability::{
     EmailProviders, EmailSection, GoogleAiSection, ObservabilitySection, SendGridSettings,
     SesSettings,
 };
-pub use sections::portal::{CaptchaConfig, CaptchaProvider, DEFAULT_POW_DIFFICULTY, PortalSection};
+pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
 pub use sections::shed::{ShedPermits, ShedSection};
 pub use sections::storage::{S3Target, StorageSection};
 pub use sections::webchat::WebchatSection;
