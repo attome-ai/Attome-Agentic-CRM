@@ -116,6 +116,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),
     );
+    // F5-T11: gateway payouts reconciled, daily.
+    crate::jobs::spawn_billing_reconcile_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // F4-T10: invoices past due, nightly.
     crate::jobs::spawn_billing_overdue_scheduler(
         db.clone(),

@@ -139,6 +139,11 @@ Attome never sees a card number.
   Finance Managers in the app. `GET /api/v1/billing/disputes/{id}/evidence` lists the paid invoices'
   PDFs and the files attached to those invoices and to the link's order; a person submits the evidence
   to the gateway.
+- Settlement: each day the gateways' payouts for the day before are matched to their payments by
+  gateway reference (`gateway_payout`): `matched` when every payment is known and the gross, fees and
+  net agree, otherwise `difference` with the unmatched references and expected totals; the stored
+  query "Billing: Payouts with differences" lists those. Each payout's fees go on the change feed as
+  `billing.gateway_fee` for the ledger to post. Moyasar offers payouts to aggregation merchants only.
 - The gateway's webhook URL is `https://<deployment>/api/v1/billing/gateways/<system id>/webhook`.
   A call whose secret (Moyasar) or encryption (HyperPay) does not verify gets `401`. Each verified
   event is stored once and applied by a background job, so a redelivered event never changes a

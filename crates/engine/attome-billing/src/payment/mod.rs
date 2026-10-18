@@ -4,6 +4,7 @@
 pub mod allocate;
 pub mod dispute;
 pub mod link;
+pub mod reconcile;
 pub mod recurring;
 pub mod refund;
 pub mod service;

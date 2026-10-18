@@ -481,6 +481,8 @@ pub enum EngineJob {
     BillingOverdueSweep,
     /// F5-T9: charges due invoices to saved methods. Bare unit variant.
     BillingChargeDue,
+    /// F5-T11: reconciles yesterday's gateway payouts. Bare unit variant.
+    BillingReconcile,
     /// AG2-T3: sends e-invoices ZATCA could not take yet. Bare unit variant.
     BillingEinvoiceSweep,
     /// F5-T7: applies stored payment gateway events. Bare unit variant.
@@ -970,6 +972,7 @@ impl EngineJob {
             | Self::BillingScheduleRun
             | Self::BillingOverdueSweep
             | Self::BillingChargeDue
+            | Self::BillingReconcile
             | Self::BillingEinvoiceSweep
             | Self::BillingGatewayEventApply
             | Self::SalesSnapshotPrune
@@ -1094,6 +1097,7 @@ impl EngineJob {
             EngineJob::BillingScheduleRun => "BillingScheduleRun",
             EngineJob::BillingOverdueSweep => "BillingOverdueSweep",
             EngineJob::BillingChargeDue => "BillingChargeDue",
+            EngineJob::BillingReconcile => "BillingReconcile",
             EngineJob::BillingEinvoiceSweep => "BillingEinvoiceSweep",
             EngineJob::BillingGatewayEventApply => "BillingGatewayEventApply",
             EngineJob::SalesSnapshotPrune => "SalesSnapshotPrune",
@@ -1220,6 +1224,7 @@ impl EngineJob {
             | Self::BillingScheduleRun
             | Self::BillingOverdueSweep
             | Self::BillingChargeDue
+            | Self::BillingReconcile
             | Self::BillingEinvoiceSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
@@ -1366,6 +1371,7 @@ impl EngineJob {
             | Self::BillingScheduleRun
             | Self::BillingOverdueSweep
             | Self::BillingChargeDue
+            | Self::BillingReconcile
             | Self::BillingEinvoiceSweep
             | Self::BillingGatewayEventApply
             | Self::SalesSnapshotPrune
@@ -1731,6 +1737,7 @@ mod tests {
         assert_round_trips(EngineJob::BillingScheduleRun);
         assert_round_trips(EngineJob::BillingOverdueSweep);
         assert_round_trips(EngineJob::BillingChargeDue);
+        assert_round_trips(EngineJob::BillingReconcile);
         assert_round_trips(EngineJob::BillingEinvoiceSweep);
         assert_round_trips(EngineJob::BillingGatewayEventApply);
         assert_round_trips(EngineJob::SalesSnapshotPrune);

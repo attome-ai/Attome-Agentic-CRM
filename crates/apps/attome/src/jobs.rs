@@ -1083,6 +1083,15 @@ async fn dispatch_platform_job(
                 tracing::info!(changed, "billing gateway events: payments updated");
             }
         }
+        // F5-T11: yesterday's gateway payouts, matched to their payments.
+        EngineJob::BillingReconcile => {
+            let outcome = attome_billing::payment::reconcile::reconcile_yesterday(
+                &attome_state,
+                &attome_billing::payment::recurring::LiveAdapters,
+            )
+            .await?;
+            tracing::info!(?outcome, "billing payout reconciliation");
+        }
         // F5-T9: due invoices charged to saved methods, when turned on.
         EngineJob::BillingChargeDue => {
             if attome_billing::payment::recurring::enabled(&attome_state) {
@@ -2312,6 +2321,7 @@ const DEDUP_KEY_BILLING_REQUEST_SWEEP: &str = "billing-request-sweep";
 const DEDUP_KEY_BILLING_SCHEDULE_RUN: &str = "billing-schedule-run";
 const DEDUP_KEY_BILLING_OVERDUE_SWEEP: &str = "billing-overdue-sweep";
 const DEDUP_KEY_BILLING_CHARGE_DUE: &str = "billing-charge-due";
+const DEDUP_KEY_BILLING_RECONCILE: &str = "billing-reconcile";
 const DEDUP_KEY_BILLING_EINVOICE_SWEEP: &str = "billing-einvoice-sweep";
 const DEDUP_KEY_BILLING_GATEWAY_EVENT_APPLY: &str =
     attome_billing::gateway::webhook::APPLY_DEDUP_KEY;
@@ -2394,6 +2404,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::BillingScheduleRun => DEDUP_KEY_BILLING_SCHEDULE_RUN,
         EngineJob::BillingOverdueSweep => DEDUP_KEY_BILLING_OVERDUE_SWEEP,
         EngineJob::BillingChargeDue => DEDUP_KEY_BILLING_CHARGE_DUE,
+        EngineJob::BillingReconcile => DEDUP_KEY_BILLING_RECONCILE,
         EngineJob::BillingEinvoiceSweep => DEDUP_KEY_BILLING_EINVOICE_SWEEP,
         EngineJob::BillingGatewayEventApply => DEDUP_KEY_BILLING_GATEWAY_EVENT_APPLY,
         EngineJob::SalesSnapshotPrune => DEDUP_KEY_SALES_SNAPSHOT_PRUNE,
@@ -2872,6 +2883,17 @@ pub fn spawn_billing_charge_due_scheduler(db: DbPool, interval: std::time::Durat
         EngineJob::BillingChargeDue,
         DEDUP_KEY_BILLING_CHARGE_DUE,
         "billing recurring charges",
+    );
+}
+
+/// F5-T11: daily, yesterday's gateway payouts.
+pub fn spawn_billing_reconcile_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingReconcile,
+        DEDUP_KEY_BILLING_RECONCILE,
+        "billing payout reconciliation",
     );
 }
 

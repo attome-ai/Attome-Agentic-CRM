@@ -1,0 +1,149 @@
+{
+  "author": "packs",
+  "checksum": "sha256:afd05889d49780c5aad632a195dcda27261fa394f7cdec9c4f0f09f2f845af88",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Settlement reconciliation (F5-T11): a payout records how many payments it settles and what did not match; finance managers read payouts and the list of payouts with differences.",
+  "format": "attome-changeset/v1",
+  "id": "01a14d77-24f1-73c6-88e9-550fef316a46",
+  "layer": "product",
+  "name": "billing-reconciliation",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Differences",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "differences",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "differences"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "display_name": "الفروقات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "gateway_payout.differences",
+        "object_kind": "attribute"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payments",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "payment_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payment_count"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "display_name": "عدد الدفعات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "gateway_payout.payment_count",
+        "object_kind": "attribute"
+      },
+      "seq": 4
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "gateway_payout.read"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on gateway_payout",
+          "key": "gateway_payout.read",
+          "name": "gateway_payout.read"
+        }
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "gateway_payout.read",
+        "role": "Finance Manager"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "gateway_payout",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Billing: Payouts with differences",
+          "required_privilege": "gateway_payout.read",
+          "sql": "SELECT id, gateway_system_ref, payout_reference, payout_date, gross, fees, net, currency, payment_count, differences FROM \"gateway_payout\" WHERE status = 'difference' AND is_active IS NOT FALSE ORDER BY payout_date DESC, payout_reference",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "query": "Billing: Payouts with differences"
+      },
+      "seq": 7
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 19,
+  "title": "Pack: settlement reconciliation"
+}

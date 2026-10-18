@@ -21,7 +21,8 @@
 //!   from the gateway's record, so a retry never refunds twice.
 //! - **Payouts** are Moyasar's transfers (`GET /transfers` and their lines),
 //!   which Moyasar offers to aggregation merchants; another account gets a
-//!   refusal.
+//!   refusal. Each line's payment is read for its invoice, the reference a
+//!   checkout's payment is known by.
 //! - **Webhooks** carry the endpoint's `secret_token` in the body; it is
 //!   compared with the stored secret in constant time, and a payment event's
 //!   reference is its invoice id when it has one (the checkout's reference),
@@ -403,6 +404,23 @@ impl PaymentGateway for MoyasarGateway {
                 let exponent = exponent(&transfer.currency);
                 let line_fees: i64 = lines.iter().map(|l| l.fee + l.tax).sum();
                 let fees = transfer.fee + transfer.tax + line_fees;
+                // A line names Moyasar's payment; Attome knows a checkout's
+                // payment by its invoice, so each is read for its invoice.
+                let mut references = Vec::with_capacity(lines.len());
+                for line in &lines {
+                    if line.kind.as_deref().is_some_and(|k| k != "payment") {
+                        continue;
+                    }
+                    let Some(payment) = line.payment_id.as_deref() else {
+                        continue;
+                    };
+                    let reference = match self.payment(secret, payment).await {
+                        Ok(found) => found.invoice_id.unwrap_or(found.id),
+                        Err(GatewayError::Refused(_)) => payment.to_owned(),
+                        Err(e) => return Err(e),
+                    };
+                    references.push(reference);
+                }
                 payouts.push(Payout {
                     payout_reference: transfer.reference.clone().unwrap_or(transfer.id.clone()),
                     day,
@@ -411,11 +429,7 @@ impl PaymentGateway for MoyasarGateway {
                     fees: Decimal::new(fees, exponent),
                     net: Decimal::new(transfer.amount, exponent),
                     currency: transfer.currency.clone(),
-                    payments: lines
-                        .into_iter()
-                        .filter(|l| l.kind.as_deref().is_none_or(|k| k == "payment"))
-                        .filter_map(|l| l.payment_id)
-                        .collect(),
+                    payments: references,
                 });
             }
             Ok(payouts)
