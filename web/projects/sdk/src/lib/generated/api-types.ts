@@ -1419,6 +1419,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/config/starts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_config_starts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/config/starts/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["diff_config_starts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/conflicts": {
         parameters: {
             query?: never;
@@ -18104,6 +18136,23 @@ export interface components {
             /** Format: double */
             upper: number;
         };
+        /** @description One changed key in a comparison. */
+        ConfigChange: {
+            after: Record<string, never>;
+            before: Record<string, never>;
+            /** @description The dotted configuration path, e.g. `app.port`. */
+            path: string;
+        };
+        /** @description One start, without its view. */
+        ConfigStartRow: {
+            app_version: string;
+            fingerprint: string;
+            /** Format: uuid */
+            id: string;
+            node_name: string;
+            /** Format: date-time */
+            started_at: string;
+        };
         /**
          * @description The "configured" half: every raw assignment that feeds resolution, with
          *     display names attached so the UI doesn't need N follow-up lookups.
@@ -24561,6 +24610,39 @@ export interface components {
                 participant_id?: string | null;
                 /** Format: uuid */
                 run_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ConfigChange: {
+            items: {
+                after: Record<string, never>;
+                before: Record<string, never>;
+                /** @description The dotted configuration path, e.g. `app.port`. */
+                path: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ConfigStartRow: {
+            items: {
+                app_version: string;
+                fingerprint: string;
+                /** Format: uuid */
+                id: string;
+                node_name: string;
+                /** Format: date-time */
+                started_at: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -38676,6 +38758,107 @@ export interface operations {
             };
             /** @description changeset_not_closed */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_config_starts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Node starts with their configuration fingerprints, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ConfigStartRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diff_config_starts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The earlier start. */
+                a: string;
+                /** @description The later start. */
+                b: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The configuration keys whose values differ, by dotted path */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ConfigChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such start */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
