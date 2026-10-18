@@ -901,6 +901,28 @@ pub enum EngineJob {
     /// handler re-reads the target row, so a duplicate or stale delivery
     /// does nothing.
     FleetRolloutStep { target_id: Uuid },
+
+    /// Z7-T1 — a job of a type registered at run time in [`JOB_TYPES`]
+    /// (`{name, version, payload}`), so an engine adds a job without a new
+    /// variant here. Its queue, lane and attempts come from the registered
+    /// [`attome_jobs::JobType`]; a name this worker has no handler for fails
+    /// with `unknown_job_type` and ends in the dead letters.
+    Registered(attome_jobs::RegisteredJob),
+}
+
+/// Z7-T1 — the job types registered at run time, each with its handler.
+/// Filled by code at start-up on every node (server and worker alike); the
+/// worker runs [`EngineJob::Registered`] through it.
+pub static JOB_TYPES: attome_jobs::JobRegistry<crate::EngineState> =
+    attome_jobs::JobRegistry::new();
+
+/// The registered declaration of a [`EngineJob::Registered`] job, if its
+/// type is registered on this node.
+fn registered_type(job: &EngineJob) -> Option<attome_jobs::JobType> {
+    match job {
+        EngineJob::Registered(job) => JOB_TYPES.job_type(&job.name),
+        _ => None,
+    }
 }
 
 impl EngineJob {
@@ -1040,6 +1062,8 @@ impl EngineJob {
             | Self::BillingAfterIssue { .. }
             | Self::BillingExecuteRefund { .. }
             | Self::FleetRolloutStep { .. } => false,
+            // Decided by its registered type in the `Job` impl below.
+            Self::Registered(_) => false,
         }
     }
 }
@@ -1174,6 +1198,7 @@ impl EngineJob {
             EngineJob::ExecuteApprovedRequest { .. } => "ExecuteApprovedRequest",
             EngineJob::FleetPoll => "FleetPoll",
             EngineJob::FleetRolloutStep { .. } => "FleetRolloutStep",
+            EngineJob::Registered(_) => "Registered",
         }
     }
 }
@@ -1315,6 +1340,8 @@ impl EngineJob {
             | Self::BillingExecuteRefund { .. }
             | Self::BillingGatewayEventApply
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
+            // Decided by its registered type in the `Job` impl below.
+            Self::Registered(_) => JobPriority::Normal,
         }
     }
 }
@@ -1482,6 +1509,9 @@ impl EngineJob {
             | Self::ReportRun { .. }
             | Self::DocgenRender { .. }
             | Self::PredictTrainModel { .. } => 10,
+            // Decided by its registered type in the `Job` impl below; 5 when
+            // the type is not registered on the producing node.
+            Self::Registered(_) => 5,
         }
     }
 }
@@ -1583,15 +1613,22 @@ impl attome_jobs::Job for EngineJob {
     }
 
     fn is_batch(&self) -> bool {
-        EngineJob::is_batch(self)
+        registered_type(self).map_or_else(
+            || EngineJob::is_batch(self),
+            |job_type| job_type.lane == attome_jobs::Lane::Batch,
+        )
     }
 
     fn priority(&self) -> JobPriority {
-        EngineJob::priority(self)
+        registered_type(self)
+            .map_or_else(|| EngineJob::priority(self), |job_type| job_type.priority)
     }
 
     fn max_attempts(&self) -> i32 {
-        EngineJob::max_attempts(self)
+        registered_type(self).map_or_else(
+            || EngineJob::max_attempts(self),
+            |job_type| job_type.max_attempts,
+        )
     }
 }
 

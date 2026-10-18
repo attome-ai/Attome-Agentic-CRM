@@ -7,6 +7,9 @@
 
 mod job;
 
+/// Z7-T1: job types registered at run time. See the module docs.
+pub mod registry;
+
 /// The schedule ledger that makes a periodic job run once per slot across
 /// workers and restarts. See the module docs.
 pub mod schedule;
@@ -17,6 +20,7 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 pub use apalis_sql::Config as JobsConfig;
 pub use apalis_sql::postgres::PostgresStorage;
 pub use job::{CURRENT_ENVELOPE_VERSION, Job, JobEnvelope, JobPriority, MALFORMED_VARIANT_TAG};
+pub use registry::{JobRegistry, JobType, Lane, RegisteredJob, RegistryError};
 
 /// Postgres-backed handle for one queue of `J`. Cheap to `.clone()` (it wraps
 /// a pooled `PgPool`).

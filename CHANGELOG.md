@@ -103,6 +103,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Job types registered at run time (Z7-T1): `attome_jobs::JobRegistry` maps a job name to its
+  declaration (`JobType`: payload version, lane, priority, attempts, per-node concurrency cap) and
+  handler, and `EngineJob::Registered` carries `{name, version, payload}`, so an engine adds a job
+  with `attome_core::jobs::JOB_TYPES.register(...)` instead of a new enum variant. A job naming a
+  type the worker does not have fails with `unknown_job_type` and ends in the dead letters; one
+  written by a newer payload version fails with `newer_job_version` until the node is upgraded.
 - `Server-Timing` response header (AA1-T5): `mw`, `auth`, `perm`, `db`, `app` and `ext` durations in
   milliseconds, phase names only. `observability.server_timing` says who gets it: `dev` (the
   default; every response, with `APP_ENV=debug` only), `admins` (responses to administrators) or

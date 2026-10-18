@@ -205,6 +205,14 @@ pub async fn handle_platform_job(
 /// `"unrecognized"`, never an unrecognized row's own text (cardinality).
 fn metric_kind(job: &JobEnvelope<EngineJob>) -> &'static str {
     match job {
+        // Z7-T1: a registered type's own name, fixed in code, so bounded;
+        // a name not registered here stays the variant name.
+        JobEnvelope::Known {
+            job: EngineJob::Registered(job),
+            ..
+        } => attome_core::jobs::JOB_TYPES
+            .job_type(&job.name)
+            .map_or("Registered", |job_type| job_type.name),
         JobEnvelope::Known { job, .. } => job.variant_name(),
         JobEnvelope::Unrecognized { .. } => "unrecognized",
     }
@@ -1799,6 +1807,14 @@ async fn dispatch_platform_job(
         EngineJob::FleetPoll => run_fleet_poll(&attome_state).await?,
         EngineJob::FleetRolloutStep { target_id } => {
             run_fleet_rollout_step(&attome_state, target_id).await?
+        }
+        // Z7-T1 — a run-time registered type: its handler, by name. An
+        // unknown name fails with `unknown_job_type` and dead-letters at the
+        // row's budget.
+        EngineJob::Registered(job) => {
+            attome_core::jobs::JOB_TYPES
+                .run((*attome_state).clone(), job)
+                .await?
         }
     }
     Ok(())
