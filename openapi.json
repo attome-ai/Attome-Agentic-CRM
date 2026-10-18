@@ -55114,6 +55114,42 @@
         ]
       }
     },
+    "/api/v1/openapi/deployment.json": {
+      "get": {
+        "tags": [
+          "openapi"
+        ],
+        "operationId": "deployment_openapi",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 for the entities the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/pay/{token}": {
       "get": {
         "tags": [
