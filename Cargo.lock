@@ -571,6 +571,7 @@ name = "attome-billing"
 version = "0.1.0"
 dependencies = [
  "attome-audit",
+ "attome-billing",
  "attome-core",
  "attome-db",
  "attome-docgen",
@@ -595,6 +596,7 @@ dependencies = [
  "rust_decimal",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "thiserror",
  "tokio",

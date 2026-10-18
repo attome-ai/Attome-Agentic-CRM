@@ -35,6 +35,7 @@ moka.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -47,6 +48,9 @@ zeroize.workspace = true
 test-support = []
 
 [dev-dependencies]
+# Itself with `test-support`, so the gateway tests always build with the
+# plain test client.
+attome-billing = { path = ".", features = ["test-support"] }
 attome-testkit.workspace = true
 tokio.workspace = true
 

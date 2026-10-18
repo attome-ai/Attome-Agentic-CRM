@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: the Moyasar payment gateway adapter — hosted checkout through a Moyasar invoice, payment
+  status, token charges that never charge twice for one idempotency key (`given_id`), refunds that
+  never refund twice, payouts from Moyasar transfers, webhooks verified by their secret token in
+  constant time, and saved cards kept as brand and last four digits only (F5-T5).
 - The payment gateway seam (F5-T4): integration systems of the new kind `payment_gateway` hold a
   gateway's base URL and credential; `attome_billing::gateway` defines the `PaymentGateway` trait
   (hosted checkout, status, token charge, refund, payouts, webhook verification), an SSRF-guarded

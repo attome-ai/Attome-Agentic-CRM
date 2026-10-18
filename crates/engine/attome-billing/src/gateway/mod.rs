@@ -17,6 +17,8 @@
 //!   in memory beyond it; nothing here logs a secret or a full token. No
 //!   adapter call happens inside a database transaction.
 
+pub mod moyasar;
+
 use std::future::Future;
 use std::pin::Pin;
 
@@ -98,6 +100,15 @@ pub struct Payout {
     pub payments: Vec<String>,
 }
 
+/// A saved card as Attome keeps it: the brand and last four digits only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SavedCard {
+    pub brand: String,
+    pub last4: String,
+    /// Whether the gateway will charge the token.
+    pub active: bool,
+}
+
 /// One event a gateway's webhook reported.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GatewayEvent {
@@ -172,6 +183,9 @@ pub trait PaymentGateway: Send + Sync {
         secret: &'a str,
         day: NaiveDate,
     ) -> GatewayFuture<'a, Vec<Payout>>;
+    /// The card behind a saved token: its brand and last four digits, and
+    /// nothing else from the gateway's answer.
+    fn saved_card<'a>(&'a self, secret: &'a str, token: &'a str) -> GatewayFuture<'a, SavedCard>;
     /// Verifies a webhook and reads its events; `webhook_secret` is the
     /// signing secret the gateway was configured with.
     fn verify_webhook(
@@ -241,11 +255,12 @@ impl GatewayHttp {
     }
 }
 
-/// The adapter for a gateway name, when one is built.
-pub fn gateway_for(name: &str) -> Option<Box<dyn PaymentGateway>> {
+/// The adapter for a gateway name, calling through `http`, when one is
+/// built.
+pub fn gateway_for(name: &str, http: GatewayHttp) -> Option<Box<dyn PaymentGateway>> {
     match name {
-        // F5-T5 and F5-T6 add the Moyasar and HyperPay adapters here.
-        "moyasar" | "hyperpay" => None,
+        "moyasar" => Some(Box::new(moyasar::MoyasarGateway::new(http))),
+        // F5-T6 adds the HyperPay adapter here.
         _ => None,
     }
 }
