@@ -162,7 +162,7 @@ pub fn fold_proposals(
     let mut by_attr: BTreeMap<String, IndexProposal> = BTreeMap::new();
     let entity = entity.to_lowercase();
     for (query, calls, mean) in statements {
-        if !tokens(query).iter().any(|t| *t == entity) {
+        if !tokens(query).contains(&entity) {
             continue;
         }
         for column in where_columns(query) {

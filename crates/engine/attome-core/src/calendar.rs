@@ -917,16 +917,17 @@ mod tests {
             ))
             .contains("overlap")
         );
+        // Z12-T4: an overnight range is a valid shift now, not an error.
         let overnight = json!({ "mon": [{ "start_minute": 1320, "end_minute": 360 }] });
         assert!(
-            reason(build_calendar(
+            build_calendar(
                 "UTC",
                 &days(&["mon"]),
                 &overnight,
                 BTreeSet::new(),
                 BTreeMap::new()
-            ))
-            .contains("cannot cross midnight")
+            )
+            .is_ok()
         );
         let r = reason(build_calendar(
             "UTC",

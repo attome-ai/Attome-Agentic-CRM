@@ -174,7 +174,7 @@ pub fn median(mut values: Vec<f64>) -> Option<f64> {
     }
     values.sort_by(f64::total_cmp);
     let mid = values.len() / 2;
-    Some(if values.len() % 2 == 0 {
+    Some(if values.len().is_multiple_of(2) {
         f64::midpoint(values[mid - 1], values[mid])
     } else {
         values[mid]

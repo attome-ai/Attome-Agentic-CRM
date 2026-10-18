@@ -119,6 +119,9 @@ const BASELINE: &[&str] = &[
     "data_export",
     "data_mapping_admin",
     "data_profile_admin",
+    // Y9-T2: the deployment's OpenAPI document reads every engine's live
+    // registry at once, which is composition.
+    "deployment_openapi",
     "duplicates_admin",
     "duplicates_match",
     "email_admin",
