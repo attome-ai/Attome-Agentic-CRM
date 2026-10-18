@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Rejection counts (Z5-T11): every protective layer counts its refusals in
+  `http_rejections_total{layer, reason}` with fixed reasons (`waf`, `flood`, `pre_auth_rate_limit`,
+  `rate_limit` with `limit`/`temporary_ban`/`account_budget`, `body_limit`, `host_gate`, `csrf`,
+  and `auth` with `no_credential`, `invalid_session`, `invalid_api_key`, `revoked_token`,
+  `epoch_stale`, `ip_not_allowed`), and the new `HttpRejectionsSpike` alert fires when a layer
+  refuses ten times its hourly average. `security_rejection_total` is unchanged.
 - Flood protection (Z5-T5), right after the web firewall and before sign-in: at most
   `app.max_concurrent_requests` (default 1024) requests run at once on a node, past which a request
   is `503 overloaded`, and at most `app.max_concurrent_per_ip` (default 64) from one address, past

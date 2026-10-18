@@ -281,7 +281,7 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                     // alert source; no-op if no recorder was ever installed.
                     metrics::counter!("security_rejection_total", "reason" => "revoked_token")
                         .increment(1);
-                    return AppError::Unauthorized.into_response();
+                    return refuse(AppError::Unauthorized, "revoked_token");
                 }
                 // D-113 Phase 2 (wired D-121; P-session-refresh-hardening,
                 // D-129): a disabled account's already-issued, not-yet-
@@ -301,7 +301,7 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 {
                     metrics::counter!("security_rejection_total", "reason" => "epoch_stale")
                         .increment(1);
-                    return e.into_response();
+                    return refuse(e, "epoch_stale");
                 }
                 // M03 gap 2 / D-434: role-scoped IP allow-list, checked last
                 // on this branch — after the token itself is already known
@@ -309,7 +309,7 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 // sees `Unauthorized`, never a `Forbidden` that would leak
                 // "your token was fine, only your network wasn't."
                 if let Err(e) = check_role_ip_allowlist(&state, claims.sub, caller_ip).await {
-                    return e.into_response();
+                    return refuse(e, "ip_not_allowed");
                 }
                 req.extensions_mut().insert(claims);
                 // D-510 rule 7: marks a validated cookie session, the only
@@ -329,7 +329,7 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 req.extensions_mut().insert(sid);
                 return next.run(req).await;
             }
-            Err(e) => return e.into_response(),
+            Err(e) => return refuse(e, "invalid_session"),
         }
     }
 
@@ -366,11 +366,25 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 req.extensions_mut().insert(ApiKeyIdentity(key_id));
                 return next.run(req).await;
             }
-            Err(e) => return e.into_response(),
+            Err(e) => return refuse(e, "invalid_api_key"),
         }
     }
 
-    AppError::Unauthorized.into_response()
+    refuse(AppError::Unauthorized, "no_credential")
+}
+
+/// Z5-T11: counts an authentication refusal in `http_rejections_total`
+/// (`layer="auth"`) and answers it. A `Forbidden` is an IP allow-list
+/// refusal whichever branch raised it; an error that is not a refusal at all
+/// (a store outage) counts as `unavailable`.
+fn refuse(error: AppError, reason: &'static str) -> Response {
+    let reason = match &error {
+        AppError::Forbidden => "ip_not_allowed",
+        AppError::Unauthorized => reason,
+        _ => "unavailable",
+    };
+    crate::metrics::record_rejection("auth", reason);
+    error.into_response()
 }
 
 /// Resolves `SessionClaims.sub` into a `SecurityContext` (roles + privileges)

@@ -166,7 +166,7 @@ pub fn refusal_response(refusal: Refusal) -> Response {
             "per_ip",
         ),
     };
-    metrics::counter!("http_rejections_total", "layer" => "flood", "reason" => reason).increment(1);
+    crate::metrics::record_rejection("flood", reason);
     response
         .headers_mut()
         .insert(RETRY_AFTER, HeaderValue::from_static("1"));

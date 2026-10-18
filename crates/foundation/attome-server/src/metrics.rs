@@ -694,6 +694,14 @@ pub(crate) fn record_capability_state(capability: &'static str, state: u8) {
     metrics::gauge!("capability_state", "capability" => capability).set(state as f64);
 }
 
+/// Z5-T11: one request a protective layer refused, as
+/// `http_rejections_total{layer, reason}`. Both labels are fixed strings
+/// from a short list per layer, never a path, address or identifier; the
+/// counter is the signal, so a refusal needs no warn log of its own.
+pub fn record_rejection(layer: &'static str, reason: &'static str) {
+    metrics::counter!("http_rejections_total", "layer" => layer, "reason" => reason).increment(1);
+}
+
 /// D-344 — one request refused with 503 `capability_unavailable`. The pair of
 /// this and `capability_state` is what distinguishes "the object store is
 /// down and nobody was uploading anyway" from "the object store is down and

@@ -53,6 +53,7 @@ pub(crate) async fn reject_declared_oversized_body(
             None,
             i64::try_from(len).unwrap_or(i64::MAX),
         );
+        crate::metrics::record_rejection("body_limit", "declared_length");
         return AppError::PayloadTooLarge.into_response();
     }
 

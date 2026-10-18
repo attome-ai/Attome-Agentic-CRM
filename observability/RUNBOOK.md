@@ -361,6 +361,18 @@ chained, and there is no automatic fallback (D-029). Check the `audit_chainer` s
 and its logs. Left alone, the backlog crosses `audit.ingest_backlog_threshold` and writes start
 returning 503. `/prod-observability` "Audit, bloat, partitions" covers the chain.
 
+### HttpRejectionsSpike
+
+One protective layer (the `layer` label: `waf`, `flood`, `pre_auth_rate_limit`, `rate_limit`,
+`body_limit`, `host_gate`, `csrf` or `auth`) is refusing more than ten times its one-hour average,
+and over one request a second, for five minutes. Break it down by `reason` in
+`http_rejections_total` first. A jump in `auth`/`invalid_session` right after a release is a
+broken sign-in or a rotated key, not an attack; `waf`, `flood` or `pre_auth_rate_limit` climbing
+from a few addresses is a scan or a flood (the per-address caps are holding it; block at the edge
+if it persists); `csrf`/`cross_site` climbing is a page posting into the app from another origin,
+or an allowed origin missing from `cors.allowed_origins`. No label carries a path, address or
+user: use the request-id-tagged logs for those.
+
 ### SecurityAnomalyRateHigh
 
 A security rejection reason (the `reason` label) sustained above 5/s for 5 minutes: S2S replay or

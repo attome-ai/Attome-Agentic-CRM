@@ -80,8 +80,7 @@ pub async fn basic_waf(req: Request, next: Next) -> Response {
         metrics::counter!("http_waf_signal_total", "signal" => "no_ua").increment(1);
     }
     if let Some(reason) = refusal(&req) {
-        metrics::counter!("http_rejections_total", "layer" => "waf", "reason" => reason)
-            .increment(1);
+        crate::metrics::record_rejection("waf", reason);
         tracing::warn!(reason, "web firewall: request refused");
         return AppError::RequestRejected(reason).into_response();
     }

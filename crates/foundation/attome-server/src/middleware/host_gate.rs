@@ -115,6 +115,7 @@ pub async fn gate(
         HostAudience::Portal => "portal_host",
     };
     metrics::counter!("security_rejection_total", "reason" => reason).increment(1);
+    crate::metrics::record_rejection("host_gate", reason);
     rejection()
 }
 

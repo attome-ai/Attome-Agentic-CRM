@@ -301,7 +301,8 @@ fn principal(identity: &Identity) -> (&'static str, Option<uuid::Uuid>) {
 
 /// The 429 a banned caller gets: no handler runs, and `Retry-After` is what
 /// is left of the ban.
-fn banned_response(left_secs: u64) -> Response {
+fn banned_response(layer: &'static str, left_secs: u64) -> Response {
+    crate::metrics::record_rejection(layer, "temporary_ban");
     let mut resp = AppError::TooManyRequests {
         retry_after_secs: Some(left_secs),
     }
@@ -355,6 +356,7 @@ pub async fn enforce_account_budget(
         retry_after_secs = outcome.retry_after_secs,
         "per-account throttle tripped"
     );
+    crate::metrics::record_rejection("rate_limit", "account_budget");
     let mut resp = AppError::TooManyRequests {
         retry_after_secs: Some(outcome.retry_after_secs),
     }
@@ -447,7 +449,7 @@ pub async fn rate_limit(
     // Q20-T4: a banned caller is refused before its budget is even read.
     // Fails closed on a store error, like the budget check itself.
     match active_ban(&state.redis_coordination, &bucket).await {
-        Ok(Some(left)) => return banned_response(left),
+        Ok(Some(left)) => return banned_response("rate_limit", left),
         Ok(None) => {}
         Err(e) => return e.into_response(),
     }
@@ -484,6 +486,7 @@ pub async fn rate_limit(
             // P-observability-completion — SecurityAnomalyRateHigh alert
             // source; no-op if no recorder was ever installed.
             metrics::counter!("security_rejection_total", "reason" => "rate_limit").increment(1);
+            crate::metrics::record_rejection("rate_limit", "limit");
             crate::limit_usage::record_limit_hit(
                 &format!("rate_limit.{category}"),
                 principal_kind,
@@ -536,7 +539,7 @@ pub async fn pre_auth_rate_limit(
     // Q20-T4: the same address bucket the category middleware bans.
     let bucket = format!("ip:{ip}");
     match active_ban(&state.redis_coordination, &bucket).await {
-        Ok(Some(left)) => return banned_response(left),
+        Ok(Some(left)) => return banned_response("pre_auth_rate_limit", left),
         Ok(None) => {}
         Err(e) => return e.into_response(),
     }
@@ -555,6 +558,7 @@ pub async fn pre_auth_rate_limit(
         Ok(outcome) if outcome.allowed => next.run(req).await,
         Ok(outcome) => {
             crate::limit_usage::record_limit_hit("rate_limit.pre_auth", "anonymous", None, 0);
+            crate::metrics::record_rejection("pre_auth_rate_limit", "limit");
             note_trip(
                 &state.redis_coordination,
                 &bucket,
@@ -669,7 +673,7 @@ mod tests {
         let other = format!("ip:test-{}", Uuid::now_v7());
         assert_eq!(active_ban(&store, &other).await.unwrap(), None);
 
-        let resp = banned_response(left);
+        let resp = banned_response("rate_limit", left);
         assert_eq!(resp.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(
             resp.headers().get("retry-after").unwrap(),

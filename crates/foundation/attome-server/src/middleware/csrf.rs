@@ -25,6 +25,7 @@
 //! and is rejected — the intended fix for a legitimate non-browser client that
 //! needs to carry credentials is an API key, not a cookie.
 
+use attome_config::AppConfig;
 use attome_types::AppError;
 use axum::{
     extract::{Request, State},
@@ -98,6 +99,16 @@ fn should_reject(
 }
 
 pub async fn csrf_protect(State(state): State<AppState>, req: Request, next: Next) -> Response {
+    match refusal(&state.config, &req) {
+        Some(refused) => refused,
+        None => next.run(req).await,
+    }
+}
+
+/// The refusal `csrf_protect` answers for `req`, or `None` to let it through.
+/// Z5-T11: split out of the layer so a test can drive it with a bare
+/// `AppConfig`; an enforced refusal counts in `http_rejections_total`.
+pub fn refusal(config: &AppConfig, req: &Request) -> Option<Response> {
     let path = req.uri().path().to_owned();
     if is_csrf_exempt(&path) {
         // Pre-auth by definition (login/register/health/...) — no session
@@ -108,17 +119,17 @@ pub async fn csrf_protect(State(state): State<AppState>, req: Request, next: Nex
         // so exempting them here let any attacker-controlled page force-log-out
         // an authenticated user or force-rotate their refresh family. See
         // `bypass::CSRF_ENFORCED_BYPASS_PATHS` for the full reasoning.
-        return next.run(req).await;
+        return None;
     }
 
-    let secure_cookies = state.config.auth.secure_cookies;
+    let secure_cookies = config.auth.secure_cookies;
     let method_is_unsafe = is_mutating(req.method());
     let carries_cookie_credential = carries_cookie_credential(req.headers(), secure_cookies);
 
     // Cheapest checks first: skip header parsing entirely for the common
     // case (GET/HEAD, or a non-cookie-authenticated request).
     if !method_is_unsafe || !carries_cookie_credential {
-        return next.run(req).await;
+        return None;
     }
 
     let sec_fetch_site = req
@@ -129,7 +140,7 @@ pub async fn csrf_protect(State(state): State<AppState>, req: Request, next: Nex
         .headers()
         .get(axum::http::header::ORIGIN)
         .and_then(|v| v.to_str().ok());
-    let allowed_origins = state.config.allowed_origins();
+    let allowed_origins = config.allowed_origins();
 
     if !should_reject(
         method_is_unsafe,
@@ -138,10 +149,10 @@ pub async fn csrf_protect(State(state): State<AppState>, req: Request, next: Nex
         origin,
         &allowed_origins,
     ) {
-        return next.run(req).await;
+        return None;
     }
 
-    if !state.config.security.csrf_enforce {
+    if !config.security.csrf_enforce {
         tracing::warn!(
             path = %path,
             sec_fetch_site = ?sec_fetch_site,
@@ -149,7 +160,7 @@ pub async fn csrf_protect(State(state): State<AppState>, req: Request, next: Nex
             "csrf: would reject (security.csrf_enforce=false, log-only mode) — \
              cross-site cookie-authenticated request on an unsafe method"
         );
-        return next.run(req).await;
+        return None;
     }
 
     tracing::warn!(
@@ -163,7 +174,8 @@ pub async fn csrf_protect(State(state): State<AppState>, req: Request, next: Nex
     // the real-enforcement path counts (the log-only branch above already
     // returned), never the log-only report-mode path.
     metrics::counter!("security_rejection_total", "reason" => "csrf").increment(1);
-    AppError::Forbidden.into_response()
+    crate::metrics::record_rejection("csrf", "cross_site");
+    Some(AppError::Forbidden.into_response())
 }
 
 #[cfg(test)]

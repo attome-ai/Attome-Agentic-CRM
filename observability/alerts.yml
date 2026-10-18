@@ -746,6 +746,31 @@ groups:
             revoked token looks identical to an attacker at this signal
             alone.
 
+      - alert: HttpRejectionsSpike
+        # Z5-T11: http_rejections_total{layer, reason}, counted by every
+        # protective layer (firewall, flood guard, rate limits, body limit,
+        # host gate, CSRF, authentication). A layer refusing ten times its
+        # hourly average over five minutes, and at least one a second, is an
+        # attack starting or a client gone wrong: either way, someone should
+        # look. Relative, so a busy deployment's steady background of
+        # refusals does not page.
+        expr: |
+          sum by (layer) (rate(http_rejections_total[5m]))
+            > 10 * sum by (layer) (rate(http_rejections_total[1h]))
+          and sum by (layer) (rate(http_rejections_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#httprejectionsspike"
+          summary: "The {{ $labels.layer }} layer is refusing ten times its usual rate"
+          description: >
+            Requests refused by the {{ $labels.layer }} layer have run above
+            ten times their one-hour average, and over 1/s, for 5 minutes.
+            `sum by (reason) (rate(http_rejections_total{layer="{{ $labels.layer }}"}[5m]))`
+            names the reason.
+
       # ── D-344 — durability-capability gate (amends D-167) ──────────────────
       #
       # These are NOT readiness alerts. /health/ready still watches only
