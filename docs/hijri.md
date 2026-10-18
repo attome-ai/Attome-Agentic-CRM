@@ -47,3 +47,13 @@ The change is audited (Configuration) and every node uses it within 20 seconds.
 - Dates outside 1356 to 1500 AH have no Hijri form: autonumber tokens render zeros, the browser
   falls back to its own calendar for display, and Hijri entry refuses them.
 - Years after 1450 AH are the table's prediction; corrections are expected as they are announced.
+
+## Holidays on the Hijri calendar
+
+`attome_calendar::rules::HolidayRule::Hijri { month, day, span_days }` names a holiday by its Hijri
+date (Eid al-Fitr is month 10, day 1, three days). `rules::expand(rule, year)` gives the Gregorian
+dates it closes in that year, expanding every Hijri year that overlaps it, so a rule can close two
+stretches in one Gregorian year (1 Ramadan fell on 5 January and 26 December 2030) or none. A
+`rules::Season` between two rules (Ramadan's first and last day) sets per-weekday hours, expanded
+into one exception per working date with `rules::expand_season`.
+

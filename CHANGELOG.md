@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendar: recurring holiday rules and seasons (`attome_calendar::rules`, Z12-T2): fixed dates,
+  the nth (or last) weekday of a month, Hijri dates (which can fall twice in one Gregorian year)
+  and one-off dates, each spanning 1 to 15 days, expand into the calendar's holidays; a season
+  (Ramadan's short hours, say) expands into per-date exceptions. `BusinessCalendar::
+  next_working_moment` answers the next working instant.
 - Rules: related lists and list functions (Z11-T3, V2): `sum`, `count`, `avg`, `first`, and
   `any`/`all`/`filter`/`map` with a lambda (`lines, l => l.qty > 0`) over a related list the caller
   supplies; lambdas nest two deep (`rules.budget.lambda_depth`) and each element costs a step.

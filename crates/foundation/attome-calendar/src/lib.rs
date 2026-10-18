@@ -78,6 +78,7 @@
 pub mod availability;
 pub mod hijri;
 pub mod recurrence;
+pub mod rules;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
@@ -559,13 +560,24 @@ impl BusinessCalendar {
     /// [`CalendarError::NoWorkingTime`] if no working time starts within
     /// [`MAX_DAYS_SCAN`] days.
     ///
-    /// Test-only today (cleanup 1.8): no caller outside this crate uses it;
-    /// the tests use it to check the walk agrees with [`Self::is_working`].
+    /// The tests also use it to check the walk agrees with
+    /// [`Self::is_working`].
     #[cfg(test)]
     pub(crate) fn next_business_instant(
         &self,
         instant: DateTime<Utc>,
     ) -> Result<DateTime<Utc>, CalendarError> {
+        self.next_working_moment(instant)
+    }
+
+    /// The earliest working instant at or after `from` (Z12-T2) — `from`
+    /// itself when it is already working time — found with the same bounded
+    /// walk as [`Self::add_business_duration`].
+    ///
+    /// [`CalendarError::NoWorkingTime`] if no working time starts within
+    /// [`MAX_DAYS_SCAN`] days.
+    pub fn next_working_moment(&self, from: DateTime<Utc>) -> Result<DateTime<Utc>, CalendarError> {
+        let instant = from;
         if !self.has_working_time() {
             return Err(CalendarError::NoWorkingTime);
         }
@@ -924,6 +936,27 @@ mod tests {
     fn next_business_instant_is_identity_when_already_working() {
         let t = utc(2026, 8, 27, 10, 0);
         assert_eq!(sun_thu_calendar().next_business_instant(t), Ok(t));
+    }
+
+    #[test]
+    fn next_working_moment_skips_weekend() {
+        let friday_noon = utc(2026, 8, 28, 12, 0);
+        assert_eq!(
+            sun_thu_calendar().next_working_moment(friday_noon),
+            Ok(utc(2026, 8, 30, 9, 0))
+        );
+        let closed = BusinessCalendar::new(
+            UTC,
+            HashSet::new(),
+            HashMap::new(),
+            BTreeSet::new(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            closed.next_working_moment(friday_noon),
+            Err(CalendarError::NoWorkingTime)
+        );
     }
 
     #[test]
