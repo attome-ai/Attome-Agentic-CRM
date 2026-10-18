@@ -203,6 +203,7 @@ async fn admitted_search(
             degraded: Vec::new(),
             route_hint: None,
             impression_id: None,
+            limited: false,
         });
     }
 
@@ -277,6 +278,7 @@ async fn admitted_search(
         degraded,
         route_hint: first.route_hint,
         impression_id: None,
+        limited: false,
     })
 }
 

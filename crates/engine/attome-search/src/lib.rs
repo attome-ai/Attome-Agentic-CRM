@@ -32,6 +32,7 @@ pub mod dsl;
 pub mod embedding_writer;
 pub mod engine;
 pub mod eval;
+pub mod fallback;
 pub mod graph;
 pub mod knowledge;
 pub mod knowledge_coverage;

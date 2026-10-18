@@ -684,3 +684,90 @@ async fn the_knowledge_coverage_read_is_admin_only() {
         .execute(&db)
         .await;
 }
+
+/// AB5-T5: with the search index confirmed down, search answers from the
+/// tables: a prefix match on each readable entity's title attribute, marked
+/// `limited` with the route `fallback` and `search_index` degraded. A
+/// sensitive attribute is never searched.
+#[tokio::test]
+async fn search_falls_back_when_index_down() {
+    use attome_server::capability::{Capability, ProbeOutcome};
+    let (system, db) = skip_if_no_db!(test_system().await);
+    let (_user, cookie) = seed_admin(&db).await;
+    let suffix = Uuid::now_v7().simple().to_string();
+    // `a0` sorts first, inside the fallback's entity cap.
+    let entity = format!("a0fb_{}", &suffix[20..]);
+    let entity_id = attome_metadata::provision::ensure_entity(
+        &db,
+        &entity,
+        "Fallback test",
+        Some("name"),
+        false,
+    )
+    .await
+    .expect("provision entity");
+    for (name, sensitive) in [("name", false), ("secret", true)] {
+        attome_metadata::provision::ensure_attribute(
+            &db, entity_id, name, name, "text", false, sensitive, false, false, None, None,
+        )
+        .await
+        .expect("provision attribute");
+    }
+    let token = format!("fbco{}", &suffix[26..]);
+    let named: Uuid = sqlx::query_scalar(&format!(
+        "INSERT INTO \"{entity}\" (name, secret) VALUES ($1, 'x') RETURNING id"
+    ))
+    .bind(format!("{token} Trading"))
+    .fetch_one(&db)
+    .await
+    .expect("insert the named record");
+    sqlx::query(&format!(
+        "INSERT INTO \"{entity}\" (name, secret) VALUES ('Other', $1)"
+    ))
+    .bind(format!("{token} hidden"))
+    .execute(&db)
+    .await
+    .expect("insert the record matching only on a sensitive field");
+    let state = system.state().clone();
+    let registry = attome_core::build_registry(&db)
+        .await
+        .expect("build entity metadata registry");
+    state.entities.swap(registry);
+    let app = full_app(system);
+    let uri = format!("/api/v1/search?q={token}");
+
+    let (status, body) = get(&app, &uri, &cookie).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_ne!(body["route"], "fallback", "the index is not down: {body}");
+    assert!(body.get("limited").is_none(), "{body}");
+
+    for _ in 0..2 {
+        state
+            .base
+            .capabilities
+            .record(Capability::SearchIndex, ProbeOutcome::Unreachable);
+    }
+    let (status, body) = get(&app, &uri, &cookie).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["route"], "fallback", "{body}");
+    assert_eq!(body["limited"], true, "{body}");
+    assert!(
+        body["degraded"]
+            .as_array()
+            .is_some_and(|d| d.iter().any(|v| v == "search_index")),
+        "{body}"
+    );
+    let ours: Vec<&Value> = body["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter(|i| i["entity_logicalname"] == entity.as_str())
+        .collect();
+    assert_eq!(
+        ours.len(),
+        1,
+        "only the title match, never the sensitive one: {body}"
+    );
+    assert_eq!(ours[0]["record_id"], named.to_string());
+    assert_eq!(ours[0]["title"], format!("{token} Trading"));
+}

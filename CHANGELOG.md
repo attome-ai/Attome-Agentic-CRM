@@ -355,6 +355,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Search while the index is down (AB5-T5): when the `search_index` capability is confirmed
+  unavailable, `GET /api/v1/search` answers from the tables instead — a prefix match on each
+  readable entity's title attribute (the one the index titles it by, never a sensitive field), five
+  rows per entity, filtered by the caller's record access — with `route: "fallback"`,
+  `degraded: ["search_index"]` and the new `limited: true`. At most two run at once per node and
+  one a second per person.
 - Chat streams survive a restart (AB7-T5): when a node starts draining, `GET
   /api/v1/ai/conversations/{id}/stream` sends one `reconnect` frame (`{retry_ms}`, 500 to 3000 ms,
   no `id`, with the SSE `retry` field) and closes instead of holding the shutdown open; the chat

@@ -210,6 +210,11 @@ pub struct SearchResponse {
     /// search.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub impression_id: Option<Uuid>,
+    /// AB5-T5: the index was down, so this is a short prefix match on each
+    /// readable entity's title from the database (route `fallback`), not a
+    /// ranked search. Sent only when true.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub limited: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -323,6 +328,18 @@ async fn search(
     validate_paging(params.page, params.page_size)?;
     let audience = parse_audience(params.audience.as_deref())?;
 
+    // AB5-T5: with the index confirmed down, answer from the tables instead.
+    if state
+        .base
+        .capabilities
+        .state(attome_server::capability::Capability::SearchIndex)
+        == attome_server::capability::CapabilityState::Unavailable
+    {
+        let response =
+            crate::fallback::fallback_search(&state, &ctx, &q, params.page, params.page_size)
+                .await?;
+        return Ok(Json(response));
+    }
     let response =
         execute_search(&state, &ctx, &q, params.page, params.page_size, audience).await?;
     Ok(Json(response))
@@ -366,6 +383,7 @@ pub async fn execute_search(
                 tool: hint.tool.to_owned(),
             }),
             impression_id: None,
+            limited: false,
         });
     }
 
@@ -591,6 +609,7 @@ pub async fn execute_search(
         degraded,
         route_hint: None,
         impression_id,
+        limited: false,
         items,
     })
 }
@@ -838,6 +857,7 @@ fn empty_response(route: &Route, page: i64, page_size: i64) -> SearchResponse {
         degraded: Vec::new(),
         route_hint: None,
         impression_id: None,
+        limited: false,
     }
 }
 
