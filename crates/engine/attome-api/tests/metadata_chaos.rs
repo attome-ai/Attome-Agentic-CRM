@@ -126,10 +126,20 @@ fn test_config_polling(poll_secs: u64) -> AppConfig {
         poll_secs = poll_secs,
     );
 
-    attome_testkit::with_test_database(
+    let mut config = attome_testkit::with_test_database(
         serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
         true,
-    )
+    );
+    // Y8-T1: the doorbell listener holds a runtime session, which outside
+    // APP_ENV=debug needs `database.runtime` (D-612); the test database's
+    // own user stands in for the runtime role.
+    if let Some(password) = config.database.password.clone() {
+        config.database.runtime = Some(attome_config::RuntimeDbCredentials {
+            user: config.database.user.clone(),
+            password,
+        });
+    }
+    config
 }
 
 /// One independent "node" — its own registry, subscriber and watermark
@@ -358,10 +368,15 @@ async fn registry_knows(app: &axum::Router, cookie: &str, logicalname: &str) -> 
         .expect("record create request")
         .status();
     assert!(
-        status == StatusCode::CREATED || status == StatusCode::NOT_FOUND,
-        "registry probe for {logicalname} returned {status}, expected 201 (known) or 404 (unknown)"
+        matches!(
+            status,
+            StatusCode::CREATED | StatusCode::NOT_FOUND | StatusCode::UNPROCESSABLE_ENTITY
+        ),
+        "registry probe for {logicalname} returned {status}, expected 201 or 422 (known) or 404 (unknown)"
     );
-    status == StatusCode::CREATED
+    // A 422 is the body refused by an entity the registry resolved (an
+    // entity created without the probe's `note` field): known all the same.
+    status != StatusCode::NOT_FOUND
 }
 
 /// Polls `registry_knows` until true or `deadline` elapses; returns how long

@@ -34,8 +34,8 @@ pub use sections::auth::{
 pub use sections::backup::BackupSection;
 pub use sections::cache::{CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
 pub use sections::database::{
-    AppSection, DatabasePoolSize, DatabasePools, DatabaseSection, StatementClassOverrides,
-    StatementClassTimeouts,
+    AppSection, DatabasePoolSize, DatabasePools, DatabaseSection, RuntimeDbCredentials,
+    StatementClassOverrides, StatementClassTimeouts,
 };
 pub use sections::docgen::DocgenSection;
 pub use sections::einvoice::EinvoiceSection;
@@ -103,7 +103,7 @@ use sections::auth::{default_oidc_email_claim, default_oidc_scopes};
 #[cfg(test)]
 use sections::cache::CacheSentinelNode;
 #[cfg(test)]
-use sections::database::{MigratorDbCredentials, ReadonlyDbCredentials, RuntimeDbCredentials};
+use sections::database::{MigratorDbCredentials, ReadonlyDbCredentials};
 
 // ── Top-level ─────────────────────────────────────────────────────────────────
 
