@@ -42,6 +42,8 @@
 mod config;
 mod env;
 mod keyring;
+/// AA9-T1 — every limit the platform enforces, with its range.
+pub mod limits;
 mod net;
 pub mod secret;
 
