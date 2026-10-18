@@ -45,6 +45,13 @@ pub struct EntityRecordResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, LookupMeta>>)]
     lookups: Option<serde_json::Map<String, Value>>,
+    /// S1-T13: present when the request named a language (`Accept-Language`
+    /// `ar` or `en`): each choice field's value as its label in that
+    /// language (a list for a multi-valued field), the value itself where no
+    /// label is written. `data` keeps the stored values.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<std::collections::HashMap<String, serde_json::Value>>)]
+    labels: Option<serde_json::Map<String, Value>>,
     /// M07 Phase F (D-770): present only on the response to an update that
     /// asked for a state transition requiring approval. The record was moved
     /// to the transition's pending state (visible in `data`) instead of the
@@ -220,6 +227,24 @@ pub(super) async fn resolve_select(
     Ok(Some(names))
 }
 
+/// S1-T13: the first `Accept-Language` tag the platform has labels for:
+/// `ar` or `en` (a region such as `ar-SA` counts), else `None`.
+pub(super) fn request_locale(headers: &axum::http::HeaderMap) -> Option<&'static str> {
+    let raw = headers
+        .get(axum::http::header::ACCEPT_LANGUAGE)?
+        .to_str()
+        .ok()?;
+    raw.split(',').find_map(|tag| {
+        let tag = tag.split(';').next().unwrap_or("").trim();
+        let primary = tag.split('-').next().unwrap_or("").to_ascii_lowercase();
+        match primary.as_str() {
+            "ar" => Some("ar"),
+            "en" => Some("en"),
+            _ => None,
+        }
+    })
+}
+
 impl EntityRecordResponse {
     /// S1-T3: keeps only the selected attributes in `data` and `lookups`.
     pub(super) fn selected(mut self, names: Option<&[String]>) -> Self {
@@ -232,6 +257,62 @@ impl EntityRecordResponse {
         if let Some(lookups) = self.lookups.as_mut() {
             lookups.retain(|key, _| names.iter().any(|name| name == key));
         }
+        if let Some(labels) = self.labels.as_mut() {
+            labels.retain(|key, _| names.iter().any(|name| name == key));
+        }
+        self
+    }
+
+    /// S1-T13: the choice labels in `locale` (see the `labels` field).
+    pub(super) fn with_choice_labels(
+        mut self,
+        state: &attome_core::EngineState,
+        entity: &str,
+        attrs: &[attome_core::AttrInfo],
+        locale: &str,
+    ) -> Self {
+        let snapshot = state.labels.load();
+        let deployment = state.deployment_locale();
+        let label = |field: &str, value: &Value| -> Value {
+            let Some(code) = value.as_str() else {
+                return value.clone();
+            };
+            let key = format!("{entity}.{field}.{code}");
+            // The language's own row (`ar`, or a regional `ar-SA`), else the
+            // deployment's, else the stored value.
+            let rows = snapshot.rows_for("choice_option", &key);
+            rows.iter()
+                .find(|r| r.locale == locale)
+                .or_else(|| {
+                    rows.iter()
+                        .find(|r| r.locale.split('-').next() == Some(locale))
+                })
+                .or_else(|| snapshot.resolve("choice_option", &key, None, &deployment))
+                .map_or_else(
+                    || Value::String(code.to_owned()),
+                    |row| Value::String(row.display_name.clone()),
+                )
+        };
+        let mut labels = serde_json::Map::new();
+        if let Some(data) = self.data.as_object() {
+            for attr in attrs {
+                if attr.storage_type() != attome_core::FieldType::Choice {
+                    continue;
+                }
+                let Some(value) = data.get(&attr.logicalname) else {
+                    continue;
+                };
+                let shown = match value {
+                    Value::Array(items) => {
+                        Value::Array(items.iter().map(|v| label(&attr.logicalname, v)).collect())
+                    }
+                    Value::Null => continue,
+                    single => label(&attr.logicalname, single),
+                };
+                labels.insert(attr.logicalname.clone(), shown);
+            }
+        }
+        self.labels = Some(labels);
         self
     }
 
@@ -465,6 +546,7 @@ pub(super) fn build_response(
         updated_at,
         row_version,
         lookups,
+        labels: None,
         approval_request_id: None,
         warnings: Vec::new(),
         duplicate_warnings: Vec::new(),
@@ -477,6 +559,31 @@ pub(super) fn build_response(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn accept(value: &str) -> axum::http::HeaderMap {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::ACCEPT_LANGUAGE,
+            axum::http::HeaderValue::from_str(value).unwrap(),
+        );
+        headers
+    }
+
+    #[test]
+    fn request_locale_prefers_first_supported_tag() {
+        assert_eq!(request_locale(&accept("ar-SA,en;q=0.8")), Some("ar"));
+        assert_eq!(
+            request_locale(&accept("fr-FR, en-GB;q=0.7, ar")),
+            Some("en")
+        );
+        assert_eq!(request_locale(&accept("EN")), Some("en"));
+    }
+
+    #[test]
+    fn request_locale_ignores_unsupported() {
+        assert_eq!(request_locale(&accept("fr, de;q=0.5")), None);
+        assert_eq!(request_locale(&axum::http::HeaderMap::new()), None);
+    }
 
     #[test]
     fn parse_select_trims_and_splits() {

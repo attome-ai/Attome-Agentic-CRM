@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Records: a record read with `Accept-Language: ar` or `en` carries `labels`, each choice field's
+  value as its label in that language (the stored value where none is written), and answers with
+  `Content-Language` (S1-T13). `data` keeps the stored values.
 - Web: the S2S client editor shows and edits the act-as-user grant, in English and Arabic (S1-T11).
 - Calendars: each person's calendar (Z12-T5). `resolve_calendar_id_for_user` takes the person's
   own assignment, else their lowest-id team's, else the default; `load_calendar_for_user` closes

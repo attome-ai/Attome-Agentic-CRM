@@ -310,14 +310,26 @@ pub(super) async fn get_record(
             super::expand::expand_record(&state, &ctx, response.data(), &lookups).await?;
         response = response.with_expanded(expanded);
     }
+    // S1-T13: choice labels in the language the request asked for.
+    let locale = super::response::request_locale(&headers);
+    if let Some(locale) = locale {
+        response = response.with_choice_labels(&state, &entity_name, &attrs, locale);
+    }
     let response = response.selected(select.as_deref());
     let etag = row_version_etag(response.row_version);
-    Ok((
+    let mut answer = (
         StatusCode::OK,
         [(axum::http::header::ETAG, etag)],
         Json(response),
     )
-        .into_response())
+        .into_response();
+    if let Some(locale) = locale {
+        answer.headers_mut().insert(
+            axum::http::header::CONTENT_LANGUAGE,
+            axum::http::HeaderValue::from_static(locale),
+        );
+    }
+    Ok(answer)
 }
 
 /// The record read itself, with every transport concern removed: no
