@@ -32,6 +32,8 @@ pub mod api_version;
 pub mod clock;
 pub mod error;
 pub mod error_codes;
+/// Z14-T3 — error titles in English and Arabic.
+pub mod error_messages;
 pub mod request_scope;
 pub mod text;
 pub mod types;

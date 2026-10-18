@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Error titles in the caller's language (Z14-T3): every error code has an English and an Arabic
+  message (`attome_types::error_messages`). An error response's `title` is the code's message,
+  in Arabic with `Content-Language: ar` when `Accept-Language` prefers Arabic, else in English;
+  `code`, `error` and `detail` are unchanged.
 - Runtime limit settings (AA9-T3): `limits.bulk.max_records_per_request` and
   `limits.query.timeout_ms.{interactive,report,export}` are deployment settings in the catalogue
   (Operations area). A stored value takes effect without a restart; with none stored the boot

@@ -16,8 +16,15 @@
 //! `x-request-id` header only.
 
 use crate::middleware::idempotency::{Buffered, buffer_up_to};
+use attome_types::error_messages::{self, Lang};
 use axum::{
-    body::Body, extract::Request, http::header::CONTENT_LENGTH, middleware::Next,
+    body::Body,
+    extract::Request,
+    http::{
+        HeaderValue,
+        header::{ACCEPT_LANGUAGE, CONTENT_LANGUAGE, CONTENT_LENGTH},
+    },
+    middleware::Next,
     response::Response,
 };
 use tower_http::request_id::RequestId;
@@ -35,6 +42,12 @@ pub async fn attach_request_id_to_error_body(req: Request, next: Next) -> Respon
         .map(str::to_owned);
     // Z14-T1: the problem's `instance`, the path it happened at.
     let instance = req.uri().path().to_owned();
+    // Z14-T3: the language the caller reads error titles in.
+    let lang = error_messages::from_accept_language(
+        req.headers()
+            .get(ACCEPT_LANGUAGE)
+            .and_then(|v| v.to_str().ok()),
+    );
 
     let response = next.run(req).await;
 
@@ -72,6 +85,22 @@ pub async fn attach_request_id_to_error_body(req: Request, next: Next) -> Respon
     );
     if obj.contains_key("code") {
         obj.insert("instance".to_owned(), serde_json::Value::String(instance));
+        // Z14-T3: the title in the caller's language (English is already
+        // in the body).
+        if lang == Lang::Ar
+            && let Some(title) = obj
+                .get("code")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|code| error_messages::title(code, Lang::Ar))
+        {
+            obj.insert(
+                "title".to_owned(),
+                serde_json::Value::String(title.to_owned()),
+            );
+            parts
+                .headers
+                .insert(CONTENT_LANGUAGE, HeaderValue::from_static("ar"));
+        }
     }
     let new_bytes = serde_json::to_vec(&value).unwrap_or(bytes.to_vec());
     parts.headers.remove(CONTENT_LENGTH); // body length changed; let the server recompute it

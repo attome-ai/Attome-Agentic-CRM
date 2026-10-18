@@ -510,7 +510,12 @@ impl IntoResponse for AppError {
         // client; `detail` is `message`; `instance` and `request_id` are
         // added by attome-server's request-id layer.
         body["type"] = json!("about:blank");
-        body["title"] = json!(status.canonical_reason().unwrap_or("Error"));
+        // Z14-T3: the code's own message, in English; the request-id body
+        // layer swaps in Arabic for a caller who prefers it.
+        body["title"] = json!(
+            crate::error_messages::title(code, crate::error_messages::Lang::En)
+                .unwrap_or(status.canonical_reason().unwrap_or("Error"))
+        );
         body["status"] = json!(status.as_u16());
         body["detail"] = body["message"].clone();
         body["code"] = json!(code);

@@ -814,6 +814,52 @@ mod tests {
         assert_eq!(body["request_id"], request_id);
     }
 
+    /// Z14-T3: an error's title follows `Accept-Language`, English by default.
+    async fn error_title(accept_language: Option<&str>) -> (serde_json::Value, Option<String>) {
+        use tower::ServiceExt;
+
+        let app = apply_outer_layers(
+            Router::new().route("/x", get(|| async { AppError::NotFound.into_response() })),
+            &outer_stack_config(),
+        );
+        let mut request = Request::builder()
+            .uri("/x")
+            .header(header::ORIGIN, ALLOWED_ORIGIN);
+        if let Some(value) = accept_language {
+            request = request.header(header::ACCEPT_LANGUAGE, value);
+        }
+        let response = app
+            .oneshot(request.body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let language = response
+            .headers()
+            .get(header::CONTENT_LANGUAGE)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        (serde_json::from_slice(&bytes).unwrap(), language)
+    }
+
+    #[tokio::test]
+    async fn an_error_title_is_in_arabic_for_an_arabic_caller() {
+        let (body, language) = error_title(Some("ar-SA,ar;q=0.9,en;q=0.5")).await;
+        assert_eq!(body["title"], "لم يُعثر على المورد.");
+        assert_eq!(language.as_deref(), Some("ar"));
+        assert_eq!(body["code"], "not_found", "the code never changes");
+    }
+
+    #[tokio::test]
+    async fn an_error_title_is_in_english_by_default() {
+        let (body, language) = error_title(None).await;
+        assert_eq!(body["title"], "The resource was not found.");
+        assert_eq!(language, None);
+        let (body, _) = error_title(Some("en-GB")).await;
+        assert_eq!(body["title"], "The resource was not found.");
+    }
+
     /// A2 (BSV-F06) — an allowed origin must be able to **read** the headers
     /// the SDK needs (its correlation id, its backoff). The CORS safelist hides
     /// everything else, so this list is the contract.
