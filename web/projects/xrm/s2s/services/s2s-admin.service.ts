@@ -48,6 +48,8 @@ export interface ClientDetail {
   allowed_cidrs:      string[] | null;
   max_payload_bytes:  number;
   auto_disable_days:  number;
+  /** S1-T10: may name a user to act as (`x-attome-act-as`). */
+  can_act_as_user:    boolean;
   last_used_at:       string | null;
   row_version:        number;
   created_at:         string;
@@ -97,6 +99,7 @@ export interface CreateClientBody {
   allowed_cidrs?:     string[];
   max_payload_bytes?: number;
   auto_disable_days?: number;
+  can_act_as_user?:   boolean;
 }
 
 export interface UpdateClientBody {
@@ -108,6 +111,7 @@ export interface UpdateClientBody {
   allowed_cidrs?:      string[];
   max_payload_bytes?:  number;
   auto_disable_days?:  number;
+  can_act_as_user?:    boolean;
   row_version:         number;
 }
 

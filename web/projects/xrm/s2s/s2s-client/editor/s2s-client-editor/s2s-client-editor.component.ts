@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } fro
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiError } from '@attome/base';
+import { ApiError, TranslatePipe } from '@attome/base';
 
 import {
   AccessLogItem, ClientDetail, PermissionItem, S2sAdminService, SetPermissionBody,
@@ -28,7 +28,7 @@ function emptyPermForm(): PermForm {
   selector:   'attome-s2s-client-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [FormsModule, RouterLink, DatePipe],
+  imports:    [FormsModule, RouterLink, DatePipe, TranslatePipe],
   styleUrls:  ['../../../../styles/admin-page.css', './s2s-client-editor.component.css'],
   templateUrl: './s2s-client-editor.component.html',
 })
@@ -58,6 +58,8 @@ export class S2sClientEditorComponent implements OnInit {
   editStatus      = 'active';
   editRpm         = '';
   editMaxConcurrent = '';
+  /** S1-T11: the grant to act as a named user. */
+  editCanActAs = false;
   permForm: PermForm = emptyPermForm();
 
   ngOnInit(): void { this.load(); this.loadLogs(); }
@@ -74,6 +76,7 @@ export class S2sClientEditorComponent implements OnInit {
         this.editStatus = c.status;
         this.editRpm = String(c.rate_limit_rpm);
         this.editMaxConcurrent = String(c.max_concurrent);
+        this.editCanActAs = c.can_act_as_user;
         this.loading.set(false);
       },
       error: (e: ApiError) => { this.error.set(e.message); this.loading.set(false); },
@@ -99,6 +102,7 @@ export class S2sClientEditorComponent implements OnInit {
       status:         this.editStatus,
       rate_limit_rpm: Number(this.editRpm),
       max_concurrent: Number(this.editMaxConcurrent),
+      can_act_as_user: this.editCanActAs,
       row_version:    c.row_version,
     }).subscribe({
       next:  updated => { this.client.set(updated); this.savingMeta.set(false); },

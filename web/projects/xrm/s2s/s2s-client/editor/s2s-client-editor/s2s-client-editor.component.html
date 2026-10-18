@@ -42,6 +42,16 @@
         <input id="s2s-client-max-concurrent" [(ngModel)]="editMaxConcurrent" type="number" autocomplete="off">
       </div>
     </div>
+    <div class="form-row-1">
+      <div class="field">
+        <label for="s2s-client-act-as">
+          <input id="s2s-client-act-as" type="checkbox" [(ngModel)]="editCanActAs"
+                 aria-describedby="s2s-client-act-as-hint">
+          {{ 's2sClientPage.actAs' | translate }}
+        </label>
+        <p id="s2s-client-act-as-hint" class="cell-muted">{{ 's2sClientPage.actAsHint' | translate }}</p>
+      </div>
+    </div>
     @if (metaError()) { <p class="error-msg">{{ metaError() }}</p> }
     <div class="btn-row">
       <button class="btn-primary" (click)="saveMeta()" [disabled]="savingMeta()">

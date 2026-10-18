@@ -281,6 +281,10 @@ export const xrmEn = {
     setTarget: 'Set targets', useReference: 'Use the reference', save: 'Save', cancel: 'Cancel',
     status: { ok: 'On track', at_risk: 'At risk', exhausted: 'Budget spent', unmeasured: 'Not measured here' },
   },
+  s2sClientPage: {
+    actAs: 'May act as a user',
+    actAsHint: 'The client may name a user in the signed x-attome-act-as header; the request then runs as that user, and the access log keeps both.',
+  },
   customerTestsPage: {
     title: 'Customer tests',
     intro: 'Your own checks of your configuration: start from some records, make writes, and say what must hold. A run never keeps what it did.',

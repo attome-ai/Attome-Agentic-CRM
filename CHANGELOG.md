@@ -43,6 +43,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Web: the S2S client editor shows and edits the act-as-user grant, in English and Arabic (S1-T11).
 - Calendars: each person's calendar (Z12-T5). `resolve_calendar_id_for_user` takes the person's
   own assignment, else their lowest-id team's, else the default; `load_calendar_for_user` closes
   the days they are on approved leave (HR registers itself as the absence source at boot).
