@@ -1522,6 +1522,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `GET /api/v1/{entity}/bulk/{id}?include_items=true` reports its items in the standard batch shape
+  (Z14-T6, `attome_types::BatchResult`): each item is `{index, ok?, problem?}`, where `ok` is
+  `{record_id, attempts}` for an applied item and `problem` is `{code, message, detail?}` for one that
+  did not (`version_conflict`, with the record's current version and state in `detail`, or
+  `item_failed`); a pending item has neither. The previous per-item `item_index`, `status`,
+  `outcome`, `error`, `conflict` and `attempts` fields are gone. List responses
+  (`PaginatedResponse`) gain an optional `warnings: [{code, message}]`, sent only when there is one.
 - Stored secrets are write-only (Q18-T6): `POST /api/v1/admin/ai/providers/{id}/credential` and
   `POST /api/v1/admin/integrations/systems/{id}/credential` answer `is_set` and `updated_at`
   instead of `secret_last4`; no part of a user-supplied secret is returned. The AI provider form

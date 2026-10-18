@@ -313,6 +313,7 @@ async fn session_trace(
         total,
         page: 1,
         page_size: MAX_TRACE_STEPS,
+        warnings: Vec::new(),
     }))
 }
 
@@ -374,6 +375,7 @@ async fn session_children(
         total,
         page: 1,
         page_size: MAX_CHILDREN,
+        warnings: Vec::new(),
     }))
 }
 

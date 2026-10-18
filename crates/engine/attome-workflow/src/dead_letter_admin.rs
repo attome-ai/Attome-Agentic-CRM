@@ -121,6 +121,7 @@ async fn list_trigger_dead_letters(
         total,
         page: w.page,
         page_size: w.page_size,
+        warnings: Vec::new(),
     }))
 }
 

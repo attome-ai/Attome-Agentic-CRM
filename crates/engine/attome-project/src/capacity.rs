@@ -453,6 +453,7 @@ async fn resource_capacity(
         total,
         page,
         page_size,
+        warnings: Vec::new(),
     }))
 }
 

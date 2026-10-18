@@ -20,13 +20,18 @@ pub use uuid::Uuid;
     description = "The platform's canonical list envelope (guidelines §12). \
                         `total` is the size of the whole set, not of `items`. \
                    `page` echoes the page served; every offset list is one-based \
-                   (D-793): page 1 is the first page."
+                   (D-793): page 1 is the first page. `warnings` is sent only when \
+                   there is one (Z14-T6)."
 )]
 pub struct PaginatedResponse<T> {
     pub items: Vec<T>,
     pub total: i64,
     pub page: i64,
     pub page_size: i64,
+    /// Z14-T6: what the caller should know though the list succeeded;
+    /// omitted when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<crate::batch::Warning>,
 }
 
 /// One field-level failure inside `ErrorResponse.details` (BTY-16b): the
@@ -303,6 +308,7 @@ impl<T> PaginatedResponse<T> {
             total,
             page,
             page_size,
+            warnings: Vec::new(),
         }
     }
 }

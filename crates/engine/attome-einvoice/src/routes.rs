@@ -47,6 +47,7 @@ pub(crate) async fn get_devices(
         items,
         total,
         page: 1,
+        warnings: Vec::new(),
     }))
 }
 

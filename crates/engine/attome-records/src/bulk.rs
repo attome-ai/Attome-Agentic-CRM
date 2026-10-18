@@ -28,7 +28,7 @@ use attome_security::record_action::{Bulk, Read};
 use attome_security::{RecordAction, SecurityContextExt};
 use attome_server::middleware::idempotency_durable;
 use attome_server::security::{AccessLevel, SecurityContext};
-use attome_types::{AppError, PageBase, PageWindow};
+use attome_types::{AppError, BatchResult, ItemResult, PageBase, PageWindow, Problem};
 use axum::{
     Json, Router,
     extract::{Extension, Path, Query, State},
@@ -266,8 +266,20 @@ struct BulkOperationStatus {
     // `succeeded`/`failed`.
     rejected: i32,
     errors: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    items: Option<Vec<BulkItemStatus>>,
+    /// With `include_items`: one result per item of this page, by its index
+    /// in the request (Z14-T6's `BatchResult`): `ok` when it applied,
+    /// `problem` (`version_conflict` with the record's current version in
+    /// `detail`, or `item_failed`) when it did not, neither while it has not
+    /// run.
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    items: Option<BatchResult<BulkItemOk>>,
+}
+
+/// An applied bulk item: the record it wrote and how many attempts it took.
+#[derive(Serialize, ToSchema)]
+struct BulkItemOk {
+    record_id: Option<Uuid>,
+    attempts: i32,
 }
 
 #[derive(sqlx::FromRow)]
@@ -283,7 +295,7 @@ struct BulkOperationStatusRow {
     errors: Value,
 }
 
-#[derive(Serialize, sqlx::FromRow, ToSchema)]
+#[derive(sqlx::FromRow)]
 struct BulkItemStatus {
     item_index: i32,
     record_id: Option<Uuid>,
@@ -294,9 +306,48 @@ struct BulkItemStatus {
     error: Option<String>,
     /// A16-T6: for a conflict, the record's current version and what changed
     /// since the row's version (`current_version`, `current_state`).
-    #[schema(value_type = Option<Object>)]
     conflict: Option<Value>,
     attempts: i32,
+}
+
+impl BulkItemStatus {
+    /// Z14-T6: the ledger row as a standard item result.
+    fn into_result(self) -> ItemResult<BulkItemOk> {
+        let index = i64::from(self.item_index);
+        match self.outcome.as_str() {
+            "ok" => ItemResult::ok(
+                index,
+                BulkItemOk {
+                    record_id: self.record_id,
+                    attempts: self.attempts,
+                },
+            ),
+            "conflict" => ItemResult::problem(
+                index,
+                Problem {
+                    code: "version_conflict".to_owned(),
+                    message: self.error.unwrap_or_else(|| {
+                        "the record changed since the version this item named".to_owned()
+                    }),
+                    detail: self.conflict,
+                },
+            ),
+            "error" => ItemResult::problem(
+                index,
+                Problem {
+                    code: "item_failed".to_owned(),
+                    message: self
+                        .error
+                        .unwrap_or_else(|| format!("item {}", self.status)),
+                    detail: Some(serde_json::json!({
+                        "status": self.status,
+                        "attempts": self.attempts,
+                    })),
+                },
+            ),
+            _ => ItemResult::pending(index),
+        }
+    }
 }
 
 /// A16-T6: a ledger row's outcome, from its status and conflict.
@@ -930,7 +981,9 @@ async fn status_inner(
         .fetch_all(&state.base.db)
         .await
         .map_err(AppError::internal)?;
-        status.items = Some(items);
+        status.items = Some(BatchResult {
+            items: items.into_iter().map(BulkItemStatus::into_result).collect(),
+        });
     }
     Ok(status)
 }

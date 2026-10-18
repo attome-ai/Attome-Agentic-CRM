@@ -761,6 +761,7 @@ pub async fn plan_list(
         total,
         page: window.page,
         page_size: window.page_size,
+        warnings: Vec::new(),
     })
 }
 

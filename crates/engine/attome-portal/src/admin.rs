@@ -805,6 +805,7 @@ async fn list_portals(
         total,
         page,
         page_size,
+        warnings: Vec::new(),
     }))
 }
 
@@ -864,6 +865,7 @@ async fn list_users(
         total,
         page,
         page_size,
+        warnings: Vec::new(),
     }))
 }
 
@@ -894,6 +896,7 @@ async fn list_roles(
         items,
         total,
         page: 0,
+        warnings: Vec::new(),
     }))
 }
 
@@ -1078,6 +1081,7 @@ async fn list_entity_configs(
         items,
         total,
         page: 0,
+        warnings: Vec::new(),
     }))
 }
 
@@ -1114,6 +1118,7 @@ async fn list_erasure_requests(
         total,
         page,
         page_size,
+        warnings: Vec::new(),
     }))
 }
 

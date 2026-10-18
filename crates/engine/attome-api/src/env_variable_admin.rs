@@ -162,6 +162,7 @@ async fn list_variables(
         items,
         total,
         page: 1,
+        warnings: Vec::new(),
     }))
 }
 
@@ -369,6 +370,7 @@ async fn variable_history(
         total,
         page: 1,
         page_size: 200,
+        warnings: Vec::new(),
     }))
 }
 

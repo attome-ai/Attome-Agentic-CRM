@@ -117,6 +117,7 @@ async fn list_agents(
         total,
         page: 1,
         page_size: MAX_CARDS,
+        warnings: Vec::new(),
     }))
 }
 

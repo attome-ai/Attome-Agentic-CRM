@@ -364,6 +364,7 @@ pub async fn ageing(
         total,
         page: window.page,
         page_size: window.page_size,
+        warnings: Vec::new(),
     })
 }
 
@@ -509,6 +510,7 @@ pub(crate) async fn get_ageing_totals(
         items,
         total,
         page: 1,
+        warnings: Vec::new(),
     }))
 }
 

@@ -5252,8 +5252,8 @@ fn interactive_hierarchy_reparent_races_a_bulk_update_reparent_conflict_safely()
             .unwrap();
         let bulk_status =
             body_json(app.clone().oneshot(status_req).await.expect("bulk status")).await;
-        let bulk_item_status = bulk_status["items"][0]["status"].clone();
-        let bulk_item_succeeded = bulk_item_status == "succeeded";
+        let bulk_item_status = bulk_status["items"][0].clone();
+        let bulk_item_succeeded = bulk_item_status["ok"].is_object();
         let interactive_status = interactive_res.status();
         let interactive_succeeded = interactive_status == StatusCode::OK;
 
@@ -5404,10 +5404,11 @@ fn two_bulk_update_reparents_race_conflict_safely() {
                 .expect("status b"),
         )
         .await;
-        let a_item_status = status_a["items"][0]["status"].clone();
-        let b_item_status = status_b["items"][0]["status"].clone();
-        let a_succeeded = a_item_status == "succeeded";
-        let b_succeeded = b_item_status == "succeeded";
+        // Z14-T6: an applied item carries `ok`.
+        let a_item_status = status_a["items"][0].clone();
+        let b_item_status = status_b["items"][0].clone();
+        let a_succeeded = a_item_status["ok"].is_object();
+        let b_succeeded = b_item_status["ok"].is_object();
         assert!(
             a_succeeded ^ b_succeeded,
             "exactly one bulk operation must win: a={a_item_status:?} b={b_item_status:?}"
@@ -7743,10 +7744,11 @@ fn bulk_create_processes_all_records_and_isolates_per_record_errors() {
         assert_eq!(errors[0]["index"], 2);
         let items = status["items"].as_array().expect("item status page");
         assert_eq!(items.len(), 3);
-        assert_eq!(items[0]["status"], "succeeded");
-        assert_eq!(items[0]["attempts"], 1);
-        assert_eq!(items[2]["status"], "failed");
-        assert_eq!(items[2]["attempts"], 2);
+        // Z14-T6: the standard batch item shape.
+        assert_eq!(items[0]["index"], 0);
+        assert_eq!(items[0]["ok"]["attempts"], 1, "{status}");
+        assert_eq!(items[2]["problem"]["code"], "item_failed", "{status}");
+        assert_eq!(items[2]["problem"]["detail"]["attempts"], 2, "{status}");
 
         let other_user_status_req = Request::builder()
             .method("GET")

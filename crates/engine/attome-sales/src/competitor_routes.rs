@@ -347,6 +347,7 @@ pub(crate) async fn get_sales_battlecards(
         items,
         total,
         page: 1,
+        warnings: Vec::new(),
     }))
 }
 

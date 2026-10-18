@@ -399,6 +399,7 @@ async fn list_servers(
         total,
         page: 1,
         page_size: 200,
+        warnings: Vec::new(),
     }))
 }
 
@@ -564,6 +565,7 @@ async fn list_tools_of(
         total,
         page: 1,
         page_size: 200,
+        warnings: Vec::new(),
     })
 }
 

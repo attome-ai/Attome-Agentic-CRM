@@ -428,6 +428,7 @@ async fn list_share_links(
         total,
         page: 1,
         page_size: 200,
+        warnings: Vec::new(),
     }))
 }
 

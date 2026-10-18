@@ -29,6 +29,8 @@
 /// Z15-T5: the time a decision reads (a fake one in tests).
 /// S8-T1 — the API's dated versions.
 pub mod api_version;
+/// Z14-T6 — per-item batch results and response warnings.
+pub mod batch;
 pub mod clock;
 pub mod error;
 pub mod error_codes;
@@ -43,6 +45,7 @@ pub mod text;
 pub mod types;
 pub mod w3c_trace;
 
+pub use batch::{BatchResult, ItemResult, Problem, Warning};
 pub use clock::{Clock, FakeClock, SystemClock};
 pub use error::AppError;
 pub use types::*;

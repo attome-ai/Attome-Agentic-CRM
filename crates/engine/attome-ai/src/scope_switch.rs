@@ -274,6 +274,7 @@ async fn list_switches(
         total,
         page: 1,
         page_size: 1000,
+        warnings: Vec::new(),
     }))
 }
 

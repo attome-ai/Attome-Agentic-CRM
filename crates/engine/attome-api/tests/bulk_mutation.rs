@@ -1754,10 +1754,17 @@ async fn bulk_conflict_rows_apply_the_rest_and_report_the_stale_one() {
         .as_array()
         .unwrap()
         .iter()
-        .map(|item| item["outcome"].as_str().unwrap())
+        .map(|item| {
+            if item["ok"].is_object() {
+                "ok"
+            } else {
+                item["problem"]["code"].as_str().unwrap()
+            }
+        })
         .collect();
-    assert_eq!(outcomes, ["ok", "conflict", "ok"], "{status}");
-    let conflict = &status["items"][1]["conflict"];
+    assert_eq!(outcomes, ["ok", "version_conflict", "ok"], "{status}");
+    assert_eq!(status["items"][1]["index"], 1, "{status}");
+    let conflict = &status["items"][1]["problem"]["detail"];
     assert_eq!(conflict["current_version"], 1, "{status}");
     assert_eq!(status["errors"][0]["index"], 1, "{status}");
     assert_eq!(status["errors"][0]["status"], "conflict", "{status}");

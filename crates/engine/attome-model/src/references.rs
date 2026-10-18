@@ -180,6 +180,7 @@ pub async fn references_in(
         total,
         page: window.page,
         page_size: window.page_size,
+        warnings: Vec::new(),
     })
 }
 
@@ -214,6 +215,7 @@ pub async fn references_out(
         total,
         page: window.page,
         page_size: window.page_size,
+        warnings: Vec::new(),
     })
 }
 

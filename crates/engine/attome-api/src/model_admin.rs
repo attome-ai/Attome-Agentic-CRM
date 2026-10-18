@@ -227,6 +227,7 @@ async fn list_kinds(_ctx: Authorized<Admin>) -> Json<PaginatedResponse<KindView>
         total,
         page: 1,
         page_size: total.max(1),
+        warnings: Vec::new(),
     })
 }
 
@@ -269,6 +270,7 @@ async fn list_objects(
         total: page.total,
         page: page.page,
         page_size: page.page_size,
+        warnings: Vec::new(),
     }))
 }
 
@@ -390,6 +392,7 @@ async fn get_history(
         total: page.total,
         page: page.page,
         page_size: page.page_size,
+        warnings: Vec::new(),
     }))
 }
 
@@ -429,6 +432,7 @@ async fn get_diff(
         total,
         page: 1,
         page_size: total.max(1),
+        warnings: Vec::new(),
     }))
 }
 
@@ -474,6 +478,7 @@ async fn get_references(
         total: page.total,
         page: page.page,
         page_size: page.page_size,
+        warnings: Vec::new(),
     }))
 }
 

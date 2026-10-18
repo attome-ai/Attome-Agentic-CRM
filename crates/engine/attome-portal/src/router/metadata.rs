@@ -158,6 +158,7 @@ async fn metadata_index(
         total,
         page: 1,
         page_size: MAX_INDEXED_ENTITIES as i64,
+        warnings: Vec::new(),
     }))
 }
 

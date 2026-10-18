@@ -305,6 +305,7 @@ pub async fn list_objects(
         total,
         page: window.page,
         page_size: window.page_size,
+        warnings: Vec::new(),
     })
 }
 
@@ -347,6 +348,7 @@ pub async fn history(
         total,
         page: window.page,
         page_size: window.page_size,
+        warnings: Vec::new(),
     })
 }
 

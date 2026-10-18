@@ -137,6 +137,7 @@ async fn coverage(
         total,
         page: 1,
         page_size: MAX_ROWS,
+        warnings: Vec::new(),
     }))
 }
 
