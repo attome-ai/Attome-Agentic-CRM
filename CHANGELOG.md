@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Email: the reset, verification, invitation and notification emails are written in the template
+  language (Z8-T7), in English and Arabic (`password_reset_in("ar", ...)` and the like; the Arabic
+  HTML is right to left), each with an HTML and a plain-text part. A link in `href` is now
+  percent-encoded and only http, https, mailto, tel or relative links pass.
 - Templates: `attome_html::tmpl` (Z13-T2), the one template language: text with `{{ expression }}`,
   `{% if %}...{% else %}...{% end %}` and `{% for item in list limit N %}...{% end %}` (N at most
   1,000; a longer list is an error), every expression a V2 rule compiled once against the

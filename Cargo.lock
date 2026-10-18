@@ -991,6 +991,7 @@ dependencies = [
  "attome-config",
  "attome-db",
  "attome-html",
+ "attome-rules",
  "attome-testkit",
  "attome-types",
  "base64 0.23.1",
