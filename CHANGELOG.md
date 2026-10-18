@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rules: Hijri, zone and working-day functions (Z11-T4, V2): `hijri_year`, `hijri_month`,
+  `hijri_day`, `hijri_date`, `add_workdays`, `workdays_between`, `is_working` and `to_zone`; the
+  working-day ones use the business calendar the caller supplies (`Context::with_calendar`) and
+  fail with `rules.calendar.missing` without one.
 - Calendar: recurring holiday rules and seasons (`attome_calendar::rules`, Z12-T2): fixed dates,
   the nth (or last) weekday of a month, Hijri dates (which can fall twice in one Gregorian year)
   and one-off dates, each spanning 1 to 15 days, expand into the calendar's holidays; a season

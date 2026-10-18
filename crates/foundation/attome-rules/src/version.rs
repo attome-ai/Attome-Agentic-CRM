@@ -61,6 +61,15 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     ("filter", LanguageVersion::V2),
     ("map", LanguageVersion::V2),
     ("first", LanguageVersion::V2),
+    // Z11-T4: Hijri, zone and working-day functions.
+    ("hijri_year", LanguageVersion::V2),
+    ("hijri_month", LanguageVersion::V2),
+    ("hijri_day", LanguageVersion::V2),
+    ("hijri_date", LanguageVersion::V2),
+    ("add_workdays", LanguageVersion::V2),
+    ("workdays_between", LanguageVersion::V2),
+    ("is_working", LanguageVersion::V2),
+    ("to_zone", LanguageVersion::V2),
 ];
 
 /// The version a function needs.

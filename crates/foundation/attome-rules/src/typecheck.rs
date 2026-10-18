@@ -466,6 +466,42 @@ fn typecheck_call(
                 Err(RulesError::RegexNotLiteral)
             }
         }
+        // Z11-T4: Hijri, zone and working-day functions.
+        "hijri_year" | "hijri_month" | "hijri_day" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Date, name)?;
+            Ok(Type::Number)
+        }
+        "hijri_date" => {
+            arity(name, args.len(), 3, 3)?;
+            for t in &arg_types {
+                require(t, &Type::Number, name)?;
+            }
+            Ok(Type::Date)
+        }
+        "add_workdays" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Date, name)?;
+            require(&arg_types[1], &Type::Number, "add_workdays' count")?;
+            Ok(Type::Date)
+        }
+        "workdays_between" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Date, name)?;
+            require(&arg_types[1], &Type::Date, name)?;
+            Ok(Type::Number)
+        }
+        "is_working" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Date, name)?;
+            Ok(Type::Bool)
+        }
+        "to_zone" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Date, name)?;
+            require(&arg_types[1], &Type::Text, "to_zone's zone")?;
+            Ok(Type::Date)
+        }
         // Z11-T3: list functions over related lists.
         "sum" | "avg" => {
             arity(name, args.len(), 1, 1)?;

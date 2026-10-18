@@ -34,6 +34,16 @@ is an unknown function. V2 accepts every V1 expression unchanged.
 | `any(list, x => condition)`, `all(list, x => condition)` | Whether the condition holds for some, or every, element. |
 | `filter(list, x => condition)` | The elements for which it holds. |
 | `map(list, x => value)` | The value for each element. |
+| `hijri_year(date)`, `hijri_month(date)`, `hijri_day(date)` | The Umm al-Qura date in the context's zone; outside 1356 to 1500 AH is `rules.hijri.out_of_range`. |
+| `hijri_date(year, month, day)` | The start of that Hijri day in the context's zone. |
+| `add_workdays(date, n)` | The same time of day `n` working days later (negative: earlier), on the business calendar the caller supplies. |
+| `workdays_between(a, b)` | The working days after `a` up to and including `b` (negative when `b` is earlier). |
+| `is_working(date)` | Whether the date is a working day of the calendar. |
+| `to_zone(date, zone)` | The same instant, with an IANA zone checked (`rules.context.unknown_timezone` otherwise). |
+
+The working-day functions count on the business calendar the caller puts in the context; without
+one they fail with `rules.calendar.missing` (never counting calendar days instead), and a calendar
+with no working days in reach fails with `rules.calendar.no_working_time`.
 
 Text results respect the string-length budget and number results must be finite, as for every
 function.

@@ -172,6 +172,19 @@ pub enum RulesError {
     /// Z11-T8: a user function calls itself, directly or through others.
     #[error("function {0} is recursive")]
     Recursive(String),
+
+    /// Z11-T4: a working-day function ran with no calendar in the Context
+    /// (never answered in calendar days instead, D-517).
+    #[error("{0} needs a business calendar")]
+    CalendarMissing(String),
+
+    /// Z11-T4: the calendar has no working time where the function needed it.
+    #[error("{0}: the calendar has no working time within its search limit")]
+    NoWorkingTime(String),
+
+    /// Z11-T4: a date outside the Umm al-Qura table (1356 to 1500 AH).
+    #[error("{0}: the date is outside the Hijri calendar's table")]
+    HijriOutOfRange(String),
 }
 
 impl RulesError {
@@ -201,6 +214,9 @@ impl RulesError {
             Self::RegexInvalid(_) => "rules.regex.invalid",
             Self::InvalidFunction(_) => "rules.function.invalid",
             Self::Recursive(_) => "rules.function.recursive",
+            Self::CalendarMissing(_) => "rules.calendar.missing",
+            Self::NoWorkingTime(_) => "rules.calendar.no_working_time",
+            Self::HijriOutOfRange(_) => "rules.hijri.out_of_range",
             Self::Budget(kind) => kind.code(),
         }
     }
@@ -336,6 +352,9 @@ mod tests {
             RulesError::UnknownTimezone("Mars/Olympus".to_owned()),
             RulesError::InvalidFunction("round".to_owned()),
             RulesError::Recursive("f".to_owned()),
+            RulesError::CalendarMissing("add_workdays".to_owned()),
+            RulesError::NoWorkingTime("add_workdays".to_owned()),
+            RulesError::HijriOutOfRange("hijri_year".to_owned()),
         ];
         for kind in [
             BudgetKind::AstNodes,

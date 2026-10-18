@@ -516,6 +516,13 @@ impl BusinessCalendar {
             })
     }
 
+    /// Whether `date` (a local date of this calendar) has any working hours:
+    /// a working weekday that is not a holiday, or an exception that opens it
+    /// (Z11-T4's working-day functions count these).
+    pub fn is_working_date(&self, date: NaiveDate) -> bool {
+        !self.ranges_for_date(date).is_empty()
+    }
+
     /// Whether any date can ever be working time: a working weekday, or an
     /// exception that opens one. A calendar that answers `false` is closed for
     /// good, so the deadline calculators answer

@@ -117,6 +117,8 @@ pub struct Context {
     /// Z11-T5: the base currency and, per currency, the value of one unit
     /// in the base currency. Supplied by the caller; never looked up.
     rates: Option<(String, HashMap<String, f64>)>,
+    /// Z11-T4: the business calendar the working-day functions count on.
+    calendar: Option<std::sync::Arc<attome_calendar::BusinessCalendar>>,
 }
 
 impl Context {
@@ -127,6 +129,7 @@ impl Context {
             fields: HashMap::new(),
             related: HashMap::new(),
             rates: None,
+            calendar: None,
         }
     }
 
@@ -195,6 +198,21 @@ impl Context {
         self
     }
 
+    /// Z11-T4: the business calendar `add_workdays`, `workdays_between` and
+    /// `is_working` count on. Without one they fail (`rules.calendar.missing`).
+    #[must_use]
+    pub fn with_calendar(
+        mut self,
+        calendar: std::sync::Arc<attome_calendar::BusinessCalendar>,
+    ) -> Self {
+        self.calendar = Some(calendar);
+        self
+    }
+
+    pub(crate) fn calendar(&self) -> Option<&attome_calendar::BusinessCalendar> {
+        self.calendar.as_deref()
+    }
+
     /// Z11-T3: the rows of a related list (the schema's
     /// [`Schema::with_related_list`]); more rows than the budgets'
     /// `max_list_len` is refused when a rule reads it.
@@ -219,6 +237,7 @@ impl Context {
             fields: HashMap::new(),
             related: HashMap::new(),
             rates: self.rates.clone(),
+            calendar: self.calendar.clone(),
         }
     }
 

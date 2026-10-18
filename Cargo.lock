@@ -1636,6 +1636,7 @@ dependencies = [
 name = "attome-rules"
 version = "0.1.0"
 dependencies = [
+ "attome-calendar",
  "chrono",
  "chrono-tz",
  "criterion",

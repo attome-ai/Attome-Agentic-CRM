@@ -60,7 +60,9 @@
 //! rules.eval.divide_by_zero, rules.eval.failed, rules.number.non_finite,
 //! rules.null.operand, rules.context.type_mismatch,
 //! rules.context.unknown_timezone, rules.function.invalid,
-//! rules.function.recursive, and one code per budget
+//! rules.function.recursive, rules.calendar.missing,
+//! rules.calendar.no_working_time, rules.hijri.out_of_range, and one code
+//! per budget
 //! kind (rules.budget.ast_nodes, rules.budget.recursion_depth,
 //! rules.budget.eval_steps, rules.budget.wall_clock, rules.budget.string_length,
 //! rules.budget.source_length, rules.budget.list_length,

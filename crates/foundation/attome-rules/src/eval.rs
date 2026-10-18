@@ -696,6 +696,98 @@ impl Evaluator<'_> {
                     other => Err(eval_type_err(name, "text", other)),
                 }
             }
+            // Z11-T4: Hijri dates read in the context's zone.
+            "hijri_year" | "hijri_month" | "hijri_day" => {
+                let v = self.eval_only(args, 1, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                let Value::Date(instant) = &v[0] else {
+                    return Err(eval_type_err(name, "date", &v[0]));
+                };
+                let local = instant.with_timezone(&self.ctx.timezone()).date_naive();
+                let hijri = attome_calendar::hijri::to_hijri(local)
+                    .map_err(|_| RulesError::HijriOutOfRange(name.to_owned()))?;
+                Ok(Value::Number(f64::from(match name {
+                    "hijri_year" => hijri.year,
+                    "hijri_month" => u16::from(hijri.month),
+                    _ => u16::from(hijri.day),
+                })))
+            }
+            "hijri_date" => {
+                let v = self.eval_only(args, 3, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                let part = |value: &Value, max: f64| match value {
+                    Value::Number(n) if n.fract() == 0.0 && *n >= 1.0 && *n <= max => Ok(*n),
+                    other => Err(eval_type_err(name, "a whole number in range", other)),
+                };
+                let year = part(&v[0], f64::from(u16::MAX))? as u16;
+                let month = part(&v[1], 12.0)? as u8;
+                let day = part(&v[2], 30.0)? as u8;
+                let date = attome_calendar::hijri::from_hijri(
+                    attome_calendar::hijri::HijriDate::new(year, month, day),
+                )
+                .map_err(|_| RulesError::HijriOutOfRange(name.to_owned()))?;
+                local_date_start(date, self.ctx.timezone()).map(Value::Date)
+            }
+            "add_workdays" | "workdays_between" | "is_working" => {
+                let v =
+                    self.eval_only(args, if name == "is_working" { 1 } else { 2 }, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                let calendar = self
+                    .ctx
+                    .calendar()
+                    .ok_or_else(|| RulesError::CalendarMissing(name.to_owned()))?;
+                let local = |value: &Value| match value {
+                    Value::Date(d) => Ok((*d, d.with_timezone(&calendar.tz()).date_naive())),
+                    other => Err(eval_type_err(name, "date", other)),
+                };
+                let (instant, date) = local(&v[0])?;
+                match name {
+                    "is_working" => Ok(Value::Bool(calendar.is_working_date(date))),
+                    "add_workdays" => {
+                        let count = match &v[1] {
+                            Value::Number(n) if n.fract() == 0.0 && n.abs() <= 3_660.0 => *n as i64,
+                            other => {
+                                return Err(eval_type_err(name, "a whole number of days", other));
+                            }
+                        };
+                        let target = add_workdays(calendar, date, count)
+                            .ok_or_else(|| RulesError::NoWorkingTime(name.to_owned()))?;
+                        // The same local time of day, on the working date found.
+                        let shift = (target - date).num_days();
+                        instant
+                            .checked_add_signed(chrono::Duration::days(shift))
+                            .map(Value::Date)
+                            .ok_or(RulesError::NumericOverflow)
+                    }
+                    _ => {
+                        let (_, end) = local(&v[1])?;
+                        workdays_between(calendar, date, end)
+                            .map(|n| Value::Number(n as f64))
+                            .ok_or_else(|| RulesError::NoWorkingTime(name.to_owned()))
+                    }
+                }
+            }
+            "to_zone" => {
+                let v = self.eval_only(args, 2, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1]) {
+                    // The same instant; the zone is checked and shows in a trace.
+                    (Value::Date(d), Value::Text(zone)) => {
+                        zone.parse::<Tz>()
+                            .map_err(|_| RulesError::UnknownTimezone(zone.clone()))?;
+                        Ok(Value::Date(*d))
+                    }
+                    (other, _) => Err(eval_type_err(name, "(date, text)", other)),
+                }
+            }
             // Z11-T3: list functions; every element costs a step.
             "sum" | "avg" | "count" | "first" => {
                 let mut v = self.eval_only(args, 1, name, trace)?;
@@ -1192,6 +1284,68 @@ fn arity_err(function: &str, expected: &str, got: usize) -> RulesError {
         expected: expected.to_owned(),
         got,
     }
+}
+
+/// Z11-T4: midnight of `date` in `tz`, as an instant (the first real instant
+/// of the day when midnight falls in a gap).
+fn local_date_start(date: chrono::NaiveDate, tz: Tz) -> Result<DateTime<Utc>, RulesError> {
+    let midnight = date
+        .and_hms_opt(0, 0, 0)
+        .ok_or(RulesError::NumericOverflow)?;
+    (0..=24 * 60)
+        .find_map(|minute| {
+            tz.from_local_datetime(&(midnight + chrono::Duration::minutes(minute)))
+                .earliest()
+        })
+        .map(|local| local.with_timezone(&Utc))
+        .ok_or(RulesError::NumericOverflow)
+}
+
+/// Z11-T4: the local date `count` working dates after (or, negative,
+/// before) `date`; `None` past the calendar's search limit.
+fn add_workdays(
+    calendar: &attome_calendar::BusinessCalendar,
+    date: chrono::NaiveDate,
+    count: i64,
+) -> Option<chrono::NaiveDate> {
+    let step = if count < 0 { -1 } else { 1 };
+    let mut left = count.abs();
+    let mut day = date;
+    let mut scanned = 0;
+    while left > 0 {
+        day = day.checked_add_signed(chrono::Duration::days(step))?;
+        scanned += 1;
+        if scanned > attome_calendar::MAX_DAYS_SCAN {
+            return None;
+        }
+        if calendar.is_working_date(day) {
+            left -= 1;
+        }
+    }
+    Some(day)
+}
+
+/// Z11-T4: how many working dates lie after `a` up to and including `b`
+/// (negative when `b` is before `a`), so `add_workdays(a, n)` is `n` working
+/// dates on; `None` past the search limit.
+fn workdays_between(
+    calendar: &attome_calendar::BusinessCalendar,
+    a: chrono::NaiveDate,
+    b: chrono::NaiveDate,
+) -> Option<i64> {
+    let (from, to, sign) = if b >= a { (a, b, 1) } else { (b, a, -1) };
+    if (to - from).num_days() > attome_calendar::MAX_DAYS_SCAN {
+        return None;
+    }
+    let mut count = 0;
+    let mut day = from;
+    while day < to {
+        day = day.succ_opt()?;
+        if calendar.is_working_date(day) {
+            count += 1;
+        }
+    }
+    Some(sign * count)
 }
 
 fn eval_type_err(ctx: &str, expected: &str, got: &Value) -> RulesError {
