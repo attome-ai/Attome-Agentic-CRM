@@ -80,6 +80,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_marketing_sweep_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // Y2-T8: the table-health sample, daily.
     crate::jobs::spawn_table_health_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
+    // Q16-T2: the whole audit chain verified once a week.
+    crate::jobs::spawn_audit_chain_verify_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(7 * 86_400),
+    );
     // AA13-T9: the monthly SLO report (hourly check) and the fast-burn check.
     crate::jobs::spawn_slo_monthly_report_scheduler(
         db.clone(),

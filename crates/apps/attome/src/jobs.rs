@@ -991,6 +991,31 @@ async fn dispatch_platform_job(
                 tracing::info!(tuned, "storage tuning: daily pass done");
             }
         }
+        // Q16-T2: the weekly audit chain verification.
+        EngineJob::AuditChainVerify => {
+            let store = if config.audit.external_anchoring_enabled {
+                match attome_audit::anchor::create_anchor_store(&config).await {
+                    Ok(store) => Some(store),
+                    Err(e) => {
+                        tracing::warn!(error = %e, "audit verify: anchor store unavailable; verifying the database only");
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+            let summary = attome_audit::verify_job::run(
+                &db,
+                attome_state.audit_signer.as_deref(),
+                store.as_ref(),
+            )
+            .await?;
+            tracing::info!(
+                organizations = summary.organizations,
+                failed = summary.failed,
+                "audit chain verification: weekly run done"
+            );
+        }
         // AA13-T9: the monthly SLO report, written once per month.
         EngineJob::SloMonthlyReport => {
             if attome_api::slo_admin::monthly_report(&attome_state, chrono::Utc::now()).await? {
@@ -2369,6 +2394,7 @@ const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
 const DEDUP_KEY_SALES_LEAVER_SWEEP: &str = "sales-leaver-sweep";
 const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_TABLE_HEALTH_SAMPLE: &str = "table-health-sample";
+const DEDUP_KEY_AUDIT_CHAIN_VERIFY: &str = "audit-chain-verify";
 const DEDUP_KEY_SLO_MONTHLY_REPORT: &str = "slo-monthly-report";
 const DEDUP_KEY_SLO_BURN_CHECK: &str = "slo-burn-check";
 const DEDUP_KEY_SALES_MENTION_SCAN: &str = "sales-mention-scan";
@@ -2453,6 +2479,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SalesLeaverSweep => DEDUP_KEY_SALES_LEAVER_SWEEP,
         EngineJob::AiFollowupScan => DEDUP_KEY_AI_FOLLOWUP_SCAN,
         EngineJob::TableHealthSample => DEDUP_KEY_TABLE_HEALTH_SAMPLE,
+        EngineJob::AuditChainVerify => DEDUP_KEY_AUDIT_CHAIN_VERIFY,
         EngineJob::SloMonthlyReport => DEDUP_KEY_SLO_MONTHLY_REPORT,
         EngineJob::SloBurnCheck => DEDUP_KEY_SLO_BURN_CHECK,
         EngineJob::SalesMentionScan => DEDUP_KEY_SALES_MENTION_SCAN,
@@ -2784,6 +2811,17 @@ pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration
 }
 
 /// Y2-T8: daily, the table-health sample.
+/// Q16-T2: the audit chain verification, weekly.
+pub fn spawn_audit_chain_verify_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::AuditChainVerify,
+        DEDUP_KEY_AUDIT_CHAIN_VERIFY,
+        "audit chain verification",
+    );
+}
+
 pub fn spawn_table_health_scheduler(db: DbPool, interval: std::time::Duration) {
     spawn_dedup_scheduler(
         db,

@@ -29,6 +29,8 @@ pub mod signoff;
 mod user_ctx;
 pub mod value_mode;
 pub mod verify;
+/// Q16-T2 — the weekly audit chain verification.
+pub mod verify_job;
 
 pub use anchor::{anchor_root, fetch_anchored_root};
 pub use bulk::{write_bulk_accepted, write_bulk_completed_once};

@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- The audit chain is verified every week (Q16-T2): the `AuditChainVerify` job runs the same checks
+  as `verify_audit_chain` for every organization, records each result in
+  `audit_chain_verification` (migration 0117) and, on a failure, logs
+  `audit.chain_verify_failed` and counts `audit_chain_verify_failures_total`.
 - Every API response now says how it may be cached (AA7-T1): writes and every read of
   credentials, tokens, keys, sessions, secrets or exports answer `Cache-Control: no-store`; other
   API reads answer `private, no-cache` with `Vary: Authorization, Cookie`; a handler's own

@@ -506,6 +506,8 @@ pub enum EngineJob {
     AiFollowupItem { item_id: Uuid },
     /// Y2-T8: the daily table-health sample. Bare unit variant.
     TableHealthSample,
+    /// Q16-T2: the weekly audit chain verification. Bare unit variant.
+    AuditChainVerify,
     /// AA13-T9: writes the latest finished month's SLO report when it is
     /// missing. Bare unit variant.
     SloMonthlyReport,
@@ -988,6 +990,7 @@ impl EngineJob {
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
+            | Self::AuditChainVerify
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
             | Self::SalesMentionScan
@@ -1115,6 +1118,7 @@ impl EngineJob {
             EngineJob::AiFollowupScan => "AiFollowupScan",
             EngineJob::AiFollowupItem { .. } => "AiFollowupItem",
             EngineJob::TableHealthSample => "TableHealthSample",
+            EngineJob::AuditChainVerify => "AuditChainVerify",
             EngineJob::SloMonthlyReport => "SloMonthlyReport",
             EngineJob::SloBurnCheck => "SloBurnCheck",
             EngineJob::SalesMentionScan => "SalesMentionScan",
@@ -1243,6 +1247,7 @@ impl EngineJob {
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
+            | Self::AuditChainVerify
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
             | Self::SalesMentionScan
@@ -1393,6 +1398,7 @@ impl EngineJob {
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
+            | Self::AuditChainVerify
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
             | Self::SalesMentionScan
@@ -1763,6 +1769,7 @@ mod tests {
             item_id: Uuid::nil(),
         });
         assert_round_trips(EngineJob::TableHealthSample);
+        assert_round_trips(EngineJob::AuditChainVerify);
         assert_round_trips(EngineJob::SloMonthlyReport);
         assert_round_trips(EngineJob::SloBurnCheck);
         assert_round_trips(EngineJob::SalesMentionScan);

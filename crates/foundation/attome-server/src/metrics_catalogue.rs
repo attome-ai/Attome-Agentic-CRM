@@ -276,6 +276,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "أختام الحقب في سلسلة التدقيق التي تعذّر تثبيتها.",
     },
     MetricInfo {
+        name: "audit_chain_verify_failures_total",
+        kind: "counter",
+        unit: "organizations",
+        en: "Scheduled audit chain verifications that found a problem.",
+        ar: "عمليات تحقق مجدولة من سلسلة التدقيق وجدت مشكلة.",
+    },
+    MetricInfo {
         name: "audit_chainer_lag_seconds",
         kind: "gauge",
         unit: "seconds",
