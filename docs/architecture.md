@@ -42,6 +42,12 @@ Kubernetes are optional. Each customer has its own deployment and its own databa
 Dependencies never point back up the table. Crates are named `attome-<name>`. Built-in packs use the
 same SDK that customers' own engines use.
 
+The metadata model is `crates/engine/attome-model`: one store (`metadata_object` and its versions) for
+every kind, the kind registry, the one edit path, validation and the cooker that writes content-hashed
+artefacts. Entity and attribute kinds are adapters over their typed tables, and the request path reads
+cooked artefacts, never the store. Administrators reach it under `/api/v1/admin/model`.
+`crates/engine/attome-metadata` provisions entity tables from that metadata.
+
 ## Customising, from no code to Rust
 
 1. Describe it to a building agent.
