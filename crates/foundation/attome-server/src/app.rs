@@ -354,6 +354,10 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
             .layer(PropagateRequestIdLayer::x_request_id())
             .layer(mark(config, "cors"))
             .layer(cors_layer(config))
+            // Z5-T4: before body limits, rate limits and authentication;
+            // after CORS so a refused browser request can read its 400.
+            .layer(mark(config, "waf"))
+            .layer(middleware::from_fn(crate::middleware::waf::basic_waf))
             .layer(mark(config, "catch_panic"))
             .layer(CatchPanicLayer::custom(panic_response))
             .layer(mark(config, "body_limit"))
@@ -624,6 +628,7 @@ pub(crate) fn apply_authoring_gate(router: Router, state: AppState) -> Router {
 pub const PIPELINE_ORDER: &[&str] = &[
     "request_id",
     "cors",
+    "waf",
     "catch_panic",
     "body_limit",
     "timeout",

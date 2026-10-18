@@ -260,6 +260,13 @@ pub enum AppError {
     #[error("the request body exceeds the configured size limit")]
     PayloadTooLarge,
 
+    /// Z5-T4: the web firewall refused a request no route can want (a
+    /// traversal segment, a NUL, an oversized header or URI). The reason is
+    /// for logs and the rejection metric only; the body never echoes it or
+    /// the URL.
+    #[error("the request was refused")]
+    RequestRejected(&'static str),
+
     /// A same-key retry of an earlier request whose outcome the server cannot
     /// know: it timed out, panicked, lost its client mid-request, or failed
     /// with an error that may have followed a write. The server will not run
@@ -399,6 +406,7 @@ impl IntoResponse for AppError {
             AppError::QueryTimeout => (StatusCode::GATEWAY_TIMEOUT, "query_timeout"),
             AppError::ReadOnly => (StatusCode::SERVICE_UNAVAILABLE, "read_only"),
             AppError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
+            AppError::RequestRejected(_) => (StatusCode::BAD_REQUEST, "request_rejected"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
             }
@@ -590,7 +598,12 @@ mod tests {
         );
         let body = body_json(resp).await;
         assert_eq!(body["type"], "about:blank");
-        assert_eq!(body["title"], "Not Found");
+        // Z14-T3: the catalogue's title for the code, in English by default.
+        assert_eq!(
+            body["title"],
+            crate::error_messages::title("not_found", crate::error_messages::Lang::En)
+                .expect("not_found has a title")
+        );
         assert_eq!(body["status"], 404);
         assert_eq!(body["code"], "not_found");
         assert_eq!(body["error"], "not_found", "the old field stays");
@@ -1379,6 +1392,7 @@ mod tests {
             AppError::AttributeNotWritable(_) => 28,
             AppError::LimitExceeded { .. } => 29,
             AppError::CustomerTestsFailed(_) => 30,
+            AppError::RequestRejected(_) => 31,
         }
     }
 
@@ -1455,6 +1469,7 @@ mod tests {
             AppError::QueryTimeout,
             AppError::ReadOnly,
             AppError::PayloadTooLarge,
+            AppError::RequestRejected("x"),
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,
             AppError::Internal("x".to_string()),
@@ -1538,7 +1553,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=30).collect::<Vec<_>>(),
+            (0..=31).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

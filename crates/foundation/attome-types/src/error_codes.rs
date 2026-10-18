@@ -146,6 +146,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "request_rejected",
+        "The request was refused before it reached a route: a malformed path or oversized headers.",
+        false,
+    ),
+    code(
         "idempotency_outcome_unknown",
         "An earlier attempt with this key did not finish; its outcome is unknown.",
         false,

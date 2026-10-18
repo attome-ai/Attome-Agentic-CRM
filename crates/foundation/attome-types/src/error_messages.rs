@@ -149,6 +149,7 @@ const MESSAGES: &[(&str, &str, &str)] = &[
         "The request is too large.",
         "الطلب كبير جدًا.",
     ),
+    ("request_rejected", "The request was refused.", "رُفض الطلب."),
     (
         "idempotency_outcome_unknown",
         "It is not known whether the earlier request finished. Check before retrying.",

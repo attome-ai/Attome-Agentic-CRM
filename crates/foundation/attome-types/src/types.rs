@@ -138,6 +138,7 @@ pub struct ErrorResponse {
     /// `metadata_authoring_locked`, `transition_not_allowed`,
     /// `rule_violation`, `field_locked`, `field_locked_required`,
     /// `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
+    /// `request_rejected`,
     /// `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
     /// `method_not_allowed`, or
     /// `internal_error` — one per `AppError` variant (`FieldLocked` answers
@@ -148,7 +149,8 @@ pub struct ErrorResponse {
     /// Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`.
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub problem_type: Option<String>,
-    /// The HTTP status phrase, e.g. `Not Found`.
+    /// A short title for `code` in the request's language (Z14-T3), e.g.
+    /// `The resource was not found.`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// The HTTP status code.
@@ -266,6 +268,21 @@ pub struct ReauthRequiredResponse {
     /// `recovery_code`, `password` and `federated`, or the single
     /// `totp_enrollment_required` when the account has none.
     pub acceptable_factors: Vec<String>,
+    /// Z14-T1 (RFC 9457) members, as on [`ErrorResponse`].
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub problem_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retryable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance: Option<String>,
 }
 
 /// A 401 from a route guarded by a step-up (D-510): either the standard
@@ -275,7 +292,7 @@ pub struct ReauthRequiredResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(untagged)]
 pub enum UnauthorizedResponse {
-    ReauthRequired(ReauthRequiredResponse),
+    ReauthRequired(Box<ReauthRequiredResponse>),
     Unauthorized(Box<ErrorResponse>),
 }
 

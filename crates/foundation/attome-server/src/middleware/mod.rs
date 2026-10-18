@@ -31,6 +31,7 @@ pub mod shed;
 pub mod trace_context;
 /// S8-T2 — request and response adapters between API versions.
 pub mod version_adapters;
+pub mod waf;
 
 /// Shared by `idempotency`, `mutation_gate` and `authoring_gate` — all key
 /// off "is this request trying to change something," not any auth/route-

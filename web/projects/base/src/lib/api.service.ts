@@ -404,6 +404,7 @@ function codeToKind(code: unknown): ApiError['kind'] | undefined {
     case 'reauth_required':                return 'reauth_required';
     case 'rate_limit_exceeded':            return 'rate_limited';
     case 'payload_too_large':              return 'payload_too_large';
+    case 'request_rejected':               return 'validation';
     case 'feature_hidden':                 return 'feature_hidden';
     case 'metadata_authoring_locked':      return 'authoring_locked';
     case 'feature_unavailable':            return 'unavailable';

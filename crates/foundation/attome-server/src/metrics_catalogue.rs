@@ -626,6 +626,20 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمليات البحث في الذاكرة المؤقتة الداخلية حسب الإصابة.",
     },
     MetricInfo {
+        name: "http_rejections_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Requests a protective layer refused, by layer and reason.",
+        ar: "طلبات رفضتها طبقة حماية، حسب الطبقة والسبب.",
+    },
+    MetricInfo {
+        name: "http_waf_signal_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Requests the web firewall noted but let through, by signal.",
+        ar: "طلبات لاحظها جدار حماية الويب وسمح بمرورها، حسب الإشارة.",
+    },
+    MetricInfo {
         name: "idempotency_durable_non_atomic_completion_total",
         kind: "counter",
         unit: "requests",

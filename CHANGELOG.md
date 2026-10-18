@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- A basic web firewall (Z5-T4) runs before body limits, rate limits and sign-in: more than 100
+  headers, a header value or URI over 8 KiB, a `..` path segment (plain or percent-encoded), `%00`,
+  a raw backslash, or a double-encoded dot, slash, backslash or NUL is `400 request_rejected` (new
+  error code). A literal `%` or `..` inside a path value (alternate-key lookups) still passes.
+  Refusals count in `http_rejections_total{layer="waf",reason}` and log the reason, never the URL;
+  `/api/` requests with no `User-Agent` count in `http_waf_signal_total` and are not refused.
 - A self-hosted proof-of-work challenge (Q20-T3): `portal.captcha.provider = "pow"` (the default
   on a sovereign deployment with no provider) needs no outside service. `GET /api/v1/auth/challenge`
   hands out a signed, two-minute challenge (`portal.captcha.pow_difficulty`, default 18 bits); an
