@@ -183,6 +183,14 @@ impl Evaluator<'_> {
             }
             Expr::Binary { op, lhs, rhs } => self.eval_binary(*op, lhs, rhs, trace),
             Expr::Call { name, args } => self.eval_call(name, args, trace),
+            Expr::Path(segments) => {
+                let joined = segments.join(".");
+                match (self.ctx.path(&joined), self.schema.path_type(&joined)) {
+                    (Some(value), _) => Ok(value.clone()),
+                    (None, Some((_, true))) => Ok(Value::Null),
+                    (None, _) => Err(RulesError::UnknownField(joined)),
+                }
+            }
             Expr::Lambda { .. } => Err(RulesError::Eval(
                 "a lambda is only the second argument of any, all, filter or map".into(),
             )),

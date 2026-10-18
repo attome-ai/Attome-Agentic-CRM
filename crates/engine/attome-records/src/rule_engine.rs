@@ -208,6 +208,12 @@ fn walk(expr: &Expr, out: &mut HashSet<String>) {
             walk(rhs, out);
         }
         Expr::Call { args, .. } => args.iter().for_each(|e| walk(e, out)),
+        // Z11-T7: a path starts at a field of the record.
+        Expr::Path(segments) => {
+            if let Some(base) = segments.first() {
+                out.insert(base.clone());
+            }
+        }
         // Z11-T3: the parameter is the element, not a field of the record.
         Expr::Lambda { param, body } => {
             let mut inner = HashSet::new();

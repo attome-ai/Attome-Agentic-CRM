@@ -95,6 +95,12 @@ pub(crate) fn check(expr: &Expr, version: LanguageVersion) -> Result<(), RulesEr
             check(rhs, version)
         }
         Expr::ListLit(items) => items.iter().try_for_each(|a| check(a, version)),
+        Expr::Path(segments) => {
+            if version < LanguageVersion::V2 {
+                return Err(RulesError::MultiHopLookup(segments.join(".")));
+            }
+            Ok(())
+        }
         Expr::Lambda { body, .. } => {
             if version < LanguageVersion::V2 {
                 return Err(RulesError::UnknownFunction("=>".to_owned()));

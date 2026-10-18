@@ -78,3 +78,14 @@ condition on its input, read as `it` (`it >= 100 and it < 500`, `it == "gold"`,
 row's result as a list. `check()` reports number ranges no row covers, pairs of rows that can both
 match, and cells of any other form as unchecked, never guessing about those. A table has at most
 500 rows and 10 inputs (`rules.budget.table_size`).
+
+## Paths (V2)
+
+V1 reads a field (`amount`) or one hop (`account.tier`). V2 also reads a path of two or three hops,
+`deal.account.owner.region`; four hops or more is `rules.lookup.multi_hop`, as is any path in V1.
+The language loads nothing itself: the caller declares each path's type
+(`Schema::with_path`, or `with_optional_path` for one that may be empty), asks the compiled rule
+which paths it reads (`Compiled::paths()`), checks the person may read every hop, and supplies the
+values (`Context::with_path`). An unloaded path is `rules.field.unknown`, or null when declared
+optional.
+

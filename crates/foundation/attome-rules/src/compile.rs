@@ -172,6 +172,34 @@ impl Compiled {
         eval::eval_traced(&self.expr, ctx, &self.budgets, &self.schema, &self.regexes)
     }
 
+    /// Z11-T7: every multi-hop path the rule reads, sorted: the caller loads
+    /// these, after checking read access at every hop, before evaluating.
+    pub fn paths(&self) -> Vec<Vec<String>> {
+        fn walk(expr: &Expr, out: &mut Vec<Vec<String>>) {
+            match expr {
+                Expr::Path(segments) => out.push(segments.clone()),
+                Expr::Unary { expr, .. } => walk(expr, out),
+                Expr::Binary { lhs, rhs, .. } => {
+                    walk(lhs, out);
+                    walk(rhs, out);
+                }
+                Expr::Call { args, .. } => args.iter().for_each(|a| walk(a, out)),
+                Expr::ListLit(items) => items.iter().for_each(|a| walk(a, out)),
+                Expr::Lambda { body, .. } => walk(body, out),
+                Expr::NullLit
+                | Expr::BoolLit(_)
+                | Expr::NumberLit(_)
+                | Expr::StringLit(_)
+                | Expr::FieldRef(_) => {}
+            }
+        }
+        let mut out = Vec::new();
+        walk(&self.expr, &mut out);
+        out.sort();
+        out.dedup();
+        out
+    }
+
     /// Z11-T8: the tree, schema and patterns, for evaluating this as a user
     /// function's body inside another evaluation.
     pub(crate) fn parts(&self) -> (&Expr, &Schema, &eval::Regexes) {

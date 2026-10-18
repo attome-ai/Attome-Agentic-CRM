@@ -785,6 +785,13 @@ fn collect_field_refs(expr: &attome_rules::Expr, out: &mut Vec<String>) -> Resul
                 collect_field_refs(arg, out)?;
             }
         }
+        // Z11-T7: nor paths.
+        Expr::Path(segments) => {
+            return Err(AppError::Validation(format!(
+                "formula metric references may not use a lookup path ('{}')",
+                segments.join(".")
+            )));
+        }
         // Z11-T3: a formula metric combines metric keys; it has no lists.
         Expr::Lambda { .. } => {
             return Err(AppError::Validation(

@@ -116,7 +116,11 @@ enum SpannedKind {
         param: String,
         body: Box<Spanned>,
     },
+    Path(Vec<String>),
 }
+
+/// Z11-T7: the most hops a path may take (four segments).
+pub(crate) const MAX_PATH_HOPS: usize = 3;
 
 impl Parser {
     fn peek(&self) -> &TokKind {
@@ -397,22 +401,35 @@ impl Parser {
                         self.node(name_span, tree_depth, SpannedKind::Call { name, args })
                     }
                     _ if matches!(self.peek(), TokKind::Dot) => {
-                        self.bump();
-                        let hop = self.expect_ident("a field name after '.'")?;
-                        let hop_end = self.tokens[self.pos - 1].end;
-                        if matches!(self.peek(), TokKind::Dot) {
-                            self.error_span = Some((name_span.0, hop_end));
-                            return Err(RulesError::MultiHopLookup(format!("{name}.{hop}")));
+                        let mut hops = Vec::new();
+                        let mut end = name_span.1;
+                        while matches!(self.peek(), TokKind::Dot) {
+                            self.bump();
+                            hops.push(self.expect_ident("a field name after '.'")?);
+                            end = self.tokens[self.pos - 1].end;
+                            if hops.len() > MAX_PATH_HOPS {
+                                self.error_span = Some((name_span.0, end));
+                                return Err(RulesError::MultiHopLookup(format!(
+                                    "{name}.{}",
+                                    hops.join(".")
+                                )));
+                            }
                         }
-                        let span = (name_span.0, hop_end);
-                        self.node(
-                            span,
-                            1,
-                            SpannedKind::FieldRef(FieldRef {
-                                base: name,
-                                hop: Some(hop),
-                            }),
-                        )
+                        let span = (name_span.0, end);
+                        if hops.len() == 1 {
+                            self.node(
+                                span,
+                                1,
+                                SpannedKind::FieldRef(FieldRef {
+                                    base: name,
+                                    hop: hops.pop(),
+                                }),
+                            )
+                        } else {
+                            let mut segments = vec![name];
+                            segments.extend(hops);
+                            self.node(span, 1, SpannedKind::Path(segments))
+                        }
                     }
                     _ => self.node(
                         name_span,
@@ -514,6 +531,7 @@ fn to_expr(node: Spanned, spans: &mut Vec<(usize, usize)>) -> Expr {
             param,
             body: Box::new(to_expr(*body, spans)),
         },
+        SpannedKind::Path(segments) => Expr::Path(segments),
     }
 }
 
@@ -547,8 +565,14 @@ mod tests {
     }
 
     #[test]
-    fn rejects_two_hop_lookup() {
-        let err = parse("a.b.c").unwrap_err();
+    fn rejects_a_path_past_three_hops() {
+        // Z11-T7: two and three hops are paths (V2 only, checked at compile).
+        assert_eq!(
+            parse("a.b.c").unwrap(),
+            Expr::Path(vec!["a".into(), "b".into(), "c".into()])
+        );
+        assert!(parse("a.b.c.d").is_ok());
+        let err = parse("a.b.c.d.e").unwrap_err();
         assert!(matches!(err, RulesError::MultiHopLookup(_)), "{err:?}");
     }
 

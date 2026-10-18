@@ -1486,6 +1486,12 @@ fn collect_field_refs(expr: &Expr, out: &mut Vec<(String, Option<String>)>) {
             collect_field_refs(body, &mut inner);
             out.extend(inner.into_iter().filter(|(base, _)| base != param));
         }
+        // Z11-T7: a path reads its first segment's lookup and beyond.
+        Expr::Path(segments) => {
+            if let Some((base, rest)) = segments.split_first() {
+                out.push((base.clone(), Some(rest.join("."))));
+            }
+        }
         Expr::NullLit | Expr::BoolLit(_) | Expr::NumberLit(_) | Expr::StringLit(_) => {}
     }
 }

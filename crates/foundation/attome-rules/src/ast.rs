@@ -16,8 +16,8 @@ pub enum Expr {
     StringLit(String),
     /// `[a, b, c]` — a list literal.
     ListLit(Vec<Expr>),
-    /// `field_name` or `lookup_field.target_field` (exactly one hop —
-    /// `a.b.c` is rejected by the parser as `RulesError::MultiHopLookup`).
+    /// `field_name` or `lookup_field.target_field` (exactly one hop; two or
+    /// three hops are an [`Expr::Path`], V2 only).
     FieldRef(FieldRef),
     Unary {
         op: UnaryOp,
@@ -42,6 +42,9 @@ pub enum Expr {
         param: String,
         body: Box<Expr>,
     },
+    /// Z11-T7 (V2): a path of three or four segments (two or three hops),
+    /// `deal.account.owner.name`, read from data the caller loaded.
+    Path(Vec<String>),
 }
 
 impl Expr {
@@ -60,6 +63,7 @@ impl Expr {
             Expr::Binary { lhs, rhs, .. } => lhs.node_count() + rhs.node_count(),
             Expr::Call { args, .. } => args.iter().map(Expr::node_count).sum(),
             Expr::Lambda { body, .. } => body.node_count(),
+            Expr::Path(_) => 0,
         }
     }
 }
@@ -168,6 +172,7 @@ impl fmt::Display for Expr {
                 write!(f, ")")
             }
             Expr::Lambda { param, body } => write!(f, "{param} => {body}"),
+            Expr::Path(segments) => write!(f, "{}", segments.join(".")),
         }
     }
 }

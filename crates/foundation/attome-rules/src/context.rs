@@ -35,6 +35,9 @@ pub struct Schema {
     related: HashMap<String, HashMap<String, Type>>,
     /// Z11-T8: the user functions a rule may call.
     functions: Option<std::sync::Arc<crate::functions::FunctionLibrary>>,
+    /// Z11-T7: multi-hop paths (joined by `.`), their type and whether an
+    /// unloaded one reads as null.
+    paths: HashMap<String, (Type, bool)>,
 }
 
 impl Schema {
@@ -83,6 +86,27 @@ impl Schema {
         self.with_field(name, Type::List(Box::new(Type::Record(fields))))
     }
 
+    /// Z11-T7: a path of three or four segments a rule may read; the caller
+    /// loads its value ([`Context::with_path`]) after checking read access at
+    /// every hop. Unloaded at evaluation, it is `rules.field.unknown`.
+    #[must_use]
+    pub fn with_path(mut self, path: &[&str], ty: Type) -> Self {
+        self.paths.insert(path.join("."), (ty, false));
+        self
+    }
+
+    /// [`Schema::with_path`] for a path that reads as null when the caller
+    /// did not load it (an empty hop, say).
+    #[must_use]
+    pub fn with_optional_path(mut self, path: &[&str], ty: Type) -> Self {
+        self.paths.insert(path.join("."), (ty, true));
+        self
+    }
+
+    pub(crate) fn path_type(&self, path: &str) -> Option<&(Type, bool)> {
+        self.paths.get(path)
+    }
+
     pub fn field_type(&self, name: &str) -> Option<&Type> {
         self.fields.get(name)
     }
@@ -119,6 +143,8 @@ pub struct Context {
     rates: Option<(String, HashMap<String, f64>)>,
     /// Z11-T4: the business calendar the working-day functions count on.
     calendar: Option<std::sync::Arc<attome_calendar::BusinessCalendar>>,
+    /// Z11-T7: loaded path values, by joined path.
+    paths: HashMap<String, Value>,
 }
 
 impl Context {
@@ -130,6 +156,7 @@ impl Context {
             related: HashMap::new(),
             rates: None,
             calendar: None,
+            paths: HashMap::new(),
         }
     }
 
@@ -209,6 +236,17 @@ impl Context {
         self
     }
 
+    /// Z11-T7: a path's loaded value (see [`Schema::with_path`]).
+    #[must_use]
+    pub fn with_path(mut self, path: &[&str], value: Value) -> Self {
+        self.paths.insert(path.join("."), value);
+        self
+    }
+
+    pub(crate) fn path(&self, path: &str) -> Option<&Value> {
+        self.paths.get(path)
+    }
+
     pub(crate) fn calendar(&self) -> Option<&attome_calendar::BusinessCalendar> {
         self.calendar.as_deref()
     }
@@ -238,6 +276,7 @@ impl Context {
             related: HashMap::new(),
             rates: self.rates.clone(),
             calendar: self.calendar.clone(),
+            paths: HashMap::new(),
         }
     }
 

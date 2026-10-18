@@ -124,6 +124,13 @@ fn typecheck_node(
             typecheck_lambda_call(name, args, schema, cursor)
         }
         Expr::Call { name, args } => typecheck_call(name, args, schema, cursor),
+        Expr::Path(segments) => {
+            let joined = segments.join(".");
+            schema
+                .path_type(&joined)
+                .map(|(ty, _)| ty.clone())
+                .ok_or_else(|| RulesDiagnostic::without_span(RulesError::UnknownField(joined)))
+        }
         Expr::Lambda { .. } => Err(RulesDiagnostic::without_span(type_err(
             "a lambda (x => ...) is only the second argument of any, all, filter or map".into(),
         ))),

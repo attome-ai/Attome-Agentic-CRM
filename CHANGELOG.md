@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rules: multi-hop paths (Z11-T7, V2): `deal.account.owner.region` (two or three hops) read from
+  values the caller loads; `Compiled::paths()` lists them so the caller can check every hop's read
+  access first. Four hops, or any path in V1, is `rules.lookup.multi_hop`.
 - Calendar: the recurrence engine moved to `attome_calendar::rrule` (Z12-T9) and grew `COUNT`,
   `BYMONTH`, `BYMONTHDAY` (negative from the end), ordinal `BYDAY` (`2TU`, `-1FR`), exception
   dates, and `RSCALE=ISLAMIC-UMALQURA` with `SKIP=FORWARD` (Hijri months and days). Report
