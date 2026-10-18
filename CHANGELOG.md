@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Templates: region filters (Z13-T4): `{{ total | currency('SAR') }}`, `| number(2)`,
+  `| date('long')`, `| hijri`, `| digits('western')`, formatted for the render's locale (Arabic
+  digits and separators, Arabic currency symbols and month names in Arabic), and `{% dir %}` for a
+  block in the locale's direction.
 - Rules: multi-hop paths (Z11-T7, V2): `deal.account.owner.region` (two or three hops) read from
   values the caller loads; `Compiled::paths()` lists them so the caller can check every hop's read
   access first. Four hops, or any path in V1, is `rules.lookup.multi_hop`.

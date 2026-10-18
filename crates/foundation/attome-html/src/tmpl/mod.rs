@@ -14,13 +14,22 @@
 //! A loop names its limit, at most [`MAX_LOOP_LIMIT`]; a list longer than its
 //! limit is an error, never silently cut short. Inside a loop the item is a
 //! field (`{{ line }}`), and a record item's fields read as `line.qty`.
+//!
+//! An output may end with region filters (Z13-T4),
+//! `{{ total | currency('SAR') }}`, `{{ due | hijri }}`, `{{ n | number(2) }}`,
+//! `{{ opened | date('long') }}`, `{{ code | digits('western') }}`, formatted
+//! for the render's locale. `{% dir %}...{% end %}` wraps a block in
+//! `<div dir="rtl" lang="ar">` for an Arabic locale (`dir="ltr"` otherwise) in
+//! HTML output, and writes the block alone in text output.
 
 mod escape;
+mod format;
 mod parse;
 mod render;
 mod set;
 
 pub use escape::Output;
+pub use format::MAX_DECIMALS;
 pub use parse::MAX_LOOP_LIMIT;
 pub use render::{RenderContext, RenderLimits};
 pub use set::{

@@ -7,6 +7,7 @@ use attome_rules::{
     Budgets, Compiled, LanguageVersion, RulesError, Schema, Type, compile_versioned,
 };
 
+use super::format::{self, Filter};
 use super::{Position, TemplateError};
 
 /// The most items one loop may name as its limit.
@@ -18,6 +19,12 @@ pub(crate) enum Node {
     Output {
         at: Position,
         expr: Compiled,
+        /// Z13-T4: region filters, applied in order.
+        filters: Vec<Filter>,
+    },
+    /// Z13-T4: `{% dir %}`: the block in the locale's direction.
+    Dir {
+        body: Vec<Node>,
     },
     If {
         at: Position,
@@ -184,10 +191,7 @@ impl Builder<'_> {
             self.next += 1;
             match piece {
                 Piece::Text(text) => nodes.push(Node::Text(text.to_owned())),
-                Piece::Output { src, at } => nodes.push(Node::Output {
-                    at: Position::of(self.source, at),
-                    expr: compile(self.source, at, src, schema)?,
-                }),
+                Piece::Output { src, at } => nodes.push(self.output(at, src, schema)?),
                 Piece::Tag { src, at } => {
                     let (word, rest) = src.split_once(char::is_whitespace).unwrap_or((src, ""));
                     match word {
@@ -195,11 +199,12 @@ impl Builder<'_> {
                         "end" if rest.trim().is_empty() => return Ok((nodes, Stop::End(at))),
                         "if" => nodes.push(self.if_block(at, rest.trim(), schema)?),
                         "for" => nodes.push(self.for_block(at, rest, schema)?),
+                        "dir" if rest.trim().is_empty() => nodes.push(self.dir_block(at, schema)?),
                         other => {
                             return Err(syntax(
                                 self.source,
                                 at,
-                                format!("unknown tag {other:?} (if, else, for, end)"),
+                                format!("unknown tag {other:?} (if, else, for, dir, end)"),
                             ));
                         }
                     }
@@ -207,6 +212,41 @@ impl Builder<'_> {
             }
         }
         Ok((nodes, Stop::Eof))
+    }
+
+    /// `{{ expr | filter | ... }}`: the expression, then its filters checked
+    /// against its type.
+    fn output(&self, at: usize, src: &str, schema: &Schema) -> Result<Node, TemplateError> {
+        let (expr_src, filter_srcs) = format::split(src);
+        let expr = compile(self.source, at, expr_src, schema)?;
+        let filters = filter_srcs
+            .into_iter()
+            .map(|f| {
+                if f.is_empty() {
+                    return Err(syntax(self.source, at, "an empty filter after '|'"));
+                }
+                format::parse_filter(f).map_err(|message| syntax(self.source, at, message))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        format::check(expr.result_type(), &filters)
+            .map_err(|message| expression_error(self.source, at, message))?;
+        Ok(Node::Output {
+            at: Position::of(self.source, at),
+            expr,
+            filters,
+        })
+    }
+
+    fn dir_block(&mut self, at: usize, schema: &Schema) -> Result<Node, TemplateError> {
+        match self.block(schema)? {
+            (body, Stop::End(_)) => Ok(Node::Dir { body }),
+            (_, Stop::Else(other)) => Err(syntax(
+                self.source,
+                other,
+                "{% else %} belongs to an if, not a dir block",
+            )),
+            (_, Stop::Eof) => Err(syntax(self.source, at, "this dir block has no {% end %}")),
+        }
     }
 
     fn if_block(&mut self, at: usize, cond: &str, schema: &Schema) -> Result<Node, TemplateError> {

@@ -12,12 +12,12 @@ publish.workspace      = true
 
 [dependencies]
 ammonia.workspace = true
+attome-calendar.workspace = true
 attome-rules.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
 scraper.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
-chrono.workspace = true
 
 [lints]
 workspace = true

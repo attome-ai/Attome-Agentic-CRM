@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use attome_rules::{Context, Value};
 
 use super::escape::{self, HtmlPlace, Output};
+use super::format::{self, Locale};
 use super::parse::Node;
 use super::{Position, RenderLimit, TemplateError};
 
@@ -59,6 +60,7 @@ impl RenderContext {
 
 pub(crate) fn render(nodes: &[Node], ctx: &RenderContext) -> Result<String, TemplateError> {
     let mut renderer = Renderer {
+        locale: Locale::parse(&ctx.locale),
         output: ctx.output,
         limits: ctx.limits,
         started: Instant::now(),
@@ -72,6 +74,7 @@ pub(crate) fn render(nodes: &[Node], ctx: &RenderContext) -> Result<String, Temp
 }
 
 struct Renderer {
+    locale: Locale,
     output: Output,
     limits: RenderLimits,
     started: Instant,
@@ -108,13 +111,40 @@ impl Renderer {
                         self.place.advance(text);
                     }
                 }
-                Node::Output { at, expr } => {
+                Node::Output { at, expr, filters } => {
                     self.at = *at;
                     let value = expr
                         .eval(values)
                         .map_err(|error| TemplateError::Expression { at: *at, error })?;
+                    let value = if filters.is_empty() {
+                        value
+                    } else {
+                        format::apply(value, filters, &self.locale, values.timezone()).map_err(
+                            |message| TemplateError::Expression {
+                                at: *at,
+                                error: attome_rules::RulesError::Eval(message),
+                            },
+                        )?
+                    };
                     let written = escape::write(&value, self.output, &self.place);
                     self.out.push_str(&written);
+                }
+                Node::Dir { body } => {
+                    if self.output == Output::Html {
+                        // `lang` is ASCII letters only (`Locale::parse`).
+                        let open = if self.locale.is_arabic() {
+                            format!("<div dir=\"rtl\" lang=\"{}\">", self.locale.lang())
+                        } else {
+                            format!("<div dir=\"ltr\" lang=\"{}\">", self.locale.lang())
+                        };
+                        self.out.push_str(&open);
+                        self.place.advance(&open);
+                        self.nodes(body, values)?;
+                        self.out.push_str("</div>");
+                        self.place.advance("</div>");
+                    } else {
+                        self.nodes(body, values)?;
+                    }
                 }
                 Node::If {
                     at,
@@ -364,5 +394,41 @@ mod tests {
         });
         let err = template.render(&ctx).unwrap_err();
         assert_eq!(err.code(), "template.limit.time");
+    }
+
+    #[test]
+    fn format_filters_in_a_template_per_locale() {
+        let template = Template::compile(
+            "{% dir %}{{ name }}: {{ total | currency('SAR') }}{% end %}",
+            &schema(),
+        )
+        .unwrap();
+        let en = template
+            .render(&RenderContext::new(values(0), "en", Output::Html))
+            .unwrap();
+        assert_eq!(
+            en,
+            "<div dir=\"ltr\" lang=\"en\">Salma &lt;Co&gt;: SAR 150.00</div>"
+        );
+        let ar = template
+            .render(&RenderContext::new(values(0), "ar-SA", Output::Html))
+            .unwrap();
+        assert_eq!(
+            ar,
+            "<div dir=\"rtl\" lang=\"ar\">Salma &lt;Co&gt;: ١٥٠٫٠٠ ر.س</div>"
+        );
+        let text = template
+            .render(&RenderContext::new(values(0), "ar", Output::Text))
+            .unwrap();
+        assert_eq!(text, "Salma <Co>: ١٥٠٫٠٠ ر.س");
+    }
+
+    #[test]
+    fn format_filter_errors_at_compile() {
+        let code = |src: &str| Template::compile(src, &schema()).unwrap_err().code();
+        assert_eq!(code("{{ name | number(2) }}"), "rules.type.mismatch");
+        assert_eq!(code("{{ total | upper }}"), "template.syntax");
+        assert_eq!(code("{{ total | }}"), "template.syntax");
+        assert_eq!(code("{% dir %}x"), "template.syntax");
     }
 }

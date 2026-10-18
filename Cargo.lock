@@ -1155,8 +1155,10 @@ name = "attome-html"
 version = "0.1.0"
 dependencies = [
  "ammonia",
+ "attome-calendar",
  "attome-rules",
  "chrono",
+ "chrono-tz",
  "scraper",
  "thiserror",
 ]
