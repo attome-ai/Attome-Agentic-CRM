@@ -38,6 +38,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rules: decision tables (`attome_rules::DecisionTable`, Z11-T9). Rows of V2 conditions on named
+  inputs (`it >= 100 and it < 500`, `it == "gold"`, `in(it, [...])`, or empty for any) with a
+  result, first-match or all-matches, compiled once; `check()` reports number gaps, overlapping rows
+  and cells it cannot analyse. At most 500 rows and 10 inputs (`rules.budget.table_size`).
+- Calendar: `attome_calendar::hijri::month_length` (Z12-T1).
 - Tests: `bounded_state` (Y13-T3) fails on an unbounded channel or a moka cache without
   `max_capacity` in production code; the AI token-delta queue is now bounded (4,096, a full queue
   drops the delta, which the stored answer supersedes).

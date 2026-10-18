@@ -62,7 +62,8 @@
 //! rules.context.unknown_timezone, and one code per budget
 //! kind (rules.budget.ast_nodes, rules.budget.recursion_depth,
 //! rules.budget.eval_steps, rules.budget.wall_clock, rules.budget.string_length,
-//! rules.budget.source_length, rules.budget.list_length).
+//! rules.budget.source_length, rules.budget.list_length,
+//! rules.budget.table_size).
 //! The bilingual admin UI translates those; the English Display stays for logs.
 //! [RulesError::is_transient] is true only for a wall-clock trip, so a consumer
 //! can map a load-dependent failure to a retry (503) rather than a rule
@@ -103,6 +104,7 @@ mod budget;
 mod compile;
 mod context;
 pub mod currency;
+pub mod decision_table;
 mod error;
 mod eval;
 mod lexer;
@@ -117,6 +119,7 @@ pub use budget::{Budgets, HARD_MAX_DEPTH, HARD_MAX_NODES, HARD_MAX_SOURCE_BYTES}
 pub use chrono_tz::Tz;
 pub use compile::{Compiled, compile, compile_versioned, compile_with_budgets};
 pub use context::{Context, Schema};
+pub use decision_table::{CompiledTable, DecisionRow, DecisionTable, HitPolicy, TableIssue};
 pub use error::{BudgetKind, RulesDiagnostic, RulesError, Spans};
 pub use trace::{Trace, TraceEntry};
 pub use value::{Type, Value};

@@ -36,6 +36,9 @@ pub enum BudgetKind {
     /// A `List` value arriving through `Context` exceeded
     /// `Budgets::max_list_len` (BRU-E2).
     ListLength,
+    /// Z11-T9: a decision table with more rows or inputs than
+    /// `decision_table::MAX_ROWS` / `MAX_INPUTS`.
+    TableSize,
 }
 
 impl BudgetKind {
@@ -51,6 +54,7 @@ impl BudgetKind {
             Self::StringLength => "rules.budget.string_length",
             Self::SourceLength => "rules.budget.source_length",
             Self::ListLength => "rules.budget.list_length",
+            Self::TableSize => "rules.budget.table_size",
         }
     }
 }
@@ -65,6 +69,7 @@ impl fmt::Display for BudgetKind {
             Self::StringLength => "max string length",
             Self::SourceLength => "max source length",
             Self::ListLength => "max list length",
+            Self::TableSize => "max decision table size",
         };
         f.write_str(s)
     }
@@ -323,6 +328,7 @@ mod tests {
             BudgetKind::StringLength,
             BudgetKind::SourceLength,
             BudgetKind::ListLength,
+            BudgetKind::TableSize,
         ] {
             all.push(RulesError::Budget(kind));
         }
