@@ -9,14 +9,6 @@ use attome_types::AppError;
 
 const FIELD_NAME: &str = "integration.credential_encryption_key";
 
-pub fn encrypt_secret(ring: &KeyRing, plaintext: &str) -> Result<String, AppError> {
-    attome_auth::envelope::encrypt(FIELD_NAME, ring, plaintext)
-}
-
-pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
-    attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
-}
-
 /// Q18-T2: `integration_credential.secret_encrypted` is bound to its row.
 fn binding(credential_id: uuid::Uuid) -> attome_auth::envelope::RowBinding<'static> {
     attome_auth::envelope::RowBinding {
@@ -61,11 +53,16 @@ mod tests {
         let ring_b = KeyRing::single("22".repeat(32));
         let secret = "super-secret-api-key-value";
 
-        let encrypted = encrypt_secret(&ring_a, secret).unwrap();
-        assert_eq!(decrypt_secret(&ring_a, &encrypted).unwrap(), secret);
+        let id = uuid::Uuid::now_v7();
+        let encrypted = encrypt_credential(&ring_a, id, secret).unwrap();
+        assert_eq!(decrypt_credential(&ring_a, id, &encrypted).unwrap(), secret);
         assert!(
-            decrypt_secret(&ring_b, &encrypted).is_err(),
+            decrypt_credential(&ring_b, id, &encrypted).is_err(),
             "wrong key must not decrypt"
+        );
+        assert!(
+            decrypt_credential(&ring_a, uuid::Uuid::now_v7(), &encrypted).is_err(),
+            "Q18-T2: another row's id must not decrypt"
         );
     }
 

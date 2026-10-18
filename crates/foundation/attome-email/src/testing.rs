@@ -209,6 +209,7 @@ impl FakeInbox {
             smtp_use_tls: None,
             tls_mode: Some("none".to_owned()),
             test_mode_catch_all: None,
+            providers: Default::default(),
         }
     }
 
