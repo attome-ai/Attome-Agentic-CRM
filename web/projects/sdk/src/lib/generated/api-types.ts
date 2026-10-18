@@ -20413,11 +20413,12 @@ export interface components {
          *     `idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.
          *     `idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.
          *     `method_not_allowed`: The path exists but not for this method; see `Allow`.
+         *     `api_version_sunset`: The API version this request is answered at was retired; `supported` lists the current ones.
          *     `unsupported_api_version`: The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "unsupported_api_version" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
