@@ -170,7 +170,7 @@ struct Builder<'a> {
 }
 
 /// How a block ended.
-enum End {
+enum Stop {
     Eof,
     Else(usize),
     End(usize),
@@ -178,7 +178,7 @@ enum End {
 
 impl Builder<'_> {
     /// Nodes until `{% else %}`, `{% end %}` or the end of the source.
-    fn block(&mut self, schema: &Schema) -> Result<(Vec<Node>, End), TemplateError> {
+    fn block(&mut self, schema: &Schema) -> Result<(Vec<Node>, Stop), TemplateError> {
         let mut nodes = Vec::new();
         while let Some(piece) = self.pieces.get(self.next).cloned() {
             self.next += 1;
@@ -191,8 +191,8 @@ impl Builder<'_> {
                 Piece::Tag { src, at } => {
                     let (word, rest) = src.split_once(char::is_whitespace).unwrap_or((src, ""));
                     match word {
-                        "else" if rest.trim().is_empty() => return Ok((nodes, End::Else(at))),
-                        "end" if rest.trim().is_empty() => return Ok((nodes, End::End(at))),
+                        "else" if rest.trim().is_empty() => return Ok((nodes, Stop::Else(at))),
+                        "end" if rest.trim().is_empty() => return Ok((nodes, Stop::End(at))),
                         "if" => nodes.push(self.if_block(at, rest.trim(), schema)?),
                         "for" => nodes.push(self.for_block(at, rest, schema)?),
                         other => {
@@ -206,7 +206,7 @@ impl Builder<'_> {
                 }
             }
         }
-        Ok((nodes, End::Eof))
+        Ok((nodes, Stop::Eof))
     }
 
     fn if_block(&mut self, at: usize, cond: &str, schema: &Schema) -> Result<Node, TemplateError> {
@@ -220,15 +220,15 @@ impl Builder<'_> {
         }
         let (then, end) = self.block(schema)?;
         let otherwise = match end {
-            End::End(_) => Vec::new(),
-            End::Else(_) => match self.block(schema)? {
-                (nodes, End::End(_)) => nodes,
-                (_, End::Else(again)) => {
+            Stop::End(_) => Vec::new(),
+            Stop::Else(_) => match self.block(schema)? {
+                (nodes, Stop::End(_)) => nodes,
+                (_, Stop::Else(again)) => {
                     return Err(syntax(self.source, again, "a second {% else %} in one if"));
                 }
-                (_, End::Eof) => return Err(syntax(self.source, at, "this if has no {% end %}")),
+                (_, Stop::Eof) => return Err(syntax(self.source, at, "this if has no {% end %}")),
             },
-            End::Eof => return Err(syntax(self.source, at, "this if has no {% end %}")),
+            Stop::Eof => return Err(syntax(self.source, at, "this if has no {% end %}")),
         };
         Ok(Node::If {
             at: Position::of(self.source, at),
@@ -260,15 +260,15 @@ impl Builder<'_> {
             );
         }
         let body = match self.block(&inner)? {
-            (nodes, End::End(_)) => nodes,
-            (_, End::Else(other)) => {
+            (nodes, Stop::End(_)) => nodes,
+            (_, Stop::Else(other)) => {
                 return Err(syntax(
                     self.source,
                     other,
                     "{% else %} belongs to an if, not a loop",
                 ));
             }
-            (_, End::Eof) => return Err(syntax(self.source, at, "this loop has no {% end %}")),
+            (_, Stop::Eof) => return Err(syntax(self.source, at, "this loop has no {% end %}")),
         };
         Ok(Node::For {
             at: Position::of(self.source, at),
@@ -288,8 +288,8 @@ pub(crate) fn parse(source: &str, schema: &Schema) -> Result<Vec<Node>, Template
         next: 0,
     };
     match builder.block(schema)? {
-        (nodes, End::Eof) => Ok(nodes),
-        (_, End::Else(at)) => Err(syntax(source, at, "{% else %} outside an if")),
-        (_, End::End(at)) => Err(syntax(source, at, "{% end %} with nothing to end")),
+        (nodes, Stop::Eof) => Ok(nodes),
+        (_, Stop::Else(at)) => Err(syntax(source, at, "{% else %} outside an if")),
+        (_, Stop::End(at)) => Err(syntax(source, at, "{% end %} with nothing to end")),
     }
 }

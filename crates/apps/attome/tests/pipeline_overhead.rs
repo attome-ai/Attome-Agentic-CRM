@@ -691,11 +691,11 @@ fn print_window(title: &str, w: &Window) {
 
 // ── The measurement ──────────────────────────────────────────────────────────
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 /// Z5-T12: the median overhead budget of a session-cookie request, in
 /// microseconds (1 ms).
 const PIPELINE_BUDGET_US: f64 = 1000.0;
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "benchmark: run explicitly in release, see the module doc"]
 async fn measure_middleware_overhead() {
     install_sql_capture();
