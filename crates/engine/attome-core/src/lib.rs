@@ -63,6 +63,8 @@ pub mod audit_signing;
 /// lock precedence; `compile_condition` (one attome-rules program, typed
 /// parameters) and `validate_rule`.
 pub mod business_rules;
+/// Z3-T3 — how a cache must keep an entity's fields.
+pub mod cache_sensitivity;
 /// D-517 — the single `calendar` loader: strict parsing into a
 /// `attome_calendar::BusinessCalendar`, typed unresolved reasons, content hash.
 pub mod calendar;

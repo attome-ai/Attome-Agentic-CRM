@@ -90,6 +90,12 @@ pub struct CacheSection {
     /// half (reconnect without a process restart) is proven — BCA-01/BCA-01b.
     #[serde(default)]
     pub sentinel: Option<CacheSentinelConfig>,
+    /// Z3-T3: the key ring a cache declared `EncryptedInRedis` seals its
+    /// values with before they reach Redis (AES-256-GCM, tagged with the key
+    /// id so a rotation keeps old entries readable). Required when such a
+    /// cache runs over Redis; such a cache refuses to start without it.
+    #[serde(default)]
+    pub encryption_key: Option<crate::KeyRing>,
 }
 
 /// Hand-rolled: `password` is the Redis/Dragonfly auth credential — the
@@ -112,6 +118,7 @@ impl std::fmt::Debug for CacheSection {
             .field("tls_enabled", &self.tls_enabled)
             .field("tls_ca_path", &self.tls_ca_path)
             .field("sentinel", &self.sentinel)
+            .field("encryption_key", &self.encryption_key)
             .finish()
     }
 }

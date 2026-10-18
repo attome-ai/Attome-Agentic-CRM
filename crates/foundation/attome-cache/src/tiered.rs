@@ -20,6 +20,15 @@
 //! rows, and only rows filtered by privileges and field security: a row set
 //! filtered by record ownership depends on the user, so it is `PerUser`.
 //! A `Shared` cache is read with [`get_or_load`](TieredCache::get_or_load).
+//!
+//! Sensitivity (Z3-T3): a `LocalOnly` cache never reaches the shared store.
+//! An `EncryptedInRedis` cache seals each value with a [`ValueSealer`]
+//! before it reaches Redis and opens it on the way back; a value that does
+//! not open (a rotated-out key, a foreign value) is a miss, logged at
+//! `warn`. Over Redis such a cache needs a sealer and refuses to start
+//! without one; the in-process store keeps values in this process and is not
+//! sealed. This crate holds no cryptography: the sealer comes from
+//! `attome-auth` (`envelope::CacheSealer`, over `cache.encryption_key`).
 
 use std::collections::hash_map::RandomState;
 use std::future::Future;
@@ -72,6 +81,13 @@ impl<V> moka::Expiry<String, V> for JitterExpiry {
     }
 }
 
+/// Z3-T3: seals a cache value before it reaches Redis and opens it after.
+/// `attome-auth`'s `envelope::CacheSealer` is the deployment's.
+pub trait ValueSealer: Send + Sync {
+    fn seal(&self, plaintext: &str) -> Result<String, AppError>;
+    fn open(&self, sealed: &str) -> Result<String, AppError>;
+}
+
 /// An `AppError` again, for each caller that waited on one shared load.
 fn reissue(error: &AppError) -> AppError {
     match error {
@@ -90,6 +106,7 @@ pub struct TieredCache<V: Clone + Send + Sync + 'static> {
     spec: &'static CacheSpec,
     l1: moka::future::Cache<String, V>,
     store: Option<Store>,
+    sealer: Option<std::sync::Arc<dyn ValueSealer>>,
     last_degraded_warning: Mutex<Option<Instant>>,
 }
 
@@ -108,8 +125,28 @@ where
     /// A cache for `spec` (validated and registered), over `store` when the
     /// deployment has one; `None` keeps it in process (one server).
     pub fn new(spec: &'static CacheSpec, store: Option<Store>) -> Result<Self, AppError> {
+        Self::with_sealer(spec, store, None)
+    }
+
+    /// Z3-T3: [`new`](Self::new) with the sealer an `EncryptedInRedis`
+    /// cache needs over Redis. Such a cache over Redis without one is
+    /// refused.
+    pub fn with_sealer(
+        spec: &'static CacheSpec,
+        store: Option<Store>,
+        sealer: Option<std::sync::Arc<dyn ValueSealer>>,
+    ) -> Result<Self, AppError> {
         spec.validate()
             .map_err(|e| AppError::internal(e.to_string()))?;
+        if spec.sensitivity == CacheSensitivity::EncryptedInRedis
+            && matches!(store, Some(Store::Redis(_)))
+            && sealer.is_none()
+        {
+            return Err(AppError::internal(format!(
+                "cache {} is EncryptedInRedis over Redis and needs cache.encryption_key",
+                spec.name
+            )));
+        }
         crate::spec::register(spec);
         let l1 = moka::future::Cache::builder()
             .max_capacity(spec.l1_capacity)
@@ -122,6 +159,7 @@ where
             spec,
             l1,
             store,
+            sealer,
             last_degraded_warning: Mutex::new(None),
         })
     }
@@ -130,6 +168,15 @@ where
         match self.spec.sensitivity {
             CacheSensitivity::LocalOnly => None,
             _ => self.store.as_ref(),
+        }
+    }
+
+    /// The sealer for values bound for `store`: only Redis values of an
+    /// `EncryptedInRedis` cache are sealed.
+    fn sealer_for(&self, store: &Store) -> Option<&dyn ValueSealer> {
+        match (self.spec.sensitivity, store) {
+            (CacheSensitivity::EncryptedInRedis, Store::Redis(_)) => self.sealer.as_deref(),
+            _ => None,
         }
     }
 
@@ -205,14 +252,25 @@ where
         let Some(store) = self.shared_store() else {
             return loader.await;
         };
+        let sealer = self.sealer_for(store);
         match store.get(key).await {
-            Ok(Some(text)) => match serde_json::from_str::<V>(&text) {
-                Ok(value) => return Ok(value),
-                // A value written by another version: read the source.
-                Err(error) => {
-                    tracing::debug!(cache = self.spec.name, %error, "cache entry does not decode; reloading");
+            Ok(Some(stored)) => {
+                let text = match sealer {
+                    Some(sealer) => sealer.open(&stored).map_err(|error| {
+                        tracing::warn!(cache = self.spec.name, %error, "sealed cache entry does not open; reloading");
+                    }),
+                    None => Ok(stored),
+                };
+                if let Ok(text) = text {
+                    match serde_json::from_str::<V>(&text) {
+                        Ok(value) => return Ok(value),
+                        // A value written by another version: read the source.
+                        Err(error) => {
+                            tracing::debug!(cache = self.spec.name, %error, "cache entry does not decode; reloading");
+                        }
+                    }
                 }
-            },
+            }
             Ok(None) => {}
             Err(error) => match self.spec.failure {
                 FailureMode::FailClosed => return Err(AppError::Overloaded("cache")),
@@ -224,9 +282,21 @@ where
         }
         let value = loader.await?;
         if let Ok(text) = serde_json::to_string(&value) {
-            let ttl = jittered(self.spec.ttl, self.spec.jitter_pct, seed(key));
-            if let Err(error) = store.set(key, &text, Some(ttl)).await {
-                self.warn_degraded(&error);
+            let stored = match sealer {
+                Some(sealer) => sealer.seal(&text),
+                None => Ok(text),
+            };
+            match stored {
+                Ok(stored) => {
+                    let ttl = jittered(self.spec.ttl, self.spec.jitter_pct, seed(key));
+                    if let Err(error) = store.set(key, &stored, Some(ttl)).await {
+                        self.warn_degraded(&error);
+                    }
+                }
+                // Never written unsealed: the value stays in this node only.
+                Err(error) => {
+                    tracing::warn!(cache = self.spec.name, %error, "cache value could not be sealed; not shared");
+                }
             }
         }
         Ok(value)

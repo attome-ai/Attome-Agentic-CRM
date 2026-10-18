@@ -134,6 +134,46 @@ pub fn decrypt_bytes_with_aad(
     decrypt_with_key(field_name, &key_bytes, nonce_and_ciphertext, aad)
 }
 
+/// Z3-T3: seals an `EncryptedInRedis` cache's values with
+/// `cache.encryption_key`, through [`encrypt`] and [`decrypt`] (AES-256-GCM,
+/// tagged with the key id).
+pub struct CacheSealer {
+    ring: KeyRing,
+}
+
+impl std::fmt::Debug for CacheSealer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CacheSealer").finish_non_exhaustive()
+    }
+}
+
+impl CacheSealer {
+    pub fn new(ring: KeyRing) -> Self {
+        Self { ring }
+    }
+
+    /// The deployment's sealer, when `cache.encryption_key` is set.
+    pub fn from_config(
+        config: &attome_config::AppConfig,
+    ) -> Option<std::sync::Arc<dyn attome_cache::tiered::ValueSealer>> {
+        let ring = config.cache.encryption_key.clone()?;
+        if ring.is_empty() {
+            return None;
+        }
+        Some(std::sync::Arc::new(Self::new(ring)))
+    }
+}
+
+impl attome_cache::tiered::ValueSealer for CacheSealer {
+    fn seal(&self, plaintext: &str) -> Result<String, AppError> {
+        encrypt("cache.encryption_key", &self.ring, plaintext)
+    }
+
+    fn open(&self, sealed: &str) -> Result<String, AppError> {
+        decrypt("cache.encryption_key", &self.ring, sealed)
+    }
+}
+
 /// `String`/base64 convenience wrapper over [`encrypt_bytes`] for `TEXT`
 /// columns (`mfa.rs`, `xrm_s2s::crypto`).
 pub fn encrypt(field_name: &str, ring: &KeyRing, plaintext: &str) -> Result<String, AppError> {
@@ -295,6 +335,24 @@ mod tests {
     fn dek_open_rejects_truncated_ciphertext() {
         let dek = generate_dek();
         assert!(open_with_dek(&dek, b"short").is_err());
+    }
+
+    /// Z3-T3: what reaches Redis for an encrypted cache is not the value.
+    #[test]
+    fn encrypted_value_not_plaintext_in_redis_bytes() {
+        use attome_cache::tiered::ValueSealer;
+
+        let value = r#"{"email":"layla@example.com","salary":18250}"#;
+        let sealer = CacheSealer::new(single_ring("k1", &key_hex(7)));
+        let sealed = sealer.seal(value).unwrap();
+        assert!(!sealed.contains("layla"), "{sealed}");
+        assert!(!sealed.contains("18250"), "{sealed}");
+        assert_eq!(sealer.open(&sealed).unwrap(), value);
+        let other = CacheSealer::new(single_ring("k2", &key_hex(9)));
+        assert!(
+            other.open(&sealed).is_err(),
+            "another ring does not open it"
+        );
     }
 
     fn single_ring(key_id: &str, key_hex_value: &str) -> KeyRing {

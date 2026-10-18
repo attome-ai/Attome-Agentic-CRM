@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Encrypted cache values (Z3-T3): a cache declared `EncryptedInRedis` seals each value with
+  `cache.encryption_key` (AES-256-GCM, key-id tagged) before it reaches Redis, and refuses to start
+  over Redis without that key; a `LocalOnly` cache never reaches Redis. A credential column may not
+  be cached at all (`attome_core::cache_sensitivity`).
 - Email providers (Z8-T1): besides SMTP, mail can leave through Amazon SES (v2 API, SigV4) or
   SendGrid (v3 mail send), chosen per sender identity with `email.providers.by_sender` and
   `email.providers.default` (SMTP when unset). Every provider classifies its answers into the same
