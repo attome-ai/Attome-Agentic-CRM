@@ -184,6 +184,20 @@ impl CookedRegistry {
 
 #[cfg(test)]
 mod tests {
+
+    /// Y1-T16: the runtime read API works from the loaded snapshot alone;
+    /// no `get` takes a database pool.
+    #[test]
+    fn runtime_api_takes_no_pool() {
+        let source = include_str!("runtime.rs");
+        let offenders: Vec<&str> = source
+            .lines()
+            .map(str::trim_start)
+            .filter(|line| line.starts_with("pub fn get") && line.contains("DbPool"))
+            .collect();
+        assert!(offenders.is_empty(), "{offenders:?}");
+    }
+
     use super::*;
     use crate::cooker::ManifestEntry;
     use serde::Deserialize;

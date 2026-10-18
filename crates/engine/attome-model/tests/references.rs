@@ -182,3 +182,57 @@ async fn references_in_and_out_agree() {
     assert_eq!(outgoing.items[0].to_entity, target_key(&target_ref));
     assert_eq!(outgoing.items[0].mode, "reads");
 }
+
+/// Y1-T16: replacing an object's references drops the old rows instead of
+/// adding to them.
+#[tokio::test]
+async fn replace_references_removes_old_rows() {
+    let Some(pool) = pool().await else {
+        return;
+    };
+    let source = ObjectRef {
+        kind: KindName("test_source"),
+        id: ObjectId::new(),
+    };
+    let first = ObjectRef {
+        kind: KindName("test_target"),
+        id: ObjectId::new(),
+    };
+    let second = ObjectRef {
+        kind: KindName("test_target"),
+        id: ObjectId::new(),
+    };
+    let reads = |target: &ObjectRef| Reference {
+        target: *target,
+        mode: RefMode::Reads,
+    };
+
+    let mut tx = pool.begin().await.unwrap();
+    references::replace_references(&mut tx, &source, &[reads(&first)])
+        .await
+        .unwrap();
+    references::replace_references(&mut tx, &source, &[reads(&second)])
+        .await
+        .unwrap();
+    let targets: Vec<String> = sqlx::query_scalar(
+        "SELECT to_entity FROM metadata_reference WHERE from_kind = $1 AND from_ref = $2",
+    )
+    .bind(source.kind.as_str())
+    .bind(source.id.0)
+    .fetch_all(&mut *tx)
+    .await
+    .unwrap();
+    assert_eq!(targets, [target_key(&second)]);
+    references::replace_references(&mut tx, &source, &[])
+        .await
+        .unwrap();
+    let left: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM metadata_reference WHERE from_kind = $1 AND from_ref = $2",
+    )
+    .bind(source.kind.as_str())
+    .bind(source.id.0)
+    .fetch_one(&mut *tx)
+    .await
+    .unwrap();
+    assert_eq!(left, 0);
+}

@@ -863,3 +863,157 @@ fn environment_variable_values_are_set_per_deployment() {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     });
 }
+
+/// Y1-T16: a non-administrator is refused on every model route, reads and
+/// writes alike, before anything is looked up.
+#[test]
+fn non_admin_gets_403_on_every_route() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_user(&db, "plain-every-route").await;
+        let app = full_app(system);
+        let id = Uuid::now_v7();
+        let gets = [
+            "/api/v1/admin/model/kinds".to_owned(),
+            "/api/v1/admin/model/form".to_owned(),
+            format!("/api/v1/admin/model/form/{id}"),
+            format!("/api/v1/admin/model/form/{id}/versions/1"),
+            format!("/api/v1/admin/model/form/{id}/history"),
+            format!("/api/v1/admin/model/form/{id}/diff?from=1&to=2"),
+            format!("/api/v1/admin/model/form/{id}/references"),
+            "/api/v1/admin/model/export".to_owned(),
+        ];
+        for uri in &gets {
+            let resp = app.clone().oneshot(get_req(uri, &cookie)).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN, "GET {uri}");
+        }
+        let posts = [
+            format!("/api/v1/admin/model/form/{id}/validate"),
+            format!("/api/v1/admin/model/form/{id}/commands"),
+            format!("/api/v1/admin/model/form/{id}/publish"),
+            "/api/v1/admin/model/blueprint/plan".to_owned(),
+        ];
+        for uri in &posts {
+            let resp = app
+                .clone()
+                .oneshot(post_req(uri, &cookie, serde_json::json!({})))
+                .await
+                .unwrap();
+            assert_eq!(resp.status(), StatusCode::FORBIDDEN, "POST {uri}");
+        }
+    });
+}
+
+/// Y1-T16: commands against a draft that changed since the caller read it
+/// are refused with 409, and nothing is saved.
+#[test]
+fn stale_base_hash_on_commands_is_409() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
+                .fetch_one(&db)
+                .await
+                .expect("a seeded entity");
+        let app = full_app(system);
+        let form_id = Uuid::now_v7();
+        let uri = format!("/api/v1/admin/model/form/{form_id}/commands");
+        let first = app
+            .clone()
+            .oneshot(post_req(
+                &uri,
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": format!("stale test {form_id}"),
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": entity_id.to_string() },
+                        { "op": "set", "path": "/sections", "value": [] }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(first.status(), StatusCode::OK);
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &uri,
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                    "name": format!("stale test {form_id}"),
+                    "commands": [
+                        { "op": "set", "path": "/sections", "value": [{ "label": "Late", "fields": [] }] }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let read = body_json(
+            app.oneshot(get_req(
+                &format!("/api/v1/admin/model/form/{form_id}"),
+                &cookie,
+            ))
+            .await
+            .unwrap(),
+        )
+        .await;
+        assert_eq!(
+            read["doc"]["sections"],
+            serde_json::json!([]),
+            "nothing was saved"
+        );
+    });
+}
+
+/// Y1-T16: an object's history is the standard paginated envelope.
+#[test]
+fn history_uses_paginated_shape() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
+                .fetch_one(&db)
+                .await
+                .expect("a seeded entity");
+        let app = full_app(system);
+        let form_id = Uuid::now_v7();
+        let saved = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": format!("history test {form_id}"),
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": entity_id.to_string() },
+                        { "op": "set", "path": "/sections", "value": [] }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(saved.status(), StatusCode::OK);
+        let resp = app
+            .oneshot(get_req(
+                &format!("/api/v1/admin/model/form/{form_id}/history?page=1&page_size=10"),
+                &cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp).await;
+        assert!(body["items"].is_array(), "{body}");
+        assert_eq!(body["total"], 1);
+        assert_eq!(body["page"], 1);
+        assert_eq!(body["page_size"], 10);
+    });
+}

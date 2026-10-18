@@ -290,3 +290,60 @@ async fn stale_base_hash_is_version_conflict() {
     let read = store::read(&pool, object.id.0, None).await.unwrap();
     assert_eq!(read.doc["title"], "two");
 }
+
+/// Y1-T16: the diff between two versions is RFC 6902: a changed member is
+/// `replace`, a new one `add`, a dropped one `remove`, each at its pointer.
+#[tokio::test]
+async fn diff_returns_rfc6902_ops() {
+    let Some(pool) = pool().await else {
+        return;
+    };
+    let object = spec();
+    save(
+        &pool,
+        &object,
+        json!({ "title": "v1", "old": true, "a/b": 1 }),
+    )
+    .await;
+    sqlx::query("UPDATE metadata_object_version SET state = 'published' WHERE object_id = $1")
+        .bind(object.id.0)
+        .execute(&pool)
+        .await
+        .unwrap();
+    save(&pool, &object, json!({ "title": "v2", "new": 2, "a/b": 1 })).await;
+    let ops = store::diff(&pool, object.id.0, 1, 2).await.unwrap();
+    let mut seen: Vec<(String, String)> = ops
+        .iter()
+        .map(|op| (op.op.to_owned(), op.path.clone()))
+        .collect();
+    seen.sort();
+    assert_eq!(
+        seen,
+        [
+            ("add".to_owned(), "/new".to_owned()),
+            ("remove".to_owned(), "/old".to_owned()),
+            ("replace".to_owned(), "/title".to_owned()),
+        ]
+    );
+    let add = ops.iter().find(|op| op.op == "add").unwrap();
+    assert_eq!(add.value, Some(json!(2)));
+}
+
+/// Y1-T16: asking for a version an object does not have is not found.
+#[tokio::test]
+async fn read_at_missing_version_is_not_found() {
+    let Some(pool) = pool().await else {
+        return;
+    };
+    let object = spec();
+    save(&pool, &object, json!({ "title": "only" })).await;
+    assert!(store::read(&pool, object.id.0, Some(1)).await.is_ok());
+    assert!(matches!(
+        store::read(&pool, object.id.0, Some(99)).await,
+        Err(AppError::NotFound)
+    ));
+    assert!(matches!(
+        store::diff(&pool, object.id.0, 1, 99).await,
+        Err(AppError::NotFound)
+    ));
+}
