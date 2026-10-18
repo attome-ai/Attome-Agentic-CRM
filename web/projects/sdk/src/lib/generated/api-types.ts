@@ -7603,6 +7603,12 @@ export interface paths {
          *     events only (I-14, A-78). A delta for a turn whose `message.completed`
          *     this stream has already sent is dropped: the answer supersedes it (A-79).
          *     When Redis is unavailable there are no deltas and nothing else changes.
+         *
+         *     **Drain (AB7-T5).** When this node starts draining, the stream sends one
+         *     `reconnect` frame — `{retry_ms}`, 500 to 3000 ms, with no `id` — and
+         *     closes, so a restart is never held open by a chat. The client waits that
+         *     long and reopens from its last durable ordinal (`Last-Event-ID` or
+         *     `after`), landing on a node that is not draining.
          */
         get: operations["stream_conversation"];
         put?: never;

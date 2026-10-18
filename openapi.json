@@ -44176,7 +44176,7 @@
           "action"
         ],
         "summary": "`GET /api/v1/ai/conversations/{id}/stream` — the conversation's semantic\nevents as Server-Sent Events: every stored event after the cursor, in\nordinal order, then new ones as they commit (C10-A, I-14, row A-12).",
-        "description": "**Authorized before the first frame (I-20).** The conversation is resolved\nfor the caller before the response starts: an unknown conversation, or\nsomeone else's, is an ordinary `404` with no stream.\n\n**A projection of the log.** Every frame with an `id` is a committed event.\nReplay and live-follow are one loop over `ordinal > cursor`, and a\nconversation's events commit in ordinal order, so the handoff from replay\nto live neither skips nor repeats one.\n\n**Token deltas (C11 B3).** While following live, the stream also relays\n`message.delta` frames — `{turn_id, text}`, **with no `id`**, so a delta\nnever moves the client's `Last-Event-ID` and a reconnect replays durable\nevents only (I-14, A-78). A delta for a turn whose `message.completed`\nthis stream has already sent is dropped: the answer supersedes it (A-79).\nWhen Redis is unavailable there are no deltas and nothing else changes.",
+        "description": "**Authorized before the first frame (I-20).** The conversation is resolved\nfor the caller before the response starts: an unknown conversation, or\nsomeone else's, is an ordinary `404` with no stream.\n\n**A projection of the log.** Every frame with an `id` is a committed event.\nReplay and live-follow are one loop over `ordinal > cursor`, and a\nconversation's events commit in ordinal order, so the handoff from replay\nto live neither skips nor repeats one.\n\n**Token deltas (C11 B3).** While following live, the stream also relays\n`message.delta` frames — `{turn_id, text}`, **with no `id`**, so a delta\nnever moves the client's `Last-Event-ID` and a reconnect replays durable\nevents only (I-14, A-78). A delta for a turn whose `message.completed`\nthis stream has already sent is dropped: the answer supersedes it (A-79).\nWhen Redis is unavailable there are no deltas and nothing else changes.\n\n**Drain (AB7-T5).** When this node starts draining, the stream sends one\n`reconnect` frame — `{retry_ms}`, 500 to 3000 ms, with no `id` — and\ncloses, so a restart is never held open by a chat. The client waits that\nlong and reopens from its last durable ordinal (`Last-Event-ID` or\n`after`), landing on a node that is not draining.",
         "operationId": "stream_conversation",
         "parameters": [
           {
@@ -133134,6 +133134,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -133186,6 +133187,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }
