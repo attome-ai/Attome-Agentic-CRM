@@ -8,6 +8,7 @@
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Invoicing](invoicing.md): drafts, issue and numbering, notes, the invoice document, statements, ageing and write-offs.
 - [Rule language functions](rule-language.md): language versions and the functions V2 adds.
+- [Data layer](data-layer.md): pools, statement classes, retry, locks, query tags, read-your-writes and the censuses.
 - [Backup](backup.md), [Versions and support](versions-and-support.md), [Model servers](model-servers.md)
 - [Release](release.md), [SLOs](slo.md), [Testing](testing.md), [Build machine](build-machine.md)
 - `evidence/`: dated measurements (latency, memory, AI quality) that releases are checked against.
