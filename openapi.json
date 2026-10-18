@@ -48870,6 +48870,102 @@
         }
       }
     },
+    "/api/v1/calendars/{id}/calculate": {
+      "post": {
+        "tags": [
+          "calendars"
+        ],
+        "summary": "Z12-T10: business-time arithmetic on a calendar, for any signed-in\ncaller: the same answers SLA clocks use, with the calendar version and\ncontent hash they were computed against.",
+        "operationId": "calculate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The answer, with the calendar version and hash",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Asked about another person's calendar without being an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such active calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing operand, or a calendar that cannot answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "pure calculation; writes nothing",
+          "reason": "read_only",
+          "via": null
+        }
+      }
+    },
     "/api/v1/catalog/entities": {
       "get": {
         "tags": [
@@ -81708,6 +81804,81 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "CalculateOp": {
+        "type": "string",
+        "description": "Z12-T10: one business-time question for a calendar.",
+        "enum": [
+          "add",
+          "between",
+          "next",
+          "is_working"
+        ]
+      },
+      "CalculateRequest": {
+        "type": "object",
+        "description": "Z12-T10: `POST /api/v1/calendars/{id}/calculate`'s body.",
+        "required": [
+          "op",
+          "from"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "op": {
+            "$ref": "#/components/schemas/CalculateOp"
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Answer on this person's calendar, with their absences, instead of\n`{id}`. Only the caller themselves, or an administrator."
+          }
+        }
+      },
+      "CalculateResponse": {
+        "type": "object",
+        "description": "Z12-T10: the answer, and what it was computed against.",
+        "required": [
+          "result",
+          "calendar_id",
+          "calendar_version",
+          "content_hash"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "calendar_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "result": {
+            "description": "A timestamp for `add` and `next`, minutes for `between`, a boolean\nfor `is_working`."
           }
         }
       },

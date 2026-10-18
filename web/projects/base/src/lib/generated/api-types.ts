@@ -9362,6 +9362,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendars/{id}/calculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Z12-T10: business-time arithmetic on a calendar, for any signed-in
+         *     caller: the same answers SLA clocks use, with the calendar version and
+         *     content hash they were computed against.
+         */
+        post: operations["calculate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/entities": {
         parameters: {
             query?: never;
@@ -16692,6 +16713,40 @@ export interface components {
             role_ids?: string[] | null;
             severity?: string | null;
             target_field?: string | null;
+        };
+        /**
+         * @description Z12-T10: one business-time question for a calendar.
+         * @enum {string}
+         */
+        CalculateOp: "add" | "between" | "next" | "is_working";
+        /** @description Z12-T10: `POST /api/v1/calendars/{id}/calculate`'s body. */
+        CalculateRequest: {
+            /** Format: date-time */
+            from: string;
+            /** Format: int64 */
+            minutes?: number | null;
+            op: components["schemas"]["CalculateOp"];
+            /** Format: date-time */
+            to?: string | null;
+            /**
+             * Format: uuid
+             * @description Answer on this person's calendar, with their absences, instead of
+             *     `{id}`. Only the caller themselves, or an administrator.
+             */
+            user_id?: string | null;
+        };
+        /** @description Z12-T10: the answer, and what it was computed against. */
+        CalculateResponse: {
+            /** Format: uuid */
+            calendar_id: string;
+            /** Format: int32 */
+            calendar_version: number;
+            content_hash: string;
+            /**
+             * @description A timestamp for `add` and `next`, minutes for `between`, a boolean
+             *     for `is_working`.
+             */
+            result: unknown;
         };
         CalendarBody: {
             description?: string | null;
@@ -65754,6 +65809,69 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    calculate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalculateRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer, with the calendar version and hash */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalculateResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Asked about another person's calendar without being an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing operand, or a calendar that cannot answer */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
