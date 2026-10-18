@@ -145,6 +145,32 @@ pub struct ErrorResponse {
     /// found this list four codes short of the taxonomy it documents.
     pub error: String,
     pub message: String,
+    /// Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`.
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub problem_type: Option<String>,
+    /// The HTTP status phrase, e.g. `Not Found`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// The HTTP status code.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<u16>,
+    /// The same text as `message`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    /// The same value as `error`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    /// Whether the same request may succeed later (the error catalogue's
+    /// verdict for `code`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retryable: Option<bool>,
+    /// The request path the problem happened at.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance: Option<String>,
+    /// Every field-level failure on a `validation_error`, as
+    /// `{attribute, rule, message, fix}`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub errors: Option<Vec<serde_json::Value>>,
     /// Present on responses that passed through the request-id middleware
     /// (D-043); absent on the few pre-middleware rejection paths.
     #[serde(skip_serializing_if = "Option::is_none")]

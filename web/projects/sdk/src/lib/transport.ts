@@ -164,7 +164,7 @@ export class AttomeTransport {
     let data: unknown;
     if (raw.length === 0) {
       data = undefined;
-    } else if (contentType.includes('application/json')) {
+    } else if (/[/+]json\b/.test(contentType)) {
       data = JSON.parse(raw);
     } else {
       data = raw;

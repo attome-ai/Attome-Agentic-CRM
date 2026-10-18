@@ -505,7 +505,35 @@ impl IntoResponse for AppError {
             body["retry_after_sec"] = json!(secs);
         }
 
+        // Z14-T1: RFC 9457 problem details beside the Attome fields. `code`
+        // is the same value as `error`, which stays for every existing
+        // client; `detail` is `message`; `instance` and `request_id` are
+        // added by attome-server's request-id layer.
+        body["type"] = json!("about:blank");
+        body["title"] = json!(status.canonical_reason().unwrap_or("Error"));
+        body["status"] = json!(status.as_u16());
+        body["detail"] = body["message"].clone();
+        body["code"] = json!(code);
+        body["retryable"] = json!(crate::error_codes::lookup(code).is_some_and(|c| c.retryable));
+        if let AppError::FieldValidation(details) = &self {
+            body["errors"] = details
+                .iter()
+                .map(|f| {
+                    json!({
+                        "attribute": f.field,
+                        "rule": f.code,
+                        "message": f.message,
+                        "fix": serde_json::Value::Null,
+                    })
+                })
+                .collect();
+        }
+
         let mut resp = (status, Json(body)).into_response();
+        resp.headers_mut().insert(
+            axum::http::header::CONTENT_TYPE,
+            axum::http::HeaderValue::from_static(PROBLEM_JSON),
+        );
         if let Some(value) =
             retry_after.and_then(|secs| axum::http::HeaderValue::from_str(&secs.to_string()).ok())
         {
@@ -522,6 +550,9 @@ impl IntoResponse for AppError {
         resp
     }
 }
+
+/// Z14-T1: the media type of every error body (RFC 9457).
+pub const PROBLEM_JSON: &str = "application/problem+json";
 
 /// AA9-T5: the limit a `LimitExceeded` response refused at, carried as a
 /// response extension so the rate-limit layer, which knows the caller,
@@ -541,6 +572,40 @@ mod tests {
             .await
             .expect("read response body");
         serde_json::from_slice(&bytes).expect("response body must be JSON")
+    }
+
+    /// Z14-T1: every error body is problem details as well as the Attome
+    /// envelope, and field failures are listed under `errors`.
+    #[tokio::test]
+    async fn errors_are_problem_details() {
+        let resp = AppError::NotFound.into_response();
+        assert_eq!(
+            resp.headers()[axum::http::header::CONTENT_TYPE],
+            PROBLEM_JSON
+        );
+        let body = body_json(resp).await;
+        assert_eq!(body["type"], "about:blank");
+        assert_eq!(body["title"], "Not Found");
+        assert_eq!(body["status"], 404);
+        assert_eq!(body["code"], "not_found");
+        assert_eq!(body["error"], "not_found", "the old field stays");
+        assert_eq!(body["detail"], body["message"]);
+        assert_eq!(body["retryable"], false);
+
+        let resp = AppError::FieldValidation(vec![crate::types::FieldError {
+            field: "name".into(),
+            code: "required".into(),
+            message: "name is required".into(),
+        }])
+        .into_response();
+        let body = body_json(resp).await;
+        assert_eq!(body["errors"][0]["attribute"], "name");
+        assert_eq!(body["errors"][0]["rule"], "required");
+        assert_eq!(body["code"], "validation_error");
+
+        let body = body_json(AppError::internal("db password is hunter2").into_response()).await;
+        assert_eq!(body["retryable"], true);
+        assert!(!body.to_string().contains("hunter2"), "detail stays masked");
     }
 
     #[tokio::test]

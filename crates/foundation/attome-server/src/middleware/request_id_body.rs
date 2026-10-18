@@ -33,6 +33,8 @@ pub async fn attach_request_id_to_error_body(req: Request, next: Next) -> Respon
         .get::<RequestId>()
         .and_then(|id| id.header_value().to_str().ok())
         .map(str::to_owned);
+    // Z14-T1: the problem's `instance`, the path it happened at.
+    let instance = req.uri().path().to_owned();
 
     let response = next.run(req).await;
 
@@ -68,6 +70,9 @@ pub async fn attach_request_id_to_error_body(req: Request, next: Next) -> Respon
         "request_id".to_owned(),
         serde_json::Value::String(request_id),
     );
+    if obj.contains_key("code") {
+        obj.insert("instance".to_owned(), serde_json::Value::String(instance));
+    }
     let new_bytes = serde_json::to_vec(&value).unwrap_or(bytes.to_vec());
     parts.headers.remove(CONTENT_LENGTH); // body length changed; let the server recompute it
     Response::from_parts(parts, Body::from(new_bytes))

@@ -1939,7 +1939,9 @@ async fn assert_error_envelope(
         "{row}: CORS"
     );
     assert!(
-        header("content-type").is_some_and(|ct| ct.starts_with("application/json")),
+        header("content-type")
+            .is_some_and(|ct| ct.starts_with("application/json")
+                || ct.starts_with("application/problem+json")),
         "{row}: JSON content type"
     );
     let body = axum::body::to_bytes(res.into_body(), usize::MAX)

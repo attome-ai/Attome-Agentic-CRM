@@ -1332,6 +1332,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- Error bodies are RFC 9457 problem details (Z14-T1): served as `application/problem+json`, with
+  `type`, `title`, `status`, `detail`, `code`, `retryable`, `instance` and, for field failures,
+  `errors` beside the existing `error`, `message`, `request_id` and `details`, which keep their
+  values. A client that checked for exactly `application/json` on an error must accept
+  `application/problem+json`; the SDK does.
 - `GET /api/v1/billing/disputes/{id}/evidence` answers a `PaginatedResponse` (`items`, page 1 holds
   every document) and `POST /api/v1/billing/accounts/{id}/apply-credit` answers
   `{account_id, payments}` instead of bare arrays (the contract shape guard).
