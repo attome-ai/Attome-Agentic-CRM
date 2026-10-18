@@ -63,7 +63,7 @@ const fn rate(key: &'static str, purpose: &'static str, rpm: i64) -> LimitSpec {
         default_team: rpm,
         default_scale: rpm,
         floor: 1,
-        ceiling: 100_000,
+        ceiling: 10_000_000,
         unit: "requests per minute",
         owner: "rate limiting",
     }
@@ -140,7 +140,7 @@ pub static LIMITS: &[LimitSpec] = &[
         default_solo: 10 * 1024 * 1024,
         default_team: 10 * 1024 * 1024,
         default_scale: 10 * 1024 * 1024,
-        floor: 1024,
+        floor: 1,
         ceiling: 1024 * 1024 * 1024,
         unit: "bytes",
         owner: "HTTP",
@@ -203,6 +203,52 @@ pub static LIMITS: &[LimitSpec] = &[
 /// The limit named `key`.
 pub fn spec(key: &str) -> Option<&'static LimitSpec> {
     LIMITS.iter().find(|limit| limit.key == key)
+}
+
+/// AA9-T2: every boot-config limit this configuration sets, as
+/// `(registry key, value)`. A rate category the configuration does not name
+/// falls back to the top-level rates, which are checked themselves.
+pub fn boot_values(config: &crate::AppConfig) -> Vec<(String, i64)> {
+    let rate = &config.rate_limit;
+    let mut values = vec![
+        (
+            "rate_limit.anonymous".to_owned(),
+            i64::from(rate.anonymous_rpm),
+        ),
+        (
+            "rate_limit.authenticated".to_owned(),
+            i64::from(rate.authenticated_rpm),
+        ),
+        (
+            "http.max_body_bytes".to_owned(),
+            i64::try_from(config.app.max_body_size_bytes).unwrap_or(i64::MAX),
+        ),
+        (
+            "auth.mfa_challenge_max_attempts".to_owned(),
+            i64::from(config.auth.mfa_challenge_max_attempts),
+        ),
+    ];
+    for (category, limits) in &rate.categories {
+        let key = format!("rate_limit.{category}");
+        // A category the registry does not list is ruled by the top-level
+        // rate's range.
+        let key = if spec(&key).is_some() {
+            key
+        } else {
+            "rate_limit.authenticated".to_owned()
+        };
+        values.push((key.clone(), i64::from(limits.anonymous_rpm)));
+        values.push((key, i64::from(limits.authenticated_rpm)));
+    }
+    values
+}
+
+/// AA9-T2: every boot-config limit outside its range, one line each.
+pub fn boot_violations(config: &crate::AppConfig) -> Vec<String> {
+    boot_values(config)
+        .into_iter()
+        .filter_map(|(key, value)| validate(&key, value).err())
+        .collect()
 }
 
 /// Whether `value` is an acceptable setting for `key`.

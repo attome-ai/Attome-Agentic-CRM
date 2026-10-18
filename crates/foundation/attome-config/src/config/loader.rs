@@ -635,6 +635,15 @@ impl AppConfig {
     }
 
     pub fn validate(&self) -> Result<(), ConfigError> {
+        // AA9-T2: every boot-config limit inside its registered range, all
+        // failures reported together.
+        let limits = crate::limits::boot_violations(self);
+        if !limits.is_empty() {
+            return Err(ConfigError::Invalid {
+                field: "limits".into(),
+                reason: limits.join("; "),
+            });
+        }
         // U1-T5 — the sovereign preset refuses outside destinations first, so
         // the operator sees that before any other complaint.
         if self.deployment.sovereign

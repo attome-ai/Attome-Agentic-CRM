@@ -4444,3 +4444,21 @@ fn read_replica_needs_its_own_endpoint() {
     );
     assert!(config.database.has_read_replica());
 }
+
+/// AA9-T2: a boot-config limit below its floor refuses to start, naming it.
+#[test]
+fn boot_rejects_limit_below_floor() {
+    let mut config = minimal_valid_config();
+    config.auth.mfa_challenge_max_attempts = 0;
+    let err = config
+        .validate()
+        .expect_err("0 attempts is below the floor");
+    let text = err.to_string();
+    assert!(text.contains("auth.mfa_challenge_max_attempts"), "{text}");
+    let mut config = minimal_valid_config();
+    config.rate_limit.anonymous_rpm = 0;
+    assert!(
+        config.validate().is_err(),
+        "a rate of 0 switches the limit off"
+    );
+}
