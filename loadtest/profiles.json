@@ -1,6 +1,7 @@
 {
-  "_comment": "AA1-T1: the reference machine and dataset per deployment profile. Every benchmark script reads this file. All sizes are proposals until AA2 measures them; none of these numbers is a measurement.",
+  "_comment": "AA1-T1: the reference machine and dataset per deployment profile. Every benchmark script reads this file. All sizes are proposals until AA2 measures them; none of these numbers is a measurement. rated_rps (AA14-T7) is the request rate a soak runs a fraction of.",
   "solo": {
+    "rated_rps": 100,
     "machine": "4 vCPU, 16 GB RAM, NVMe",
     "cloud_example": "AWS m7i.xlarge",
     "records_per_entity": 1000000,
@@ -10,6 +11,7 @@
     "status": "proposal"
   },
   "team": {
+    "rated_rps": 400,
     "machine": "8 vCPU, 32 GB RAM, NVMe",
     "cloud_example": "AWS m7i.2xlarge",
     "records_per_entity": 20000000,
@@ -19,6 +21,7 @@
     "status": "proposal"
   },
   "ha": {
+    "rated_rps": 1000,
     "machine": "16 vCPU, 64 GB RAM, NVMe",
     "cloud_example": "AWS m7i.4xlarge",
     "records_per_entity": 100000000,
@@ -28,6 +31,7 @@
     "status": "proposal"
   },
   "scale": {
+    "rated_rps": 3000,
     "machine": "32 vCPU, 128 GB RAM, NVMe",
     "cloud_example": "AWS m7i.8xlarge",
     "records_per_entity": 1000000000,
