@@ -985,6 +985,11 @@ async fn dispatch_platform_job(
         EngineJob::TableHealthSample => {
             let sampled = attome_api::table_health::sample_all(&attome_state).await?;
             tracing::info!(sampled, "table health: daily sample taken");
+            // Y2-T9: fill factors from the measured updates, when enabled.
+            if config.metadata.storage_tuning_enabled {
+                let tuned = attome_api::table_health::tune_storage(&attome_state).await?;
+                tracing::info!(tuned, "storage tuning: daily pass done");
+            }
         }
         // AA13-T9: the monthly SLO report, written once per month.
         EngineJob::SloMonthlyReport => {

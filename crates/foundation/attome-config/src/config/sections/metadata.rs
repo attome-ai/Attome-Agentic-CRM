@@ -31,6 +31,11 @@ pub struct MetadataSection {
     /// notification.
     #[serde(default)]
     pub release_report: ReleaseReportSection,
+    /// Y2-T9: the daily table-health job also sets each entity table's fill
+    /// factor from its measured updates (80 for a table whose updates miss
+    /// heap-only updates, 100 for an append-only one). Off by default.
+    #[serde(default)]
+    pub storage_tuning_enabled: bool,
 }
 
 /// Most role names `metadata.release_report.notify_roles` accepts.

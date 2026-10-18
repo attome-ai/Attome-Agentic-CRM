@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: storage tuning (Y2-T9). With `metadata.storage_tuning_enabled` (default off), the daily
+  table-health job sets each entity table's fill factor from its measured updates: 80 when it is
+  updated more than inserted and most updates miss heap-only updates, 100 when it is append-only.
 - Data: renamed attributes keep their old name for 90 days (Y12-T8). A create or update body and
   a `query/execute` filter may use the old name; the response carries `Deprecation: true` and a
   `Link` to the current attribute, and always uses the new name. Migration 0112 adds

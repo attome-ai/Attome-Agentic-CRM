@@ -119,6 +119,87 @@ pub async fn health_of(state: &EngineState, entity: &str) -> Result<TableHealth,
     })
 }
 
+/// Y2-T9: the fill factor an entity table should have, from what its rows
+/// do, or `None` to leave it. An append-only table packs its pages full
+/// (100); a table updated more than inserted whose updates mostly miss
+/// heap-only (HOT) updates leaves room on each page for them (80).
+pub fn recommend_fillfactor(
+    is_append_only: bool,
+    inserts: i64,
+    updates: i64,
+    hot_updates: i64,
+    current: i32,
+) -> Option<i32> {
+    let wanted = if is_append_only {
+        100
+    } else if updates > inserts && updates > 0 && (hot_updates as f64 / updates as f64) < 0.5 {
+        80
+    } else {
+        return None;
+    };
+    (wanted != current).then_some(wanted)
+}
+
+/// Y2-T9: sets the recommended fill factor on every entity table that needs
+/// a change (`metadata.storage_tuning_enabled`), each in its own bounded
+/// transaction on the migrator pool (`ALTER TABLE ... SET` takes a lock that
+/// blocks neither reads nor writes, and applies to pages written from now).
+/// A table whose lock does not come within the DDL bound is skipped with a
+/// warning and tried again tomorrow. Returns the tables changed.
+pub async fn tune_storage(state: &EngineState) -> Result<u64, AppError> {
+    let entities: Vec<(String, bool)> = state
+        .entities
+        .load()
+        .iter()
+        .map(|m| (m.logicalname.clone(), m.is_append_only))
+        .collect();
+    let names: Vec<String> = entities.iter().map(|(n, _)| n.clone()).collect();
+    let stats: Vec<(String, i64, i64, i64, i32)> = sqlx::query_as(
+        "SELECT e.name, COALESCE(s.n_tup_ins, 0), COALESCE(s.n_tup_upd, 0), \
+                COALESCE(s.n_tup_hot_upd, 0), \
+                COALESCE((SELECT substring(o FROM 'fillfactor=([0-9]+)')::int \
+                            FROM unnest(c.reloptions) AS o WHERE o LIKE 'fillfactor=%'), 100) \
+           FROM unnest($1::text[]) AS e(name) \
+           JOIN pg_class c ON c.oid = to_regclass(e.name) \
+           LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid",
+    )
+    .bind(&names)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut changed = 0;
+    for (entity, inserts, updates, hot, current) in stats {
+        let append_only = entities
+            .iter()
+            .any(|(name, append_only)| *name == entity && *append_only);
+        let Some(wanted) = recommend_fillfactor(append_only, inserts, updates, hot, current) else {
+            continue;
+        };
+        if !attome_db::ident::is_identifier(&entity) {
+            continue;
+        }
+        let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
+        attome_metadata::provision::field_change::set_ddl_bounds_in_tx(&mut tx).await?;
+        let altered = sqlx::query(&format!(
+            "ALTER TABLE {} SET (fillfactor = {wanted})",
+            attome_core::quote_ident(&entity)
+        ))
+        .execute(&mut *tx)
+        .await;
+        match altered {
+            Ok(_) => {
+                attome_db::tx::commit(tx).await?;
+                tracing::info!(entity = %entity, old = current, new = wanted, updates, hot_updates = hot, "storage tuning: fill factor changed");
+                changed += 1;
+            }
+            Err(error) => {
+                tracing::warn!(entity = %entity, %error, "storage tuning: fill factor not changed (lock not granted in time); next run retries");
+            }
+        }
+    }
+    Ok(changed)
+}
+
 /// The daily sample of every entity table; tables sampled.
 pub async fn sample_all(state: &EngineState) -> Result<u64, AppError> {
     let entities: Vec<String> = state
@@ -249,6 +330,20 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn low_hot_ratio_lowers_fillfactor() {
+        // Updated more than inserted, a fifth of updates HOT: leave room.
+        assert_eq!(recommend_fillfactor(false, 100, 1_000, 200, 100), Some(80));
+        // Already 80: nothing to do.
+        assert_eq!(recommend_fillfactor(false, 100, 1_000, 200, 80), None);
+        // Mostly HOT already, or mostly inserts: unchanged.
+        assert_eq!(recommend_fillfactor(false, 100, 1_000, 900, 100), None);
+        assert_eq!(recommend_fillfactor(false, 5_000, 1_000, 0, 100), None);
+        // Append-only packs pages full.
+        assert_eq!(recommend_fillfactor(true, 5_000, 0, 0, 80), Some(100));
+        assert_eq!(recommend_fillfactor(true, 5_000, 0, 0, 100), None);
+    }
 
     #[test]
     fn dead_ratio_and_unindexed_lookups() {
