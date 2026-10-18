@@ -101712,7 +101712,8 @@
           },
           "peak_7d": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "description": "The highest use seen in seven days, in `unit`: the size asked for,\nor for a rate the requests counted in one window."
           },
           "purpose": {
             "type": "string"
@@ -101730,7 +101731,7 @@
           },
           "warning": {
             "type": "boolean",
-            "description": "Someone reached this limit in the last seven days."
+            "description": "Someone was refused by this limit in the last seven days, or its\npeak reached `limits.warn_at_percent` of its value."
           }
         }
       },
@@ -111223,7 +111224,8 @@
                 },
                 "peak_7d": {
                   "type": "integer",
-                  "format": "int64"
+                  "format": "int64",
+                  "description": "The highest use seen in seven days, in `unit`: the size asked for,\nor for a rate the requests counted in one window."
                 },
                 "purpose": {
                   "type": "string"
@@ -111241,7 +111243,7 @@
                 },
                 "warning": {
                   "type": "boolean",
-                  "description": "Someone reached this limit in the last seven days."
+                  "description": "Someone was refused by this limit in the last seven days, or its\npeak reached `limits.warn_at_percent` of its value."
                 }
               }
             }

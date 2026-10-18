@@ -22682,7 +22682,11 @@ export interface components {
             key: string;
             /** @description `resource` or `abuse`. */
             kind: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The highest use seen in seven days, in `unit`: the size asked for,
+             *     or for a rate the requests counted in one window.
+             */
             peak_7d: number;
             purpose: string;
             /** @description `boot_config` or `runtime_setting`. */
@@ -22690,7 +22694,10 @@ export interface components {
             unit: string;
             /** Format: int64 */
             value: number;
-            /** @description Someone reached this limit in the last seven days. */
+            /**
+             * @description Someone was refused by this limit in the last seven days, or its
+             *     peak reached `limits.warn_at_percent` of its value.
+             */
             warning: boolean;
         };
         /** @enum {string} */
@@ -26139,7 +26146,11 @@ export interface components {
                 key: string;
                 /** @description `resource` or `abuse`. */
                 kind: string;
-                /** Format: int64 */
+                /**
+                 * Format: int64
+                 * @description The highest use seen in seven days, in `unit`: the size asked for,
+                 *     or for a rate the requests counted in one window.
+                 */
                 peak_7d: number;
                 purpose: string;
                 /** @description `boot_config` or `runtime_setting`. */
@@ -26147,7 +26158,10 @@ export interface components {
                 unit: string;
                 /** Format: int64 */
                 value: number;
-                /** @description Someone reached this limit in the last seven days. */
+                /**
+                 * @description Someone was refused by this limit in the last seven days, or its
+                 *     peak reached `limits.warn_at_percent` of its value.
+                 */
                 warning: boolean;
             }[];
             /** Format: int64 */
