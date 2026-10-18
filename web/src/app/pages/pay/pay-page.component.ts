@@ -117,7 +117,7 @@ type Stage = 'loading' | 'ready' | 'starting' | 'widget' | 'missing' | 'failed';
     .pay-amount dd { font-size: 1.5rem; font-weight: 600; }
     .num { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
     .pay-button { padding-block: 0.75rem; padding-inline: 1rem; border: none; border-radius: 0.5rem;
-      background: var(--color-accent, #2563eb); color: #fff; font-size: 1rem; cursor: pointer; }
+      background: var(--color-accent, #2563eb); color: var(--color-on-accent, #fff); font-size: 1rem; cursor: pointer; }
     .pay-button[disabled] { opacity: 0.6; cursor: progress; }
     .pay-muted { margin-block: 0; color: var(--color-text-secondary, #5b616b); font-size: 0.8125rem; }
     .pay-error { margin-block: 0; color: var(--color-danger, #b42318); }
