@@ -43,6 +43,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::ratelimit_admin::openapi_fragment(),
         crate::sbom_admin::openapi_fragment(),
         crate::env_variable_admin::openapi_fragment(),
+        crate::customer_test_admin::openapi_fragment(),
         crate::metadata_label_admin::openapi_fragment(),
         crate::bundle::routes::openapi_fragment(),
         crate::bundle::break_glass::openapi_fragment(),

@@ -170,6 +170,8 @@ impl EngineSystem {
             .merge(crate::sbom_admin::routes())
             // A30-T1: environment variable values.
             .merge(crate::env_variable_admin::routes())
+            // Z15-T13: customer tests.
+            .merge(crate::customer_test_admin::routes())
             .merge(crate::business_rule_admin::routes())
             .merge(crate::metadata_label_admin::routes())
             .merge(

@@ -113,6 +113,9 @@ const BASELINE: &[&str] = &[
     "changeset",
     "communication",
     "content_public",
+    // Z15-T13: the customer test admin routes; the store and runner live in
+    // attome-records, which has no admin-guard routes to host them.
+    "customer_test_admin",
     "data_export",
     "data_mapping_admin",
     "data_profile_admin",

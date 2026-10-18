@@ -51,6 +51,8 @@ mod changes_admin;
 /// translation, the JCS checksum and the review summary. `pub` for the same
 /// reason `bundle` is: the apply engine and `crates/server` consume it.
 pub mod changeset;
+/// Z15-T13 — `/api/v1/admin/customer-tests`.
+mod customer_test_admin;
 /// A30-T1 — `/api/v1/admin/env-variables`.
 mod env_variable_admin;
 mod mentions;

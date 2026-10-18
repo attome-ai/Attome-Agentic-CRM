@@ -1685,6 +1685,57 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
 
+        // ── customer tests (Z15-T13) ────────────────────────────────────────
+        "POST /api/v1/admin/customer-tests" => request(
+            "POST",
+            "/api/v1/admin/customer-tests",
+            t,
+            Some(json!({"name": format!("emission-{}", Uuid::now_v7()), "definition": {}})),
+        ),
+        "PATCH /api/v1/admin/customer-tests/{id}" => {
+            let id = customer_test(fx).await;
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/admin/customer-tests/{id}"),
+                    t,
+                    Some(json!({"description": "changed"})),
+                ),
+                1,
+            )
+        }
+        "DELETE /api/v1/admin/customer-tests/{id}" => {
+            let id = customer_test(fx).await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/customer-tests/{id}"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/customer-tests/{id}/run" => {
+            let id = customer_test(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/customer-tests/{id}/run"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/customer-tests/run-all" => {
+            customer_test(fx).await;
+            request("POST", "/api/v1/admin/customer-tests/run-all", t, None)
+        }
+        "POST /api/v1/admin/customer-tests/import" => request(
+            "POST",
+            "/api/v1/admin/customer-tests/import",
+            t,
+            Some(json!({
+                "format": "attome-customer-tests/v1",
+                "tests": [{"name": format!("emission-import-{}", Uuid::now_v7()), "definition": {}}]
+            })),
+        ),
+
         // ── SLO targets (AA13-T8) ───────────────────────────────────────────
         "PUT /api/v1/admin/slo/targets/{class_id}" => {
             sqlx::query("DELETE FROM ops_slo_target_override WHERE class_id = 'S1'")
@@ -5640,6 +5691,19 @@ async fn published_workflow(fx: &Fx) -> String {
     )
     .await;
     logicalname
+}
+
+/// A stored customer test with an empty (always passing) definition, at
+/// row_version 1.
+async fn customer_test(fx: &Fx) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query("INSERT INTO customer_test (id, name, definition) VALUES ($1, $2, '{}'::jsonb)")
+        .bind(id)
+        .bind(format!("emission-{id}"))
+        .execute(&fx.base.db)
+        .await
+        .expect("seed a customer test");
+    id
 }
 
 /// Sets `If-Match` to `row_version`, as every content page/space/template

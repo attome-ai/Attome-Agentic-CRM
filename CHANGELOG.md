@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Admin API: customer tests at `/api/v1/admin/customer-tests` (Z15-T13): list, create, show,
+  PATCH with `If-Match`, delete, `/{id}/run`, `/{id}/runs`, `/run-all`, `/export` and `/import`
+  (an `attome-customer-tests/v1` document of tests only; a name already here is replaced). Every
+  write and run is a `Configuration` audit event (`customer_test.created|updated|deleted|run|imported`).
 - Tests: customer tests (Z15-T12). `attome_records::customer_tests` runs a given/when/expect
   definition through the record mutation primitives inside one transaction that is always rolled
   back (`as_role` runs the steps with a role's privileges and field grants), and `run_and_record`
