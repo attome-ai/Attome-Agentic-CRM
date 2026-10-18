@@ -72,7 +72,7 @@ describe('CustomerTestEditorComponent (Z15-T15)', () => {
       id: 't1', name: 'x', description: null, blocking: true, is_active: true, row_version: 4,
       definition: { as_role: 'Sales', when: [{ op: 'delete', entity: 'account', ref: 'a' }], expect: [{ error: 'forbidden' }] },
       created_at: '', updated_at: '', created_by: null, last_passed: null, last_run_at: null,
-    } as CustomerTest;
+    } as unknown as CustomerTest;
     const { fixture, patch } = create(test);
     expect(fixture.componentInstance.draft.asRole).toBe('Sales');
     fixture.componentInstance.save();
