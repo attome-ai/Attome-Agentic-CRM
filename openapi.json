@@ -90765,6 +90765,17 @@
             "type": "string",
             "format": "uuid"
           },
+          "labels": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "S1-T13: present when the request named a language (`Accept-Language`\n`ar` or `en`): each choice field's value as its label in that\nlanguage (a list for a multi-valued field), the value itself where no\nlabel is written. `data` keeps the stored values.",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
           "lookups": {
             "type": [
               "object",
@@ -103350,6 +103361,17 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "labels": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "S1-T13: present when the request named a language (`Accept-Language`\n`ar` or `en`): each choice field's value as its label in that\nlanguage (a list for a multi-valued field), the value itself where no\nlabel is written. `data` keeps the stored values.",
+                  "additionalProperties": {},
+                  "propertyNames": {
+                    "type": "string"
+                  }
                 },
                 "lookups": {
                   "type": [

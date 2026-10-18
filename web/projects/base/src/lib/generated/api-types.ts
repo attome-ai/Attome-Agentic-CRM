@@ -20268,6 +20268,15 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
+             * @description S1-T13: present when the request named a language (`Accept-Language`
+             *     `ar` or `en`): each choice field's value as its label in that
+             *     language (a list for a multi-valued field), the value itself where no
+             *     label is written. `data` keeps the stored values.
+             */
+            labels?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * @description P-entity-contract-hardening item (a) â€” supersedes D-057's read-time
              *     nulling (DECISIONS.md). `data` always carries the stored UUID for a
              *     lookup field, unmodified; this sibling map carries the tombstone
@@ -25156,6 +25165,15 @@ export interface components {
                 hidden_duplicates?: number;
                 /** Format: uuid */
                 id: string;
+                /**
+                 * @description S1-T13: present when the request named a language (`Accept-Language`
+                 *     `ar` or `en`): each choice field's value as its label in that
+                 *     language (a list for a multi-valued field), the value itself where no
+                 *     label is written. `data` keeps the stored values.
+                 */
+                labels?: {
+                    [key: string]: unknown;
+                } | null;
                 /**
                  * @description P-entity-contract-hardening item (a) â€” supersedes D-057's read-time
                  *     nulling (DECISIONS.md). `data` always carries the stored UUID for a
