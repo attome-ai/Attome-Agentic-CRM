@@ -2010,8 +2010,15 @@ pub async fn execute_stored_query_with_definition(
 
     // S1-T2: the generic list reads the entity's live attributes, not its
     // seeded default view (which selects only `id`, so every filter, sort
-    // and select on a real attribute would be "unknown").
-    let entity_list = body.force_cursor && body.entity.is_some();
+    // and select on a real attribute would be "unknown"). That is both
+    // `GET /api/v1/{entity}` and the ad-hoc `{"entity": ...}` request, which
+    // names no query, view or version (the web app's pickers read real
+    // attributes through it; Y12-T8 filters it by an attribute's old name).
+    let entity_list = body.entity.is_some()
+        && (body.force_cursor
+            || (body.query_id.is_none()
+                && body.view_id.is_none()
+                && body.query_version_id.is_none()));
     let list_sql = if entity_list {
         entity_list_sql(state, ctx, qrow.entity_logical_name)
     } else {
@@ -2093,6 +2100,9 @@ pub async fn execute_stored_query_with_definition(
         .and_then(|d| d.column_definition.clone())
     {
         Some(captured) => Some(captured),
+        // The generic list's columns are the live attributes it selected; the
+        // default view's stored definition may predate a rename.
+        None if list_sql.is_some() => None,
         None => qrow
             .table_definition
             .as_deref()

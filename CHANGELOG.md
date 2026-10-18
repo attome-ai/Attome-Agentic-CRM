@@ -361,6 +361,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- `POST /api/v1/query/execute` with only `entity` (no query, view or version) lists the entity's
+  live readable attributes, as `GET /api/v1/{entity}` does, instead of the seeded default view's
+  `id`-only columns: filters, sorts and selects by real attributes (and by an attribute's old name
+  during its alias period, Y12-T8) now work there.
 - Docs: three Arazzo 1.0.1 workflows in `docs/api/arazzo/` (S2-T13): create an account with its
   contacts in one composite request, read an entity page by page from a keyset cursor, and approve
   and run a gated action. A test checks every step names an operation the API document has.
