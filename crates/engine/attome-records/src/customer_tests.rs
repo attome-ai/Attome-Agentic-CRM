@@ -470,7 +470,7 @@ pub async fn run_and_record(
     let started = chrono::Utc::now();
     let outcome = run_test(state, ctx, &definition).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let run = insert_run(&mut *tx, test_id, started, &outcome).await?;
+    let run = insert_run(&mut tx, test_id, started, &outcome).await?;
     attome_db::tx::commit(tx).await?;
     Ok((run, outcome))
 }
