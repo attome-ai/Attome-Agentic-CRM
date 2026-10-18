@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:3518c61430100bc214848edeaa5cb22f4b05e4140571376a5b0359d0414da6b0",
+  "checksum": "sha256:9e4b6b913c52391e138a144e89770716a74038f28463139e9a58065e3d45e9da",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -308,6 +308,8 @@
               "article.draft",
               "billing.account_balance",
               "billing.draft_credit_note",
+              "billing.payment.lookup",
+              "billing.payment_link.create",
               "billing.draft_invoice",
               "billing.explain_tax",
               "billing.find_invoices",

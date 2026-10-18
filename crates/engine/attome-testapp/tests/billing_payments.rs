@@ -173,6 +173,23 @@ fn payment_partial_marks_partly_paid() {
             47.5
         );
 
+        // The agents' payment lookup (F5-T13) finds them, newest first.
+        let ctx = app.state.base.security.resolve(app.admin.id).await.unwrap();
+        let found = attome_billing::lookup::find_payments(
+            &app.state,
+            &ctx,
+            &attome_billing::lookup::PaymentFilter {
+                account_id: Some(payer),
+                status: Some("succeeded".into()),
+                reference: Some("TRF".into()),
+                limit: None,
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].reference.as_deref(), Some("TRF-1"));
+
         // Allocating by hand: more than the invoice owes is refused.
         let other = issued(&app, payer, "10", 10).await; // 11.50
         let (status, _) = pay(

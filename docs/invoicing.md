@@ -164,3 +164,8 @@ Attome never sees a card number.
 `billing.find_invoices`, `billing.account_balance` and `billing.explain_tax` read as the person;
 `billing.draft_invoice` and `billing.draft_credit_note` file drafts after a person confirms.
 Issuing, cancelling, issuing a credit note and writing off stay with people.
+
+Payment tools (F5-T13): `billing.payment.lookup` finds payments the caller may read, and
+`billing.payment_link.create` makes a payment link for an open invoice; it is consequential, so the
+agent asks before it acts, and it sends nothing. Refunds, saved payment methods, write-offs and credit
+limits have no agent tool.

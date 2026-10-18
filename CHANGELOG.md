@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- AI: payment tools for agents (F5-T13): `billing.payment.lookup` (read) and
+  `billing.payment_link.create` (consequential, confirmed by the agent's user), offered in the agent
+  policy's allowed actions; no tool refunds, changes payment methods, writes off or changes credit
+  limits.
 - Billing: settlement reconciliation (F5-T11). The daily `BillingReconcile` job lists each payment
   gateway's payouts for yesterday, upserts `gateway_payout` by system and payout reference, matches
   the payments it settles by gateway reference (`matched` or `difference`, with `differences` and

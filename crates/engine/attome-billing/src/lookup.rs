@@ -119,6 +119,112 @@ pub async fn find_invoices(
         .collect())
 }
 
+/// What to look for in payments; every field narrows (F5-T13).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct PaymentFilter {
+    pub account_id: Option<Uuid>,
+    /// `pending`, `succeeded`, `failed`, `refunded`, `partially_refunded`,
+    /// `disputed` or `reversed`.
+    pub status: Option<String>,
+    /// A bank or cheque reference, or the start of one.
+    pub reference: Option<String>,
+    pub limit: Option<i64>,
+}
+
+/// One payment found. The gateway's reference and fee are finance fields
+/// and are not shown.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PaymentSummary {
+    pub id: Uuid,
+    pub name: Option<String>,
+    pub account_id: Option<Uuid>,
+    pub amount: Option<String>,
+    pub currency: Option<String>,
+    pub method: Option<String>,
+    pub status: Option<String>,
+    pub received_on: Option<NaiveDate>,
+    pub reference: Option<String>,
+    pub unallocated: Option<String>,
+}
+
+type PaymentRow = (
+    Uuid,
+    Option<String>,
+    Option<Uuid>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<NaiveDate>,
+    Option<String>,
+    Option<String>,
+);
+
+/// Payments the caller may read that match `filter`, newest first.
+pub async fn find_payments(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    filter: &PaymentFilter,
+) -> Result<Vec<PaymentSummary>, AppError> {
+    let scope = read_scope(state, ctx, "customer_payment", "p", 1).await?;
+    let rls = scope.as_ref().map_or("", |p| p.sql.as_str());
+    let n = scope_binds(&scope);
+    let (p_account, p_status, p_reference) = (n + 1, n + 2, n + 3);
+    let limit = filter.limit.unwrap_or(20).clamp(1, MAX_FOUND);
+    let sql = format!(
+        "SELECT p.id, p.name, p.payer_account_ref, p.amount::text, p.currency, p.method, \
+                p.status, p.received_on::date, p.reference, p.unallocated::text \
+         FROM customer_payment p \
+         WHERE (p.is_active IS NULL OR p.is_active = true) {rls} \
+           AND (${p_account}::uuid IS NULL OR p.payer_account_ref = ${p_account}::uuid) \
+           AND (${p_status}::text IS NULL OR p.status = ${p_status}::text) \
+           AND (${p_reference}::text IS NULL OR p.reference LIKE ${p_reference}::text || '%') \
+         ORDER BY p.received_on DESC NULLS FIRST, p.id DESC LIMIT {limit}"
+    );
+    let reference = filter
+        .reference
+        .as_deref()
+        .map(|r| r.trim().replace(['%', '_'], ""))
+        .filter(|r| !r.is_empty());
+    let rows: Vec<PaymentRow> = bind_scope(sqlx::query_as(&sql), &scope)
+        .bind(filter.account_id)
+        .bind(filter.status.as_deref())
+        .bind(reference)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(
+                id,
+                name,
+                account,
+                amount,
+                currency,
+                method,
+                status,
+                received,
+                reference,
+                unallocated,
+            )| {
+                PaymentSummary {
+                    id,
+                    name,
+                    account_id: account,
+                    amount,
+                    currency,
+                    method,
+                    status,
+                    received_on: received,
+                    reference,
+                    unallocated,
+                }
+            },
+        )
+        .collect())
+}
+
 /// What an account owes today, per currency (the statement's closing
 /// balance over all time).
 pub async fn account_balance(
