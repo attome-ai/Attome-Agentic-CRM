@@ -1,0 +1,747 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b270cf1a7ac39e102884b2d2b4168d1d0e1021d43bbc3baaae8704b636a6977b",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Payment security (F5-T14): a read-only payments role, gateway references, fees and payouts for finance managers only, and saved card tokens readable by no role.",
+  "format": "attome-changeset/v1",
+  "id": "01a14d88-cfd1-7848-9cb0-6b2cb7174043",
+  "layer": "product",
+  "name": "billing-payment-security",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Fee",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "fee",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "fee"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Gateway Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "gateway_reference",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "gateway_reference"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 3,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "currency"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Differences",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "differences",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "differences"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Fees",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "fees",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "fees"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Gateway",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "gateway_system_ref",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "gateway_system_ref"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Gross",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "gross",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "gross"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Net",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "net",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "net"
+      },
+      "seq": 8
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payments",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "payment_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payment_count"
+      },
+      "seq": 9
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payout Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": true,
+          "is_sortable": true,
+          "logicalname": "payout_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payout_date"
+      },
+      "seq": 10
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payout Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "payout_reference",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payout_reference"
+      },
+      "seq": 11
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "unmatched",
+              "matched",
+              "difference"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "status"
+      },
+      "seq": 12
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Token",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "token",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "target": {
+        "entity": "saved_payment_method",
+        "field": "token"
+      },
+      "seq": 13
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Reads payments, refunds and disputes; changes nothing.",
+          "is_customized": false,
+          "name": "Payments Viewer",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "target": {
+        "role": "Payments Viewer"
+      },
+      "seq": 14
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "saved_payment_method.read"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on saved_payment_method",
+          "key": "saved_payment_method.read",
+          "name": "saved_payment_method.read"
+        }
+      },
+      "seq": 15
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.read"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on payment_link",
+          "key": "payment_link.read",
+          "name": "payment_link.read"
+        }
+      },
+      "seq": 16
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "customer_payment.read",
+        "role": "Payments Viewer"
+      },
+      "seq": 17
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_allocation.read",
+        "role": "Payments Viewer"
+      },
+      "seq": 18
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_refund.read",
+        "role": "Payments Viewer"
+      },
+      "seq": 19
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_dispute.read",
+        "role": "Payments Viewer"
+      },
+      "seq": 20
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.read",
+        "role": "Payments Viewer"
+      },
+      "seq": 21
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "saved_payment_method.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 22
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "saved_payment_method.read",
+        "role": "Finance Manager"
+      },
+      "seq": 23
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "The gateway's reference and fee on a payment, and gateway payouts: finance managers only.",
+          "is_customized": false,
+          "name": "Payment finance fields"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "target": {
+        "profile": "Payment finance fields"
+      },
+      "seq": 24
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "gateway_reference",
+        "profile": "Payment finance fields"
+      },
+      "seq": 25
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "fee",
+        "profile": "Payment finance fields"
+      },
+      "seq": 26
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "gateway_system_ref",
+        "profile": "Payment finance fields"
+      },
+      "seq": 27
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payout_reference",
+        "profile": "Payment finance fields"
+      },
+      "seq": 28
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payout_date",
+        "profile": "Payment finance fields"
+      },
+      "seq": 29
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "gross",
+        "profile": "Payment finance fields"
+      },
+      "seq": 30
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "fees",
+        "profile": "Payment finance fields"
+      },
+      "seq": 31
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "net",
+        "profile": "Payment finance fields"
+      },
+      "seq": 32
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "currency",
+        "profile": "Payment finance fields"
+      },
+      "seq": 33
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "status",
+        "profile": "Payment finance fields"
+      },
+      "seq": 34
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "differences",
+        "profile": "Payment finance fields"
+      },
+      "seq": 35
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "field": "payment_count",
+        "profile": "Payment finance fields"
+      },
+      "seq": 36
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "target": {
+        "profile": "Payment finance fields",
+        "role": "Finance Manager"
+      },
+      "seq": 37
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "A saved card's gateway token: no role reads it; the engine charges it with its own context.",
+          "is_customized": false,
+          "name": "Saved card tokens"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "target": {
+        "profile": "Saved card tokens"
+      },
+      "seq": 38
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": false,
+          "can_update": false
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "target": {
+        "entity": "saved_payment_method",
+        "field": "token",
+        "profile": "Saved card tokens"
+      },
+      "seq": 39
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 20,
+  "title": "Pack: payment roles and field security"
+}

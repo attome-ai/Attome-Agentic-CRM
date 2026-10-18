@@ -155,9 +155,15 @@ Attome never sees a card number.
 | Role | May |
 |---|---|
 | Billing Clerk | Create and edit drafts, lines and schedules. |
-| Accounts Receivable | The clerk's work, plus issue and credit. |
-| Finance Manager | All of it, plus write off and manage tax rates. |
-| Billing Viewer | Read invoices, lines, schedules and tax rates. |
+| Accounts Receivable | The clerk's work, plus issue and credit; record payments and create payment links. |
+| Finance Manager | All of it, plus write off, refund, reverse payments, read payouts and manage tax rates. |
+| Billing Viewer | Read invoices, lines, schedules, tax rates, payments, refunds and disputes. |
+| Payments Viewer | Read payments, refunds, disputes and payment links. |
+
+A payment's gateway reference and fee, and every payout field, are sensitive: only the Finance
+Manager (field profile "Payment finance fields") reads them, and search, reports and queries mask them
+for everyone else. A saved card's gateway token is readable by no role (field profile "Saved card
+tokens", given to none); the engine reads it to charge the card.
 
 ## Agents
 

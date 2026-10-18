@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: payment roles and field security (F5-T14, roles and fields). The Payments Viewer role;
+  saved-method reads for receivables and finance; `customer_payment.gateway_reference` and `fee` and
+  every `gateway_payout` field are sensitive and readable only through the Finance Manager's
+  "Payment finance fields" profile; `saved_payment_method.token` is sensitive and readable by no
+  role. Pack changeset 0020.
 - AI: payment tools for agents (F5-T13): `billing.payment.lookup` (read) and
   `billing.payment_link.create` (consequential, confirmed by the agent's user), offered in the agent
   policy's allowed actions; no tool refunds, changes payment methods, writes off or changes credit
