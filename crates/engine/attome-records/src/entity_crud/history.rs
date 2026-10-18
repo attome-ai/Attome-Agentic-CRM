@@ -123,11 +123,12 @@ pub const CONFLICT_SOURCES: [&str; 3] = ["api", "bulk", "import"];
 /// Runs after the failed write's transaction is gone; a failure here is
 /// logged and never changes the answer the caller gets.
 pub async fn count_conflict(db: &attome_db::DbPool, entity: &str, source: &str) {
-    let counted = sqlx::query(
+    let counted = sqlx::query(attome_db::tagged_sql!(
+        "entity.history",
         "INSERT INTO conflict_daily_count (day, entity, source, count) \
          VALUES ((now() AT TIME ZONE 'UTC')::date, $1, $2, 1) \
-         ON CONFLICT (day, entity, source) DO UPDATE SET count = conflict_daily_count.count + 1",
-    )
+         ON CONFLICT (day, entity, source) DO UPDATE SET count = conflict_daily_count.count + 1"
+    ))
     .bind(entity)
     .bind(source)
     .execute(db)
@@ -156,11 +157,12 @@ pub async fn conflict_totals(
     days: i64,
 ) -> Result<Vec<ConflictCount>, AppError> {
     let days = days.clamp(1, CONFLICT_DAYS_MAX);
-    sqlx::query_as(
+    sqlx::query_as(attome_db::tagged_sql!(
+        "entity.history",
         "SELECT entity, source, sum(count)::bigint AS count FROM conflict_daily_count \
          WHERE day > (now() AT TIME ZONE 'UTC')::date - $1::int \
-         GROUP BY entity, source ORDER BY 3 DESC, 1, 2",
-    )
+         GROUP BY entity, source ORDER BY 3 DESC, 1, 2"
+    ))
     .bind(i32::try_from(days).map_err(AppError::internal)?)
     .fetch_all(db)
     .await
@@ -178,10 +180,10 @@ async fn conflict_details(
     let db = &state.base.db;
     // The record's own stamps name the last writer and the time even before
     // the audit chainer has turned that write into history.
-    let current: Option<(i64, Option<DateTime<Utc>>, Option<Uuid>)> = sqlx::query_as(&format!(
+    let current: Option<(i64, Option<DateTime<Utc>>, Option<Uuid>)> = sqlx::query_as(&attome_db::tag_dynamic("entity.history", &format!(
         "SELECT row_version, modified_at, modified_by FROM {} WHERE id = $1 AND is_active = true",
         quote_ident(&entity_name)
-    ))
+    )))
     .bind(record_id)
     .fetch_optional(db)
     .await
@@ -195,11 +197,12 @@ async fn conflict_details(
     let headers: Vec<(Uuid, Option<DateTime<Utc>>, Option<String>)> = if missed == 0 {
         Vec::new()
     } else {
-        sqlx::query_as(
+        sqlx::query_as(attome_db::tagged_sql!(
+            "entity.history",
             "SELECT h.id, h.changed_on, h.user_display_name FROM audit_header h \
              WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on IS NOT NULL \
-             ORDER BY h.changed_on DESC, h.id DESC LIMIT $3",
-        )
+             ORDER BY h.changed_on DESC, h.id DESC LIMIT $3"
+        ))
         .bind(&entity_name)
         .bind(record_id)
         .bind(missed)
@@ -220,11 +223,12 @@ async fn conflict_details(
     )> = if ids.is_empty() {
         Vec::new()
     } else {
-        sqlx::query_as(
+        sqlx::query_as(attome_db::tagged_sql!(
+            "entity.history",
             "SELECT d.audit_ref, d.field_name::text, d.new_value, d.new_display_value, \
                     d.new_lookup_name, d.is_sensitive, d.value_mode::smallint \
-             FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id",
-        )
+             FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id"
+        ))
         .bind(&ids)
         .fetch_all(db)
         .await
@@ -497,6 +501,7 @@ pub async fn record_history(
            {keyset} \
          ORDER BY h.changed_on DESC, h.id DESC LIMIT $3"
     );
+    let sql = attome_db::tag_dynamic("entity.history", &sql);
     let mut q = sqlx::query_as::<_, HeaderRow>(&sql)
         .bind(&entity_name)
         .bind(record_id)
@@ -524,14 +529,15 @@ pub async fn record_history(
     let details: Vec<DetailRow> = if header_ids.is_empty() {
         Vec::new()
     } else {
-        sqlx::query_as(
+        sqlx::query_as(attome_db::tagged_sql!(
+            "entity.history",
             "SELECT d.audit_ref, d.field_name::text, d.display_name::text, d.old_value, \
                     d.new_value, d.old_display_value, d.new_display_value, \
                     d.old_lookup_name, d.new_lookup_name, d.is_sensitive, d.value_mode \
              FROM audit_detail d \
              WHERE d.audit_ref = ANY($1) AND d.field_name = ANY($2) \
-             ORDER BY d.field_name, d.id",
-        )
+             ORDER BY d.field_name, d.id"
+        ))
         .bind(&header_ids)
         .bind(&readable_names)
         .fetch_all(&state.base.db)
@@ -708,7 +714,8 @@ async fn values_before(
     record_id: Uuid,
     request: &HistoryRestoreRequest,
 ) -> Result<Map<String, Value>, AppError> {
-    let headers: Vec<HeaderRow> = sqlx::query_as(
+    let headers: Vec<HeaderRow> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.history",
         "SELECT h.id, h.operation::int AS operation, h.changed_on, \
                 (EXTRACT(EPOCH FROM h.changed_on) * 1000000)::bigint AS micros, \
                 h.user_id, h.user_display_name, h.initiator::int AS initiator, \
@@ -717,8 +724,8 @@ async fn values_before(
          FROM audit_header h \
          WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on IS NOT NULL \
            AND ($3::uuid IS NULL OR h.id = $3) \
-         ORDER BY h.changed_on DESC, h.id DESC LIMIT $4",
-    )
+         ORDER BY h.changed_on DESC, h.id DESC LIMIT $4"
+    ))
     .bind(entity_name)
     .bind(record_id)
     .bind(request.audit_id)
@@ -764,10 +771,11 @@ async fn values_before(
                 .map(|a| (a.logicalname.as_str(), a))
         })
         .collect();
-    let mut rows: Vec<BeforeRow> = sqlx::query_as(
+    let mut rows: Vec<BeforeRow> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.history",
         "SELECT d.audit_ref, d.field_name::text, d.old_value, d.is_sensitive, d.value_mode \
-             FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id",
-    )
+             FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id"
+    ))
     .bind(&ids)
     .fetch_all(&state.base.db)
     .await
@@ -1071,6 +1079,7 @@ pub async fn search_history(
             "(d.value_mode IS NULL OR d.value_mode = 0)"
         },
     );
+    let sql = attome_db::tag_dynamic("entity.history", &sql);
     let mut q = sqlx::query_as::<_, HistoryMatch>(&sql)
         .bind(&entity)
         .bind(&attr.logicalname)

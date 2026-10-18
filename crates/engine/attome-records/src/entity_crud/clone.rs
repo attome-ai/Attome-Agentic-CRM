@@ -393,9 +393,12 @@ pub async fn undo_clone(
             return Err(AppError::Forbidden);
         }
         ctx.require(&name, "delete")?;
-        let current: Option<(i64, bool)> = sqlx::query_as(&format!(
-            "SELECT row_version, is_active FROM {} WHERE id = $1",
-            quote_ident(&name)
+        let current: Option<(i64, bool)> = sqlx::query_as(&attome_db::tag_dynamic(
+            "entity.clone",
+            &format!(
+                "SELECT row_version, is_active FROM {} WHERE id = $1",
+                quote_ident(&name)
+            ),
         ))
         .bind(item.id)
         .fetch_optional(&state.base.db)
@@ -464,10 +467,13 @@ async fn child_ids(
         Some(_) => " AND is_active = true",
         None => return Err(AppError::NotFound),
     };
-    sqlx::query_scalar(&format!(
-        "SELECT id FROM {} WHERE {} = $1{live} ORDER BY created_at, id LIMIT $2",
-        quote_ident(entity),
-        quote_ident(field)
+    sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.clone",
+        &format!(
+            "SELECT id FROM {} WHERE {} = $1{live} ORDER BY created_at, id LIMIT $2",
+            quote_ident(entity),
+            quote_ident(field)
+        ),
     ))
     .bind(parent)
     .bind(i64::try_from(MAX_CLONE_CHILDREN + 1).unwrap_or(i64::MAX))

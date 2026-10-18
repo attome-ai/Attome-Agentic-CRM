@@ -65,6 +65,8 @@ mod migrate;
 mod pool;
 mod schema;
 mod session;
+/// Z2-T8: the `/* class */` comment that names a query's source.
+mod tag;
 pub mod tx;
 
 pub use checksum::{ChecksumError, verify_migration_checksums};
@@ -88,6 +90,7 @@ pub use session::{UnpooledSession, unpooled_sessions_open};
 pub use sqlx::{
     PgConnection, PgPool, Postgres, Transaction, migrate::MigrateError, postgres::PgPoolOptions,
 };
+pub use tag::tag_dynamic;
 
 pub use hook::{BeforeCommit, Chain, HookFuture, NoHook};
 pub type DbPool = PgPool;

@@ -277,11 +277,14 @@ async fn upsert_record_inner(
     // A29-T2: a declared key (external id, business key) brings its own
     // unique index; no ad hoc one is built for it.
     let index_already_exists: bool = key_indexed
-        || sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
-            .bind(&index_name)
-            .fetch_one(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
+        || sqlx::query_scalar(attome_db::tagged_sql!(
+            "entity.upsert",
+            "SELECT to_regclass($1) IS NOT NULL"
+        ))
+        .bind(&index_name)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
     if !index_already_exists {
         ctx.require_admin()?;
         // guidelines §9 / M01 Core C-06: never run a full-table-scan-shaped
@@ -309,10 +312,10 @@ async fn upsert_record_inner(
         }
     }
     if !key_indexed {
-        sqlx::query(&format!(
+        sqlx::query(&attome_db::tag_dynamic("entity.upsert", &format!(
             "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS {index_name} ON {table} ({}) WHERE is_active = TRUE",
             match_columns.join(", ")
-        ))
+        )))
         .execute(&state.base.db)
         .await
         .map_err(|_| AppError::Validation("natural key columns are not indexable".into()))?;
@@ -343,6 +346,7 @@ async fn upsert_record_inner(
             "SELECT id FROM {table} WHERE {} AND is_active = TRUE",
             conflict_predicates.join(" AND ")
         );
+        let sql = attome_db::tag_dynamic("entity.upsert", &sql);
         let mut probe = sqlx::query_scalar::<_, Uuid>(&sql);
         for value in &conflict_values {
             probe = probe.bind(value.clone());
@@ -370,6 +374,7 @@ async fn upsert_record_inner(
             "SELECT id FROM {table} WHERE {} AND is_active = TRUE",
             conflict_predicates.join(" AND ")
         );
+        let sql = attome_db::tag_dynamic("entity.upsert", &sql);
         let mut probe = sqlx::query_scalar::<_, Uuid>(&sql);
         for value in &conflict_values {
             probe = probe.bind(value.clone());
@@ -397,6 +402,7 @@ async fn upsert_record_inner(
         "SELECT id FROM {table} WHERE {} AND is_active = TRUE FOR UPDATE",
         conflict_predicates.join(" AND ")
     );
+    let precheck_sql = attome_db::tag_dynamic("entity.upsert", &precheck_sql);
     let mut precheck = sqlx::query_scalar::<_, Uuid>(&precheck_sql);
     for value in &conflict_values {
         precheck = precheck.bind(value.clone());
@@ -654,12 +660,14 @@ pub(super) async fn resolve_lookups_by_external_id(
     }
     let mut unmatched = Vec::new();
     for (field, target_ref, by, value) in by_id {
-        let target: Option<String> =
-            sqlx::query_scalar("SELECT logicalname FROM entity_info WHERE id = $1")
-                .bind(target_ref)
-                .fetch_optional(&state.base.db)
-                .await
-                .map_err(AppError::internal)?;
+        let target: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+            "entity.upsert",
+            "SELECT logicalname FROM entity_info WHERE id = $1"
+        ))
+        .bind(target_ref)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
         let target =
             target.ok_or_else(|| AppError::Validation(format!("{field}: no target entity")))?;
         let (_, target_name, target_attrs, _) = resolve_entity(state, &target).await?;
@@ -676,11 +684,14 @@ pub(super) async fn resolve_lookups_by_external_id(
                 "{field}.value: give the external id"
             )));
         };
-        let mut found: Option<Uuid> = sqlx::query_scalar(&format!(
-            "SELECT id FROM {} WHERE {} = $1{} AND is_active = TRUE",
-            quote_ident(&target_name),
-            quote_ident(&by_attr.logicalname),
-            sql_cast(by_attr)
+        let mut found: Option<Uuid> = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.upsert",
+            &format!(
+                "SELECT id FROM {} WHERE {} = $1{} AND is_active = TRUE",
+                quote_ident(&target_name),
+                quote_ident(&by_attr.logicalname),
+                sql_cast(by_attr)
+            ),
         ))
         .bind(&text)
         .fetch_optional(&state.base.db)
@@ -690,11 +701,11 @@ pub(super) async fn resolve_lookups_by_external_id(
         if found.is_none()
             && let Some(system) = external_id_system_of(by_attr)
         {
-            found = sqlx::query_scalar(&format!(
+            found = sqlx::query_scalar(&attome_db::tag_dynamic("entity.upsert", &format!(
                 "SELECT l.record_id FROM external_id_link l JOIN {} t ON t.id = l.record_id \
                  WHERE l.entity = $1 AND l.system = $2 AND l.external_id = $3 AND t.is_active = TRUE",
                 quote_ident(&target_name)
-            ))
+            )))
             .bind(&target_name)
             .bind(system)
             .bind(&text)

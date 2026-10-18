@@ -230,9 +230,9 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
     // 1. Direct: caller knows the exact query UUID
     if let Some(qid) = body.query_id {
         return sqlx::query_as(
-            "SELECT id, NULL::uuid AS view_id, sql_query, table_definition, record_no, required_privilege, is_report,
+            attome_db::tagged_sql!("query.execute", "SELECT id, NULL::uuid AS view_id, sql_query, table_definition, record_no, required_privilege, is_report,
                     entity_logical_name, NULL::varchar AS view_kind, NULL::jsonb AS view_metadata
-             FROM sql_query WHERE id = $1 AND is_active = true LIMIT 1",
+             FROM sql_query WHERE id = $1 AND is_active = true LIMIT 1"),
         )
         .bind(qid)
         .fetch_optional(db)
@@ -244,13 +244,13 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
     // 2. A view is list/presentation metadata and references executable SQL.
     if let Some(view_id) = body.view_id {
         return sqlx::query_as(
-            "SELECT q.id, v.id AS view_id, q.sql_query, v.table_definition::text, v.name AS record_no,
+            attome_db::tagged_sql!("query.execute", "SELECT q.id, v.id AS view_id, q.sql_query, v.table_definition::text, v.name AS record_no,
                     q.required_privilege, q.is_report, v.entity_logical_name,
                     v.kind AS view_kind, v.view_metadata AS view_metadata
              FROM view v
              JOIN sql_query q ON q.id = v.sql_query_ref
              WHERE v.id = $1 AND v.is_active = true AND q.is_active = true
-             LIMIT 1",
+             LIMIT 1"),
         )
         .bind(view_id)
         .fetch_optional(db)
@@ -263,7 +263,7 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
     // view from an arbitrary SQL query or query insertion order.
     if let Some(eln) = body.entity_logical_name {
         return sqlx::query_as(
-            "SELECT q.id, v.id AS view_id, q.sql_query, v.table_definition::text, v.name AS record_no,
+            attome_db::tagged_sql!("query.execute", "SELECT q.id, v.id AS view_id, q.sql_query, v.table_definition::text, v.name AS record_no,
                     q.required_privilege, q.is_report, v.entity_logical_name,
                     v.kind AS view_kind, v.view_metadata AS view_metadata
              FROM view v
@@ -271,7 +271,7 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
              WHERE v.entity_logical_name = $1
                AND v.is_default = true AND v.is_active = true
                AND q.is_active = true
-             LIMIT 1",
+             LIMIT 1"),
         )
         .bind(eln)
         .fetch_optional(db)
@@ -283,7 +283,7 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
     // 4. Resolve the entity's explicit default view by logical name.
     if let Some(ref entity) = body.entity {
         return sqlx::query_as(
-            "SELECT csq.id, v.id AS view_id, csq.sql_query, v.table_definition::text, v.name AS record_no,
+            attome_db::tagged_sql!("query.execute", "SELECT csq.id, v.id AS view_id, csq.sql_query, v.table_definition::text, v.name AS record_no,
                     csq.required_privilege, csq.is_report, v.entity_logical_name,
                     v.kind AS view_kind, v.view_metadata AS view_metadata
              FROM view v
@@ -292,7 +292,7 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
              WHERE ei.logicalname = $1
                AND v.is_default = true AND v.is_active = true
                AND csq.is_active = true
-             LIMIT 1",
+             LIMIT 1"),
         )
         .bind(entity)
         .fetch_optional(db)
@@ -323,10 +323,11 @@ async fn load_pinned_version(
     query_id: Uuid,
     version_id: Uuid,
 ) -> Result<PinnedVersion, AppError> {
-    let row: Option<(Uuid, String, Vec<String>, f64)> = sqlx::query_as(
+    let row: Option<(Uuid, String, Vec<String>, f64)> = sqlx::query_as(attome_db::tagged_sql!(
+        "query.execute",
         "SELECT id, sql_query, relations, cost_estimate FROM sql_query_version \
-         WHERE id = $1 AND query_id = $2",
-    )
+         WHERE id = $1 AND query_id = $2"
+    ))
     .bind(version_id)
     .bind(query_id)
     .fetch_optional(db)
@@ -381,10 +382,11 @@ async fn apply_multi_entity_record_scope(
     // version whose SQL actually runs, never the latest one.
     let version: Option<(Uuid, Vec<String>)> = match pinned {
         Some((version_id, relations)) => Some((version_id, relations.to_vec())),
-        None => sqlx::query_as(
+        None => sqlx::query_as(attome_db::tagged_sql!(
+            "query.execute",
             "SELECT id, relations FROM sql_query_version \
-             WHERE query_id = $1 ORDER BY id DESC LIMIT 1",
-        )
+             WHERE query_id = $1 ORDER BY id DESC LIMIT 1"
+        ))
         .bind(query_id)
         .fetch_optional(&state.base.db)
         .await
@@ -403,10 +405,11 @@ async fn apply_multi_entity_record_scope(
         return Ok(());
     }
 
-    let entities: Vec<(Uuid, String)> = sqlx::query_as(
+    let entities: Vec<(Uuid, String)> = sqlx::query_as(attome_db::tagged_sql!(
+        "query.execute",
         "SELECT id, logicalname FROM entity_info \
-         WHERE (is_active IS NULL OR is_active = true) AND logicalname = ANY($1)",
-    )
+         WHERE (is_active IS NULL OR is_active = true) AND logicalname = ANY($1)"
+    ))
     .bind(&relations)
     .fetch_all(&state.base.db)
     .await
@@ -418,10 +421,11 @@ async fn apply_multi_entity_record_scope(
         return Err(AppError::Forbidden);
     }
 
-    let mappings: Vec<(Uuid, String)> = sqlx::query_as(
+    let mappings: Vec<(Uuid, String)> = sqlx::query_as(attome_db::tagged_sql!(
+        "query.execute",
         "SELECT entity_ref, id_column FROM sql_query_entity_mapping \
-         WHERE query_version_id = $1",
-    )
+         WHERE query_version_id = $1"
+    ))
     .bind(version_id)
     .fetch_all(&state.base.db)
     .await
@@ -1197,6 +1201,7 @@ where
     let explain_sql = format!(
         "EXPLAIN (FORMAT JSON) SELECT 1 FROM ({base_sql}) AS t {where_sql} {order_sql} LIMIT 1"
     );
+    let explain_sql = attome_db::tag_dynamic("query.execute", &explain_sql);
     let mut explain = sqlx::query_scalar::<_, Value>(&explain_sql);
     for param in params {
         explain = explain.bind(param.clone());
@@ -1225,6 +1230,7 @@ where
     E: sqlx::PgExecutor<'e>,
 {
     let explain_sql = format!("EXPLAIN (FORMAT JSON) SELECT 1 FROM ({base_sql}) AS t {where_sql}");
+    let explain_sql = attome_db::tag_dynamic("query.execute", &explain_sql);
     let mut explain = sqlx::query_scalar::<_, Value>(&explain_sql);
     for param in params {
         explain = explain.bind(param.clone());
@@ -1485,10 +1491,11 @@ pub async fn execute_stored_query_with_definition(
         // disappeared.
         let entity_logicalname = match cached_logicalname {
             Some(logicalname) => logicalname,
-            None => sqlx::query_scalar(
+            None => sqlx::query_scalar(attome_db::tagged_sql!(
+                "query.execute",
                 "SELECT logicalname FROM entity_info \
-                 WHERE id = $1 AND is_active = true LIMIT 1",
-            )
+                 WHERE id = $1 AND is_active = true LIMIT 1"
+            ))
             .bind(entity_id)
             .fetch_optional(&state.base.db)
             .await
@@ -1759,10 +1766,13 @@ pub async fn execute_stored_query_with_definition(
         limits.interactive
     }
     .max(1);
-    sqlx::query(&format!("SET LOCAL statement_timeout = {timeout_ms}"))
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    sqlx::query(&attome_db::tag_dynamic(
+        "query.execute",
+        &format!("SET LOCAL statement_timeout = {timeout_ms}"),
+    ))
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
 
     // Parse table_definition varchar → JSON up front — it's the preferred
     // (trusted, pre-query) source for the column whitelist below. D-543: a
@@ -2047,10 +2057,11 @@ pub async fn execute_stored_query_with_definition(
     } else {
         let cached: Option<f64> = match &pinned {
             Some(p) => Some(p.cost_estimate),
-            None => sqlx::query_scalar(
+            None => sqlx::query_scalar(attome_db::tagged_sql!(
+                "query.execute",
                 "SELECT cost_estimate FROM sql_query_version \
-                 WHERE query_id = $1 ORDER BY id DESC LIMIT 1",
-            )
+                 WHERE query_id = $1 ORDER BY id DESC LIMIT 1"
+            ))
             .bind(qrow.id)
             .fetch_optional(&mut *tx)
             .await
@@ -2198,6 +2209,7 @@ pub async fn execute_stored_query_with_definition(
                  LIMIT ${limit_param}"
             )
         };
+        let main_sql = attome_db::tag_dynamic("query.execute", &main_sql);
         let mut main_q = sqlx::query_as::<_, (Value,)>(&main_sql);
         for p in &params {
             main_q = main_q.bind(p.clone());
@@ -2241,6 +2253,7 @@ pub async fn execute_stored_query_with_definition(
             "SELECT row_to_json(t.*) AS __row, COUNT(*) OVER() AS __total_count
                  FROM ({base_sql}) AS t {where_sql} {order_sql} LIMIT ${lp} OFFSET ${op}"
         );
+        let main_sql = attome_db::tag_dynamic("query.execute", &main_sql);
         let mut main_q = sqlx::query_as::<_, (Value, i64)>(&main_sql);
         for p in &params {
             main_q = main_q.bind(p.clone());
@@ -2274,6 +2287,7 @@ pub async fn execute_stored_query_with_definition(
             "SELECT row_to_json(t.*) AS __row
              FROM ({base_sql}) AS t {where_sql} {order_sql} LIMIT ${lp} OFFSET ${op}"
         );
+        let main_sql = attome_db::tag_dynamic("query.execute", &main_sql);
         let mut main_q = sqlx::query_as::<_, (Value,)>(&main_sql);
         for p in &params {
             main_q = main_q.bind(p.clone());
@@ -2769,9 +2783,10 @@ async fn arabic_collation_available(db: &DbPool) -> bool {
     if let Some(available) = ARABIC_COLLATION_AVAILABLE.get() {
         return *available;
     }
-    let probe = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = $1)",
-    )
+    let probe = sqlx::query_scalar::<_, bool>(attome_db::tagged_sql!(
+        "query.execute",
+        "SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = $1)"
+    ))
     .bind(ARABIC_COLLATION)
     .fetch_one(db)
     .await;

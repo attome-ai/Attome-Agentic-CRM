@@ -85,11 +85,14 @@ async fn resolve_key(
     let is_external = key_attrs.len() == 1 && super::upsert::is_external_id(key_attrs[0]);
     let unique = is_business_key
         || is_external
-        || sqlx::query_scalar::<_, bool>("SELECT to_regclass($1) IS NOT NULL")
-            .bind(quote_ident(&upsert_index_name(entity_name, &names)))
-            .fetch_one(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
+        || sqlx::query_scalar::<_, bool>(attome_db::tagged_sql!(
+            "entity.key_address",
+            "SELECT to_regclass($1) IS NOT NULL"
+        ))
+        .bind(quote_ident(&upsert_index_name(entity_name, &names)))
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
     if !unique {
         return Err(AppError::Validation("not a unique key".into()));
     }
@@ -113,6 +116,7 @@ async fn resolve_key(
         quote_ident(entity_name),
         conditions.join(" AND ")
     );
+    let sql = attome_db::tag_dynamic("entity.key_address", &sql);
     let mut query = sqlx::query_scalar::<_, Uuid>(&sql);
     for (_, value) in pairs {
         query = query.bind(value);

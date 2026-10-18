@@ -37,11 +37,12 @@ pub async fn resolve_entity_from_db(
     }
 
     // Fetch entity by logicalname; the returned logicalname is DB-trusted.
-    let entity_row: Option<(Uuid, String, Option<bool>)> = sqlx::query_as(
+    let entity_row: Option<(Uuid, String, Option<bool>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.resolve",
         "SELECT id, COALESCE(logicalname, '') AS logicalname, is_append_only
          FROM entity_info
-         WHERE logicalname = $1 AND (is_active IS NULL OR is_active = true)",
-    )
+         WHERE logicalname = $1 AND (is_active IS NULL OR is_active = true)"
+    ))
     .bind(input_name)
     .fetch_optional(db)
     .await
@@ -49,7 +50,8 @@ pub async fn resolve_entity_from_db(
 
     let (entity_id, entity_name, is_append_only) = entity_row.ok_or(AppError::NotFound)?;
 
-    let attrs: Vec<AttrRow> = sqlx::query_as(
+    let attrs: Vec<AttrRow> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.resolve",
         r#"SELECT COALESCE(logicalname, '')        AS logicalname,
                   COALESCE("type", 3)              AS field_type_int,
                   COALESCE(required, false)         AS is_required,
@@ -64,8 +66,8 @@ pub async fn resolve_entity_from_db(
                   options
            FROM attribute_info
            WHERE entity_ref = $1 AND (is_active IS NULL OR is_active = true)
-             AND logicalname IS NOT NULL AND logicalname <> ''"#,
-    )
+             AND logicalname IS NOT NULL AND logicalname <> ''"#
+    ))
     .bind(entity_id)
     .fetch_all(db)
     .await

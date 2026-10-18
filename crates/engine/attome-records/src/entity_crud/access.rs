@@ -94,9 +94,10 @@ pub(crate) async fn invalidate_privilege_grant_target(
 
     let user_id = match from_row {
         Some(id) => Some(id),
-        None => sqlx::query_scalar::<_, Option<Uuid>>(
-            "SELECT user_ref FROM user_account_mm_privilege WHERE id = $1",
-        )
+        None => sqlx::query_scalar::<_, Option<Uuid>>(attome_db::tagged_sql!(
+            "entity.access",
+            "SELECT user_ref FROM user_account_mm_privilege WHERE id = $1"
+        ))
         .bind(record_id)
         .fetch_optional(&state.base.db)
         .await
@@ -290,6 +291,7 @@ where
         predicate = pred.sql,
     );
 
+    let sql = attome_db::tag_dynamic("entity.access", &sql);
     let mut q = sqlx::query_scalar::<_, bool>(&sql).bind(record_id);
     if let Some(tb) = &pred.tier_binds {
         q = bind_rls_predicate(q, tb);
@@ -578,20 +580,24 @@ pub(super) async fn polymorphic_audit_target(
             // writes them directly), fatal for Document, which does for both
             // the file-field mirror sync and the folder browser's ordinary
             // generic-entity writes).
-            sqlx::query_as(&format!(
-                "SELECT entity_name, record_id::uuid FROM {table} \
+            sqlx::query_as(&attome_db::tag_dynamic(
+                "entity.access",
+                &format!(
+                    "SELECT entity_name, record_id::uuid FROM {table} \
                  WHERE id = $1 AND entity_name IS NOT NULL AND record_id IS NOT NULL"
+                ),
             ))
             .bind(record_id)
             .fetch_optional(&state.base.db)
             .await
             .map_err(AppError::internal)?
         }
-        "audit_detail" => sqlx::query_as(
+        "audit_detail" => sqlx::query_as(attome_db::tagged_sql!(
+            "entity.access",
             "SELECT h.entity_name, h.record_id FROM audit_detail d \
              JOIN audit_header h ON h.id = d.audit_ref \
-             WHERE d.id = $1 AND h.entity_name IS NOT NULL AND h.record_id IS NOT NULL",
-        )
+             WHERE d.id = $1 AND h.entity_name IS NOT NULL AND h.record_id IS NOT NULL"
+        ))
         .bind(record_id)
         .fetch_optional(&state.base.db)
         .await
@@ -751,8 +757,9 @@ async fn child_parent_ref(
     record_id: Uuid,
 ) -> Result<Option<(Option<String>, Option<String>)>, AppError> {
     let table = quote_ident(entity_name);
-    sqlx::query_as(&format!(
-        "SELECT entity_name, record_id FROM {table} WHERE id = $1"
+    sqlx::query_as(&attome_db::tag_dynamic(
+        "entity.access",
+        &format!("SELECT entity_name, record_id FROM {table} WHERE id = $1"),
     ))
     .bind(record_id)
     .fetch_optional(&state.base.db)
@@ -871,14 +878,15 @@ pub async fn grant_user_share_in_tx(
             "a share capability is 0 (view) or 1 (act)",
         ));
     }
-    sqlx::query_scalar(
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.access",
         "INSERT INTO record_share \
             (record_id, entity_ref, principal_type, principal_id, capability, granted_by) \
          VALUES ($1, $2, 0, $3, $4, $5) \
          ON CONFLICT (record_id, entity_ref, principal_type, principal_id, capability) \
          DO UPDATE SET granted_by = record_share.granted_by \
-         RETURNING id",
-    )
+         RETURNING id"
+    ))
     .bind(record_id)
     .bind(entity_id)
     .bind(user_id)
@@ -894,12 +902,15 @@ pub async fn revoke_share_in_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     share_id: Uuid,
 ) -> Result<bool, AppError> {
-    Ok(sqlx::query("DELETE FROM record_share WHERE id = $1")
-        .bind(share_id)
-        .execute(&mut **tx)
-        .await
-        .map_err(AppError::internal)?
-        .rows_affected()
+    Ok(sqlx::query(attome_db::tagged_sql!(
+        "entity.access",
+        "DELETE FROM record_share WHERE id = $1"
+    ))
+    .bind(share_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected()
         > 0)
 }
 
@@ -1031,8 +1042,11 @@ pub async fn guard_cascade_dependent_access(
         };
         let predicate = rls.as_ref().map_or("", |p| p.sql.as_str());
 
-        let total_count: i64 = sqlx::query_scalar(&format!(
-            "SELECT COUNT(*) FROM {dep_table} WHERE {dep_field_ident} = $1 AND is_active = TRUE"
+        let total_count: i64 = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.access",
+            &format!(
+                "SELECT COUNT(*) FROM {dep_table} WHERE {dep_field_ident} = $1 AND is_active = TRUE"
+            ),
         ))
         .bind(record_id)
         .fetch_one(&mut **tx)
@@ -1049,6 +1063,7 @@ pub async fn guard_cascade_dependent_access(
             "SELECT d.id FROM {dep_table} d WHERE d.{dep_field_ident} = $1 \
              AND d.is_active = TRUE {predicate} FOR UPDATE"
         );
+        let lock_sql = attome_db::tag_dynamic("entity.access", &lock_sql);
         let mut lq = sqlx::query_scalar::<_, Uuid>(&lock_sql).bind(record_id);
         if let Some(pred) = &rls {
             if let Some(tb) = &pred.tier_binds {

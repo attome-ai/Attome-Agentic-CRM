@@ -98,6 +98,7 @@ pub async fn deleted_records(
         "SELECT COUNT(*) FROM {table} WHERE is_active = false {}",
         count_pred.as_ref().map_or("", |p| p.sql.as_str())
     );
+    let count_sql = attome_db::tag_dynamic("entity.recycle_bin", &count_sql);
     let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
     if let Some(p) = &count_pred {
         count_query = count_query
@@ -136,6 +137,7 @@ pub async fn deleted_records(
          ORDER BY {table}.modified_at DESC NULLS LAST, {table}.id DESC LIMIT $1 OFFSET $2",
         pred.as_ref().map_or("", |p| p.sql.as_str())
     );
+    let sql = attome_db::tag_dynamic("entity.recycle_bin", &sql);
     let mut rows_query = sqlx::query_as::<_, DeletedRecord>(&sql)
         .bind(window.page_size)
         .bind(window.offset);
@@ -236,10 +238,13 @@ pub(super) async fn dependent_counts(
             Some(_) => " AND is_active = true",
             None => continue,
         };
-        let count: i64 = sqlx::query_scalar(&format!(
-            "SELECT COUNT(*) FROM {} WHERE {} = ANY($1){live}",
-            quote_ident(&dependent),
-            quote_ident(&field)
+        let count: i64 = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.recycle_bin",
+            &format!(
+                "SELECT COUNT(*) FROM {} WHERE {} = ANY($1){live}",
+                quote_ident(&dependent),
+                quote_ident(&field)
+            ),
         ))
         .bind(ids)
         .fetch_one(&state.base.db)
@@ -294,13 +299,15 @@ pub async fn delete_impact(
             attome_core::OnTargetDelete::Orphan => impact.orphaned.push(row),
         }
     }
-    impact.reason_required =
-        sqlx::query_scalar::<_, bool>("SELECT require_reason FROM bin_setting WHERE entity = $1")
-            .bind(&entity)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(attome_db::classify)?
-            .unwrap_or(false);
+    impact.reason_required = sqlx::query_scalar::<_, bool>(attome_db::tagged_sql!(
+        "entity.recycle_bin",
+        "SELECT require_reason FROM bin_setting WHERE entity = $1"
+    ))
+    .bind(&entity)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?
+    .unwrap_or(false);
     Ok(impact)
 }
 
@@ -385,8 +392,9 @@ pub(super) async fn list_bin_settings(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
 ) -> Result<Json<PaginatedResponse<BinSetting>>, AppError> {
-    let items: Vec<BinSetting> = sqlx::query_as(&format!(
-        "SELECT {BIN_SETTING_COLUMNS} FROM bin_setting ORDER BY entity"
+    let items: Vec<BinSetting> = sqlx::query_as(&attome_db::tag_dynamic(
+        "entity.recycle_bin",
+        &format!("SELECT {BIN_SETTING_COLUMNS} FROM bin_setting ORDER BY entity"),
     ))
     .fetch_all(&state.base.db)
     .await
@@ -443,8 +451,10 @@ pub(super) async fn put_bin_setting(
     .named("bin_setting.updated")
     .comment(format!("recycle bin rules for {entity}"));
     let mut stx = SecurityTx::begin(&state, event).await?;
-    let setting: BinSetting = sqlx::query_as(&format!(
-        "INSERT INTO bin_setting (entity, require_reason, retention_days, alert_threshold, \
+    let setting: BinSetting = sqlx::query_as(&attome_db::tag_dynamic(
+        "entity.recycle_bin",
+        &format!(
+            "INSERT INTO bin_setting (entity, require_reason, retention_days, alert_threshold, \
                                   hard_delete_needs_approval) \
          VALUES ($1, $2, $3, $4, $5) \
          ON CONFLICT (entity) DO UPDATE SET require_reason = EXCLUDED.require_reason, \
@@ -452,6 +462,7 @@ pub(super) async fn put_bin_setting(
              hard_delete_needs_approval = EXCLUDED.hard_delete_needs_approval, \
              updated_at = NOW(), row_version = bin_setting.row_version + 1 \
          RETURNING {BIN_SETTING_COLUMNS}"
+        ),
     ))
     .bind(&entity)
     .bind(body.require_reason)
@@ -479,7 +490,8 @@ pub struct LargeDelete {
 /// caller sends anything, so a crash costs an alert, never a repeat storm.
 pub async fn take_large_deletes(db: &attome_db::DbPool) -> Result<Vec<LargeDelete>, AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
-    let rows: Vec<(Uuid, String, i64)> = sqlx::query_as(
+    let rows: Vec<(Uuid, String, i64)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.recycle_bin",
         "SELECT d.deleted_by, d.entity, COUNT(*) \
          FROM deletion d LEFT JOIN bin_setting s ON s.entity = d.entity \
          WHERE d.deleted_at > now() - interval '10 minutes' AND d.deleted_by IS NOT NULL \
@@ -488,19 +500,20 @@ pub async fn take_large_deletes(db: &attome_db::DbPool) -> Result<Vec<LargeDelet
                              AND a.alerted_at > now() - interval '1 hour') \
          GROUP BY d.deleted_by, d.entity, s.alert_threshold \
          HAVING COUNT(*) >= COALESCE(s.alert_threshold, 100) \
-         ORDER BY d.deleted_by, d.entity",
-    )
+         ORDER BY d.deleted_by, d.entity"
+    ))
     .fetch_all(&mut *tx)
     .await
     .map_err(attome_db::classify)?;
     let mut users: Vec<Uuid> = rows.iter().map(|(user, _, _)| *user).collect();
     users.dedup();
     if !users.is_empty() {
-        sqlx::query(
+        sqlx::query(attome_db::tagged_sql!(
+            "entity.recycle_bin",
             "INSERT INTO bin_delete_alert (user_ref, alerted_at) \
              SELECT unnest($1::uuid[]), now() \
-             ON CONFLICT (user_ref) DO UPDATE SET alerted_at = EXCLUDED.alerted_at",
-        )
+             ON CONFLICT (user_ref) DO UPDATE SET alerted_at = EXCLUDED.alerted_at"
+        ))
         .bind(&users)
         .execute(&mut *tx)
         .await
@@ -643,10 +656,13 @@ async fn deleted_parent(
         if ctx.require(&target, "update").is_err() {
             continue;
         }
-        let parent_id: Option<Uuid> = sqlx::query_scalar(&format!(
-            "SELECT {} FROM {} WHERE id = $1",
-            quote_ident(&field),
-            quote_ident(&entity_name)
+        let parent_id: Option<Uuid> = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.recycle_bin",
+            &format!(
+                "SELECT {} FROM {} WHERE id = $1",
+                quote_ident(&field),
+                quote_ident(&entity_name)
+            ),
         ))
         .bind(id)
         .fetch_optional(&state.base.db)
@@ -656,9 +672,12 @@ async fn deleted_parent(
         let Some(parent_id) = parent_id else {
             continue;
         };
-        let deleted: Option<bool> = sqlx::query_scalar(&format!(
-            "SELECT NOT is_active FROM {} WHERE id = $1",
-            quote_ident(&target)
+        let deleted: Option<bool> = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.recycle_bin",
+            &format!(
+                "SELECT NOT is_active FROM {} WHERE id = $1",
+                quote_ident(&target)
+            ),
         ))
         .bind(parent_id)
         .fetch_optional(&state.base.db)
@@ -721,11 +740,12 @@ pub(super) async fn restore_operation(
     Extension(claims): Extension<SessionClaims>,
     Path(operation_id): Path<String>,
 ) -> Result<Json<BinRestoreResult>, AppError> {
-    let rows: Vec<(String, Uuid)> = sqlx::query_as(
+    let rows: Vec<(String, Uuid)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.recycle_bin",
         "SELECT entity, record_id FROM deletion \
          WHERE operation_id = $1 AND restored_at IS NULL AND purged_at IS NULL \
-         ORDER BY deleted_at LIMIT $2",
-    )
+         ORDER BY deleted_at LIMIT $2"
+    ))
     .bind(operation_id.trim())
     .bind(MAX_BIN_RESTORE as i64)
     .fetch_all(&state.base.db)

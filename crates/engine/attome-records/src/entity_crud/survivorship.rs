@@ -51,11 +51,12 @@ pub(crate) async fn load_survivorship_rules(
     db: &attome_db::DbPool,
     entity_name: &str,
 ) -> Result<HashMap<String, SurvivorshipRule>, AppError> {
-    let rows: Vec<(String, String, Option<Vec<Uuid>>)> = sqlx::query_as(
+    let rows: Vec<(String, String, Option<Vec<Uuid>>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.survivorship",
         "SELECT field_logicalname, strategy, priority_owner_ids \
            FROM survivorship_rule \
-          WHERE entity_logicalname = $1 AND NOT is_deleted",
-    )
+          WHERE entity_logicalname = $1 AND NOT is_deleted"
+    ))
     .bind(entity_name)
     .fetch_all(db)
     .await

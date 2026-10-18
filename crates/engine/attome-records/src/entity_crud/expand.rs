@@ -95,6 +95,7 @@ async fn read_target(
           WHERE id = $1 AND (is_active IS NULL OR is_active = TRUE) {predicate}) t",
         quote_ident(&table)
     );
+    let sql = attome_db::tag_dynamic("entity.expand", &sql);
     let mut query = sqlx::query_scalar::<_, Value>(&sql).bind(id);
     if let Some(p) = &pred {
         query = query

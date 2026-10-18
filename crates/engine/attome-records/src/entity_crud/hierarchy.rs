@@ -138,6 +138,7 @@ async fn hierarchy_rows(
         None => sql.to_owned(),
     };
 
+    let sql = attome_db::tag_dynamic("entity.hierarchy", &sql);
     let mut q = sqlx::query_scalar(&sql)
         .bind(record_id)
         .bind(MAX_HIERARCHY_DEPTH as i32);
@@ -416,24 +417,28 @@ pub(super) async fn move_preview(
     let field = hierarchy_field(entity_id, &attrs, None)?;
     let table = quote_ident(&entity_name);
     let field_ident = quote_ident(&field.logicalname);
-    let (moving, parent_in_subtree, height): (i64, bool, i32) = sqlx::query_as(&format!(
-        "WITH RECURSIVE subtree(id, depth) AS ( \
+    let (moving, parent_in_subtree, height): (i64, bool, i32) =
+        sqlx::query_as(&attome_db::tag_dynamic(
+            "entity.hierarchy",
+            &format!(
+                "WITH RECURSIVE subtree(id, depth) AS ( \
              SELECT id, 0 FROM {table} WHERE id = $1 \
              UNION ALL \
              SELECT c.id, s.depth + 1 FROM {table} c JOIN subtree s ON c.{field_ident} = s.id \
              WHERE s.depth < $2 AND (c.is_active IS NULL OR c.is_active = true) \
          ) \
          SELECT count(*), COALESCE(bool_or(id = $3), false), COALESCE(max(depth), 0) FROM subtree"
-    ))
-    .bind(record_id)
-    .bind(MAX_HIERARCHY_DEPTH as i32)
-    .bind(query.parent)
-    .fetch_one(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
+            ),
+        ))
+        .bind(record_id)
+        .bind(MAX_HIERARCHY_DEPTH as i32)
+        .bind(query.parent)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
     let parent_depth: i32 = match query.parent {
         None => -1,
-        Some(parent) => sqlx::query_scalar(&format!(
+        Some(parent) => sqlx::query_scalar(&attome_db::tag_dynamic("entity.hierarchy", &format!(
             "WITH RECURSIVE chain(id, depth) AS ( \
                  SELECT {field_ident}, 0 FROM {table} WHERE id = $1 \
                  UNION ALL \
@@ -441,7 +446,7 @@ pub(super) async fn move_preview(
                  WHERE chain.depth < $2 \
              ) \
              SELECT COALESCE(max(depth), 0) FROM chain WHERE id IS NOT NULL"
-        ))
+        )))
         .bind(parent)
         .bind(MAX_HIERARCHY_DEPTH as i32)
         .fetch_one(&state.base.db)

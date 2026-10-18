@@ -236,11 +236,14 @@ pub async fn enqueue<J: Job>(jobs: &mut Jobs<J>, job: J) -> Result<(), sqlx::Err
     // D-619: a separate statement because `push_request` is apalis's own. A
     // failed notify only delays the job to the next safety poll.
     let namespace = storage.config().namespace().to_owned();
-    if let Err(e) = sqlx::query("SELECT pg_notify($1, $2)")
-        .bind(WAKE_CHANNEL)
-        .bind(&namespace)
-        .execute(storage.pool())
-        .await
+    if let Err(e) = sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT pg_notify($1, $2)"
+    ))
+    .bind(WAKE_CHANNEL)
+    .bind(&namespace)
+    .execute(storage.pool())
+    .await
     {
         tracing::warn!(error = %e, namespace, "job enqueued, but the worker wake-up notify failed");
     }
@@ -269,11 +272,12 @@ pub async fn enqueue_in_tx<J: Job>(tx: &mut attome_db::Tx<'_>, job: J) -> Result
     ))
     .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
     // D-619: the notify is transactional, so it is delivered at commit.
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT apalis.push_job(\
              job_type => $1, job => $2::json, priority => $3, max_attempts => $4), \
-             pg_notify($5, $1)",
-    )
+             pg_notify($5, $1)"
+    ))
     .bind(namespace)
     .bind(payload)
     .bind(priority)
@@ -297,7 +301,7 @@ pub async fn enqueue_on_pool<J: Job>(pool: &attome_db::DbPool, job: J) -> Result
     ))
     .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
     sqlx::query(
-        "SELECT apalis.push_job( job_type => $1, job => $2::json, priority => $3, max_attempts => $4), pg_notify($5, $1)",
+        attome_db::tagged_sql!("jobs.queue", "SELECT apalis.push_job( job_type => $1, job => $2::json, priority => $3, max_attempts => $4), pg_notify($5, $1)"),
     )
     .bind(namespace)
     .bind(payload)
@@ -331,11 +335,12 @@ pub async fn enqueue_dedup<J: Job>(
     ))
     .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
     // D-619: one notify per inserted row; a deduplicated no-op wakes nobody.
-    let id: Option<String> = sqlx::query_scalar(
+    let id: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT id, pg_notify($6, $1) FROM apalis.push_job_dedup(\
              p_job_type => $1, p_job => $2::json, p_dedup_key => $3, p_priority => $4, \
-             p_max_attempts => $5)",
-    )
+             p_max_attempts => $5)"
+    ))
     .bind(namespace)
     .bind(payload)
     .bind(dedup_key)
@@ -364,11 +369,12 @@ pub async fn enqueue_in_tx_dedup<J: Job>(
     ))
     .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
     // D-619: one notify per inserted row; a deduplicated no-op wakes nobody.
-    let id: Option<String> = sqlx::query_scalar(
+    let id: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT id, pg_notify($6, $1) FROM apalis.push_job_dedup(\
              p_job_type => $1, p_job => $2::json, p_dedup_key => $3, p_priority => $4, \
-             p_max_attempts => $5)",
-    )
+             p_max_attempts => $5)"
+    ))
     .bind(namespace)
     .bind(payload)
     .bind(dedup_key)
@@ -386,9 +392,10 @@ pub async fn enqueue_in_tx_dedup<J: Job>(
 /// `COUNT(*)` is fine. `batch = false` for the default/fast queue.
 pub async fn pending_count(pool: &attome_db::DbPool, batch: bool) -> Result<i64, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_scalar(
-        "SELECT COUNT(*) FROM apalis.jobs WHERE status = 'Pending' AND job_type = $1",
-    )
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT COUNT(*) FROM apalis.jobs WHERE status = 'Pending' AND job_type = $1"
+    ))
     .bind(namespace)
     .fetch_one(pool)
     .await
@@ -405,10 +412,11 @@ pub async fn pending_count_by_priority(
     priority: JobPriority,
 ) -> Result<i64, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_scalar(
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT COUNT(*) FROM apalis.jobs \
-         WHERE status = 'Pending' AND job_type = $1 AND priority = $2",
-    )
+         WHERE status = 'Pending' AND job_type = $1 AND priority = $2"
+    ))
     .bind(namespace)
     .bind(priority.apalis_priority())
     .fetch_one(pool)
@@ -423,10 +431,11 @@ pub async fn pending_count_by_priority(
 /// export is BJB-14b's sibling change and lives outside this crate).
 pub async fn retrying_count(pool: &attome_db::DbPool, batch: bool) -> Result<i64, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_scalar(
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT COUNT(*) FROM apalis.jobs \
-         WHERE status = 'Failed' AND attempts < max_attempts AND job_type = $1",
-    )
+         WHERE status = 'Failed' AND attempts < max_attempts AND job_type = $1"
+    ))
     .bind(namespace)
     .fetch_one(pool)
     .await
@@ -443,10 +452,11 @@ pub async fn oldest_pending_age_seconds(
     batch: bool,
 ) -> Result<Option<f64>, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_scalar(
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT EXTRACT(EPOCH FROM (now() - MIN(run_at)))::float8 FROM apalis.jobs \
-         WHERE status = 'Pending' AND job_type = $1",
-    )
+         WHERE status = 'Pending' AND job_type = $1"
+    ))
     .bind(namespace)
     .fetch_one(pool)
     .await
@@ -459,10 +469,13 @@ pub async fn oldest_pending_age_seconds(
 /// dead-letter admin list's count.
 pub async fn dead_letter_count(pool: &attome_db::DbPool, batch: bool) -> Result<i64, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_scalar("SELECT COUNT(*) FROM apalis.jobs WHERE status = 'Killed' AND job_type = $1")
-        .bind(namespace)
-        .fetch_one(pool)
-        .await
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT COUNT(*) FROM apalis.jobs WHERE status = 'Killed' AND job_type = $1"
+    ))
+    .bind(namespace)
+    .fetch_one(pool)
+    .await
 }
 
 /// Seconds since any worker process of one queue last heartbeat
@@ -478,10 +491,11 @@ pub async fn worker_last_seen_age_seconds(
     batch: bool,
 ) -> Result<Option<f64>, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_scalar(
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT EXTRACT(EPOCH FROM (now() - MAX(last_seen)))::float8 \
-         FROM apalis.workers WHERE worker_type = $1",
-    )
+         FROM apalis.workers WHERE worker_type = $1"
+    ))
     .bind(namespace)
     .fetch_one(pool)
     .await
@@ -507,11 +521,12 @@ pub fn worker_name(kind: &str) -> String {
 /// idempotent and retry-safe (guidelines section 10): a job that had half
 /// run simply runs again. Returns how many were released.
 pub async fn release_claimed(pool: &attome_db::DbPool, worker: &str) -> Result<u64, sqlx::Error> {
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
         "UPDATE apalis.jobs SET status = 'Pending', lock_at = NULL, lock_by = NULL, \
              run_at = now() \
-         WHERE lock_by = $1 AND status = 'Running'",
-    )
+         WHERE lock_by = $1 AND status = 'Running'"
+    ))
     .bind(worker)
     .execute(pool)
     .await
@@ -568,13 +583,14 @@ pub async fn list_dead_letter_jobs(
     page_size: i64,
 ) -> Result<Vec<DeadLetterJobRow>, sqlx::Error> {
     let namespace = if batch { NAMESPACE_BATCH } else { NAMESPACE };
-    sqlx::query_as(
+    sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT id, job, attempts, max_attempts, last_error, run_at, done_at \
          FROM apalis.jobs \
          WHERE status = 'Killed' AND job_type = $1 \
          ORDER BY done_at DESC NULLS LAST \
-         LIMIT $2 OFFSET $3",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(namespace)
     .bind(page_size)
     .bind(offset)
@@ -630,10 +646,11 @@ pub async fn replay_dead_letter_job_checked(
 ) -> Result<ReplayOutcome, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
-    let target: Option<(String, Option<String>)> = sqlx::query_as(
+    let target: Option<(String, Option<String>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT job_type, dedup_key FROM apalis.jobs \
-         WHERE id = $1 AND status = 'Killed' FOR UPDATE",
-    )
+         WHERE id = $1 AND status = 'Killed' FOR UPDATE"
+    ))
     .bind(id)
     .fetch_optional(&mut *tx)
     .await?;
@@ -649,7 +666,8 @@ pub async fn replay_dead_letter_job_checked(
         return Ok(ReplayOutcome::DedupSlotTaken { live_id });
     }
 
-    let updated = sqlx::query(
+    let updated = sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
         "UPDATE apalis.jobs SET status = 'Pending', attempts = 0, last_error = NULL, \
              run_at = now(), lock_at = NULL, lock_by = NULL, done_at = NULL \
          WHERE id = $1 AND status = 'Killed' \
@@ -657,8 +675,8 @@ pub async fn replay_dead_letter_job_checked(
                SELECT 1 FROM apalis.jobs live \
                WHERE live.job_type = $2 AND live.dedup_key = $3 \
                  AND live.status IN ('Pending', 'Running', 'Failed') AND live.id <> $1 \
-           )",
-    )
+           )"
+    ))
     .bind(id)
     .bind(&job_type)
     .bind(dedup_key.as_deref())
@@ -716,12 +734,13 @@ async fn live_row_with_key<'e>(
     dedup_key: &str,
     excluding_id: &str,
 ) -> Result<Option<String>, sqlx::Error> {
-    sqlx::query_scalar(
+    sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "SELECT id FROM apalis.jobs \
          WHERE job_type = $1 AND dedup_key = $2 \
            AND status IN ('Pending', 'Running', 'Failed') AND id <> $3 \
-         ORDER BY run_at ASC LIMIT 1",
-    )
+         ORDER BY run_at ASC LIMIT 1"
+    ))
     .bind(job_type)
     .bind(dedup_key)
     .bind(excluding_id)
@@ -753,13 +772,15 @@ pub async fn discard_dead_letter_job(
     pool: &attome_db::DbPool,
     id: &str,
 ) -> Result<Option<DiscardedJob>, sqlx::Error> {
-    let deleted: Option<(String, String, serde_json::Value)> = sqlx::query_as(
-        "DELETE FROM apalis.jobs WHERE id = $1 AND status = 'Killed' \
-         RETURNING id, job_type, job",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?;
+    let deleted: Option<(String, String, serde_json::Value)> =
+        sqlx::query_as(attome_db::tagged_sql!(
+            "jobs.queue",
+            "DELETE FROM apalis.jobs WHERE id = $1 AND status = 'Killed' \
+         RETURNING id, job_type, job"
+        ))
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
     Ok(deleted.map(|(id, queue, job)| DiscardedJob {
         variant: job_variant_tag(&job).map(str::to_string),
         id,
@@ -816,11 +837,14 @@ pub async fn apply_retry_backoff(
     attempt: usize,
 ) -> Result<(), sqlx::Error> {
     let delay_secs = retry_backoff_seconds(attempt) as f64;
-    sqlx::query("UPDATE apalis.jobs SET run_at = now() + make_interval(secs => $1) WHERE id = $2")
-        .bind(delay_secs)
-        .bind(task_id)
-        .execute(pool)
-        .await?;
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
+        "UPDATE apalis.jobs SET run_at = now() + make_interval(secs => $1) WHERE id = $2"
+    ))
+    .bind(delay_secs)
+    .bind(task_id)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
@@ -837,7 +861,8 @@ pub const LOCK_DEFERRAL_SECS: f64 = 300.0;
 /// fails the run. The caller returns success for the run that deferred, so
 /// apalis marks the original row done and the copy is the only live one.
 pub async fn defer_for_lock(pool: &attome_db::DbPool, task_id: &str) -> Result<bool, sqlx::Error> {
-    let pushed: Option<String> = sqlx::query_scalar(
+    let pushed: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
         "WITH src AS ( \
              SELECT job_type, job, max_attempts, priority, \
                     COALESCE((job->>'deferrals')::int, 0) AS deferrals \
@@ -848,8 +873,8 @@ pub async fn defer_for_lock(pool: &attome_db::DbPool, task_id: &str) -> Result<b
              run_at => now() + make_interval(secs => $2), \
              max_attempts => src.max_attempts, \
              priority => src.priority) p \
-         WHERE src.deferrals < $3",
-    )
+         WHERE src.deferrals < $3"
+    ))
     .bind(task_id)
     .bind(LOCK_DEFERRAL_SECS)
     .bind(MAX_LOCK_DEFERRALS)
@@ -874,11 +899,13 @@ pub async fn is_final_attempt(
     task_id: &str,
     attempt: usize,
 ) -> Result<bool, sqlx::Error> {
-    let max_attempts: Option<i32> =
-        sqlx::query_scalar("SELECT max_attempts FROM apalis.jobs WHERE id = $1")
-            .bind(task_id)
-            .fetch_optional(pool)
-            .await?;
+    let max_attempts: Option<i32> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT max_attempts FROM apalis.jobs WHERE id = $1"
+    ))
+    .bind(task_id)
+    .fetch_optional(pool)
+    .await?;
     Ok(max_attempts.is_some_and(|max| attempt >= usize::try_from(max).unwrap_or(0)))
 }
 

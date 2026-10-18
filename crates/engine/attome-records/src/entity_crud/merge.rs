@@ -405,11 +405,14 @@ pub async fn do_merge_core_with_version(
         [duplicate_id, canonical_id]
     };
     for id in lock_order {
-        sqlx::query(&format!("SELECT id FROM {table} WHERE id = $1 FOR UPDATE"))
-            .bind(id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
+        sqlx::query(&attome_db::tag_dynamic(
+            "entity.merge",
+            &format!("SELECT id FROM {table} WHERE id = $1 FOR UPDATE"),
+        ))
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
     }
 
     // Explicit projection, not `SELECT *`/`RETURNING *` (external review,
@@ -418,18 +421,18 @@ pub async fn do_merge_core_with_version(
     // regardless of the caller's own field visibility, same reason
     // create/update always fetch everything for their audit diff.
     let merge_cols = attome_core::select_columns(&attrs, true);
-    let canonical_row: Option<Value> = sqlx::query_scalar(&format!(
+    let canonical_row: Option<Value> = sqlx::query_scalar(&attome_db::tag_dynamic("entity.merge", &format!(
         "SELECT row_to_json(t) FROM (SELECT {merge_cols} FROM {table} WHERE id = $1 AND is_active = true) t"
-    ))
+    )))
     .bind(canonical_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
     let canonical_row = canonical_row.ok_or(AppError::NotFound)?;
 
-    let duplicate_row: Option<Value> = sqlx::query_scalar(&format!(
+    let duplicate_row: Option<Value> = sqlx::query_scalar(&attome_db::tag_dynamic("entity.merge", &format!(
         "SELECT row_to_json(t) FROM (SELECT {merge_cols} FROM {table} WHERE id = $1 AND is_active = true) t"
-    ))
+    )))
     .bind(duplicate_id)
     .fetch_optional(&mut *tx)
     .await
@@ -589,6 +592,7 @@ pub async fn do_merge_core_with_version(
         // "how many authorized" â€” both answers come from the same locked set.
         let lock_sql =
             format!("SELECT id FROM {dep_table} WHERE {dep_field_ident} = $1 FOR UPDATE");
+        let lock_sql = attome_db::tag_dynamic("entity.merge", &lock_sql);
         let all_ids: Vec<Uuid> = sqlx::query_scalar(&lock_sql)
             .bind(duplicate_id)
             .fetch_all(&mut *tx)
@@ -601,6 +605,7 @@ pub async fn do_merge_core_with_version(
 
         let authorized_sql =
             format!("SELECT d.id FROM {dep_table} d WHERE d.id = ANY($1) {predicate}");
+        let authorized_sql = attome_db::tag_dynamic("entity.merge", &authorized_sql);
         let mut aq = sqlx::query_scalar::<_, Uuid>(&authorized_sql).bind(&all_ids);
         if let Some(pred) = &rls {
             if let Some(tb) = &pred.tier_binds {
@@ -649,6 +654,7 @@ pub async fn do_merge_core_with_version(
             "UPDATE {dep_table} SET {dep_field_ident} = $1, row_version = row_version + 1, \
                     modified_at = NOW(), modified_by = $3 WHERE id = ANY($2) RETURNING id"
         );
+        let redirect_sql = attome_db::tag_dynamic("entity.merge", &redirect_sql);
         let redirected_ids: Vec<Uuid> = sqlx::query_scalar(&redirect_sql)
             .bind(canonical_id)
             .bind(&authorized_ids)
@@ -692,13 +698,15 @@ pub async fn do_merge_core_with_version(
     // concurrent writer can have touched it since.
     // A15-T5: the entity's merge mode: retire the duplicate (the default), or
     // keep it live with a redirect to the survivor.
-    let merge_mode: String =
-        sqlx::query_scalar("SELECT merge_mode FROM merge_setting WHERE entity_logicalname = $1")
-            .bind(&entity_name)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(AppError::internal)?
-            .unwrap_or_else(|| "soft_delete".to_owned());
+    let merge_mode: String = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
+        "SELECT merge_mode FROM merge_setting WHERE entity_logicalname = $1"
+    ))
+    .bind(&entity_name)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .unwrap_or_else(|| "soft_delete".to_owned());
     let keep_merged = merge_mode == "keep_merged";
     let cascade_summary: Vec<String> = if keep_merged {
         Vec::new()
@@ -724,11 +732,12 @@ pub async fn do_merge_core_with_version(
         .get("row_version")
         .and_then(Value::as_i64)
         .unwrap_or(canonical_row_version);
-    let merge_log_id: Uuid = sqlx::query_scalar(
+    let merge_log_id: Uuid = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
         "INSERT INTO merge_log (entity_logicalname, survivor_id, merged_ids, survivor_before, \
              merged_before, moved_rows, merge_mode, merged_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
-    )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+    ))
     .bind(&entity_name)
     .bind(canonical_id)
     .bind(vec![duplicate_id])
@@ -754,12 +763,13 @@ pub async fn do_merge_core_with_version(
     )
     .await?;
     if keep_merged {
-        sqlx::query(
+        sqlx::query(attome_db::tagged_sql!(
+            "entity.merge",
             "INSERT INTO record_redirect (entity_logicalname, from_id, to_id, merge_log_id) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (entity_logicalname, from_id) DO UPDATE \
-             SET to_id = EXCLUDED.to_id, merge_log_id = EXCLUDED.merge_log_id",
-        )
+             SET to_id = EXCLUDED.to_id, merge_log_id = EXCLUDED.merge_log_id"
+        ))
         .bind(&entity_name)
         .bind(duplicate_id)
         .bind(canonical_id)
@@ -779,20 +789,26 @@ pub async fn do_merge_core_with_version(
     // records.
     // A29-T3: the survivor keeps every system's id: the merged record's links
     // move to it, and the merged record's own external ids become links.
-    sqlx::query("UPDATE external_id_link SET record_id = $1 WHERE entity = $2 AND record_id = $3")
-        .bind(canonical_id)
-        .bind(&entity_name)
-        .bind(duplicate_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.merge",
+        "UPDATE external_id_link SET record_id = $1 WHERE entity = $2 AND record_id = $3"
+    ))
+    .bind(canonical_id)
+    .bind(&entity_name)
+    .bind(duplicate_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     for attr in &attrs {
         let Some(system) = super::upsert::external_id_system_of(attr) else {
             continue;
         };
-        let value: Option<String> = sqlx::query_scalar(&format!(
-            "SELECT {}::text FROM {table} WHERE id = $1",
-            quote_ident(&attr.logicalname)
+        let value: Option<String> = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.merge",
+            &format!(
+                "SELECT {}::text FROM {table} WHERE id = $1",
+                quote_ident(&attr.logicalname)
+            ),
         ))
         .bind(duplicate_id)
         .fetch_optional(&mut *tx)
@@ -801,9 +817,9 @@ pub async fn do_merge_core_with_version(
         .flatten();
         if let Some(value) = value {
             sqlx::query(
-                "INSERT INTO external_id_link (entity, record_id, system, external_id) \
+                attome_db::tagged_sql!("entity.merge", "INSERT INTO external_id_link (entity, record_id, system, external_id) \
                  VALUES ($1, $2, $3, $4) \
-                 ON CONFLICT (entity, system, external_id) DO UPDATE SET record_id = EXCLUDED.record_id",
+                 ON CONFLICT (entity, system, external_id) DO UPDATE SET record_id = EXCLUDED.record_id"),
             )
             .bind(&entity_name)
             .bind(canonical_id)
@@ -816,12 +832,13 @@ pub async fn do_merge_core_with_version(
     }
 
     if let Some(candidate_id) = candidate_id {
-        sqlx::query(
+        sqlx::query(attome_db::tagged_sql!(
+            "entity.merge",
             "UPDATE duplicate_candidate \
                 SET status = 'merged', resolved_at = NOW(), resolved_by = $2, \
                     row_version = row_version + 1 \
-              WHERE id = $1 AND status = 'open'",
-        )
+              WHERE id = $1 AND status = 'open'"
+        ))
         .bind(candidate_id)
         .bind(actor_user_id)
         .execute(&mut *tx)
@@ -979,7 +996,7 @@ pub async fn merge_preview(
             "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t"
         );
         async move {
-            sqlx::query_scalar::<_, Value>(&sql)
+            sqlx::query_scalar::<_, Value>(&attome_db::tag_dynamic("entity.merge", &sql))
                 .bind(id)
                 .fetch_optional(db)
                 .await
@@ -1010,10 +1027,13 @@ pub async fn merge_preview(
     let mut moved = Vec::new();
     let dependents = state.entities.load().dependents_of(entity_id);
     for (dep_entity, dep_field, _) in dependents {
-        let count: i64 = sqlx::query_scalar(&format!(
-            "SELECT count(*) FROM {} WHERE {} = $1",
-            quote_ident(&dep_entity),
-            quote_ident(&dep_field)
+        let count: i64 = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.merge",
+            &format!(
+                "SELECT count(*) FROM {} WHERE {} = $1",
+                quote_ident(&dep_entity),
+                quote_ident(&dep_field)
+            ),
         ))
         .bind(duplicate_id)
         .fetch_one(db)
@@ -1026,24 +1046,27 @@ pub async fn merge_preview(
             });
         }
     }
-    let flows: Vec<String> = sqlx::query_scalar(
+    let flows: Vec<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
         "SELECT DISTINCT d.name FROM workflow_trigger_index ti \
            JOIN workflow_definition_version v ON v.id = ti.definition_version_id \
            JOIN workflow_definition d ON d.id = v.definition_id \
           WHERE ti.role = 'entry' AND ti.entity_logicalname = $1 \
-            AND ti.match_type IN ('update', 'delete') ORDER BY 1",
-    )
+            AND ti.match_type IN ('update', 'delete') ORDER BY 1"
+    ))
     .bind(&entity_name)
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
-    let merge_mode: String =
-        sqlx::query_scalar("SELECT merge_mode FROM merge_setting WHERE entity_logicalname = $1")
-            .bind(&entity_name)
-            .fetch_optional(db)
-            .await
-            .map_err(AppError::internal)?
-            .unwrap_or_else(|| "soft_delete".to_owned());
+    let merge_mode: String = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
+        "SELECT merge_mode FROM merge_setting WHERE entity_logicalname = $1"
+    ))
+    .bind(&entity_name)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?
+    .unwrap_or_else(|| "soft_delete".to_owned());
     Ok(MergePreview {
         moved,
         flows,
@@ -1085,10 +1108,11 @@ pub async fn undo_merge(
         Value,
         String,
         Option<chrono::DateTime<Utc>>,
-    )> = sqlx::query_as(
+    )> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.merge",
         "SELECT entity_logicalname, survivor_id, merged_ids, survivor_before, moved_rows, \
-                    merge_mode, undone_at FROM merge_log WHERE id = $1",
-    )
+                    merge_mode, undone_at FROM merge_log WHERE id = $1"
+    ))
     .bind(merge_log_id)
     .fetch_optional(&state.base.db)
     .await
@@ -1112,28 +1136,34 @@ pub async fn undo_merge(
     let (user_ctx, org_ref) = fetch_audit_ctx(state, actor_user_id).await;
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
-        .bind(crate::ADVISORY_LOCK_NAMESPACE)
-        .bind(format!("attome-records/merge_undo:{merge_log_id}"))
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    let locked: bool = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
+        "SELECT pg_try_advisory_xact_lock($1, hashtext($2))"
+    ))
+    .bind(crate::ADVISORY_LOCK_NAMESPACE)
+    .bind(format!("attome-records/merge_undo:{merge_log_id}"))
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     if !locked {
         return Err(AppError::Conflict("this merge is being undone already"));
     }
-    let still_open: bool =
-        sqlx::query_scalar("SELECT undone_at IS NULL FROM merge_log WHERE id = $1 FOR UPDATE")
-            .bind(merge_log_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
+    let still_open: bool = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
+        "SELECT undone_at IS NULL FROM merge_log WHERE id = $1 FOR UPDATE"
+    ))
+    .bind(merge_log_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     if !still_open {
         return Err(AppError::Conflict("this merge was undone already"));
     }
 
     // The survivor must be exactly as the merge left it.
-    let current: Option<i64> = sqlx::query_scalar(&format!(
-        "SELECT row_version FROM {table} WHERE id = $1 FOR UPDATE"
+    let current: Option<i64> = sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.merge",
+        &format!("SELECT row_version FROM {table} WHERE id = $1 FOR UPDATE"),
     ))
     .bind(survivor_id)
     .fetch_optional(&mut *tx)
@@ -1160,11 +1190,11 @@ pub async fn undo_merge(
             .map(|c| quote_ident(c))
             .collect::<Vec<_>>()
             .join(", ");
-        sqlx::query(&format!(
+        sqlx::query(&attome_db::tag_dynamic("entity.merge", &format!(
             "UPDATE {table} SET ({list}) = (SELECT {list} FROM jsonb_populate_record(NULL::{table}, $1)), \
                     row_version = row_version + 1, modified_at = now(), modified_by = $3 \
               WHERE id = $2"
-        ))
+        )))
         .bind(&survivor_before)
         .bind(survivor_id)
         .bind(actor_user_id)
@@ -1175,15 +1205,21 @@ pub async fn undo_merge(
 
     // The merged records come back (or stop redirecting).
     if merge_mode == "keep_merged" {
-        sqlx::query("DELETE FROM record_redirect WHERE merge_log_id = $1")
-            .bind(merge_log_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
+        sqlx::query(attome_db::tagged_sql!(
+            "entity.merge",
+            "DELETE FROM record_redirect WHERE merge_log_id = $1"
+        ))
+        .bind(merge_log_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
     } else {
-        sqlx::query(&format!(
-            "UPDATE {table} SET is_active = true, row_version = row_version + 1, \
+        sqlx::query(&attome_db::tag_dynamic(
+            "entity.merge",
+            &format!(
+                "UPDATE {table} SET is_active = true, row_version = row_version + 1, \
                     modified_at = now(), modified_by = $2 WHERE id = ANY($1)"
+            ),
         ))
         .bind(&merged_ids)
         .bind(actor_user_id)
@@ -1222,12 +1258,15 @@ pub async fn undo_merge(
     };
     for (dep_entity, dep_field, ids) in &moves {
         let (dep_entity, dep_field) = (dep_entity.as_str(), dep_field.as_str());
-        let back: Vec<Uuid> = sqlx::query_scalar(&format!(
-            "UPDATE {} SET {} = $1, row_version = row_version + 1, modified_at = now(), \
+        let back: Vec<Uuid> = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.merge",
+            &format!(
+                "UPDATE {} SET {} = $1, row_version = row_version + 1, modified_at = now(), \
                     modified_by = $4 WHERE id = ANY($2) AND {} = $3 RETURNING id",
-            quote_ident(dep_entity),
-            quote_ident(dep_field),
-            quote_ident(dep_field)
+                quote_ident(dep_entity),
+                quote_ident(dep_field),
+                quote_ident(dep_field)
+            ),
         ))
         .bind(back_to)
         .bind(ids)
@@ -1256,12 +1295,15 @@ pub async fn undo_merge(
         attome_core::ChangeOperation::Update,
     )
     .await?;
-    sqlx::query("UPDATE merge_log SET undone_at = now(), undone_by = $2 WHERE id = $1")
-        .bind(merge_log_id)
-        .bind(actor_user_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.merge",
+        "UPDATE merge_log SET undone_at = now(), undone_by = $2 WHERE id = $1"
+    ))
+    .bind(merge_log_id)
+    .bind(actor_user_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
 
     let event = |record_id: Uuid, operation: AuditOperation, comment: String| AuditEvent {
         organization_ref: org_ref,
@@ -1383,12 +1425,14 @@ pub(super) async fn undo_merge_route(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<MergeUndone>, AppError> {
     let (_, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
-    let logged: Option<String> =
-        sqlx::query_scalar("SELECT entity_logicalname FROM merge_log WHERE id = $1")
-            .bind(merge_id)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
+    let logged: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.merge",
+        "SELECT entity_logicalname FROM merge_log WHERE id = $1"
+    ))
+    .bind(merge_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
     if logged.as_deref() != Some(entity_name.as_str()) {
         return Err(AppError::NotFound);
     }

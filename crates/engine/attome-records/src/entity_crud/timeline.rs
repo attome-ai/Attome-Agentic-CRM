@@ -393,8 +393,9 @@ pub(super) async fn require_live_record(
     let live = attome_core::live_row_predicate("t", is_append_only)
         .map(|p| format!("AND {p}"))
         .unwrap_or_default();
-    let exists: bool = sqlx::query_scalar(&format!(
-        "SELECT EXISTS(SELECT 1 FROM {table} t WHERE t.id = $1 {live})"
+    let exists: bool = sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.timeline",
+        &format!("SELECT EXISTS(SELECT 1 FROM {table} t WHERE t.id = $1 {live})"),
     ))
     .bind(record_id)
     .fetch_one(&state.base.db)
@@ -477,6 +478,7 @@ async fn fetch_audit_events(
          ORDER BY h.changed_on DESC, h.id DESC LIMIT $3",
         keyset = keyset.as_ref().map_or("", |k| k.0.as_str()),
     );
+    let sql = attome_db::tag_dynamic("entity.timeline", &sql);
     let mut q = sqlx::query_as::<_, AuditEventRow>(&sql)
         .bind(entity_name)
         .bind(record_id)
@@ -585,6 +587,7 @@ async fn fetch_state_transitions(
          ORDER BY h.changed_on DESC, d.id DESC LIMIT $4",
         keyset = keyset.as_ref().map_or("", |k| k.0.as_str()),
     );
+    let sql = attome_db::tag_dynamic("entity.timeline", &sql);
     let mut q = sqlx::query_as::<_, StateTransitionRow>(&sql)
         .bind(entity_name)
         .bind(record_id)
@@ -740,6 +743,7 @@ async fn run_source_query(
         binds.len() + 1,
     );
     let sql = sql_template.replace("{rls}", pred.as_ref().map_or("", |p| p.sql.as_str()));
+    let sql = attome_db::tag_dynamic("entity.timeline", &sql);
     let mut q = sqlx::query_scalar::<_, Value>(&sql);
     for b in &binds {
         q = match b {

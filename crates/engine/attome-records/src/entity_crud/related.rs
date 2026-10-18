@@ -228,6 +228,7 @@ pub(super) async fn list_related(
     // site; only the dynamic condition loop still repeats, since its length
     // varies per request.
     let total: i64 = {
+        let count_sql = attome_db::tag_dynamic("entity.related", &count_sql);
         let mut q = sqlx::query_scalar::<_, i64>(&count_sql).bind(record_id);
         if let Some(p) = &pred {
             if let Some(tb) = &p.tier_binds {
@@ -242,6 +243,7 @@ pub(super) async fn list_related(
             .map_err(AppError::internal)?
     };
 
+    let select_sql = attome_db::tag_dynamic("entity.related", &select_sql);
     let mut sq = sqlx::query_scalar::<_, serde_json::Value>(&select_sql).bind(record_id);
     if let Some(p) = &pred {
         if let Some(tb) = &p.tier_binds {
@@ -411,7 +413,7 @@ pub(super) async fn link_related(
     // `user_account_mm_privilege` entity.
     let actor = MutationActor::fetch(&state, ctx.user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    sqlx::query(&sql)
+    sqlx::query(&attome_db::tag_dynamic("entity.related", &sql))
         .bind(record_id)
         .bind(body.id)
         .bind(ctx.user_id)
@@ -554,6 +556,7 @@ pub(super) async fn unlink_related(
     // the existing convention, not a new cost introduced here.
     let actor = MutationActor::fetch(&state, ctx.user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let sql = attome_db::tag_dynamic("entity.related", &sql);
     let result = sqlx::query(&sql)
         .bind(record_id)
         .bind(q.id)

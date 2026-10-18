@@ -68,12 +68,13 @@ pub async fn tick<J: crate::Job>(
     // (a redeploy that changes a scheduler's interval should show up in the
     // ledger), but only written when it actually changed, so the common case
     // adds no writes.
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.schedule",
         "INSERT INTO job_schedule (name, interval_secs) VALUES ($1, $2) \
          ON CONFLICT (name) DO UPDATE \
              SET interval_secs = EXCLUDED.interval_secs, updated_at = now() \
-             WHERE job_schedule.interval_secs <> EXCLUDED.interval_secs",
-    )
+             WHERE job_schedule.interval_secs <> EXCLUDED.interval_secs"
+    ))
     .bind(name)
     .bind(interval_secs)
     .execute(&mut *tx)
@@ -81,15 +82,16 @@ pub async fn tick<J: crate::Job>(
 
     // The slot CAS. `now()` is the transaction's own start time, so a caller
     // that loses simply reads the winner's already-advanced `next_due_at`.
-    let claimed: Option<String> = sqlx::query_scalar(
+    let claimed: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.schedule",
         "UPDATE job_schedule \
          SET next_due_at = now() + make_interval(secs => $2), \
              last_enqueued_at = now(), \
              row_version = row_version + 1, \
              updated_at = now() \
          WHERE name = $1 AND next_due_at <= now() \
-         RETURNING name",
-    )
+         RETURNING name"
+    ))
     .bind(name)
     .bind(interval_secs)
     .fetch_optional(&mut *tx)
@@ -112,10 +114,11 @@ pub async fn tick<J: crate::Job>(
 /// distinguishes "the scheduler is ticking" from "the sweep is actually
 /// running and succeeding".
 pub async fn mark_succeeded(pool: &attome_db::DbPool, name: &str) -> Result<(), sqlx::Error> {
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.schedule",
         "UPDATE job_schedule SET last_succeeded_at = now(), updated_at = now() \
-         WHERE name = $1",
-    )
+         WHERE name = $1"
+    ))
     .bind(name)
     .execute(pool)
     .await?;
@@ -125,11 +128,12 @@ pub async fn mark_succeeded(pool: &attome_db::DbPool, name: &str) -> Result<(), 
 /// Every schedule's persisted row, ordered by name — the metrics refresh
 /// loop's read (BJB-14b) and tests' inspection point.
 pub async fn all(pool: &attome_db::DbPool) -> Result<Vec<ScheduleState>, sqlx::Error> {
-    sqlx::query_as(
+    sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.schedule",
         "SELECT name, interval_secs, next_due_at, last_enqueued_at, last_succeeded_at, \
                 row_version \
-         FROM job_schedule ORDER BY name",
-    )
+         FROM job_schedule ORDER BY name"
+    ))
     .fetch_all(pool)
     .await
 }
@@ -145,10 +149,11 @@ pub async fn last_success_age_seconds(
     // Both "no row for this schedule" and "a row that has never succeeded"
     // are `None`: the caller (an alert on the age gauge) treats both as
     // "nothing has succeeded yet".
-    let age: Option<Option<f64>> = sqlx::query_scalar(
+    let age: Option<Option<f64>> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.schedule",
         "SELECT EXTRACT(EPOCH FROM (now() - last_succeeded_at))::float8 \
-         FROM job_schedule WHERE name = $1",
-    )
+         FROM job_schedule WHERE name = $1"
+    ))
     .bind(name)
     .fetch_optional(pool)
     .await?;
@@ -161,10 +166,11 @@ pub async fn last_success_age_seconds(
 pub async fn last_success_ages(
     pool: &attome_db::DbPool,
 ) -> Result<Vec<(String, Option<f64>)>, sqlx::Error> {
-    sqlx::query_as(
+    sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.schedule",
         "SELECT name, EXTRACT(EPOCH FROM (now() - last_succeeded_at))::float8 \
-         FROM job_schedule ORDER BY name",
-    )
+         FROM job_schedule ORDER BY name"
+    ))
     .fetch_all(pool)
     .await
 }

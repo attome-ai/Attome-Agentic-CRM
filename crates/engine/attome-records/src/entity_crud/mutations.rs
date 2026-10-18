@@ -112,12 +112,16 @@ pub async fn field_changes_from_obj(
             Some(col) => {
                 let target_table = quote_ident(&target_logicalname);
                 let name_col = quote_ident(col);
-                let rows: Result<Vec<(Uuid, Option<String>)>, _> = sqlx::query_as(&format!(
-                    "SELECT id, {name_col}::text FROM {target_table} WHERE id = ANY($1)"
-                ))
-                .bind(&ids)
-                .fetch_all(&mut *conn)
-                .await;
+                let rows: Result<Vec<(Uuid, Option<String>)>, _> =
+                    sqlx::query_as(&attome_db::tag_dynamic(
+                        "entity.mutations",
+                        &format!(
+                            "SELECT id, {name_col}::text FROM {target_table} WHERE id = ANY($1)"
+                        ),
+                    ))
+                    .bind(&ids)
+                    .fetch_all(&mut *conn)
+                    .await;
                 match rows {
                     Ok(rows) => rows
                         .into_iter()
@@ -257,8 +261,9 @@ pub(super) async fn get_record(
     // this optimization validated â€” see coding-guidelines.md Â§14
     // (performance work is evidence-driven).
     if let Some(if_none_match) = if_none_match_row_version(&headers) {
-        let current_version: Option<i64> = sqlx::query_scalar(&format!(
-            "SELECT row_version FROM {table} WHERE id = $1 AND is_active = true"
+        let current_version: Option<i64> = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.mutations",
+            &format!("SELECT row_version FROM {table} WHERE id = $1 AND is_active = true"),
         ))
         .bind(record_id)
         .fetch_optional(pool)
@@ -290,9 +295,10 @@ pub(super) async fn get_record(
     )
     .await?;
     // A15-T5: a record kept after a merge names the one it was merged into.
-    let merged_into: Option<Uuid> = sqlx::query_scalar(
-        "SELECT to_id FROM record_redirect WHERE entity_logicalname = $1 AND from_id = $2",
-    )
+    let merged_into: Option<Uuid> = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.mutations",
+        "SELECT to_id FROM record_redirect WHERE entity_logicalname = $1 AND from_id = $2"
+    ))
     .bind(&entity_name)
     .bind(record_id)
     .fetch_optional(pool)
@@ -364,6 +370,7 @@ pub(crate) async fn read_record_projection(
         "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t"
     );
 
+    let sql = attome_db::tag_dynamic("entity.mutations", &sql);
     let row: Option<Value> = sqlx::query_scalar::<_, Value>(&sql)
         .bind(record_id)
         .fetch_optional(pool)
@@ -1085,10 +1092,11 @@ pub(crate) async fn sync_file_field_documents(
         // `access.rs::polymorphic_audit_target`'s comment on why
         // `attome_document.record_id` can't be a `lookup`-typed column) — bind
         // as strings, not `Uuid`, to match.
-        let existing: Vec<(Uuid, String)> = sqlx::query_as(
+        let existing: Vec<(Uuid, String)> = sqlx::query_as(attome_db::tagged_sql!(
+            "entity.mutations",
             "SELECT id, file FROM attome_document \
-             WHERE entity_name = $1 AND record_id = $2 AND source_field = $3 AND is_active = true",
-        )
+             WHERE entity_name = $1 AND record_id = $2 AND source_field = $3 AND is_active = true"
+        ))
         .bind(entity_name)
         .bind(record_id.to_string())
         .bind(&attr.logicalname)
@@ -1100,10 +1108,11 @@ pub(crate) async fn sync_file_field_documents(
             if current_keys.contains(key) {
                 continue;
             }
-            sqlx::query(
+            sqlx::query(attome_db::tagged_sql!(
+                "entity.mutations",
                 "UPDATE attome_document SET is_active = false, modified_by = $1, \
-                 modified_at = now(), row_version = row_version + 1 WHERE id = $2",
-            )
+                 modified_at = now(), row_version = row_version + 1 WHERE id = $2"
+            ))
             .bind(acting_user_id)
             .bind(doc_id)
             .execute(&mut **tx)
@@ -1471,13 +1480,15 @@ pub(super) async fn hard_delete_record(
     use axum::response::IntoResponse;
     let expected_version = optional_expected_row_version(&headers)?;
     let (_, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
-    let needs_approval: bool =
-        sqlx::query_scalar("SELECT hard_delete_needs_approval FROM bin_setting WHERE entity = $1")
-            .bind(&entity_name)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(attome_db::classify)?
-            .unwrap_or(false);
+    let needs_approval: bool = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.mutations",
+        "SELECT hard_delete_needs_approval FROM bin_setting WHERE entity = $1"
+    ))
+    .bind(&entity_name)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?
+    .unwrap_or(false);
     if let Some(request) = attome_audit::approval::gate_required(
         &state,
         ACTION_RECORD_HARD_DELETE,

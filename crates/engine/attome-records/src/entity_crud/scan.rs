@@ -141,6 +141,7 @@ pub async fn find_scanned(
             quote_ident(&attr.attribute),
         );
         let remaining = MAX_SCAN_HITS - hits.len();
+        let sql = attome_db::tag_dynamic("entity.scan", &sql);
         let ids: Vec<Uuid> = sqlx::query_scalar(&sql)
             .bind(value)
             .bind(i64::try_from(remaining).unwrap_or(i64::MAX))

@@ -89,10 +89,11 @@ pub async fn resolve_visible(
     // every record of it as missing.
     let found = match cached {
         Some(found) => Some(found),
-        None => sqlx::query_as::<_, (String, Option<String>)>(
+        None => sqlx::query_as::<_, (String, Option<String>)>(attome_db::tagged_sql!(
+            "entity.lookup_names",
             "SELECT logicalname, primary_name_attribute FROM entity_info \
-             WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
-        )
+             WHERE id = $1 AND (is_active IS NULL OR is_active = true)"
+        ))
         .bind(target_entity_id)
         .fetch_optional(&state.base.db)
         .await
@@ -147,6 +148,7 @@ pub async fn resolve_visible(
          FROM {target_table_q} WHERE id = ANY($1) {predicate}"
     );
 
+    let sql = attome_db::tag_dynamic("entity.lookup_names", &sql);
     let mut query = sqlx::query_as::<_, (Uuid, bool, Option<String>)>(&sql).bind(ids);
     if let Some(p) = &pred {
         query = query

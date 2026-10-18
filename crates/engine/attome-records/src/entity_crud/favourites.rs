@@ -249,22 +249,24 @@ pub async fn report_opens(
         return Ok(());
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
         "INSERT INTO user_recent (user_id, entity, record_id) \
          SELECT $1, e, r FROM UNNEST($2::text[], $3::uuid[]) AS t(e, r) \
-         ON CONFLICT (user_id, entity, record_id) DO UPDATE SET opened_at = now()",
-    )
+         ON CONFLICT (user_id, entity, record_id) DO UPDATE SET opened_at = now()"
+    ))
     .bind(user_id)
     .bind(&entities)
     .bind(&ids)
     .execute(&mut *tx)
     .await
     .map_err(attome_db::classify)?;
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
         "DELETE FROM user_recent WHERE user_id = $1 AND (entity, record_id) NOT IN ( \
              SELECT entity, record_id FROM user_recent WHERE user_id = $1 \
-             ORDER BY opened_at DESC LIMIT $2)",
-    )
+             ORDER BY opened_at DESC LIMIT $2)"
+    ))
     .bind(user_id)
     .bind(MAX_RECENT)
     .execute(&mut *tx)
@@ -275,11 +277,14 @@ pub async fn report_opens(
 
 /// Empties the caller's recent history.
 pub async fn clear_recent(state: &EngineState, user_id: Uuid) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM user_recent WHERE user_id = $1")
-        .bind(user_id)
-        .execute(&state.base.db)
-        .await
-        .map_err(attome_db::classify)?;
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
+        "DELETE FROM user_recent WHERE user_id = $1"
+    ))
+    .bind(user_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
     Ok(())
 }
 
@@ -289,10 +294,11 @@ pub async fn recent(
     ctx: &SecurityContext,
     limit: i64,
 ) -> Result<Vec<RecentItem>, AppError> {
-    let rows: Vec<(String, Uuid, DateTime<Utc>)> = sqlx::query_as(
+    let rows: Vec<(String, Uuid, DateTime<Utc>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.favourites",
         "SELECT entity, record_id, opened_at FROM user_recent WHERE user_id = $1 \
-         ORDER BY opened_at DESC LIMIT $2",
-    )
+         ORDER BY opened_at DESC LIMIT $2"
+    ))
     .bind(ctx.user_id)
     .bind(limit.clamp(1, MAX_RECENT))
     .fetch_all(&state.base.db)
@@ -362,11 +368,12 @@ async fn load_lists(
     ctx: &SecurityContext,
     also: Option<Uuid>,
 ) -> Result<Vec<FavouriteList>, AppError> {
-    let lists: Vec<(Uuid, String, Option<Uuid>)> = sqlx::query_as(
+    let lists: Vec<(Uuid, String, Option<Uuid>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.favourites",
         "SELECT id, name, team_id FROM favourite_list \
          WHERE owner_user = $1 OR team_id = ANY($2) OR id = $3 \
-         ORDER BY team_id NULLS FIRST, created_at, id",
-    )
+         ORDER BY team_id NULLS FIRST, created_at, id"
+    ))
     .bind(ctx.user_id)
     .bind(&ctx.team_ids)
     .bind(also)
@@ -383,10 +390,11 @@ async fn load_lists(
         Option<String>,
         bool,
     );
-    let items: Vec<ItemRow> = sqlx::query_as(
+    let items: Vec<ItemRow> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.favourites",
         "SELECT list_id, id, kind, entity, ref, label, pinned FROM favourite_item \
-         WHERE list_id = ANY($1) ORDER BY list_id, position",
-    )
+         WHERE list_id = ANY($1) ORDER BY list_id, position"
+    ))
     .bind(&ids)
     .fetch_all(&state.base.db)
     .await
@@ -444,11 +452,14 @@ async fn write_items(
     list_id: Uuid,
     items: &[FavouriteItemInput],
 ) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM favourite_item WHERE list_id = $1")
-        .bind(list_id)
-        .execute(&mut *conn)
-        .await
-        .map_err(attome_db::classify)?;
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
+        "DELETE FROM favourite_item WHERE list_id = $1"
+    ))
+    .bind(list_id)
+    .execute(&mut *conn)
+    .await
+    .map_err(attome_db::classify)?;
     if items.is_empty() {
         return Ok(());
     }
@@ -457,12 +468,13 @@ async fn write_items(
     let refs: Vec<&str> = items.iter().map(|i| i.reference.as_str()).collect();
     let labels: Vec<Option<&str>> = items.iter().map(|i| i.label.as_deref()).collect();
     let pinned: Vec<bool> = items.iter().map(|i| i.pinned).collect();
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
         "INSERT INTO favourite_item (list_id, kind, entity, ref, label, pinned, position) \
          SELECT $1, k, e, r, l, p, (n - 1)::int \
          FROM UNNEST($2::text[], $3::text[], $4::text[], $5::text[], $6::bool[]) \
-              WITH ORDINALITY AS t(k, e, r, l, p, n)",
-    )
+              WITH ORDINALITY AS t(k, e, r, l, p, n)"
+    ))
     .bind(list_id)
     .bind(&kinds)
     .bind(&entities)
@@ -482,8 +494,8 @@ async fn list_count(
     team_id: Option<Uuid>,
 ) -> Result<i64, AppError> {
     sqlx::query_scalar(
-        "SELECT COUNT(*) FROM favourite_list \
-         WHERE ($1::uuid IS NOT NULL AND owner_user = $1) OR ($2::uuid IS NOT NULL AND team_id = $2)",
+        attome_db::tagged_sql!("entity.favourites", "SELECT COUNT(*) FROM favourite_list \
+         WHERE ($1::uuid IS NOT NULL AND owner_user = $1) OR ($2::uuid IS NOT NULL AND team_id = $2)"),
     )
     .bind(owner_user)
     .bind(team_id)
@@ -505,10 +517,11 @@ async fn insert_list(
             "at most {MAX_LISTS} lists are kept"
         )));
     }
-    let id: Uuid = sqlx::query_scalar(
+    let id: Uuid = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.favourites",
         "INSERT INTO favourite_list (owner_user, team_id, name, created_by) \
-         VALUES ($1, $2, $3, $4) RETURNING id",
-    )
+         VALUES ($1, $2, $3, $4) RETURNING id"
+    ))
     .bind(owner_user)
     .bind(team_id)
     .bind(name)
@@ -530,10 +543,11 @@ async fn update_list(
     name: &str,
     items: &[FavouriteItemInput],
 ) -> Result<bool, AppError> {
-    let updated = sqlx::query(
+    let updated = sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
         "UPDATE favourite_list SET name = $4, updated_at = now() \
-         WHERE id = $1 AND owner_user IS NOT DISTINCT FROM $2 AND team_id IS NOT DISTINCT FROM $3",
-    )
+         WHERE id = $1 AND owner_user IS NOT DISTINCT FROM $2 AND team_id IS NOT DISTINCT FROM $3"
+    ))
     .bind(list_id)
     .bind(owner_user)
     .bind(team_id)
@@ -554,10 +568,11 @@ async fn remove_list(
     owner_user: Option<Uuid>,
     team_id: Option<Uuid>,
 ) -> Result<bool, AppError> {
-    let deleted = sqlx::query(
+    let deleted = sqlx::query(attome_db::tagged_sql!(
+        "entity.favourites",
         "DELETE FROM favourite_list \
-         WHERE id = $1 AND owner_user IS NOT DISTINCT FROM $2 AND team_id IS NOT DISTINCT FROM $3",
-    )
+         WHERE id = $1 AND owner_user IS NOT DISTINCT FROM $2 AND team_id IS NOT DISTINCT FROM $3"
+    ))
     .bind(list_id)
     .bind(owner_user)
     .bind(team_id)

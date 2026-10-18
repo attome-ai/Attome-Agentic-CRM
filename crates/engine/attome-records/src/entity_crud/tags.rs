@@ -175,12 +175,15 @@ async fn tags_on(
     entity: &str,
     record_id: Uuid,
 ) -> Result<Vec<TagView>, AppError> {
-    sqlx::query_as(&format!(
-        "SELECT {TAG_COLUMNS} FROM tag_link l JOIN tag t ON t.id = l.tag_id \
+    sqlx::query_as(&attome_db::tag_dynamic(
+        "entity.tags",
+        &format!(
+            "SELECT {TAG_COLUMNS} FROM tag_link l JOIN tag t ON t.id = l.tag_id \
          WHERE l.entity = $1 AND l.record_id = $2 \
            AND (l.expires_at IS NULL OR l.expires_at > now()) \
            AND (t.owner_user IS NULL OR t.owner_user = $3) \
          ORDER BY t.owner_user NULLS FIRST, t.name"
+        ),
     ))
     .bind(entity)
     .bind(record_id)
@@ -208,10 +211,13 @@ pub async fn add_tag(
     let db = &state.base.db;
     let tag: TagView = match (input.tag_id, input.name.as_deref()) {
         // B4-T3: a merged tag's id leads to the tag it went into.
-        (Some(id), None) => sqlx::query_as(&format!(
-            "SELECT {TAG_COLUMNS} FROM tag t \
+        (Some(id), None) => sqlx::query_as(&attome_db::tag_dynamic(
+            "entity.tags",
+            &format!(
+                "SELECT {TAG_COLUMNS} FROM tag t \
              WHERE t.id = (SELECT COALESCE(m.merged_into, m.id) FROM tag m WHERE m.id = $1) \
                AND (t.owner_user IS NULL OR t.owner_user = $2)"
+            ),
         ))
         .bind(id)
         .bind(ctx.user_id)
@@ -238,22 +244,25 @@ pub async fn add_tag(
         )
         .await?;
     }
-    let count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM tag_link WHERE entity = $1 AND record_id = $2")
-            .bind(&entity)
-            .bind(record_id)
-            .fetch_one(db)
-            .await
-            .map_err(attome_db::classify)?;
+    let count: i64 = sqlx::query_scalar(attome_db::tagged_sql!(
+        "entity.tags",
+        "SELECT COUNT(*) FROM tag_link WHERE entity = $1 AND record_id = $2"
+    ))
+    .bind(&entity)
+    .bind(record_id)
+    .fetch_one(db)
+    .await
+    .map_err(attome_db::classify)?;
     if count >= MAX_TAGS_PER_RECORD {
         return Err(AppError::Validation(format!(
             "a record carries at most {MAX_TAGS_PER_RECORD} tags"
         )));
     }
-    sqlx::query(
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.tags",
         "INSERT INTO tag_link (tag_id, entity, record_id, created_by) VALUES ($1, $2, $3, $4) \
-         ON CONFLICT (tag_id, entity, record_id) DO UPDATE SET expires_at = NULL",
-    )
+         ON CONFLICT (tag_id, entity, record_id) DO UPDATE SET expires_at = NULL"
+    ))
     .bind(tag.id)
     .bind(&entity)
     .bind(record_id)
@@ -286,11 +295,14 @@ async fn find_or_create(
 ) -> Result<TagView, AppError> {
     let db = &state.base.db;
     // B4-T3: a merged tag's name leads to the tag it went into.
-    let existing: Option<TagView> = sqlx::query_as(&format!(
-        "SELECT {TAG_COLUMNS} FROM tag t \
+    let existing: Option<TagView> = sqlx::query_as(&attome_db::tag_dynamic(
+        "entity.tags",
+        &format!(
+            "SELECT {TAG_COLUMNS} FROM tag t \
          WHERE t.id = (SELECT COALESCE(m.merged_into, m.id) FROM tag m \
                        WHERE m.normalized_name = normalize_ar($1) \
                          AND (($2 AND m.owner_user = $3) OR (NOT $2 AND m.owner_user IS NULL)))"
+        ),
     ))
     .bind(name)
     .bind(input.personal)
@@ -305,18 +317,20 @@ async fn find_or_create(
         return Err(AppError::Validation("a personal tag has no group".into()));
     }
     if let Some(group_id) = input.group_id {
-        let group: (String, Option<String>) =
-            sqlx::query_as("SELECT create_policy, create_privilege FROM tag_group WHERE id = $1")
-                .bind(group_id)
-                .fetch_optional(db)
-                .await
-                .map_err(attome_db::classify)?
-                .ok_or(AppError::NotFound)?;
+        let group: (String, Option<String>) = sqlx::query_as(attome_db::tagged_sql!(
+            "entity.tags",
+            "SELECT create_policy, create_privilege FROM tag_group WHERE id = $1"
+        ))
+        .bind(group_id)
+        .fetch_optional(db)
+        .await
+        .map_err(attome_db::classify)?
+        .ok_or(AppError::NotFound)?;
         if !may_create(ctx, &group.0, group.1.as_deref()) {
             return Err(AppError::Forbidden);
         }
     }
-    sqlx::query_as(&format!(
+    sqlx::query_as(&attome_db::tag_dynamic("entity.tags", &format!(
         "WITH inserted AS ( \
              INSERT INTO tag (group_id, name, colour, owner_user, created_by) \
              VALUES ($1, $2, $3, $4, $5) \
@@ -326,7 +340,7 @@ async fn find_or_create(
          SELECT {TAG_COLUMNS} FROM tag t WHERE t.normalized_name = normalize_ar($2) \
            AND t.owner_user IS NOT DISTINCT FROM $4 AND NOT EXISTS (SELECT 1 FROM inserted) \
          LIMIT 1"
-    ))
+    )))
     .bind(input.group_id)
     .bind(name)
     .bind(input.colour.as_deref())
@@ -349,9 +363,9 @@ pub async fn remove_tag(
     ctx.require(&entity, "read")?;
     require_record_read(state, ctx, entity_id, &entity, record_id).await?;
     let db = &state.base.db;
-    let tag: TagView = sqlx::query_as(&format!(
+    let tag: TagView = sqlx::query_as(&attome_db::tag_dynamic("entity.tags", &format!(
         "SELECT {TAG_COLUMNS} FROM tag t WHERE t.id = $1 AND (t.owner_user IS NULL OR t.owner_user = $2)"
-    ))
+    )))
     .bind(tag_id)
     .bind(ctx.user_id)
     .fetch_optional(db)
@@ -370,14 +384,16 @@ pub async fn remove_tag(
         )
         .await?;
     }
-    let removed =
-        sqlx::query("DELETE FROM tag_link WHERE tag_id = $1 AND entity = $2 AND record_id = $3")
-            .bind(tag_id)
-            .bind(&entity)
-            .bind(record_id)
-            .execute(db)
-            .await
-            .map_err(attome_db::classify)?;
+    let removed = sqlx::query(attome_db::tagged_sql!(
+        "entity.tags",
+        "DELETE FROM tag_link WHERE tag_id = $1 AND entity = $2 AND record_id = $3"
+    ))
+    .bind(tag_id)
+    .bind(&entity)
+    .bind(record_id)
+    .execute(db)
+    .await
+    .map_err(attome_db::classify)?;
     if removed.rows_affected() == 0 {
         return Err(AppError::NotFound);
     }
@@ -408,14 +424,15 @@ pub async fn suggest(
     if typed.chars().count() > 80 {
         return Err(AppError::Validation("q is at most 80 characters".into()));
     }
-    sqlx::query_as(
+    sqlx::query_as(attome_db::tagged_sql!(
+        "entity.tags",
         "SELECT t.id, t.name, t.colour, (t.owner_user IS NOT NULL) AS personal, \
                 (SELECT COUNT(*) FROM tag_link l WHERE l.tag_id = t.id) AS uses \
          FROM tag t \
          WHERE (t.owner_user IS NULL OR t.owner_user = $1) AND t.merged_into IS NULL \
            AND starts_with(t.normalized_name, normalize_ar($2)) \
-         ORDER BY uses DESC, t.name LIMIT $3",
-    )
+         ORDER BY uses DESC, t.name LIMIT $3"
+    ))
     .bind(user_id)
     .bind(typed)
     .bind(SUGGEST_LIMIT)
@@ -432,10 +449,11 @@ const TAG_BATCH: i64 = 1000;
 pub async fn sweep_expired_links(db: &attome_db::DbPool) -> Result<u64, AppError> {
     let mut removed = 0;
     loop {
-        let done = sqlx::query(
+        let done = sqlx::query(attome_db::tagged_sql!(
+            "entity.tags",
             "DELETE FROM tag_link WHERE ctid IN ( \
-                 SELECT ctid FROM tag_link WHERE expires_at <= now() LIMIT $1)",
-        )
+                 SELECT ctid FROM tag_link WHERE expires_at <= now() LIMIT $1)"
+        ))
         .bind(TAG_BATCH)
         .execute(db)
         .await
@@ -467,12 +485,14 @@ pub struct TagMergeResult {
 
 /// A shared tag that has not been merged away.
 async fn live_shared_tag(db: &attome_db::DbPool, id: Uuid) -> Result<String, AppError> {
-    let row: Option<(String, Option<Uuid>, Option<Uuid>)> =
-        sqlx::query_as("SELECT name, owner_user, merged_into FROM tag WHERE id = $1")
-            .bind(id)
-            .fetch_optional(db)
-            .await
-            .map_err(attome_db::classify)?;
+    let row: Option<(String, Option<Uuid>, Option<Uuid>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.tags",
+        "SELECT name, owner_user, merged_into FROM tag WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_optional(db)
+    .await
+    .map_err(attome_db::classify)?;
     match row {
         Some((name, None, None)) => Ok(name),
         Some((_, Some(_), _)) => Err(AppError::Validation(
@@ -503,13 +523,14 @@ pub async fn merge_tag(
     let into_name = live_shared_tag(db, into).await?;
     let mut moved = 0;
     loop {
-        let done = sqlx::query(
+        let done = sqlx::query(attome_db::tagged_sql!(
+            "entity.tags",
             "UPDATE tag_link SET tag_id = $2, merged_from = $1 WHERE ctid IN ( \
                  SELECT l.ctid FROM tag_link l WHERE l.tag_id = $1 \
                    AND NOT EXISTS (SELECT 1 FROM tag_link d WHERE d.tag_id = $2 \
                                      AND d.entity = l.entity AND d.record_id = l.record_id) \
-                 LIMIT $3)",
-        )
+                 LIMIT $3)"
+        ))
         .bind(source)
         .bind(into)
         .bind(TAG_BATCH)
@@ -522,20 +543,25 @@ pub async fn merge_tag(
             break;
         }
     }
-    let dropped = sqlx::query("DELETE FROM tag_link WHERE tag_id = $1")
-        .bind(source)
-        .execute(db)
-        .await
-        .map_err(attome_db::classify)?
-        .rows_affected();
-    let marked =
-        sqlx::query("UPDATE tag SET merged_into = $2 WHERE id = $1 AND merged_into IS NULL")
-            .bind(source)
-            .bind(into)
-            .execute(db)
-            .await
-            .map_err(attome_db::classify)?
-            .rows_affected();
+    let dropped = sqlx::query(attome_db::tagged_sql!(
+        "entity.tags",
+        "DELETE FROM tag_link WHERE tag_id = $1"
+    ))
+    .bind(source)
+    .execute(db)
+    .await
+    .map_err(attome_db::classify)?
+    .rows_affected();
+    let marked = sqlx::query(attome_db::tagged_sql!(
+        "entity.tags",
+        "UPDATE tag SET merged_into = $2 WHERE id = $1 AND merged_into IS NULL"
+    ))
+    .bind(source)
+    .bind(into)
+    .execute(db)
+    .await
+    .map_err(attome_db::classify)?
+    .rows_affected();
     if marked == 0 {
         return Err(AppError::Conflict("that tag was already merged"));
     }
@@ -564,12 +590,14 @@ pub async fn unmerge_tag(
     source: Uuid,
 ) -> Result<TagMergeResult, AppError> {
     let db = &state.base.db;
-    let row: Option<(String, Option<Uuid>)> =
-        sqlx::query_as("SELECT name, merged_into FROM tag WHERE id = $1")
-            .bind(source)
-            .fetch_optional(db)
-            .await
-            .map_err(attome_db::classify)?;
+    let row: Option<(String, Option<Uuid>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.tags",
+        "SELECT name, merged_into FROM tag WHERE id = $1"
+    ))
+    .bind(source)
+    .fetch_optional(db)
+    .await
+    .map_err(attome_db::classify)?;
     let (name, into) = match row {
         Some((name, Some(into))) => (name, into),
         Some((_, None)) => return Err(AppError::Conflict("that tag is not merged")),
@@ -577,10 +605,11 @@ pub async fn unmerge_tag(
     };
     let mut moved = 0;
     loop {
-        let done = sqlx::query(
+        let done = sqlx::query(attome_db::tagged_sql!(
+            "entity.tags",
             "UPDATE tag_link SET tag_id = $1, merged_from = NULL WHERE ctid IN ( \
-                 SELECT ctid FROM tag_link WHERE tag_id = $2 AND merged_from = $1 LIMIT $3)",
-        )
+                 SELECT ctid FROM tag_link WHERE tag_id = $2 AND merged_from = $1 LIMIT $3)"
+        ))
         .bind(source)
         .bind(into)
         .bind(TAG_BATCH)
@@ -593,11 +622,14 @@ pub async fn unmerge_tag(
             break;
         }
     }
-    sqlx::query("UPDATE tag SET merged_into = NULL WHERE id = $1")
-        .bind(source)
-        .execute(db)
-        .await
-        .map_err(attome_db::classify)?;
+    sqlx::query(attome_db::tagged_sql!(
+        "entity.tags",
+        "UPDATE tag SET merged_into = NULL WHERE id = $1"
+    ))
+    .bind(source)
+    .execute(db)
+    .await
+    .map_err(attome_db::classify)?;
     attome_audit::write_business_event(
         state,
         "tag",
@@ -622,7 +654,7 @@ pub async fn tagged_records(
 ) -> Result<Vec<TaggedRecord>, AppError> {
     let db = &state.base.db;
     let visible: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1 AND (owner_user IS NULL OR owner_user = $2))",
+        attome_db::tagged_sql!("entity.tags", "SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1 AND (owner_user IS NULL OR owner_user = $2))"),
     )
     .bind(tag_id)
     .bind(ctx.user_id)
@@ -632,11 +664,12 @@ pub async fn tagged_records(
     if !visible {
         return Err(AppError::NotFound);
     }
-    let links: Vec<(String, Uuid)> = sqlx::query_as(
+    let links: Vec<(String, Uuid)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.tags",
         "SELECT entity, record_id FROM tag_link \
          WHERE tag_id = $1 AND (expires_at IS NULL OR expires_at > now()) \
-         ORDER BY created_at DESC LIMIT $2",
-    )
+         ORDER BY created_at DESC LIMIT $2"
+    ))
     .bind(tag_id)
     .bind(TAG_PAGE_LIMIT)
     .fetch_all(db)
@@ -931,9 +964,10 @@ pub(super) async fn list_tag_groups(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
 ) -> Result<Json<PaginatedResponse<TagGroup>>, AppError> {
-    let groups: Vec<TagGroup> = sqlx::query_as(
-        "SELECT id, name, colour, create_policy, create_privilege FROM tag_group ORDER BY name",
-    )
+    let groups: Vec<TagGroup> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.tags",
+        "SELECT id, name, colour, create_policy, create_privilege FROM tag_group ORDER BY name"
+    ))
     .fetch_all(&state.base.db)
     .await
     .map_err(attome_db::classify)?;
@@ -985,11 +1019,12 @@ pub(super) async fn create_tag_group(
     )
     .named("tag_group.created");
     let mut stx = SecurityTx::begin(&state, event).await?;
-    let group: TagGroup = sqlx::query_as(
+    let group: TagGroup = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.tags",
         "INSERT INTO tag_group (id, name, colour, create_policy, create_privilege, created_by) \
          VALUES ($1, $2, $3, $4, $5, $6) \
-         RETURNING id, name, colour, create_policy, create_privilege",
-    )
+         RETURNING id, name, colour, create_policy, create_privilege"
+    ))
     .bind(id)
     .bind(&name)
     .bind(body.colour.as_deref())

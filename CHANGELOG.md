@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Operations: query tags (Z2-T8). The generic record queries, `query/execute` and the job queue
+  start their SQL with a `/* class */` comment (`entity.merge`, `query.execute`, `jobs.queue`), so
+  `pg_stat_statements`, the slow-query log and `pg_stat_activity` show which engine and operation
+  sent a statement (`attome_db::tagged_sql!`, `attome_db::tag_dynamic`).
 - Data: the orphan scan (Y2-T4). `GET /api/v1/admin/entities/{entity_id}/orphans` counts, per
   lookup field, the rows whose value names no record of the target; a table over 10,000 rows
   answers from its latest finished scan, which `POST .../orphans/scan` queues as a durable
