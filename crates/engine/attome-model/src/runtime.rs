@@ -126,6 +126,34 @@ impl CookedRegistry {
         }
     }
 
+    /// AA7-T5: the current version's `kind` artefacts as `(key, content
+    /// hash)`, in key order.
+    pub fn hashes(&self, kind: &str) -> Vec<(String, String)> {
+        let snapshot = self.current.load();
+        snapshot
+            .manifest
+            .artefacts
+            .iter()
+            .filter(|(key, _)| kind_of(key) == kind)
+            .map(|(key, entry)| (key.clone(), entry.content_hash.clone()))
+            .collect()
+    }
+
+    /// AA7-T5: the bytes of the current version's `kind` artefact whose
+    /// content hash is `hash`, or `None` when the version has none.
+    pub fn payload_by_hash(&self, kind: &str, hash: &str) -> Option<Arc<[u8]>> {
+        let snapshot = self.current.load();
+        let (key, _) = snapshot
+            .manifest
+            .artefacts
+            .iter()
+            .find(|(key, entry)| kind_of(key) == kind && entry.content_hash == hash)?;
+        snapshot
+            .entries
+            .get(&(kind.to_owned(), key.clone()))
+            .map(|entry| Arc::clone(&entry.payload))
+    }
+
     /// Builds a snapshot from artefact payloads already in hand (by content
     /// hash) and swaps it in. Every manifest entry must have its payload.
     pub fn load_from_artefacts(

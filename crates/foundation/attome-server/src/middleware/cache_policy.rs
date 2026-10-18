@@ -13,6 +13,10 @@
 //!   [`CACHE_CLASSES`] names, and only public artefacts whose bytes never
 //!   change under one URL. Nothing an authenticated session reads is
 //!   public otherwise.
+//! - **PrivateImmutable** (`private, max-age=31536000, immutable` and
+//!   `Vary: Authorization, Cookie`): a signed-in read of bytes whose URL
+//!   names their content hash (AA7-T5's cooked artefacts). The browser keeps
+//!   it for a year without asking again; no shared cache keeps it.
 //!
 //! The class comes from [`CACHE_CLASSES`] when a route is listed there, and
 //! from [`class_for`]'s rules otherwise. A test walks the API document and
@@ -29,6 +33,9 @@ pub enum CacheClass {
     NoStore,
     PrivateRevalidate,
     Immutable,
+    /// AA7-T5: content-addressed bytes a signed-in caller reads: kept by
+    /// the browser for a year without asking again, by no shared cache.
+    PrivateImmutable,
 }
 
 /// Routes whose class is not the one [`class_for`]'s rules give, as
@@ -38,6 +45,12 @@ pub static CACHE_CLASSES: &[(&str, &str, CacheClass)] = &[
     // one URL across releases, so it revalidates rather than being
     // immutable.
     ("GET", "/api/v1/openapi.json", CacheClass::PrivateRevalidate),
+    // AA7-T5: an artefact's URL names its content hash.
+    (
+        "GET",
+        "/api/v1/cooked/{kind}/{hash}",
+        CacheClass::PrivateImmutable,
+    ),
 ];
 
 /// Path words that make a read `NoStore`: what a shared or browser cache must
@@ -80,9 +93,11 @@ pub fn class_for(method: &Method, template: &str) -> CacheClass {
     if method != Method::GET && method != Method::HEAD {
         return CacheClass::NoStore;
     }
+    // A path parameter counts by its name: `/pay/{token}` carries a token.
     let sensitive = template
         .split(['/', '-', '_', '.'])
         .chain(template.split('/'))
+        .map(|word| word.trim_matches(['{', '}']))
         .any(|word| NO_STORE_WORDS.contains(&word));
     if sensitive {
         return CacheClass::NoStore;
@@ -100,6 +115,10 @@ fn header_values(class: CacheClass) -> (&'static str, Option<&'static str>) {
         CacheClass::NoStore => ("no-store", None),
         CacheClass::PrivateRevalidate => ("private, no-cache", Some("Authorization, Cookie")),
         CacheClass::Immutable => ("public, max-age=31536000, immutable", None),
+        CacheClass::PrivateImmutable => (
+            "private, max-age=31536000, immutable",
+            Some("Authorization, Cookie"),
+        ),
     }
 }
 
@@ -154,6 +173,11 @@ mod tests {
             CacheClass::NoStore,
             "a write is never cached"
         );
+        assert_eq!(
+            class_for(&Method::GET, "/api/v1/pay/{token}"),
+            CacheClass::NoStore,
+            "a path parameter named for a secret"
+        );
         assert_eq!(header_values(CacheClass::NoStore).0, "no-store");
     }
 
@@ -170,6 +194,26 @@ mod tests {
         let (cache_control, vary) = header_values(CacheClass::PrivateRevalidate);
         assert_eq!(cache_control, "private, no-cache");
         assert_eq!(vary, Some("Authorization, Cookie"));
+    }
+
+    #[test]
+    fn a_cooked_artefact_is_private_and_immutable() {
+        assert_eq!(
+            class_for(&Method::GET, "/api/v1/cooked/{kind}/{hash}"),
+            CacheClass::PrivateImmutable
+        );
+        assert_eq!(
+            class_for(&Method::GET, "/api/v1/cooked/{kind}"),
+            CacheClass::PrivateRevalidate,
+            "the list changes with every publish"
+        );
+        assert_eq!(
+            header_values(CacheClass::PrivateImmutable),
+            (
+                "private, max-age=31536000, immutable",
+                Some("Authorization, Cookie")
+            )
+        );
     }
 
     #[test]

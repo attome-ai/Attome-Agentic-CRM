@@ -1018,3 +1018,114 @@ fn history_uses_paginated_shape() {
         assert_eq!(body["page_size"], 10);
     });
 }
+
+/// AA7-T5: a published option set is listed with its hash-named URL; the
+/// artefact there is cached as private and immutable, comes Brotli-encoded
+/// when the client accepts it, and answers 304 to its own hash. A kind that
+/// is not shared answers 404.
+#[test]
+fn cooked_artefact_is_immutable_and_brotli() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, admin) = seed_admin(&db).await;
+        let (_, user) = seed_user(&db, "cooked").await;
+        let app = full_app(system);
+        let set_id = Uuid::now_v7();
+        // Enough values that the artefact is over the 1 KiB compression floor.
+        let values: Vec<serde_json::Value> = (0..40)
+            .map(|n| {
+                serde_json::json!({ "code": format!("code_{n}"),
+                    "label_en": format!("A fairly long English label for value {n}"), "order": n })
+            })
+            .collect();
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/option_set/{set_id}/commands"),
+                &admin,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": format!("cooked_{}", set_id.simple()),
+                    "commands": [{ "op": "set", "path": "/values", "value": values }]
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "{}", body_json(resp).await);
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/option_set/{set_id}/publish"),
+                &admin,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "{}", body_json(resp).await);
+
+        let resp = app
+            .clone()
+            .oneshot(get_req("/api/v1/cooked/option_set", &user))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let list = body_json(resp).await;
+        let key = format!("option_set:{set_id}");
+        let item = list["items"]
+            .as_array()
+            .expect("items")
+            .iter()
+            .find(|item| item["key"] == key.as_str())
+            .unwrap_or_else(|| panic!("{key} is listed: {list}"))
+            .clone();
+        let url = item["url"].as_str().expect("url").to_owned();
+        let hash = item["hash"].as_str().expect("hash").to_owned();
+
+        let mut fetch = get_req(&url, &user);
+        fetch
+            .headers_mut()
+            .insert("accept-encoding", "br".parse().unwrap());
+        let resp = app.clone().oneshot(fetch).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let header = |name: &str| {
+            resp.headers()
+                .get(name)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or_default()
+                .to_owned()
+        };
+        assert_eq!(
+            header("cache-control"),
+            "private, max-age=31536000, immutable"
+        );
+        assert_eq!(header("content-encoding"), "br");
+        assert_eq!(header("etag"), format!("\"{hash}\""));
+
+        let mut again = get_req(&url, &user);
+        again
+            .headers_mut()
+            .insert("if-none-match", format!("\"{hash}\"").parse().unwrap());
+        let resp = app.clone().oneshot(again).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_MODIFIED);
+
+        let resp = app
+            .clone()
+            .oneshot(get_req(
+                &format!("/api/v1/cooked/option_set/{}", "0".repeat(64)),
+                &user,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND, "an unknown hash");
+        let resp = app
+            .oneshot(get_req("/api/v1/cooked/agent", &user))
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::NOT_FOUND,
+            "agents are not shared"
+        );
+    });
+}

@@ -42,6 +42,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   credentials, tokens, keys, sessions, secrets or exports answer `Cache-Control: no-store`; other
   API reads answer `private, no-cache` with `Vary: Authorization, Cookie`; a handler's own
   `Cache-Control` still wins.
+- Cooked artefacts at hash-named URLs (AA7-T5): `GET /api/v1/cooked/{kind}` lists the published
+  forms or option sets with each artefact's content hash and URL, and `GET
+  /api/v1/cooked/{kind}/{hash}` serves the artefact as `private, max-age=31536000, immutable`
+  (new cache class `private-immutable`), Brotli-encoded when accepted, so a browser downloads each
+  once per version. Other kinds answer 404.
 - Revoked session tokens stay revoked across a restart without Redis (Z4-T5): with
   `cache.backend = memory` the token denylist lives in Postgres (`auth_jti_denylist`, migration
   0114) instead of process memory, still failing closed on a database error; the auth token prune

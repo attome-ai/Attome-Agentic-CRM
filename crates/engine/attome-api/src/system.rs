@@ -165,6 +165,7 @@ impl EngineSystem {
             .merge(crate::slo_admin::routes())
             // AA9-T6: every limit and its use; a caller's own limits.
             .merge(crate::limits_admin::routes())
+            .merge(crate::cooked::routes())
             // C4-T1: mentions in text about a record.
             .merge(crate::mentions::routes())
             // Q20-T5: rate-limit bans (admin-gated in the handlers).

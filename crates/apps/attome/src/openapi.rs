@@ -204,6 +204,9 @@ fn declare_rate_class(doc: &mut utoipa::openapi::OpenApi) {
                     "private-revalidate"
                 }
                 attome_server::middleware::cache_policy::CacheClass::Immutable => "immutable",
+                attome_server::middleware::cache_policy::CacheClass::PrivateImmutable => {
+                    "private-immutable"
+                }
             };
             let extra: Extensions = [
                 ("x-rate-class", serde_json::Value::from(class)),
