@@ -6793,6 +6793,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/templates/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["preview_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/themes": {
         parameters: {
             query?: never;
@@ -28356,6 +28372,11 @@ export interface components {
             /** Format: double */
             threshold?: number | null;
         };
+        /**
+         * @description The output a preview renders.
+         * @enum {string}
+         */
+        PreviewOutput: "html" | "text";
         /** @description B5-T2: one record as the edit would change it. */
         PreviewRecord: {
             /** @description The same attributes after the edit. */
@@ -28364,6 +28385,29 @@ export interface components {
             before: Record<string, never>;
             /** Format: uuid */
             id: string;
+        };
+        /** @description `POST /api/v1/admin/templates/preview`'s body. */
+        PreviewRequest: {
+            /** @description The record's entity (logical name). */
+            entity: string;
+            /** @description The render's locale, e.g. `ar-SA`; the deployment's when unset. */
+            language?: string | null;
+            output?: components["schemas"]["PreviewOutput"];
+            /** Format: uuid */
+            record_id: string;
+            /** @description The template source. */
+            template: string;
+        };
+        /** @description The rendered preview. */
+        PreviewResponse: {
+            rendered: string;
+            warnings: components["schemas"]["PreviewWarning"][];
+        };
+        /** @description One field the template names that rendered empty for this caller. */
+        PreviewWarning: {
+            field: string;
+            /** @description `unreadable`: the caller may not read it on this record. */
+            reason: string;
         };
         PriceBreak: {
             discount_percent?: string | null;
@@ -57738,6 +57782,66 @@ export interface operations {
             };
             /** @description The tag is not merged */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The rendered template and the fields that rendered empty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller may not read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The template does not compile or render; the message names where */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

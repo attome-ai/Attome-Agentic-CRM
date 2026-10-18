@@ -36622,6 +36622,89 @@
         }
       }
     },
+    "/api/v1/admin/templates/preview": {
+      "post": {
+        "tags": [
+          "docgen"
+        ],
+        "operationId": "preview_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The rendered template and the fields that rendered empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller may not read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The template does not compile or render; the message names where",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "renders a preview; writes nothing",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
     "/api/v1/admin/themes": {
       "get": {
         "tags": [
@@ -44684,6 +44767,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -44723,7 +44809,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/auth/identity-link-callback/oidc/{provider}": {
@@ -44790,7 +44879,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/auth/identity-link/google": {
@@ -45026,6 +45118,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45063,6 +45158,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45336,6 +45434,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45383,6 +45484,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45570,6 +45674,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45613,6 +45720,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45655,7 +45765,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/auth/oidc/{provider}/callback": {
@@ -45737,6 +45850,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45779,7 +45895,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/auth/refresh": {
@@ -45805,6 +45924,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45858,6 +45980,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45897,7 +46022,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/auth/reset-confirm": {
@@ -45932,6 +46060,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -45975,6 +46106,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -46103,7 +46237,10 @@
           "302": {
             "description": "Redirect to the frontend: `step_up=<operation>` on success, `step_up_error=1` otherwise"
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/auth/step-up/{operation}": {
@@ -46577,6 +46714,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -47067,6 +47207,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit-exempt": {
           "note": "unauthenticated gateway callback; the applied payment change is audited by the job",
           "reason": "delegated",
@@ -48787,7 +48930,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/branding/me": {
@@ -48867,7 +49013,10 @@
           "304": {
             "description": "Unchanged since the ETag the caller holds"
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/calendars/{id}/calculate": {
@@ -50224,6 +50373,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -50352,7 +50504,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/content/vote": {
@@ -50403,6 +50558,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit-exempt": {
           "note": "an anonymous, rate-limited helpful/not-helpful vote on a published page; no identity, no business or security effect",
           "reason": "telemetry",
@@ -52633,6 +52791,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -55104,6 +55265,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -55175,7 +55339,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/openapi.json": {
@@ -55294,7 +55461,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/pay/{token}/checkout": {
@@ -55376,6 +55546,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit-exempt": {
           "note": "public payer action; payment audited on success",
           "reason": "delegated",
@@ -57173,6 +57346,17 @@
             "description": "Invalid filter, ordering, or pagination contract"
           }
         },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          },
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit-exempt": {
           "note": "executes a stored query against the read-only pool; persists nothing",
           "reason": "read_only",
@@ -58051,7 +58235,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ]
       }
     },
     "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}": {
@@ -58113,7 +58302,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ]
       }
     },
     "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}/email": {
@@ -58196,6 +58390,11 @@
             }
           }
         },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -58281,6 +58480,11 @@
             }
           }
         },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -58362,6 +58566,11 @@
             }
           }
         },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -58447,6 +58656,11 @@
             }
           }
         },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -58541,6 +58755,11 @@
             }
           }
         },
+        "security": [
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -61648,6 +61867,17 @@
             "description": "Invalid entity, group_by, metric, or filter"
           }
         },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          },
+          {
+            "s2s_hmac": []
+          }
+        ],
         "x-audit-exempt": {
           "note": "computes grouped metric buckets over a read privilege check; persists nothing",
           "reason": "read_only",
@@ -62121,7 +62351,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/service-portal/status": {
@@ -62162,7 +62395,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/api/v1/settings/me": {
@@ -62333,7 +62569,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       },
       "post": {
         "tags": [
@@ -62392,6 +62631,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -73697,7 +73939,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/health/dependencies": {
@@ -73771,7 +74016,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/health/startup": {
@@ -73798,7 +74046,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/version": {
@@ -73818,7 +74069,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/{keyword}/api/v1/auth/email/verify": {
@@ -73884,6 +74138,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -73947,6 +74204,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74017,6 +74277,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74064,6 +74327,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74144,6 +74410,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -74217,6 +74488,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -74277,6 +74553,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -74357,6 +74638,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -74427,6 +74713,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74501,6 +74790,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74582,6 +74874,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74640,7 +74935,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {}
+        ]
       }
     },
     "/{keyword}/api/v1/auth/refresh": {
@@ -74692,6 +74990,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74755,6 +75056,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74825,6 +75129,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74895,6 +75202,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -74958,6 +75268,9 @@
             }
           }
         },
+        "security": [
+          {}
+        ],
         "x-audit": {
           "events": [
             {
@@ -75027,7 +75340,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       },
       "patch": {
         "tags": [
@@ -75130,6 +75448,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75189,7 +75512,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -75252,6 +75580,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75312,6 +75645,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75385,6 +75723,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75447,7 +75790,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       }
     },
     "/{keyword}/api/v1/me/sessions/end-others": {
@@ -75492,6 +75840,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75555,6 +75908,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75624,7 +75982,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       }
     },
     "/{keyword}/api/v1/metadata/{entity}": {
@@ -75694,7 +76057,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       }
     },
     "/{keyword}/api/v1/records/{entity}": {
@@ -75802,7 +76170,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -75907,6 +76280,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -75985,7 +76363,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -76066,6 +76449,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -76196,6 +76584,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit": {
           "events": [
             {
@@ -76305,7 +76698,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       }
     },
     "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session": {
@@ -76425,6 +76823,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit-exempt": {
           "note": "only records upload intent; the scan result (FileScanned) and the record write naming the file (Entity/Update) are audited on their own paths",
           "reason": "delegated",
@@ -76518,7 +76921,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ]
       }
     },
     "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session/{session_id}/finalize": {
@@ -76618,6 +77026,11 @@
             }
           }
         },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
         "x-audit-exempt": {
           "note": "moves the session to uploaded and enqueues the scan; the scan result (FileScanned) and the record write naming the file (Entity/Update) are audited on their own paths",
           "reason": "delegated",
@@ -112434,6 +112847,14 @@
         },
         "additionalProperties": false
       },
+      "PreviewOutput": {
+        "type": "string",
+        "description": "The output a preview renders.",
+        "enum": [
+          "html",
+          "text"
+        ]
+      },
       "PreviewRecord": {
         "type": "object",
         "description": "B5-T2: one record as the edit would change it.",
@@ -112454,6 +112875,75 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PreviewRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/templates/preview`'s body.",
+        "required": [
+          "template",
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The record's entity (logical name)."
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The render's locale, e.g. `ar-SA`; the deployment's when unset."
+          },
+          "output": {
+            "$ref": "#/components/schemas/PreviewOutput"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "template": {
+            "type": "string",
+            "description": "The template source."
+          }
+        }
+      },
+      "PreviewResponse": {
+        "type": "object",
+        "description": "The rendered preview.",
+        "required": [
+          "rendered",
+          "warnings"
+        ],
+        "properties": {
+          "rendered": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewWarning"
+            }
+          }
+        }
+      },
+      "PreviewWarning": {
+        "type": "object",
+        "description": "One field the template names that rendered empty for this caller.",
+        "required": [
+          "field",
+          "reason"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "description": "`unreadable`: the caller may not read it on this record."
           }
         }
       },
