@@ -5,6 +5,7 @@ members = [
     "crates/foundation/attome-config",
     "crates/foundation/attome-testkit",
     "crates/foundation/attome-db",
+    "crates/foundation/attome-outbound",
     "crates/foundation/attome-cache",
     "crates/foundation/attome-html",
     "crates/foundation/attome-calendar",
@@ -89,6 +90,7 @@ attome-types   = { path = "crates/foundation/attome-types" }
 attome-config  = { path = "crates/foundation/attome-config" }
 attome-testkit = { path = "crates/foundation/attome-testkit" }
 attome-db      = { path = "crates/foundation/attome-db" }
+attome-outbound = { path = "crates/foundation/attome-outbound" }
 attome-cache     = { path = "crates/foundation/attome-cache" }
 attome-html      = { path = "crates/foundation/attome-html" }
 attome-calendar  = { path = "crates/foundation/attome-calendar" }

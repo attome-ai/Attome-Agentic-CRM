@@ -1394,6 +1394,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "attome-outbound"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "attome-partner"
 version = "0.1.0"
 dependencies = [
