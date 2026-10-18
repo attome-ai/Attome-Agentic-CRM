@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { leadingZeroBits, solvePow } from './pow';
 
 describe('proof-of-work solver (Q20-T3)', () => {
