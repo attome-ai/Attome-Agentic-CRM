@@ -1549,6 +1549,7 @@ mod tests {
             in_reply_to: None,
             references: None,
             communication_id: Some(Uuid::now_v7()),
+            attachments: Vec::new(),
         })));
     }
 
@@ -1565,6 +1566,7 @@ mod tests {
             in_reply_to: None,
             references: None,
             communication_id: None,
+            attachments: Vec::new(),
         })));
     }
 
@@ -2410,6 +2412,7 @@ mod tests {
                 in_reply_to: None,
                 references: None,
                 communication_id: None,
+                attachments: Vec::new(),
             }))
             .priority(),
             JobPriority::High

@@ -34,6 +34,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- After an invoice is issued, its bilingual PDF (Arabic and English side by side, seller and buyer
+  VAT numbers, Gregorian and Hijri issue date) is rendered through the docgen sidecar and attached to
+  the new `invoice.document` field, then emailed to the invoice's contact, which moves it to `sent`;
+  sending waits for e-invoicing clearance when there is one. New settings `billing.seller_name` and
+  `billing.seller_vat_number`. Emails can now carry attachments (`EmailMessage.attachments`), and
+  other engines can render their own HTML to a file field (`attome_docgen::generate`).
 - Billing agent actions: `billing.find_invoices`, `billing.account_balance` and `billing.explain_tax`
   read as the person (the tax facts come from the tax engine), and `billing.draft_invoice` and
   `billing.draft_credit_note` file drafts after a person confirms. No action issues, cancels, issues

@@ -65,9 +65,15 @@ pub struct IssueOutcome {
 }
 
 /// Work that follows an issue, run by the `BillingAfterIssue` job in
-/// registration order. A failed hook fails the job, which retries.
+/// [`IssueHook::order`] (e-invoicing first, then the document, then
+/// sending). A failed hook stops the run and fails the job, which retries;
+/// every hook is idempotent, so the ones that already ran do nothing then.
 pub trait IssueHook: Send + Sync {
     fn name(&self) -> &'static str;
+    /// Lower runs first.
+    fn order(&self) -> u16 {
+        100
+    }
     fn after_issue<'a>(
         &'a self,
         state: &'a EngineState,
@@ -91,7 +97,8 @@ pub fn register_issue_hook(hook: Arc<dyn IssueHook>) {
 
 /// Runs the registered hooks for one issued invoice (the job's body).
 pub async fn run_after_issue(state: &EngineState, invoice_id: Uuid) -> Result<(), AppError> {
-    let list: Vec<Arc<dyn IssueHook>> = hooks().read().map(|l| l.clone()).unwrap_or_default();
+    let mut list: Vec<Arc<dyn IssueHook>> = hooks().read().map(|l| l.clone()).unwrap_or_default();
+    list.sort_by_key(|h| h.order());
     for hook in list {
         hook.after_issue(state, invoice_id).await?;
     }

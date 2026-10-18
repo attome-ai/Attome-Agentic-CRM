@@ -31,6 +31,7 @@ impl std::fmt::Debug for EmailMessage {
             )
             .field("delivery_id", &self.delivery_id)
             .field("communication_id", &self.communication_id)
+            .field("attachments", &self.attachments.len())
             .finish_non_exhaustive()
     }
 }
@@ -94,6 +95,34 @@ pub struct EmailMessage {
     /// same forward-compat reasoning as the other optional fields.
     #[serde(default)]
     pub communication_id: Option<uuid::Uuid>,
+    /// Files sent with the message (F4-T13: an issued invoice's PDF and
+    /// e-invoice XML), carried in the job payload itself so the send needs
+    /// no storage access. `#[serde(default)]`, same forward-compat reasoning
+    /// as the other optional fields; capped by [`MAX_ATTACHMENT_BYTES`].
+    #[serde(default)]
+    pub attachments: Vec<EmailAttachment>,
+}
+
+/// The most attachment bytes one message carries (all files together).
+pub const MAX_ATTACHMENT_BYTES: usize = 10 * 1024 * 1024;
+
+/// One file sent with a message.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EmailAttachment {
+    pub filename: String,
+    /// A MIME type, e.g. `application/pdf`.
+    pub content_type: String,
+    /// The file's bytes, standard base64.
+    pub content_base64: String,
+}
+
+impl std::fmt::Debug for EmailAttachment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EmailAttachment")
+            .field("content_type", &self.content_type)
+            .field("base64_len", &self.content_base64.len())
+            .finish_non_exhaustive()
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -117,6 +146,7 @@ mod tests {
             in_reply_to: Some("<0@example.invalid>".to_string()),
             references: Some("<0@example.invalid>".to_string()),
             communication_id: None,
+            attachments: Vec::new(),
         }
     }
 

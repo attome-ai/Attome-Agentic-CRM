@@ -76,6 +76,7 @@ fn dummy_email_job(to: &str) -> TestJob {
         in_reply_to: None,
         references: None,
         communication_id: None,
+        attachments: Vec::new(),
     }))
 }
 

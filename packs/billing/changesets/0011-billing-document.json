@@ -1,0 +1,62 @@
+{
+  "author": "packs",
+  "checksum": "sha256:15f89eec141145f1dee73113e5a7f03b60e3aac429973820ab373974980715ab",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Invoice documents (F4-T13): an issued invoice carries its bilingual PDF, rendered after issue.",
+  "format": "attome-changeset/v1",
+  "id": "01a14c74-c8e0-76df-9148-0ebca6cba129",
+  "layer": "product",
+  "name": "billing-document",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Document",
+          "field_type": "file",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "document",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "invoice",
+        "field": "document"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.document",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 11,
+  "title": "Pack: the invoice document"
+}

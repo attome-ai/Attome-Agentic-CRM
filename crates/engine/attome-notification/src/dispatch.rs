@@ -634,6 +634,7 @@ pub async fn create_dispatch_in_tx(
                 in_reply_to: None,
                 references: None,
                 communication_id: None,
+                attachments: Vec::new(),
             })),
             &dedup_key,
         )
@@ -979,6 +980,7 @@ async fn send_email(
             in_reply_to: None,
             references: None,
             communication_id: None,
+            attachments: Vec::new(),
         },
     )
     .await

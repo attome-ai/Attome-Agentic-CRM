@@ -293,6 +293,7 @@ pub(super) async fn register(
                 in_reply_to: None,
                 references: None,
                 communication_id: None,
+                attachments: Vec::new(),
             })),
         )
         .await
@@ -914,6 +915,7 @@ pub(super) async fn reset_request(
                 in_reply_to: None,
                 references: None,
                 communication_id: None,
+                attachments: Vec::new(),
             })),
         )
         .await

@@ -670,7 +670,7 @@ async fn attach_generated_file(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn try_attach_generated_file(
+pub(crate) async fn try_attach_generated_file(
     state: &EngineState,
     security: &SecurityContext,
     entity: &str,

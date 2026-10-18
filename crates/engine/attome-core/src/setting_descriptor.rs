@@ -340,6 +340,10 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "billing.issue_approval_threshold" => {
             "الفواتير التي يتجاوز إجماليها هذا المبلغ تنتظر موافقة قبل إصدارها؛ صفر يعني الإصدار بلا موافقة."
         }
+        "billing.seller_name" => "اسم المنشأة القانوني، يُطبع بائعًا على كل فاتورة.",
+        "billing.seller_vat_number" => {
+            "رقم تسجيل المنشأة في ضريبة القيمة المضافة، يُطبع على كل فاتورة."
+        }
         "billing.write_off_approval_threshold" => {
             "الشطب الذي يتجاوز هذا المبلغ ينتظر موافقة قبل تنفيذه؛ صفر يعني الشطب بلا موافقة."
         }

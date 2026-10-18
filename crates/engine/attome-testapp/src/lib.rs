@@ -63,8 +63,9 @@ pub fn test_config() -> AppConfig {
                 "metadata_registry_enabled": false
             }},
             "storage": {{
-                "s3_endpoint": "http://localhost:9000", "s3_public_endpoint": "",
-                "s3_region": "us-east-1", "s3_access_key": "test", "s3_secret_key": "test",
+                "s3_endpoint": "{s3_endpoint}", "s3_public_endpoint": "",
+                "s3_region": "us-east-1", "s3_access_key": "{s3_access_key}",
+                "s3_secret_key": "{s3_secret_key}",
                 "s3_bucket": "attome-test", "s3_use_path_style": true, "s3_verify_ssl": false
             }},
             "auth": {{
@@ -93,6 +94,12 @@ pub fn test_config() -> AppConfig {
         }}"#,
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
+        // The object store CI runs (and `attome_testkit::s3_or_skip` checks
+        // for); `TEST_S3_ENDPOINT` moves it off the dev store's port.
+        s3_endpoint = std::env::var("TEST_S3_ENDPOINT")
+            .unwrap_or_else(|_| "http://localhost:9000".into()),
+        s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
+        s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
         jwt_secret = THROWAWAY_JWT_SECRET,
         issuer = ISSUER,
     );

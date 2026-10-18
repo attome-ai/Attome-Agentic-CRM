@@ -5,6 +5,7 @@
 //! tasks add it. Gated on the `billing` module.
 
 pub mod deposit;
+pub mod document;
 pub mod invoice;
 pub mod issue;
 pub mod lookup;

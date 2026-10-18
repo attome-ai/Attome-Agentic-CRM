@@ -100,6 +100,7 @@ async fn send_batch(
                     in_reply_to: None,
                     references: None,
                     communication_id: None,
+                    attachments: Vec::new(),
                 })),
             )
             .await

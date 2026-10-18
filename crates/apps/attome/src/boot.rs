@@ -1008,6 +1008,11 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     attome_profiler::record("boot.seeds_pre_build", t_seeds_pre_build.elapsed());
 
     let t_system_build = std::time::Instant::now();
+    // F4-T13: an issued invoice's PDF (through the docgen render sidecar)
+    // and its sending, run by the `BillingAfterIssue` job.
+    attome_billing::document::register_hooks(std::sync::Arc::new(
+        attome_docgen::generate::SidecarRenderer,
+    ));
     let system = register_engines(EngineSystem::builder(state))
         .build()
         .await?;

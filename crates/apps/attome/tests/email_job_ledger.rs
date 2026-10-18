@@ -192,6 +192,7 @@ async fn queued(db: &attome_db::DbPool) -> (Uuid, attome_email::EmailMessage) {
         in_reply_to: None,
         references: None,
         communication_id: None,
+        attachments: Vec::new(),
     };
     (id, message)
 }

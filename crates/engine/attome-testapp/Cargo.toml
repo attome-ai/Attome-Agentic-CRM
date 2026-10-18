@@ -19,6 +19,7 @@ attome-config.workspace   = true
 attome-contract.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
+attome-docgen.workspace   = true
 attome-modules.workspace  = true
 attome-records.workspace  = true
 attome-sales.workspace    = true

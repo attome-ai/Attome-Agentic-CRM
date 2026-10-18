@@ -44,5 +44,5 @@ pub use health::{
     CAPABILITY_PROBE_TIMEOUT, EmailHealth, health_check, health_check_authenticated,
     health_check_with_timeout,
 };
-pub use message::EmailMessage;
+pub use message::{EmailAttachment, EmailMessage, MAX_ATTACHMENT_BYTES};
 pub use sender::{catch_all, send};

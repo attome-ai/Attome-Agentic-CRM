@@ -415,6 +415,7 @@ pub async fn write_communication(
                 in_reply_to: parent_message_id.map(|s| s.to_string()),
                 references: references.clone(),
                 communication_id: Some(communication_id),
+                attachments: Vec::new(),
             }));
             attome_jobs::enqueue_in_tx(&mut tx, job)
                 .await

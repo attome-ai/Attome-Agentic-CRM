@@ -39,6 +39,7 @@
 //! reasoning `report_run` documents for itself — system-written
 //! execution history, never admin-authored metadata.
 pub mod auth;
+pub mod generate;
 pub mod merge;
 pub mod model;
 pub mod render;

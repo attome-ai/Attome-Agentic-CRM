@@ -229,6 +229,7 @@ pub(super) async fn create_invitation(
             in_reply_to: None,
             references: None,
             communication_id: None,
+            attachments: Vec::new(),
         }));
         attome_jobs::enqueue_in_tx(&mut tx, job)
             .await

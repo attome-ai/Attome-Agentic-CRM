@@ -166,6 +166,7 @@ fn message_to(recipient: &str) -> attome_email::EmailMessage {
         in_reply_to: None,
         references: None,
         communication_id: None,
+        attachments: Vec::new(),
     }
 }
 

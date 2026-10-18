@@ -49,6 +49,22 @@ fn records_settings() -> Vec<SettingDescriptor> {
             || json!(0),
         ),
         SettingDescriptor::new(
+            "billing.seller_name",
+            "The deployment's legal name, printed as the seller on every invoice.",
+            || json!({"type": "string", "maxLength": 200}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
+            "billing.seller_vat_number",
+            "The deployment's VAT registration number, printed as the seller's on every invoice.",
+            || json!({"type": "string", "maxLength": 30}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "billing.write_off_approval_threshold",
             "Write-offs larger than this wait for an approval before they are applied; \
          zero writes off without one.",

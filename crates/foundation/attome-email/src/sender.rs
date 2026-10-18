@@ -6,7 +6,7 @@ use attome_config::EmailSection;
 use attome_types::text::normalize_email;
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
-    message::{MultiPart, SinglePart},
+    message::{Attachment, MultiPart, SinglePart, header::ContentType},
     transport::smtp::Error as SmtpError,
     transport::smtp::authentication::Credentials,
 };
@@ -176,6 +176,38 @@ fn build_email(cfg: &EmailSection, msg: &EmailMessage) -> Result<Message, SendEr
     }
 
     let text_body = msg.text_body.clone();
+    if !msg.attachments.is_empty() {
+        // F4-T13: the body, then each file, as one mixed message.
+        let body = match &msg.html_body {
+            Some(html) => MultiPart::alternative()
+                .singlepart(SinglePart::plain(text_body))
+                .singlepart(SinglePart::html(html.clone())),
+            None => MultiPart::mixed().singlepart(SinglePart::plain(text_body)),
+        };
+        let mut mixed = MultiPart::mixed().multipart(body);
+        let mut total = 0usize;
+        for file in &msg.attachments {
+            let bytes = base64::Engine::decode(
+                &base64::engine::general_purpose::STANDARD,
+                file.content_base64.as_bytes(),
+            )
+            .map_err(|e| SendError::InvalidAddress(format!("attachment {}: {e}", file.filename)))?;
+            total += bytes.len();
+            if total > crate::message::MAX_ATTACHMENT_BYTES {
+                return Err(SendError::InvalidAddress(
+                    "attachments exceed the per-message cap".into(),
+                ));
+            }
+            let content_type = ContentType::parse(&file.content_type).map_err(|e| {
+                SendError::InvalidAddress(format!("attachment type {}: {e}", file.content_type))
+            })?;
+            mixed =
+                mixed.singlepart(Attachment::new(file.filename.clone()).body(bytes, content_type));
+        }
+        return builder
+            .multipart(mixed)
+            .map_err(|e| SendError::InvalidAddress(e.to_string()));
+    }
     let email = match &msg.html_body {
         Some(html) => builder.multipart(
             MultiPart::alternative()
@@ -524,7 +556,27 @@ mod tests {
             in_reply_to: None,
             references: None,
             communication_id: None,
+            attachments: Vec::new(),
         }
+    }
+
+    /// F4-T13: files go out as a mixed message after the body; a file that
+    /// does not decode is refused before any connect.
+    #[test]
+    fn attachments_go_out_as_a_mixed_message() {
+        let mut msg = test_message();
+        msg.attachments = vec![crate::message::EmailAttachment {
+            filename: "INV-2026-000001.pdf".into(),
+            content_type: "application/pdf".into(),
+            content_base64: "JVBERi0xLjQK".into(),
+        }];
+        let raw = String::from_utf8(build_email(&test_cfg(), &msg).expect("build").formatted())
+            .expect("utf-8");
+        assert!(raw.contains("multipart/mixed"), "{raw}");
+        assert!(raw.contains("INV-2026-000001.pdf"), "{raw}");
+        assert!(raw.contains("application/pdf"), "{raw}");
+        msg.attachments[0].content_base64 = "not base64!".into();
+        assert!(build_email(&test_cfg(), &msg).is_err());
     }
 
     /// Z8-T6: in test mode the message goes to the catch-all, and its real
