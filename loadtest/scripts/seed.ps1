@@ -31,10 +31,22 @@
 # Re-running is safe: registration/entity-creation 409s are caught and
 # treated as "already seeded", not fatal. To start over, `docker compose
 # -f docker-compose.loadtest.yml down -v` first.
+#
+# AA1-T2: -Profile (default solo) reads records_per_entity, users and roles
+# from loadtest/profiles.json. records_per_entity sizes loadtest_bulk unless
+# -RowCount is passed explicitly. The profile's users are registered through
+# the API, its roles created through the admin API and handed out
+# round-robin, and each 500-record bulk chunk is posted by the next user in
+# turn, so record ownership (the creator's share, D-133) is spread across
+# them and record-level security has real work to do. A summary goes to
+# loadtest/results/seed-<profile>.json; a re-run whose summary still matches
+# the API's row count skips seeding, and one that finds fewer rows seeds only
+# the difference. -DryRun prints the plan and exits without any HTTP call.
 param(
-    [int]$RowCount = 5000,       # plan's ask is 1,000,000 (§3) — see README for why
-                                   # this default is smaller for a single dev machine;
-                                   # pass -RowCount 1000000 on a real dedicated host.
+    [string]$Profile = "solo",
+    [switch]$DryRun,
+    [int]$RowCount = 5000,       # overridden by the profile's records_per_entity
+                                   # unless passed explicitly.
     [int]$MutRecordCount = 300,
     # P1.8d step 10 — dedicated target for the schema_change_ddl.js exercise.
     # Default stays under SCHEMA_CHANGE_INLINE_ROW_LIMIT (10,000, admin.rs)
@@ -45,10 +57,44 @@ param(
     [string]$AdminEmail = "loadtest-admin@attome.local",
     [string]$AdminPassword = "Loadtest-Admin-Pw1",
     [string]$TestEmail = "loadtest-user@attome.local",
-    [string]$TestPassword = "Loadtest-User-Pw1"
+    [string]$TestPassword = "Loadtest-User-Pw1",
+    [string]$ProfileUserPassword = "Loadtest-Profile-Pw1"
 )
 . "$PSScriptRoot/common.ps1"
+
+# AA1-T2: the profile.
+$profiles = Get-Content -Raw -Path (Join-Path $script:LoadtestDir "profiles.json") | ConvertFrom-Json
+$profileSpec = $profiles.$Profile
+if (-not $profileSpec -or $Profile -like "_*") {
+    $names = ($profiles.PSObject.Properties.Name | Where-Object { $_ -notlike "_*" }) -join ", "
+    throw "Unknown profile '$Profile'; profiles.json has: $names"
+}
+if (-not $PSBoundParameters.ContainsKey("RowCount")) {
+    $RowCount = [int]$profileSpec.records_per_entity
+}
+$profileUsers = [int]$profileSpec.users
+$profileRoles = [int]$profileSpec.roles
+$plannedCounts = [ordered]@{
+    loadtest_wide = 0
+    loadtest_bulk = $RowCount
+    loadtest_mut  = $MutRecordCount
+    loadtest_ddl  = $DdlRowCount
+}
+
+if ($DryRun) {
+    Write-Host "Profile '$Profile' ($($profileSpec.machine)), dry run: no HTTP call is made."
+    foreach ($entity in $plannedCounts.Keys) {
+        Write-Host ("  {0,-14} {1,12:N0} records" -f $entity, $plannedCounts[$entity])
+    }
+    Write-Host ("  users          {0,12:N0} (plus the admin and the test user)" -f $profileUsers)
+    Write-Host ("  roles          {0,12:N0}" -f $profileRoles)
+    Write-Host ("  bulk chunks    {0,12:N0} of up to 500 records" -f [Math]::Ceiling($RowCount / 500))
+    exit 0
+}
+
 Assert-LoadtestSafety
+$seedStarted = Get-Date
+$summaryPath = Join-Path $script:ResultsDir "seed-$Profile.json"
 
 function Invoke-Api {
     param($Method, $BaseUrl, $Path, $CookieJar = $null, $Body = $null, [switch]$AllowConflict)
@@ -115,6 +161,12 @@ $baseUrl = "http://127.0.0.1:$port"
 
 Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/auth/register" -Body @{ email = $AdminEmail; password = $AdminPassword } -AllowConflict | Out-Null
 Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/auth/register" -Body @{ email = $TestEmail; password = $TestPassword } -AllowConflict | Out-Null
+# AA1-T2: the profile's users, through the same registration API.
+$profileEmails = @(1..$profileUsers | ForEach-Object { "loadtest-p{0:D5}@attome.local" -f $_ })
+foreach ($email in $profileEmails) {
+    Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/auth/register" -Body @{ email = $email; password = $ProfileUserPassword } -AllowConflict | Out-Null
+}
+Write-Host "  registered $($profileEmails.Count) profile user(s)."
 Stop-LoadtestNodes
 
 Write-Host "=== Phase 2: reboot with bootstrap_admin_email set so the admin grant lands ==="
@@ -126,6 +178,62 @@ $adminCookieJar = Join-Path $script:GenDir "admin-cookies.txt"
 Remove-Item $adminCookieJar -ErrorAction SilentlyContinue
 Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/auth/login" -CookieJar $adminCookieJar `
     -Body @{ email = $AdminEmail; password = $AdminPassword } | Out-Null
+
+# AA1-T2: the rows already there, by the previous run's stored query.
+function Get-BulkRowCount {
+    param($QueryId)
+    if (-not $QueryId) { return $null }
+    try {
+        $page = Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/query/execute" -CookieJar $adminCookieJar `
+            -Body @{ query_id = $QueryId; page = 1; page_size = 1; include_total = $true }
+        return [long]$page.data.total
+    } catch {
+        return $null
+    }
+}
+$previous = $null
+if (Test-Path $summaryPath) {
+    $previous = Get-Content -Raw -Path $summaryPath | ConvertFrom-Json
+}
+$existingBulk = if ($previous) { Get-BulkRowCount -QueryId $previous.bulk_query_id } else { $null }
+if ($previous -and $null -ne $existingBulk -and
+    $existingBulk -eq [long]$previous.counts.loadtest_bulk -and
+    $existingBulk -eq $RowCount -and
+    [int]$previous.users -eq $profileUsers -and [int]$previous.roles -eq $profileRoles) {
+    Write-Host "Seed for profile '$Profile' already matches the API ($existingBulk loadtest_bulk rows); skipping."
+    Stop-LoadtestNodes
+    exit 0
+}
+if ($null -eq $existingBulk) { $existingBulk = 0 }
+
+Write-Host "=== Roles for profile '$Profile' ($profileRoles), handed out round-robin ==="
+$roleIds = @()
+for ($r = 1; $r -le $profileRoles; $r++) {
+    $roleName = "loadtest-role-{0:D3}" -f $r
+    $role = Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/admin/security/roles" -CookieJar $adminCookieJar -AllowConflict `
+        -Body @{ name = $roleName; description = "AA1-T2 load-test role" }
+    if (-not $role) {
+        $page = 1
+        do {
+            $list = Invoke-Api -Method Get -BaseUrl $baseUrl -Path "/api/v1/admin/security/roles?page=$page&page_size=200" -CookieJar $adminCookieJar
+            $role = $list.items | Where-Object { $_.name -eq $roleName } | Select-Object -First 1
+            $page++
+        } while (-not $role -and $list.items.Count -eq 200)
+    }
+    $roleIds += $role.id
+}
+$userIds = @{}
+for ($u = 0; $u -lt $profileEmails.Count; $u++) {
+    $email = $profileEmails[$u]
+    $found = Invoke-Api -Method Get -BaseUrl $baseUrl -Path "/api/v1/admin/security/users/lookup?email=$([uri]::EscapeDataString($email))" -CookieJar $adminCookieJar
+    $user = @($found) | Where-Object { $_.email -eq $email } | Select-Object -First 1
+    if (-not $user) { throw "profile user $email was registered but the lookup cannot find it" }
+    $userIds[$email] = $user.id
+    if ($roleIds.Count -gt 0) {
+        Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/admin/security/users/$($user.id)/roles" -CookieJar $adminCookieJar -AllowConflict `
+            -Body @{ role_id = $roleIds[$u % $roleIds.Count]; reason = "AA1-T2 load-test seed" } | Out-Null
+    }
+}
 
 Write-Host "=== Provisioning loadtest_wide (41 text fields) ==="
 $wide = Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/admin/entities" -CookieJar $adminCookieJar -AllowConflict `
@@ -159,27 +267,56 @@ Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/admin/entities/$($bulk.
 # running this against a live worker).
 Start-Sleep -Milliseconds 750
 
+# AA1-T2: each profile user may create and bulk-load loadtest_bulk, so the
+# chunks below can be posted as them.
+foreach ($email in $profileEmails) {
+    foreach ($action in @("read", "create", "bulk")) {
+        Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/admin/security/grants" -CookieJar $adminCookieJar -AllowConflict `
+            -Body @{ user_email = $email; privilege_key = "loadtest_bulk.$action" } | Out-Null
+    }
+}
+# One cookie jar per profile user, logged in on first use.
+$userJars = @{}
+function Get-UserJar {
+    param($Email)
+    if (-not $userJars.ContainsKey($Email)) {
+        $jar = Join-Path $script:GenDir ("user-cookies-{0}.txt" -f ($Email -replace '[^A-Za-z0-9]', '_'))
+        Remove-Item $jar -ErrorAction SilentlyContinue
+        Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/auth/login" -CookieJar $jar `
+            -Body @{ email = $Email; password = $ProfileUserPassword } | Out-Null
+        $userJars[$Email] = $jar
+    }
+    return $userJars[$Email]
+}
+
 # MAX_BULK_RECORDS is 500 (D-098) -- this used to be 5000 when this script
 # was first written, before that cap was lowered; found by actually
 # re-running the harness (a bulk POST above 500 now 422s).
 $chunkSize = 500
-$remaining = $RowCount
-$seq = 0
+# AA1-T2: a re-run seeds only the rows still missing.
+$remaining = [Math]::Max(0, $RowCount - $existingBulk)
+$seq = [int]$existingBulk
 $jobIds = @()
+$chunk = 0
 while ($remaining -gt 0) {
     $n = [Math]::Min($chunkSize, $remaining)
     $records = 1..$n | ForEach-Object { $seq++; @{ data = @{ title = "bulk-row-$seq"; seq = $seq } } }
-    $resp = Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/loadtest_bulk/bulk" -CookieJar $adminCookieJar `
+    # AA1-T2: round-robin across the profile's users; the admin when the
+    # profile has none.
+    $jar = if ($profileEmails.Count -gt 0) { Get-UserJar -Email $profileEmails[$chunk % $profileEmails.Count] } else { $adminCookieJar }
+    $resp = Invoke-Api -Method Post -BaseUrl $baseUrl -Path "/api/v1/loadtest_bulk/bulk" -CookieJar $jar `
         -Body @{ operation = "create"; records = $records }
-    $jobIds += $resp.id
+    $jobIds += [pscustomobject]@{ id = $resp.id; jar = $jar }
     $remaining -= $n
+    $chunk++
     Write-Host "  enqueued chunk of $n (seq up to $seq), $remaining remaining"
 }
 Write-Host "  waiting for $($jobIds.Count) bulk job(s) to complete..."
-foreach ($jobId in $jobIds) {
+foreach ($job in $jobIds) {
+    $jobId = $job.id
     do {
         Start-Sleep -Milliseconds 500
-        $status = Invoke-Api -Method Get -BaseUrl $baseUrl -Path "/api/v1/loadtest_bulk/bulk/$jobId" -CookieJar $adminCookieJar
+        $status = Invoke-Api -Method Get -BaseUrl $baseUrl -Path "/api/v1/loadtest_bulk/bulk/$jobId" -CookieJar $job.jar
     } while ($status.status -notin @("completed", "failed"))
     if ($status.status -eq "failed" -or $status.failed -gt 0) {
         Write-Warning "  bulk job ${jobId}: status=$($status.status) succeeded=$($status.succeeded) failed=$($status.failed)"
@@ -284,7 +421,28 @@ foreach ($entity in @("loadtest_bulk", "loadtest_mut", "loadtest_ddl")) {
     }
 }
 
+# AA1-T2: the API's own count of loadtest_bulk, for the summary.
+$bulkTotal = Get-BulkRowCount -QueryId $bulkQuery.id
+
 Stop-LoadtestNodes
+
+$summary = [ordered]@{
+    profile         = $Profile
+    machine         = $profileSpec.machine
+    counts          = [ordered]@{
+        loadtest_wide = 0
+        loadtest_bulk = if ($null -ne $bulkTotal) { $bulkTotal } else { $RowCount }
+        loadtest_mut  = $mutIds.Count
+        loadtest_ddl  = $ddlIds.Count
+    }
+    users           = $profileUsers
+    roles           = $profileRoles
+    bulk_query_id   = $bulkQuery.id
+    elapsed_seconds = [Math]::Round(((Get-Date) - $seedStarted).TotalSeconds, 1)
+    finished_at     = (Get-Date).ToUniversalTime().ToString("o")
+}
+$summary | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryPath -Encoding utf8
+Write-Host "Seed summary: $summaryPath ($($summary.elapsed_seconds) s)"
 
 $seedInfo = @{
     admin_email    = $AdminEmail

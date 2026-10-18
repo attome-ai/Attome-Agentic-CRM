@@ -213,11 +213,16 @@ $env:LOADTEST_ACK = "yes"
 # 1. Bring up isolated infra (once; `down -v` between from-scratch reseeds)
 docker compose -f docker-compose.loadtest.yml up -d
 
-# 2. Seed: bootstrap admin, two test entities + data, a stored query, a
-#    non-admin test user with real grants. ~1-2min for the default row count.
-./scripts/seed.ps1
-# Full plan-spec row count (slow on a dev laptop, fine on a real host):
-# ./scripts/seed.ps1 -RowCount 1000000
+# 2. Seed: bootstrap admin, test entities + data, a stored query, a
+#    non-admin test user with real grants, and the profile's users and
+#    roles (AA1-T2). -Profile (default solo) sizes loadtest_bulk from
+#    profiles.json's records_per_entity; -RowCount overrides it. Each
+#    500-record chunk is posted by the next profile user, so ownership is
+#    spread across them. The summary lands in results/seed-<profile>.json,
+#    and a re-run whose summary matches the API's count skips seeding.
+./scripts/seed.ps1 -Profile solo -DryRun   # the plan, no HTTP call
+./scripts/seed.ps1 -RowCount 5000          # a quick dev-laptop seed
+# ./scripts/seed.ps1 -Profile solo         # 1,000,000 rows: hours through the bulk API
 
 # 3. Run the matrix (N=1/4/12, all 6 scenarios, 30s each ~= 18min total)
 ./scripts/run-matrix.ps1
