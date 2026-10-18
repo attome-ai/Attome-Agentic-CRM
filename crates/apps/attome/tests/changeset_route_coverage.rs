@@ -341,10 +341,6 @@ const EXCLUDED: &[(&str, &str)] = &[
         "classifies proposed structure changes (Y12-T3); writes nothing",
     ),
     (
-        "POST /api/v1/admin/entities/{entity_id}/orphans/scan",
-        "queues a read-only orphan scan (Y2-T4); no metadata changes",
-    ),
-    (
         "POST /api/v1/admin/queries/describe",
         "describes a draft query's columns; reads only",
     ),

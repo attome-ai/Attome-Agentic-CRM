@@ -254,7 +254,7 @@ pub async fn field_busy(conn: &mut PgConnection, row: &FieldRow) -> Result<bool,
                AND status IN ('queued', 'claimed', 'backfilling', 'altering')) \
          OR EXISTS (SELECT 1 FROM data_step_run \
              WHERE entity_logicalname = $2 \
-               AND status IN ('queued', 'claimed', 'running', 'failed') \
+               AND status IN ('queued', 'claimed', 'running', 'paused', 'failed') \
                AND (spec->>'field' = $3 OR spec->>'attribute_id' = $1::text \
                     OR spec->>'from' = $3 OR spec->>'to' = $3))",
     )
@@ -1893,7 +1893,7 @@ pub async fn claim_run(db: &DbPool, id: Uuid, worker: &str) -> Result<Option<Run
     sqlx::query_as(&format!(
         "UPDATE data_step_run \
          SET status = 'running', claimed_by = $2, claimed_at = NOW(), updated_at = NOW(), \
-             row_version = row_version + 1 \
+             started_at = COALESCE(started_at, NOW()), row_version = row_version + 1 \
          WHERE id = $1 AND (status IN ('queued', 'failed') \
                OR (status IN ('claimed', 'running') \
                    AND claimed_at < NOW() - INTERVAL '{RUN_CLAIM_TIMEOUT}')) \
@@ -1904,6 +1904,48 @@ pub async fn claim_run(db: &DbPool, id: Uuid, worker: &str) -> Result<Option<Run
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)
+}
+
+/// Y12-T5: moves the run from one of `from` to `to`; `false` when it was in
+/// none of them (nothing changed). A run leaving for `queued` or `paused`
+/// gives up its claim.
+pub async fn set_run_status(
+    conn: &mut PgConnection,
+    id: Uuid,
+    from: &[&str],
+    to: &str,
+    error: Option<&str>,
+) -> Result<bool, AppError> {
+    let from: Vec<String> = from.iter().map(|s| (*s).to_owned()).collect();
+    let done = sqlx::query(
+        "UPDATE data_step_run \
+         SET status = $3, error_message = COALESCE($4, error_message), \
+             claimed_by = CASE WHEN $3 IN ('queued', 'paused') THEN NULL ELSE claimed_by END, \
+             finished_at = CASE WHEN $3 IN ('abandoned') THEN NOW() ELSE finished_at END, \
+             updated_at = NOW(), row_version = row_version + 1 \
+         WHERE id = $1 AND status = ANY($2)",
+    )
+    .bind(id)
+    .bind(&from)
+    .bind(to)
+    .bind(error)
+    .execute(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Y12-T5: whether a run its worker holds was paused or cancelled since it
+/// was claimed. The batch loops ask before each batch, so a run stops
+/// between batches (each batch commits with its cursor; none is half done).
+pub async fn run_stopped(db: &DbPool, id: Uuid) -> Result<bool, AppError> {
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM data_step_run WHERE id = $1")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(status.as_deref() != Some("running"))
 }
 
 /// Advances the cursor and counters in the batch's own transaction (and

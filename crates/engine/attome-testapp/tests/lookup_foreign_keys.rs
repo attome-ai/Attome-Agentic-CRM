@@ -118,12 +118,16 @@ fn orphan_scan_counts_missing_targets() {
 
         // The durable scan reaches the same count; a second request while it
         // is queued returns the same run.
-        let scan = format!("{path}/scan");
-        let (status, queued) = app.request(Method::POST, &scan, None).await;
+        let scan = "/api/v1/admin/data-step-runs/orphan-scans";
+        let (status, queued) = app
+            .request(Method::POST, scan, Some(json!({ "entity_id": child_id })))
+            .await;
         assert_eq!(status, StatusCode::ACCEPTED, "{queued}");
         assert_eq!(queued["created"], true);
         let run_id: Uuid = queued["run_id"].as_str().unwrap().parse().unwrap();
-        let (_, again) = app.request(Method::POST, &scan, None).await;
+        let (_, again) = app
+            .request(Method::POST, scan, Some(json!({ "entity_id": child_id })))
+            .await;
         assert_eq!(again["run_id"], queued["run_id"]);
         assert_eq!(again["created"], false);
         attome_api::field_changes::run_field_run(&app.state, run_id)

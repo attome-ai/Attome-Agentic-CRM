@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: data step run controls (Y12-T5). `GET /api/v1/admin/data-step-runs/{id}` shows a run's
+  status, counts and ETA; `POST .../pause` stops it after its current batch, `.../resume` queues it
+  to continue from its cursor, and `.../cancel` stops it (an orphan scan ends `abandoned`; a field
+  run ends `failed` for the field's abandon route to undo). Migration 0111 adds the `paused`
+  status and `started_at`.
 - Data: the change plan (Y12-T3). `POST /api/v1/admin/entities/{entity_id}/change-plan` classifies
   proposed structure changes as `instant`, `online` (a concurrent index, a validated `max_length`
   CHECK) or `background` (a type change, backfill or delete), each with an estimate from the
@@ -79,7 +84,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   sent a statement (`attome_db::tagged_sql!`, `attome_db::tag_dynamic`).
 - Data: the orphan scan (Y2-T4). `GET /api/v1/admin/entities/{entity_id}/orphans` counts, per
   lookup field, the rows whose value names no record of the target; a table over 10,000 rows
-  answers from its latest finished scan, which `POST .../orphans/scan` queues as a durable
+  answers from its latest finished scan, which `POST /api/v1/admin/data-step-runs/orphan-scans` queues as a durable
   `orphan_scan` data-step run (migration 0110). The scan never changes a value.
 - Tests: a fuzz target for the column-filter compiler (`crates/engine/attome-core/fuzz`) and
   `scripts/fuzz-all.ps1`, which runs every fuzz target for a set time and fails on a crash

@@ -2,9 +2,11 @@
 //! lists, per lookup field, how many rows point at a record that does not
 //! exist. A table up to [`ORPHAN_SCAN_INLINE_ROW_LIMIT`] rows is scanned on
 //! the request; a larger one answers from its latest finished scan, which
-//! `POST .../orphans/scan` queues as a durable `orphan_scan` run (a 409
-//! `orphan_scan_required` until one has finished). Admin only. The scan
-//! reads; it never clears or deletes a value.
+//! `POST /api/v1/admin/data-step-runs/orphan-scans` queues as a durable
+//! `orphan_scan` run (a 409 `orphan_scan_required` until one has finished).
+//! The queue route sits outside the metadata-authoring prefix: a scan only
+//! reads, so it runs on a production deployment too, where its data lives.
+//! Admin only. The scan never clears or deletes a value.
 
 use attome_core::EngineState;
 use attome_metadata::provision::{
@@ -40,6 +42,12 @@ pub struct OrphanCount {
     pub scanned_at: chrono::DateTime<chrono::Utc>,
     /// The scan run it came from; `None` for a scan on the request.
     pub run_id: Option<Uuid>,
+}
+
+/// The entity to scan.
+#[derive(Debug, Clone, serde::Deserialize, ToSchema)]
+pub struct OrphanScanRequest {
+    pub entity_id: Uuid,
 }
 
 /// A queued (or already running) scan.
@@ -89,7 +97,7 @@ fn counts(
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks system.admin", body = ErrorResponse),
         (status = 404, description = "No such entity", body = ErrorResponse),
-        (status = 409, description = "orphan_scan_required: the table is over the inline limit and no scan has finished; POST .../orphans/scan", body = ErrorResponse),
+        (status = 409, description = "orphan_scan_required: the table is over the inline limit and no scan has finished; POST /api/v1/admin/data-step-runs/orphan-scans", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -131,7 +139,7 @@ pub(super) async fn list_orphans(
 
 #[utoipa::path(
     post,
-    path = "/api/v1/admin/entities/{entity_id}/orphans/scan",
+    path = "/api/v1/admin/data-step-runs/orphan-scans",
     tag = "admin",
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::ReadOnly,
@@ -139,7 +147,7 @@ pub(super) async fn list_orphans(
         "queues a read-only scan of the entity's lookup values; the run row is \
          operational bookkeeping and no record, metadata or security state changes"
     )))),
-    params(("entity_id" = Uuid, Path)),
+    request_body = OrphanScanRequest,
     responses(
         (status = 202, description = "The scan is queued (or was already queued or running)", body = OrphanScanQueued),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -151,8 +159,9 @@ pub(super) async fn list_orphans(
 pub(super) async fn queue_orphan_scan(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
-    Path(entity_id): Path<Uuid>,
+    Json(body): Json<OrphanScanRequest>,
 ) -> Result<impl IntoResponse, AppError> {
+    let entity_id = body.entity_id;
     let (entity, columns) = entity_of(&state, entity_id)?;
     let spec = lookup_fk::scan_spec(entity_id, &columns);
     let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
@@ -185,6 +194,10 @@ pub(crate) async fn continue_scan(
     let mut spec = run.spec.clone();
     let mut cursor = run.cursor;
     loop {
+        if fc::run_stopped(db, run.id).await? {
+            tracing::info!(run_id = %run.id, "orphan scan: paused or cancelled; stopped between batches");
+            return Ok(());
+        }
         let mut tx = attome_db::tx::begin(db).await?;
         let batch = lookup_fk::scan_batch(
             &mut tx,
@@ -218,7 +231,7 @@ pub(super) fn routes() -> Router<EngineState> {
             get(list_orphans),
         )
         .route(
-            "/api/v1/admin/entities/{entity_id}/orphans/scan",
+            "/api/v1/admin/data-step-runs/orphan-scans",
             post(queue_orphan_scan),
         )
 }

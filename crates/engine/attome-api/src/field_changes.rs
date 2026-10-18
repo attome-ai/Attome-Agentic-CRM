@@ -1259,6 +1259,10 @@ async fn continue_delete(state: &EngineState, run: &fc::RunRow) -> Result<(), Ap
     // Batches, each its own transaction with the cursor.
     if let Some(ring) = ring {
         loop {
+            if fc::run_stopped(db, run.id).await? {
+                tracing::info!(run_id = %run.id, "field run: paused or cancelled; stopped between batches");
+                return Ok(());
+            }
             let mut tx = attome_db::tx::begin(db).await?;
             let row = fc::lock_field_in_tx(&mut tx, entity_id, attr_id).await?;
             let event =
@@ -1350,6 +1354,10 @@ async fn continue_retype(state: &EngineState, run: &fc::RunRow) -> Result<(), Ap
     let ring = recovery_archive::ring(state.base.config.as_ref());
     let mut cursor = run.cursor;
     loop {
+        if fc::run_stopped(db, run.id).await? {
+            tracing::info!(run_id = %run.id, "field run: paused or cancelled; stopped between batches");
+            return Ok(());
+        }
         let mut tx = attome_db::tx::begin(db).await?;
         let row = fc::lock_field_in_tx(&mut tx, entity_id, attr_id).await?;
         let event = fc::archive_event(
