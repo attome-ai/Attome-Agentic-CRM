@@ -28,7 +28,6 @@ use axum::{
 };
 use chrono::Utc;
 use serde::Serialize;
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -121,6 +120,7 @@ async fn audit(
             },
         )
         .await
+        .map(|_| ())
 }
 
 /// One control: the states it leaves, the one it enters, the error it
