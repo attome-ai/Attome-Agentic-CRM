@@ -169,7 +169,8 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
     }
 
     let ring = state.base.secrets.load().webhook_signing_key.clone();
-    let secret = crypto::decrypt_secret(&ring, secret_encrypted)?;
+    let secret =
+        crypto::decrypt_webhook_secret(&ring, delivery.subscription_ref, secret_encrypted)?;
 
     // M19 gap list: `kind = 'audit'` deliveries carry the raw audit header
     // (`build_audit_body`), not an owner-scoped entity-record projection —

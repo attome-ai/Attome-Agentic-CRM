@@ -39,6 +39,31 @@ pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError>
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
 }
 
+/// Q18-T2: `event_subscription.webhook_secret_encrypted` is bound to its row.
+fn binding(subscription_id: uuid::Uuid) -> attome_auth::envelope::RowBinding<'static> {
+    attome_auth::envelope::RowBinding {
+        table: "event_subscription",
+        column: "webhook_secret_encrypted",
+        row_id: subscription_id,
+    }
+}
+
+pub fn encrypt_webhook_secret(
+    ring: &KeyRing,
+    subscription_id: uuid::Uuid,
+    plaintext: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::encrypt_bound(FIELD_NAME, ring, plaintext, binding(subscription_id))
+}
+
+pub fn decrypt_webhook_secret(
+    ring: &KeyRing,
+    subscription_id: uuid::Uuid,
+    encoded: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, binding(subscription_id))
+}
+
 /// `{timestamp_ms}.{body}` — the exact bytes HMAC'd and the exact bytes a
 /// receiver must reconstruct to verify. Timestamp-prefixed (not merely
 /// carried in a header) so the signature itself binds the two together —

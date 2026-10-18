@@ -844,7 +844,9 @@ async fn generate_key(
     // Generate secret and encrypt at rest
     let raw_secret = crypto::generate_secret();
     let secret_last4 = &raw_secret[raw_secret.len() - 4..];
-    let secret_encrypted = crypto::encrypt_secret(&master_ring, &raw_secret)?;
+    // Q18-T2: the key row's id is chosen first so its secret is bound to it.
+    let new_key_id = Uuid::now_v7();
+    let secret_encrypted = crypto::encrypt_key_secret(&master_ring, new_key_id, &raw_secret)?;
 
     // public_id is safe to log and display. Uses v7 for consistency with the
     // rest of the platform (D-018) — accepted trade-off: this embeds an
@@ -855,11 +857,13 @@ async fn generate_key(
     let key_id: Uuid = sqlx::query_scalar(
         r#"
         INSERT INTO s2s_client_key
-            (client_ref, key_slot, public_id, secret_encrypted, secret_last4, expires_at, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (id, client_ref, key_slot, public_id, secret_encrypted, secret_last4, expires_at,
+             created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
         "#,
     )
+    .bind(new_key_id)
     .bind(client_db_id)
     .bind(&body.slot)
     .bind(&public_id)

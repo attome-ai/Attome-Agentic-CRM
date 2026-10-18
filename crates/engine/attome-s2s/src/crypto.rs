@@ -26,6 +26,33 @@ pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError>
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
 }
 
+/// Q18-T2: `s2s_client_key.secret_encrypted` is bound to its row.
+fn binding(key_id: uuid::Uuid) -> attome_auth::envelope::RowBinding<'static> {
+    attome_auth::envelope::RowBinding {
+        table: "s2s_client_key",
+        column: "secret_encrypted",
+        row_id: key_id,
+    }
+}
+
+/// Q18-T2: a client key's secret, bound to the key row `key_id`.
+pub fn encrypt_key_secret(
+    ring: &KeyRing,
+    key_id: uuid::Uuid,
+    plaintext: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::encrypt_bound(FIELD_NAME, ring, plaintext, binding(key_id))
+}
+
+/// Q18-T2: opens a key row's secret, bound or written before binding.
+pub fn decrypt_key_secret(
+    ring: &KeyRing,
+    key_id: uuid::Uuid,
+    encoded: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, binding(key_id))
+}
+
 pub fn sha256_hex(data: &[u8]) -> String {
     let mut h = Sha256::new();
     h.update(data);

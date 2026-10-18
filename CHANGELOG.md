@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Stored third-party secrets are bound to their row (Q18-T2): integration credentials, AI
+  provider keys, S2S client-key secrets and event webhook secrets are now sealed with envelope
+  version 2, whose AES-GCM associated data is `table|column|row_id`, so a ciphertext copied to
+  another row does not decrypt. Values written before this still open; the S2S rewrap job
+  re-seals them bound.
 - Stored idempotency responses can be sealed (S9-T3): with `idempotency.response_encryption_key`
   (a key ring), a durable record's response body is encrypted with AES-256-GCM, bound to the
   record's id, and its key id is kept in `idempotency_record.response_key_id` (migration 0119);

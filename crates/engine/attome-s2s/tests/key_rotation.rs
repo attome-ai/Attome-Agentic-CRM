@@ -53,7 +53,7 @@ async fn verify_current_row_hmac(
             .fetch_one(db)
             .await
             .expect("fetch secret_encrypted");
-    let decrypted = crypto::decrypt_secret(ring, &stored).expect("decrypt");
+    let decrypted = crypto::decrypt_key_secret(ring, key_id, &stored).expect("decrypt");
     assert_eq!(decrypted, expected_plain);
 
     let message =

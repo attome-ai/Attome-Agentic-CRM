@@ -17,6 +17,31 @@ pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError>
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
 }
 
+/// Q18-T2: `integration_credential.secret_encrypted` is bound to its row.
+fn binding(credential_id: uuid::Uuid) -> attome_auth::envelope::RowBinding<'static> {
+    attome_auth::envelope::RowBinding {
+        table: "integration_credential",
+        column: "secret_encrypted",
+        row_id: credential_id,
+    }
+}
+
+pub fn encrypt_credential(
+    ring: &KeyRing,
+    credential_id: uuid::Uuid,
+    plaintext: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::encrypt_bound(FIELD_NAME, ring, plaintext, binding(credential_id))
+}
+
+pub fn decrypt_credential(
+    ring: &KeyRing,
+    credential_id: uuid::Uuid,
+    encoded: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, binding(credential_id))
+}
+
 /// Last 4 characters of a plaintext secret, for the "configured, ending in
 /// ****1234" admin-UI display — never the full value.
 pub fn last4(secret: &str) -> Option<String> {

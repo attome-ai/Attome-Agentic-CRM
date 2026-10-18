@@ -348,8 +348,8 @@ async fn create_subscription(
         ));
     }
     let raw_secret = crypto::generate_secret();
-    let secret_encrypted = crypto::encrypt_secret(&ring, &raw_secret)?;
     let new_id = Uuid::now_v7();
+    let secret_encrypted = crypto::encrypt_webhook_secret(&ring, new_id, &raw_secret)?;
 
     let mut tx = SecurityTx::begin(
         &state,
@@ -576,7 +576,7 @@ async fn rotate_secret(
         ));
     }
     let raw_secret = crypto::generate_secret();
-    let secret_encrypted = crypto::encrypt_secret(&ring, &raw_secret)?;
+    let secret_encrypted = crypto::encrypt_webhook_secret(&ring, id, &raw_secret)?;
 
     let mut tx = SecurityTx::begin(
         &state,

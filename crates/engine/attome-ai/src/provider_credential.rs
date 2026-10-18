@@ -38,6 +38,15 @@ pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError>
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
 }
 
+/// Q18-T2: `ai_provider_credential.secret_encrypted` is bound to its row.
+fn binding(credential_id: Uuid) -> attome_auth::envelope::RowBinding<'static> {
+    attome_auth::envelope::RowBinding {
+        table: "ai_provider_credential",
+        column: "secret_encrypted",
+        row_id: credential_id,
+    }
+}
+
 /// Last 4 characters of a plaintext secret, for the "configured, ending in
 /// ****1234" admin-UI display — never the full value.
 ///
@@ -85,14 +94,18 @@ pub async fn store(
             "inference.provider_credential_key",
         ));
     }
-    let encrypted = encrypt_secret(ring, plaintext)?;
+    // Q18-T2: the id is chosen first so the ciphertext can be bound to it.
+    let new_id = Uuid::now_v7();
+    let encrypted =
+        attome_auth::envelope::encrypt_bound(FIELD_NAME, ring, plaintext, binding(new_id))?;
     let last4 = last4(plaintext);
 
     let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO ai_provider_credential (provider_ref, secret_encrypted, secret_last4) \
-         VALUES ($1, $2, $3) \
+        "INSERT INTO ai_provider_credential (id, provider_ref, secret_encrypted, secret_last4) \
+         VALUES ($1, $2, $3, $4) \
          RETURNING id",
     )
+    .bind(new_id)
     .bind(provider_id)
     .bind(&encrypted)
     .bind(&last4)
@@ -160,7 +173,9 @@ pub async fn resolve(
     .await
     .map_err(AppError::internal)?;
 
-    encrypted.map(|e| decrypt_secret(ring, &e)).transpose()
+    encrypted
+        .map(|e| attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, &e, binding(id)))
+        .transpose()
 }
 
 /// The disclosable metadata for one credential id.

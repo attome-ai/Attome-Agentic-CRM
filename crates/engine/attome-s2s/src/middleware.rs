@@ -292,14 +292,17 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
 
     // ── 7. HMAC verification ──────────────────────────────────────────────────
     let secrets = state.secrets.load();
-    let raw_secret =
-        match crypto::decrypt_secret(&secrets.s2s_key_encryption_key, &record.secret_encrypted) {
-            Ok(s) => s,
-            Err(e) => {
-                concurrency_guard.release().await;
-                return e.into_response();
-            }
-        };
+    let raw_secret = match crypto::decrypt_key_secret(
+        &secrets.s2s_key_encryption_key,
+        record.key_db_id,
+        &record.secret_encrypted,
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            concurrency_guard.release().await;
+            return e.into_response();
+        }
+    };
 
     let canonical = crypto::canonical_message_with_act_as(
         &method,

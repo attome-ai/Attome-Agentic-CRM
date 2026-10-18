@@ -40,14 +40,17 @@ pub async fn store(
             "integration.credential_encryption_key has no active key configured",
         ));
     }
-    let encrypted = crypto::encrypt_secret(ring, plaintext)?;
+    // Q18-T2: the id is chosen first so the ciphertext can be bound to it.
+    let new_id = Uuid::now_v7();
+    let encrypted = crypto::encrypt_credential(ring, new_id, plaintext)?;
     let last4 = crypto::last4(plaintext);
 
     let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO integration_credential (system_ref, secret_encrypted, secret_last4) \
-         VALUES ($1, $2, $3) \
+        "INSERT INTO integration_credential (id, system_ref, secret_encrypted, secret_last4) \
+         VALUES ($1, $2, $3, $4) \
          RETURNING id",
     )
+    .bind(new_id)
     .bind(system_id)
     .bind(&encrypted)
     .bind(&last4)
@@ -103,7 +106,7 @@ pub async fn resolve(
     .await
     .map_err(AppError::internal)?;
     match encrypted {
-        Some(encrypted) => Ok(Some(crypto::decrypt_secret(ring, &encrypted)?)),
+        Some(encrypted) => Ok(Some(crypto::decrypt_credential(ring, id, &encrypted)?)),
         None => Ok(None),
     }
 }

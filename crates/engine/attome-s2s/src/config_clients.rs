@@ -266,10 +266,13 @@ async fn ensure_key(
             }
             // A decrypt failure (the key ring moved on) is treated like a
             // changed secret: re-encrypting under the current ring fixes both.
-            if crypto::decrypt_secret(ring, &encrypted).is_ok_and(|s| s == secret) {
+            // Q18-T2: an unbound value is re-sealed bound to its row.
+            if attome_auth::envelope::stored_is_bound(&encrypted)
+                && crypto::decrypt_key_secret(ring, key_id, &encrypted).is_ok_and(|s| s == secret)
+            {
                 return Ok(());
             }
-            let sealed = crypto::encrypt_secret(ring, secret)?;
+            let sealed = crypto::encrypt_key_secret(ring, key_id, secret)?;
             let mut tx = SecurityTx::begin(
                 state,
                 security_event(
@@ -311,7 +314,8 @@ async fn ensure_key(
                 );
                 return Ok(());
             }
-            let sealed = crypto::encrypt_secret(ring, secret)?;
+            let new_key_id = Uuid::now_v7();
+            let sealed = crypto::encrypt_key_secret(ring, new_key_id, secret)?;
             let mut tx = SecurityTx::begin(
                 state,
                 security_event(
@@ -323,9 +327,11 @@ async fn ensure_key(
             .await?;
             let key_id: Uuid = sqlx::query_scalar(
                 "INSERT INTO s2s_client_key \
-                     (client_ref, key_slot, public_id, secret_encrypted, secret_last4, created_at) \
-                 VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id",
+                     (id, client_ref, key_slot, public_id, secret_encrypted, secret_last4, \
+                      created_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id",
             )
+            .bind(new_key_id)
             .bind(client_db_id)
             .bind(&cfg.slot)
             .bind(&cfg.public_id)

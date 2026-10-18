@@ -18,6 +18,14 @@
 //!
 //! A blob that does not parse as this format, or names a key id the ring does
 //! not hold, fails to decrypt.
+//!
+//! Q18-T2: version `0x02` has the same layout and is sealed with AES-GCM
+//! associated data naming where the value lives, `table|column|row_id`
+//! ([`RowBinding`]), so a ciphertext copied to another row or column does
+//! not open. [`encrypt_bound`] writes it; [`decrypt_bound`] opens both
+//! versions (a `0x01` value written before binding opens without one). The
+//! version byte is not authenticated, but changing `0x02` to `0x01` only
+//! makes the value open with no associated data, which fails its tag.
 
 use attome_config::KeyRing;
 use attome_types::AppError;
@@ -29,7 +37,64 @@ use aes_gcm::{
 };
 
 const FORMAT_VERSION: u8 = 0x01;
+/// Q18-T2: the row-bound version.
+const FORMAT_BOUND: u8 = 0x02;
 const NONCE_LEN: usize = 12;
+
+/// Q18-T2: where a bound ciphertext lives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RowBinding<'a> {
+    pub table: &'a str,
+    pub column: &'a str,
+    pub row_id: uuid::Uuid,
+}
+
+impl RowBinding<'_> {
+    fn aad(&self) -> Vec<u8> {
+        format!("{}|{}|{}", self.table, self.column, self.row_id).into_bytes()
+    }
+}
+
+/// Q18-T2: [`encrypt`] bound to `binding`: base64 of a `0x02` envelope.
+pub fn encrypt_bound(
+    field_name: &str,
+    ring: &KeyRing,
+    plaintext: &str,
+    binding: RowBinding<'_>,
+) -> Result<String, AppError> {
+    let mut sealed =
+        encrypt_bytes_with_aad(field_name, ring, plaintext.as_bytes(), &binding.aad())?;
+    sealed[0] = FORMAT_BOUND;
+    Ok(B64.encode(sealed))
+}
+
+/// Q18-T2: opens a value [`encrypt_bound`] wrote for `binding`, or a `0x01`
+/// value written by [`encrypt`] before the column was bound.
+pub fn decrypt_bound(
+    field_name: &str,
+    ring: &KeyRing,
+    encoded: &str,
+    binding: RowBinding<'_>,
+) -> Result<String, AppError> {
+    let combined = B64
+        .decode(encoded)
+        .map_err(|_| AppError::internal(format!("{field_name} ciphertext is not valid base64")))?;
+    let aad = if combined.first() == Some(&FORMAT_BOUND) {
+        binding.aad()
+    } else {
+        Vec::new()
+    };
+    let plaintext = decrypt_bytes_with_aad(field_name, ring, &combined, &aad)?;
+    String::from_utf8(plaintext)
+        .map_err(|_| AppError::internal(format!("{field_name} decrypted to invalid UTF-8")))
+}
+
+/// Q18-T2: whether a base64 value is a row-bound (`0x02`) envelope; a rewrap
+/// re-seals the ones that are not.
+pub fn stored_is_bound(encoded: &str) -> bool {
+    B64.decode(encoded)
+        .is_ok_and(|combined| combined.first() == Some(&FORMAT_BOUND))
+}
 
 fn parse_key(field_name: &str, hex_key: &str) -> Result<[u8; 32], AppError> {
     let bytes = hex::decode(hex_key)
@@ -193,7 +258,7 @@ pub fn decrypt(field_name: &str, ring: &KeyRing, encoded: &str) -> Result<String
 /// Returns `(key_id, nonce || ciphertext)` if `combined` parses as this
 /// module's versioned format — purely structural, does not check the ring.
 fn parse_versioned(combined: &[u8]) -> Option<(&str, &[u8])> {
-    if combined.first() != Some(&FORMAT_VERSION) {
+    if !matches!(combined.first(), Some(&FORMAT_VERSION | &FORMAT_BOUND)) {
         return None;
     }
     let key_id_len = *combined.get(1)? as usize;
@@ -300,6 +365,64 @@ pub fn canary(field_name: &str, ring: &KeyRing) -> Result<(), AppError> {
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod bound_tests {
+    use super::*;
+
+    fn binding(row_id: uuid::Uuid) -> RowBinding<'static> {
+        RowBinding {
+            table: "s2s_client_key",
+            column: "secret_encrypted",
+            row_id,
+        }
+    }
+
+    #[test]
+    fn a_ciphertext_copied_to_another_row_fails_to_decrypt() {
+        let ring = KeyRing::single("44".repeat(32));
+        let row = uuid::Uuid::now_v7();
+        let sealed = encrypt_bound("f", &ring, "secret", binding(row)).unwrap();
+        assert!(stored_is_bound(&sealed));
+        assert_eq!(
+            decrypt_bound("f", &ring, &sealed, binding(row)).unwrap(),
+            "secret"
+        );
+        assert!(decrypt_bound("f", &ring, &sealed, binding(uuid::Uuid::now_v7())).is_err());
+        let other_column = RowBinding {
+            column: "other",
+            ..binding(row)
+        };
+        assert!(decrypt_bound("f", &ring, &sealed, other_column).is_err());
+        assert!(
+            decrypt("f", &ring, &sealed).is_err(),
+            "unbound decrypt refuses it"
+        );
+    }
+
+    #[test]
+    fn an_unbound_value_still_opens_and_a_downgraded_one_does_not() {
+        let ring = KeyRing::single("55".repeat(32));
+        let row = uuid::Uuid::now_v7();
+        let legacy = encrypt("f", &ring, "old").unwrap();
+        assert!(!stored_is_bound(&legacy));
+        assert_eq!(
+            decrypt_bound("f", &ring, &legacy, binding(row)).unwrap(),
+            "old"
+        );
+        assert_eq!(stored_key_id(&legacy), stored_key_id(&legacy));
+
+        let sealed = encrypt_bound("f", &ring, "new", binding(row)).unwrap();
+        let mut bytes = B64.decode(&sealed).unwrap();
+        bytes[0] = FORMAT_VERSION;
+        let downgraded = B64.encode(bytes);
+        assert!(decrypt_bound("f", &ring, &downgraded, binding(row)).is_err());
+        assert_eq!(
+            stored_key_id(&sealed).as_deref(),
+            Some(ring.active_key_id.as_str())
+        );
+    }
 }
 
 #[cfg(test)]

@@ -53,13 +53,16 @@ pub async fn rewrap_secrets(
     let mut last_id = after_id;
     for (id, secret_encrypted, row_version) in rows {
         last_id = Some(id);
+        // Q18-T2: a row under the active key is still re-sealed until it is
+        // bound to its row.
         if attome_auth::envelope::stored_key_id(&secret_encrypted).as_deref()
             == Some(ring.active_key_id.as_str())
+            && attome_auth::envelope::stored_is_bound(&secret_encrypted)
         {
             continue;
         }
-        let plaintext = crypto::decrypt_secret(ring, &secret_encrypted)?;
-        let fresh = crypto::encrypt_secret(ring, &plaintext)?;
+        let plaintext = crypto::decrypt_key_secret(ring, id, &secret_encrypted)?;
+        let fresh = crypto::encrypt_key_secret(ring, id, &plaintext)?;
 
         let updated = sqlx::query(
             "UPDATE s2s_client_key
