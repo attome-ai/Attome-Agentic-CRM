@@ -675,6 +675,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "الوقت منذ آخر نجاح لكل مهمة مجدولة.",
     },
     MetricInfo {
+        name: "metadata_pin_unavailable_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Requests refused because this node could not catch up to the caller's own metadata write in time.",
+        ar: "طلبات رُفضت لأن هذه العقدة لم تلحق في الوقت المناسب بتعديل البيانات الوصفية الذي أجراه المستخدم نفسه.",
+    },
+    MetricInfo {
         name: "object_storage_probe_latency_seconds",
         kind: "gauge",
         unit: "seconds",
