@@ -3,6 +3,7 @@
 //! second, so an outside call gives up, and the handler can still answer,
 //! before the outer timeout cuts the request off.
 
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::extract::Request;
@@ -17,10 +18,63 @@ pub fn budget(timeout: Duration) -> Duration {
     timeout.saturating_sub(DEADLINE_MARGIN)
 }
 
-/// The layer itself: runs the rest of the request under the deadline.
+/// Runs the rest of the request under the deadline, as an axum `from_fn`
+/// body (tests use it; the server mounts [`DeadlineLayer`]).
 pub async fn with_request_deadline(timeout: Duration, req: Request, next: Next) -> Response {
     let deadline = tokio::time::Instant::now() + budget(timeout);
     attome_outbound::deadline::with_deadline(deadline, next.run(req)).await
+}
+
+/// The deadline as a plain tower layer, for the server's `ServiceBuilder`:
+/// it wraps any inner service and leaves its types alone.
+#[derive(Debug, Clone, Copy)]
+pub struct DeadlineLayer {
+    budget: Duration,
+}
+
+impl DeadlineLayer {
+    /// A layer for requests that time out after `timeout`.
+    pub fn new(timeout: Duration) -> Self {
+        Self {
+            budget: budget(timeout),
+        }
+    }
+}
+
+impl<S> tower::Layer<S> for DeadlineLayer {
+    type Service = Deadline<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        Deadline {
+            inner,
+            budget: self.budget,
+        }
+    }
+}
+
+/// [`DeadlineLayer`]'s service.
+#[derive(Debug, Clone)]
+pub struct Deadline<S> {
+    inner: S,
+    budget: Duration,
+}
+
+impl<S, R> tower::Service<R> for Deadline<S>
+where
+    S: tower::Service<R>,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = tokio::task::futures::TaskLocalFuture<tokio::time::Instant, S::Future>;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: R) -> Self::Future {
+        let deadline = tokio::time::Instant::now() + self.budget;
+        attome_outbound::deadline::scope(deadline, self.inner.call(req))
+    }
 }
 
 #[cfg(test)]

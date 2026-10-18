@@ -14,10 +14,20 @@ tokio::task_local! {
 /// Runs `fut` with `deadline` as its deadline. An enclosing, earlier
 /// deadline still wins.
 pub async fn with_deadline<F: Future>(deadline: Instant, fut: F) -> F::Output {
+    scope(deadline, fut).await
+}
+
+/// [`with_deadline`] as a nameable future, for a tower service whose
+/// `Future` type must be spelled out. The enclosing deadline is read when
+/// this is called.
+pub fn scope<F: Future>(
+    deadline: Instant,
+    fut: F,
+) -> tokio::task::futures::TaskLocalFuture<Instant, F> {
     let deadline = DEADLINE
         .try_with(|outer| (*outer).min(deadline))
         .unwrap_or(deadline);
-    DEADLINE.scope(deadline, fut).await
+    DEADLINE.scope(deadline, fut)
 }
 
 /// The time left before the current deadline; `None` outside one.
