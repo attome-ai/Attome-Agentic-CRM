@@ -153,6 +153,11 @@ const MAX_BARE_RECORD_SCOPED: usize = 5;
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "GET",
+        "/.well-known/jwks.json",
+        "Z4-T4: the public halves of the Ed25519 token-signing keys, a JSON Web Key Set; publishing them is the point and no secret or customer data is in it. Bypass-listed.",
+    ),
+    (
+        "GET",
         "/api/v1/shared-files/{token}",
         "K1-T1 external file share: the 32-byte random token, stored only as its SHA-256, is the credential for one stored file. Bypass-listed and rate-limited (portal_status); expiry, revocation, the download limit and a required password are checked inside the handler, and each download is audited.",
     ),

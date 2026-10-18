@@ -51,6 +51,38 @@ fn signing_keys() -> Option<Arc<KeyRing>> {
         .clone()
 }
 
+/// Z4-T4: the JSON Web Key Set (RFC 7517) of `eddsa`: one `OKP`/`Ed25519`
+/// key per seed, public half only, by key id. HS256 secrets have no place
+/// here, so this takes only the Ed25519 ring; a malformed seed is skipped
+/// (config load already refuses one).
+pub fn jwks_for(eddsa: Option<&KeyRing>) -> serde_json::Value {
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    let mut keys = Vec::new();
+    if let Some(ring) = eddsa {
+        let mut ids: Vec<&String> = ring.keys.keys().collect();
+        ids.sort();
+        for kid in ids {
+            let Ok(seed) = ed25519_seed(&ring.keys[kid]) else {
+                continue;
+            };
+            keys.push(serde_json::json!({
+                "kty": "OKP",
+                "crv": "Ed25519",
+                "kid": kid,
+                "x": URL_SAFE_NO_PAD.encode(ed25519_public(&seed)),
+                "use": "sig",
+                "alg": "EdDSA",
+            }));
+        }
+    }
+    serde_json::json!({ "keys": keys })
+}
+
+/// [`jwks_for`] of the installed ring.
+pub fn jwks() -> serde_json::Value {
+    jwks_for(signing_keys().as_deref())
+}
+
 /// A seed from its hex form.
 fn ed25519_seed(hex_seed: &str) -> Result<[u8; 32], AppError> {
     hex::decode(hex_seed)
@@ -360,6 +392,31 @@ mod eddsa_tests {
         )
         .unwrap();
         assert!(decode_claims_with::<Claims>(&token, &hs256(), None).is_err());
+    }
+
+    #[test]
+    fn jwks_lists_only_public_eddsa_keys() {
+        let ring = eddsa("ed1", 7);
+        let set = jwks_for(Some(&ring));
+        let keys = set["keys"].as_array().unwrap();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0]["kty"], "OKP");
+        assert_eq!(keys[0]["crv"], "Ed25519");
+        assert_eq!(keys[0]["kid"], "ed1");
+        assert!(
+            keys[0].get("d").is_none() && keys[0].get("k").is_none(),
+            "no private half"
+        );
+        // The listed key verifies a token the ring signed.
+        use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+        let x = URL_SAFE_NO_PAD
+            .decode(keys[0]["x"].as_str().unwrap())
+            .unwrap();
+        let token = encode_claims_with(&claims(), &hs256(), Some(&ring)).unwrap();
+        let mut validation = Validation::new(Algorithm::EdDSA);
+        validation.validate_aud = false;
+        assert!(decode::<Claims>(&token, &DecodingKey::from_ed_der(&x), &validation).is_ok());
+        assert_eq!(jwks_for(None)["keys"], serde_json::json!([]));
     }
 
     #[test]

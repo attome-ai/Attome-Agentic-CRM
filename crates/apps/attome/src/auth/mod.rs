@@ -27,6 +27,7 @@ mod dto;
 /// Audit plan 3.5 (D-541 rule 6): failed-login coalescing and its sweep.
 pub mod failed_login;
 mod google;
+mod jwks;
 mod local;
 mod login_guard;
 mod oidc;
@@ -67,6 +68,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         session::openapi_fragment(),
         oidc::openapi_fragment(),
         step_up::openapi_fragment(),
+        jwks::openapi_fragment(),
     ] {
         doc.merge(fragment);
     }
@@ -92,6 +94,8 @@ pub fn public_routes(
     auditor: attome_audit::security::SecurityAuditor,
 ) -> Router<AppState> {
     Router::new()
+        // Z4-T4: the public signing keys.
+        .route("/.well-known/jwks.json", get(jwks::get_jwks))
         .route("/api/v1/auth/google", post(google::google_login))
         .route("/api/v1/auth/google/config", get(google::google_config))
         .route("/api/v1/auth/register", post(local::register))

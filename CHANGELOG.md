@@ -76,6 +76,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET /.well-known/jwks.json` publishes the public halves of the Ed25519 token-signing keys
+  (Z4-T4) as a JSON Web Key Set, public and cacheable for five minutes, so another service can
+  verify EdDSA tokens without a shared secret. It is empty while signing stays HS256.
 - `POST /api/v1/query/execute` answers a query over one entity with a weak `ETag` (AA7-T3): a
   hash of the request, the caller and their permission set, the stored query's definition and the
   change feed's newest position. A request whose `If-None-Match` names it gets `304 Not Modified`

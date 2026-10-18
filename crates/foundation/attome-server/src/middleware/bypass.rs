@@ -5,6 +5,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/branding/public",
     // B13-T4: published logos, favicons and fonts, served inert; no user data.
     "/api/v1/branding/asset",
+    // Z4-T4: the public token-signing keys (a GET with no body, so no CSRF
+    // entry); publishing a public key is the point.
+    "/.well-known/jwks.json",
     "/api/v1/auth/register",
     "/api/v1/auth/register/config",
     "/api/v1/auth/login",
