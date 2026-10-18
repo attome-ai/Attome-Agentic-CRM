@@ -1066,6 +1066,13 @@ async fn dispatch_platform_job(
                 tracing::info!(settled, "billing e-invoicing sweep: documents settled");
             }
         }
+        // F5-T7: payment gateway events, each applied once.
+        EngineJob::BillingGatewayEventApply => {
+            let changed = attome_billing::gateway::webhook::apply_events(&attome_state).await?;
+            if changed > 0 {
+                tracing::info!(changed, "billing gateway events: payments updated");
+            }
+        }
         // F4-T10: issued invoices past due.
         EngineJob::BillingOverdueSweep => {
             let marked = attome_billing::status::overdue_sweep(&attome_state).await?;
@@ -2283,6 +2290,8 @@ const DEDUP_KEY_BILLING_REQUEST_SWEEP: &str = "billing-request-sweep";
 const DEDUP_KEY_BILLING_SCHEDULE_RUN: &str = "billing-schedule-run";
 const DEDUP_KEY_BILLING_OVERDUE_SWEEP: &str = "billing-overdue-sweep";
 const DEDUP_KEY_BILLING_EINVOICE_SWEEP: &str = "billing-einvoice-sweep";
+const DEDUP_KEY_BILLING_GATEWAY_EVENT_APPLY: &str =
+    attome_billing::gateway::webhook::APPLY_DEDUP_KEY;
 const DEDUP_KEY_SALES_SNAPSHOT_PRUNE: &str = "sales-snapshot-prune";
 const DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP: &str = "notification-follow-sweep";
 const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
@@ -2362,6 +2371,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::BillingScheduleRun => DEDUP_KEY_BILLING_SCHEDULE_RUN,
         EngineJob::BillingOverdueSweep => DEDUP_KEY_BILLING_OVERDUE_SWEEP,
         EngineJob::BillingEinvoiceSweep => DEDUP_KEY_BILLING_EINVOICE_SWEEP,
+        EngineJob::BillingGatewayEventApply => DEDUP_KEY_BILLING_GATEWAY_EVENT_APPLY,
         EngineJob::SalesSnapshotPrune => DEDUP_KEY_SALES_SNAPSHOT_PRUNE,
         EngineJob::NotificationFollowSweep => DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP,
         EngineJob::SalesDealCloseSweep => DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP,
@@ -2814,6 +2824,18 @@ pub fn spawn_billing_einvoice_scheduler(db: DbPool, interval: std::time::Duratio
         EngineJob::BillingEinvoiceSweep,
         DEDUP_KEY_BILLING_EINVOICE_SWEEP,
         "billing e-invoicing",
+    );
+}
+
+/// F5-T7: every minute, gateway events not applied yet (a retry after a
+/// failure; a new event enqueues its own run).
+pub fn spawn_billing_gateway_event_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingGatewayEventApply,
+        DEDUP_KEY_BILLING_GATEWAY_EVENT_APPLY,
+        "billing gateway events",
     );
 }
 

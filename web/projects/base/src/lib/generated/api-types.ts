@@ -8693,6 +8693,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/gateways/{system}/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/invoice-requests": {
         parameters: {
             query?: never;
@@ -32622,6 +32638,12 @@ export interface components {
              * @description The measurement in milliseconds.
              */
             value: number;
+        };
+        WebhookAccepted: {
+            /** @description Events the call carried. */
+            events: number;
+            /** @description Of those, new ones (the rest were delivered before). */
+            new: number;
         };
         WebhookAcceptedResponse: {
             accepted: number;
@@ -62465,6 +62487,79 @@ export interface operations {
             };
             /** @description Caller may not read invoices or accounts */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_webhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The payment_gateway integration system */
+                system: string;
+            };
+            cookie?: never;
+        };
+        /** @description The gateway's notification, as it sends it */
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Verified and stored; applied by a job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAccepted"];
+                };
+            };
+            /** @description The signature or secret does not verify */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such gateway, or billing is not licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The body is too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A verified notification that does not read */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many calls from this address */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

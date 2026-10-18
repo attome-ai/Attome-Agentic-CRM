@@ -1,7 +1,9 @@
 //! The Moyasar adapter (roadmap F5-T5).
 //!
 //! Moyasar's REST API (`https://api.moyasar.com/v1`), authenticated with the
-//! secret key as the HTTP basic-auth user and an empty password. Amounts
+//! secret key as the HTTP basic-auth user and an empty password. The
+//! credential is the secret key, or JSON with `secret_key` and the
+//! `webhook_secret` the webhook endpoint was given. Amounts
 //! travel in the currency's smallest unit (halalas for SAR, fils for KWD).
 //!
 //! - **Checkout** is a Moyasar invoice (`POST /invoices`), Moyasar's hosted
@@ -90,10 +92,11 @@ impl MoyasarGateway {
         secret: &str,
         body: Option<&Value>,
     ) -> Result<(reqwest::StatusCode, Value), GatewayError> {
+        let key = secret_key(secret);
         let mut request = self
             .http
             .request(method, path)?
-            .basic_auth(secret, Some(""))
+            .basic_auth(key.as_str(), Some(""))
             .header(reqwest::header::ACCEPT, "application/json");
         if let Some(body) = body {
             request = request.json(body);
@@ -468,6 +471,20 @@ impl PaymentGateway for MoyasarGateway {
             status: payment_status(&payment),
         }])
     }
+}
+
+/// The secret key in a credential: the credential itself, or its
+/// `secret_key` when it is a JSON object (which may also hold the
+/// `webhook_secret`).
+fn secret_key(credential: &str) -> zeroize::Zeroizing<String> {
+    let from_json = serde_json::from_str::<Value>(credential)
+        .ok()
+        .and_then(|v| {
+            v.get("secret_key")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        });
+    zeroize::Zeroizing::new(from_json.unwrap_or_else(|| credential.to_owned()))
 }
 
 /// The Moyasar payment id (`given_id`) for an idempotency key: the key

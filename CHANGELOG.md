@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: payment gateway webhooks at `POST /api/v1/billing/gateways/{system}/webhook` (an exact
+  bypass match; the adapter verifies the call with the gateway's `webhook_secret`), stored once per
+  event in the new `billing_gateway_event` table (migration 0106) and applied to their payments by
+  the `BillingGatewayEventApply` job; a gateway credential may now be JSON carrying
+  `webhook_secret`, and gateway credentials are read with the live integration key ring (F5-T7).
 - Billing: the HyperPay payment gateway adapter — COPYandPAY checkouts returned as an embeddable
   widget (with its integrity hash; mada on its own entity, never mixed with other methods), status
   by merchant transaction id across entities, merchant-initiated token charges and refunds that a

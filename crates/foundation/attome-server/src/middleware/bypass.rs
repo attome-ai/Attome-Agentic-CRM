@@ -115,6 +115,24 @@ fn is_integrations_webhook_path(path: &str) -> bool {
     !system.is_empty() && is_webhook && no_trailing_segment
 }
 
+/// F5-T7: a payment gateway's webhook,
+/// `/api/v1/billing/gateways/{system}/webhook`: the same segment-shape match
+/// as [`is_integrations_webhook_path`] (one `{system}` segment, the literal
+/// `webhook`, nothing after), so no other billing route under a gateway's
+/// segment can ever be swept into the bypass. The handler
+/// (`attome_billing::gateway::webhook::post_webhook`) verifies the call with
+/// the gateway's own webhook secret.
+fn is_billing_gateway_webhook_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/v1/billing/gateways/") else {
+        return false;
+    };
+    let mut segments = rest.split('/');
+    let system = segments.next().unwrap_or("");
+    let is_webhook = segments.next() == Some("webhook");
+    let no_trailing_segment = segments.next().is_none();
+    !system.is_empty() && is_webhook && no_trailing_segment
+}
+
 /// The only public route families with intentionally dynamic child segments.
 /// Every entry ends in `/`, so `starts_with` cannot match a sibling such as
 /// `/api/v1/auth/oidc-admin`. (The integrations webhook USED to be a third
@@ -153,6 +171,7 @@ pub fn is_bypass(path: &str) -> bool {
             .iter()
             .any(|prefix| path.starts_with(prefix))
         || is_integrations_webhook_path(path)
+        || is_billing_gateway_webhook_path(path)
 }
 
 /// Paths that skip authn/authz (they are in `EXACT_BYPASS_PATHS` above) but
@@ -358,6 +377,31 @@ mod tests {
         // The bare prefix, and an empty `{system}` segment, must not match.
         assert!(!is_bypass("/api/v1/integrations/"));
         assert!(!is_bypass("/api/v1/integrations//webhook"));
+    }
+
+    #[test]
+    fn billing_webhook_path_exact() {
+        let path = "/api/v1/billing/gateways/8f14e45f-ceea-4d5b-8f5e-4c4b4c4b4c4b/webhook";
+        assert!(is_bypass(path));
+        assert!(is_csrf_exempt(path));
+    }
+
+    #[test]
+    fn billing_webhook_path_rejects_deeper() {
+        // Only the webhook: never a sibling, a deeper path, the bare prefix
+        // or an empty system segment.
+        assert!(!is_bypass(
+            "/api/v1/billing/gateways/8f14e45f-ceea-4d5b-8f5e-4c4b4c4b4c4b/webhook/extra"
+        ));
+        assert!(!is_bypass(
+            "/api/v1/billing/gateways/8f14e45f-ceea-4d5b-8f5e-4c4b4c4b4c4b/config"
+        ));
+        assert!(!is_bypass(
+            "/api/v1/billing/gateways/8f14e45f-ceea-4d5b-8f5e-4c4b4c4b4c4b"
+        ));
+        assert!(!is_bypass("/api/v1/billing/gateways/"));
+        assert!(!is_bypass("/api/v1/billing/gateways//webhook"));
+        assert!(!is_bypass("/api/v1/billing/payments"));
     }
 
     #[test]

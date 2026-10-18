@@ -19,6 +19,7 @@
 
 pub mod hyperpay;
 pub mod moyasar;
+pub mod webhook;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -329,43 +330,67 @@ pub fn rules(state: &EngineState) -> Vec<GatewayRule> {
     }
 }
 
-/// A gateway system's name, base URL and credential reference.
+/// A gateway system's name, adapter, base URL and credential reference.
 #[derive(Debug, Clone)]
 pub struct GatewaySystem {
     pub id: Uuid,
     pub name: String,
+    /// The adapter ([`gateway_for`]): the system's `config.gateway`, or its
+    /// name in lower case.
+    pub adapter: String,
     pub base_url: String,
+    /// The user the system acts as, for attribution.
+    pub service_principal: Option<Uuid>,
     credential_ref: Option<String>,
 }
 
+type SystemRow = (
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
 /// Reads an active `payment_gateway` integration system.
 pub async fn system(state: &EngineState, id: Uuid) -> Result<GatewaySystem, AppError> {
-    let row: Option<(String, Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT name, base_url, credential_ref FROM integration_system \
-         WHERE id = $1 AND kind = 'payment_gateway' AND COALESCE(status, 'active') = 'active' \
-           AND (is_active IS NULL OR is_active = true)",
+    let row: Option<SystemRow> = sqlx::query_as(
+        "SELECT name, base_url, credential_ref, config::text, service_principal_ref::text          FROM integration_system          WHERE id = $1 AND kind = 'payment_gateway' AND COALESCE(status, 'active') = 'active'            AND (is_active IS NULL OR is_active = true)",
     )
     .bind(id)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let (name, base_url, credential_ref) = row.ok_or(AppError::NotFound)?;
+    let (name, base_url, credential_ref, config, principal) = row.ok_or(AppError::NotFound)?;
+    let adapter = config
+        .as_deref()
+        .and_then(|c| serde_json::from_str::<serde_json::Value>(c).ok())
+        .and_then(|c| c.get("gateway").and_then(|g| g.as_str()).map(str::to_owned))
+        .unwrap_or_else(|| name.trim().to_ascii_lowercase());
     Ok(GatewaySystem {
         id,
         name,
+        adapter,
         base_url: base_url.unwrap_or_default(),
+        service_principal: principal.and_then(|p| Uuid::parse_str(p.trim()).ok()),
         credential_ref,
     })
 }
 
 /// The system's secret, resolved for one call. Never cache it.
+///
+/// A gateway's credential is the secret its adapter reads (Moyasar's secret
+/// key, or HyperPay's JSON); when it is a JSON object, its `webhook_secret`
+/// is the secret webhooks are verified with ([`webhook_secret`]).
 pub async fn credential(
     state: &EngineState,
     system: &GatewaySystem,
 ) -> Result<zeroize::Zeroizing<String>, AppError> {
+    // The same live key ring the integration admin stores credentials with.
+    let ring = state.base.secrets.load().integration_credential_key.clone();
     let secret = attome_integration::credential::resolve(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &ring,
         system.credential_ref.as_deref(),
     )
     .await?
@@ -373,6 +398,16 @@ pub async fn credential(
         AppError::Validation(format!("the gateway {} has no credential", system.name))
     })?;
     Ok(zeroize::Zeroizing::new(secret))
+}
+
+/// The webhook secret in a gateway credential (its JSON `webhook_secret`).
+pub fn webhook_secret(credential: &str) -> Option<zeroize::Zeroizing<String>> {
+    let value: serde_json::Value = serde_json::from_str(credential).ok()?;
+    value
+        .get("webhook_secret")
+        .and_then(serde_json::Value::as_str)
+        .filter(|s| !s.is_empty())
+        .map(|s| zeroize::Zeroizing::new(s.to_owned()))
 }
 
 #[cfg(test)]

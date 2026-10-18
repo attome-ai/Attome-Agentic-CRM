@@ -67,6 +67,12 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/accounts/{id}/apply-credit",
                 post(crate::payment::service::post_apply_credit),
             )
+            // F5-T7: a payment gateway's webhook (bypass-listed; the
+            // adapter verifies it).
+            .route(
+                "/api/v1/billing/gateways/{system}/webhook",
+                post(crate::gateway::webhook::post_webhook),
+            )
             // AG2-T3: the invoice's e-invoice.
             .route(
                 "/api/v1/billing/invoices/{id}/einvoice",

@@ -516,6 +516,155 @@ pub async fn apply_credit(
     Ok(applied)
 }
 
+/// F5-T7: applies a gateway's report on a payment, in the caller's
+/// transaction (the webhook event's). The payment is the one with this
+/// gateway system and reference; a report that changes nothing (already
+/// applied, or still pending) returns `false`.
+///
+/// - Succeeded: a pending or failed payment becomes `succeeded` with the
+///   gateway's fee, and is allocated oldest due first within its currency,
+///   the rest kept as the payer's credit. An amount that differs from the
+///   payment's is refused, never allocated.
+/// - Failed: a pending payment becomes `failed`.
+/// - Refunded: a succeeded payment becomes `refunded`, or
+///   `partially_refunded` for less than its amount (reopening its invoices
+///   is the refund flow's, F5-T10).
+pub async fn apply_gateway_status_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    system_id: Uuid,
+    gateway_reference: &str,
+    status: &crate::gateway::GatewayStatus,
+    actor: Uuid,
+) -> Result<bool, AppError> {
+    use crate::gateway::GatewayStatus;
+    if matches!(status, GatewayStatus::Pending) {
+        return Ok(false);
+    }
+    let found: Option<(Uuid, Option<Uuid>)> = sqlx::query_as(
+        "SELECT id, payer_account_ref FROM customer_payment          WHERE gateway_system_ref = $1 AND gateway_reference = $2            AND (is_active IS NULL OR is_active = true)          ORDER BY id LIMIT 1",
+    )
+    .bind(system_id.to_string())
+    .bind(gateway_reference)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let (payment, account) = found.ok_or_else(|| {
+        AppError::Validation(format!(
+            "no payment has the gateway reference {gateway_reference}"
+        ))
+    })?;
+    // The account's money moves under its balance lock, as every payment's.
+    if let Some(account) = account {
+        lock_account(tx, account).await?;
+    }
+    let (amount, currency, current): (Option<String>, Option<String>, Option<String>) =
+        sqlx::query_as(
+            "SELECT amount::text, currency, status FROM customer_payment WHERE id = $1 FOR UPDATE",
+        )
+        .bind(payment)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    let amount = text(amount.as_deref());
+    let currency = currency
+        .unwrap_or_else(|| "SAR".into())
+        .to_ascii_uppercase();
+    let current = current.unwrap_or_else(|| "pending".into());
+    let (next, feed, comment) = match status {
+        GatewayStatus::Pending => return Ok(false),
+        GatewayStatus::Succeeded { amount: paid, fee } => {
+            if !matches!(current.as_str(), "pending" | "failed") {
+                return Ok(false);
+            }
+            if *paid != amount {
+                return Err(AppError::Validation(format!(
+                    "the gateway reports {paid} {currency}; the payment is {amount}"
+                )));
+            }
+            let received = Utc::now().date_naive();
+            let credit = match account {
+                Some(account) => {
+                    let mut open = open_invoices(tx, account).await?;
+                    open.retain(|i| i.currency == currency);
+                    let allocation =
+                        allocate(amount, &currency, &open, None).map_err(alloc_error)?;
+                    write_allocations(tx, payment, &allocation.lines, received, actor).await?;
+                    allocation.credit
+                }
+                None => amount,
+            };
+            sqlx::query(
+                "UPDATE customer_payment SET status = 'succeeded', fee = $2::numeric,                      unallocated = $3::numeric, received_on = $4, modified_at = now(),                      row_version = row_version + 1                  WHERE id = $1",
+            )
+            .bind(payment)
+            .bind(fee.map(|f| f.to_string()))
+            .bind(credit.to_string())
+            .bind(received)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            ("succeeded", "billing.payment.succeeded", None)
+        }
+        GatewayStatus::Failed { reason } => {
+            if current != "pending" {
+                return Ok(false);
+            }
+            sqlx::query(
+                "UPDATE customer_payment SET status = 'failed', modified_at = now(),                      row_version = row_version + 1 WHERE id = $1",
+            )
+            .bind(payment)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            ("failed", "billing.payment.failed", Some(reason.clone()))
+        }
+        GatewayStatus::Refunded { amount: refunded } => {
+            let next = if *refunded >= amount {
+                "refunded"
+            } else {
+                "partially_refunded"
+            };
+            if !matches!(current.as_str(), "succeeded" | "partially_refunded") || current == next {
+                return Ok(false);
+            }
+            sqlx::query(
+                "UPDATE customer_payment SET status = $2, modified_at = now(),                      row_version = row_version + 1 WHERE id = $1",
+            )
+            .bind(payment)
+            .bind(next)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            (
+                next,
+                "billing.payment.refunded",
+                Some(format!("{refunded} {currency} refunded")),
+            )
+        }
+    };
+    emit_named(
+        tx,
+        "customer_payment",
+        payment,
+        ChangeOperation::Update,
+        feed,
+    )
+    .await?;
+    business_event(
+        tx,
+        state,
+        "customer_payment",
+        payment,
+        AuditOperation::Update,
+        &format!("billing.payment_{next}"),
+        actor,
+        comment,
+    )
+    .await?;
+    Ok(true)
+}
+
 /// `customer_payment.create`: may record payments.
 #[derive(Debug)]
 pub struct PaymentCreate;

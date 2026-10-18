@@ -100,6 +100,26 @@ In the app, Billing in the sidebar opens the invoices, the receivables ageing (e
 its statement) and the schedules. Amounts keep their currency's decimals (three for KWD, BHD, OMR
 and JOD) and the screens read right to left in Arabic.
 
+## Payment gateways
+
+Card and wallet payments run through the customer's own merchant account at Moyasar or HyperPay;
+Attome never sees a card number.
+
+- A gateway is an integration system of kind `payment_gateway`: its `base_url` (Moyasar
+  `https://api.moyasar.com/v1`; HyperPay `https://eu-prod.oppwa.com`, test `https://eu-test.oppwa.com`),
+  `config` `{"gateway": "moyasar"}` or `{"gateway": "hyperpay"}`, and its credential:
+  - Moyasar: `{"secret_key": "sk_live_...", "webhook_secret": "..."}`, the webhook secret being the
+    one entered when adding the webhook in Moyasar's dashboard.
+  - HyperPay: `{"access_token": "...", "entity_ids": {"card": "...", "mada": "...", "apple_pay": "..."},
+    "webhook_secret": "<the webhook's 64-character hex key>"}`; mada always has its own entity.
+- `billing.gateway.rules` picks the gateway for a payment by currency, payer country and amount; the
+  first rule that matches wins.
+- The gateway's webhook URL is `https://<deployment>/api/v1/billing/gateways/<system id>/webhook`.
+  A call whose secret (Moyasar) or encryption (HyperPay) does not verify gets `401`. Each verified
+  event is stored once and applied by a background job, so a redelivered event never changes a
+  payment twice; an event that cannot be applied (no payment has its reference) keeps its error in
+  `billing_gateway_event` and is retried up to ten times.
+
 ## Roles
 
 | Role | May |

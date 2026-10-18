@@ -91,6 +91,7 @@ pub fn test_config() -> AppConfig {
             "external_api": {{}},
             "s2s": {{ "enabled": false }},
             "einvoice": {{ "enabled": true, "key_encryption_key": "{einvoice_key}" }},
+            "integration": {{ "credential_encryption_key": "{integration_key}" }},
             "security": {{ "bootstrap_admin_email": null }}
         }}"#,
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
@@ -104,6 +105,7 @@ pub fn test_config() -> AppConfig {
         jwt_secret = THROWAWAY_JWT_SECRET,
         // A throwaway key: the test database is dropped after the run.
         einvoice_key = "5e".repeat(32),
+        integration_key = "6a".repeat(32),
         issuer = ISSUER,
     );
     attome_testkit::with_test_database(
@@ -269,6 +271,39 @@ impl TestApp {
     ) -> (StatusCode, Value) {
         let cookie = self.admin.cookie.clone();
         self.request_as(&cookie, method, path, body).await
+    }
+
+    /// Sends one request with no credential, the raw `body` and `headers`,
+    /// as an outside caller (a gateway's webhook) would.
+    pub async fn request_public(
+        &self,
+        method: Method,
+        path: &str,
+        headers: &[(&str, &str)],
+        body: Vec<u8>,
+    ) -> (StatusCode, Value) {
+        let mut builder = Request::builder().method(method).uri(path);
+        for (name, value) in headers {
+            builder = builder.header(*name, *value);
+        }
+        let response = self
+            .router
+            .clone()
+            .oneshot(
+                builder
+                    .body(Body::from(body))
+                    .expect("a well-formed request"),
+            )
+            .await
+            .expect("the router answers");
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("read the response body");
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
     }
 
     /// Sends one request with `cookie`.

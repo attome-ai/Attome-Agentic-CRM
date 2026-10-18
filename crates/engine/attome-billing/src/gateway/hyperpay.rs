@@ -7,7 +7,8 @@
 //!
 //! - **The credential** is a JSON object: `access_token`, and `entity_ids`
 //!   by method (`card`, `mada`, `apple_pay`, `stc_pay`, `tabby`, `tamara`,
-//!   and optionally `recurring` for token charges). HyperPay takes mada on
+//!   and optionally `recurring` for token charges), and `webhook_secret`, the
+//!   webhook's 64-character hex key. HyperPay takes mada on
 //!   its own entity, so one checkout's methods must share one entity.
 //! - **The gateway reference** is the `merchantTransactionId` Attome sends,
 //!   derived from the idempotency key ([`merchant_transaction_id`]). Every

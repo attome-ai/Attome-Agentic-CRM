@@ -45343,6 +45343,104 @@
         ]
       }
     },
+    "/api/v1/billing/gateways/{system}/webhook": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_webhook",
+        "parameters": [
+          {
+            "name": "system",
+            "in": "path",
+            "description": "The payment_gateway integration system",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The gateway's notification, as it sends it",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Verified and stored; applied by a job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The signature or secret does not verify",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such gateway, or billing is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A verified notification that does not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many calls from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-audit-exempt": {
+          "note": "unauthenticated gateway callback; the applied payment change is audited by the job",
+          "reason": "delegated",
+          "via": "BillingGatewayEventApply -> payment::service::apply_gateway_status_in_tx"
+        }
+      }
+    },
     "/api/v1/billing/invoice-requests": {
       "post": {
         "tags": [
@@ -121750,6 +121848,25 @@
             "type": "number",
             "format": "double",
             "description": "The measurement in milliseconds."
+          }
+        }
+      },
+      "WebhookAccepted": {
+        "type": "object",
+        "required": [
+          "events",
+          "new"
+        ],
+        "properties": {
+          "events": {
+            "type": "integer",
+            "description": "Events the call carried.",
+            "minimum": 0
+          },
+          "new": {
+            "type": "integer",
+            "description": "Of those, new ones (the rest were delivered before).",
+            "minimum": 0
           }
         }
       },

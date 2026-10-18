@@ -106,6 +106,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // AG2-T3: e-invoices waiting for ZATCA, every five minutes.
     crate::jobs::spawn_billing_einvoice_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // F5-T7: gateway events waiting to apply, every minute.
+    crate::jobs::spawn_billing_gateway_event_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
     // F4-T10: invoices past due, nightly.
     crate::jobs::spawn_billing_overdue_scheduler(
         db.clone(),
