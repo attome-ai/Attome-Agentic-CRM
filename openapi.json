@@ -45022,6 +45022,88 @@
         }
       }
     },
+    "/api/v1/billing/accounts/{id}/apply-credit": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_apply_credit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The account",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What each payment's credit paid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentRecorded"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not record payments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another payment for the account is being recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "execute"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/accounts/{id}/statement": {
       "get": {
         "tags": [
@@ -46320,6 +46402,202 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/billing/payments": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_payment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPayment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The payment and how it was allocated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentRecorded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not record payments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another payment for the account is being recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad amount, currency, method or allocation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/billing/payments/{id}/reverse": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_reverse",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The payment",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Reversed; its invoices reopened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentReversed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not reverse payments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already reversed, or the account is busy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "execute"
+            }
+          ],
+          "policy": "entity_policy"
+        }
       }
     },
     "/api/v1/billing/usage": {
@@ -75417,6 +75695,42 @@
           }
         }
       },
+      "AllocationLine": {
+        "type": "object",
+        "description": "One allocation written.",
+        "required": [
+          "invoice_id",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Decimal, as text."
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "AllocationRequest": {
+        "type": "object",
+        "description": "One allocation the payer asked for.",
+        "required": [
+          "invoice_id",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "AncestorRow": {
         "type": "object",
         "required": [
@@ -94525,6 +94839,61 @@
         },
         "additionalProperties": false
       },
+      "NewPayment": {
+        "type": "object",
+        "description": "A payment received outside a gateway (transfer, cheque, cash).",
+        "required": [
+          "payer_account_id",
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "allocations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AllocationRequest"
+            },
+            "description": "How the payer said to split it; oldest due first when absent."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217."
+          },
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "One of the payment methods; `bank_transfer` by default."
+          },
+          "payer_account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "received_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The day it was received (default today)."
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The bank or cheque reference."
+          }
+        }
+      },
       "NewPortal": {
         "type": "object",
         "required": [
@@ -106936,6 +107305,52 @@
           "out_of_scope"
         ]
       },
+      "PaymentRecorded": {
+        "type": "object",
+        "description": "What recording (or applying credit) did.",
+        "required": [
+          "payment_id",
+          "allocations",
+          "unallocated"
+        ],
+        "properties": {
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllocationLine"
+            }
+          },
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unallocated": {
+            "type": "string",
+            "description": "Left over as the customer's credit, decimal text."
+          }
+        }
+      },
+      "PaymentReversed": {
+        "type": "object",
+        "required": [
+          "payment_id",
+          "invoices"
+        ],
+        "properties": {
+          "invoices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The invoices that reopened."
+          },
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "PendingView": {
         "oneOf": [
           {
@@ -111418,6 +111833,17 @@
             "type": "string"
           },
           "target": {
+            "type": "string"
+          }
+        }
+      },
+      "ReverseRequest": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
             "type": "string"
           }
         }

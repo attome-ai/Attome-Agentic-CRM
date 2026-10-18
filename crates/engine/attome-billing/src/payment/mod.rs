@@ -1,4 +1,5 @@
-//! Customer payments (roadmap F5): allocation over open invoices, as pure
-//! code the payment service builds on.
+//! Customer payments (roadmap F5): allocation over open invoices (pure
+//! code) and the payment service built on it.
 
 pub mod allocate;
+pub mod service;

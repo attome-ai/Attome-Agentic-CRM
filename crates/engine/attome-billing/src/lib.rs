@@ -42,5 +42,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<statements::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<writeoff::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<einvoice::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<payment::service::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

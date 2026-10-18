@@ -34,6 +34,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Payments (F5-T3): `POST /api/v1/billing/payments` records a payment received outside a gateway and
+  allocates it to the payer's open invoices (oldest due first, or as given), refreshing their paid
+  and open totals and payment status in the same transaction; what is left over stays as the
+  customer's credit, which `POST /api/v1/billing/accounts/{id}/apply-credit` allocates later.
+  `POST /api/v1/billing/payments/{id}/reverse` (`billing.payment_reverse`) reverses one with a
+  reason and reopens its invoices. An account's payments are serialised by a lock (`409` to retry);
+  payments are append-only for every other writer. Billing's engine writes to invoices now also
+  reach the change feed (issue, write-off, payment status, e-invoice status, sending).
 - E-invoicing screens (AG2-T4): `/xrm/billing/einvoice` lists the ZATCA devices with their state and
   counter, adds a device and onboards it with the Fatoora portal's OTP (ZATCA's reason shown when a
   step fails); the invoice form shows the invoice's e-invoice status with ZATCA's errors and

@@ -306,17 +306,29 @@ fn zatca_invoice(source: Source, seller: Party, icv: u64, pih: String) -> ZatcaI
 }
 
 async fn set_status(state: &EngineState, invoice_id: Uuid, status: &str) -> Result<(), AppError> {
-    sqlx::query(
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let changed = sqlx::query(
         "UPDATE invoice SET einvoice_status = $2, modified_at = now(), \
              row_version = row_version + 1 \
          WHERE id = $1 AND einvoice_status IS DISTINCT FROM $2",
     )
     .bind(invoice_id)
     .bind(status)
-    .execute(&state.base.db)
+    .execute(&mut *tx)
     .await
-    .map_err(AppError::internal)?;
-    Ok(())
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if changed > 0 {
+        attome_core::change_feed::emit_named(
+            &mut tx,
+            "invoice",
+            invoice_id,
+            attome_core::change_feed::ChangeOperation::Update,
+            "billing.invoice_einvoice_status",
+        )
+        .await?;
+    }
+    attome_db::tx::commit(tx).await
 }
 
 /// Stamps and sends one issued invoice; its e-invoice state, or `None` when

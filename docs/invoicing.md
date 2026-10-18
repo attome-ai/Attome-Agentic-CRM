@@ -84,6 +84,10 @@ copied into a draft (once per period) and moves on.
 
 - Payment status, paid and open totals follow payment allocations and the due date; a nightly sweep
   marks past-due open invoices `overdue`. Nobody marks an invoice paid by hand.
+- `POST /api/v1/billing/payments` records a payment received by transfer, cheque or cash and
+  allocates it (oldest due first, or as the payer says); the rest is the customer's credit, applied
+  later with `POST /api/v1/billing/accounts/{id}/apply-credit`. `POST .../payments/{id}/reverse`
+  (`billing.payment_reverse`) reverses a payment with a reason; nothing is ever deleted.
 - `GET /api/v1/billing/accounts/{id}/statement?from=&to=` gives the opening balance, the period's
   documents, payments and write-offs, and the closing balance, per currency.
 - `GET /api/v1/billing/ageing?as_of=` pages the open amounts per account and currency in current,

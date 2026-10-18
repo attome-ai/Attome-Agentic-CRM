@@ -84,6 +84,19 @@ pub async fn refresh_status(
     invoice_id: Uuid,
 ) -> Result<PaymentState, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let result = refresh_in_tx(&mut tx, invoice_id).await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(result)
+}
+
+/// [`refresh_status`] inside the caller's transaction (the payment service
+/// refreshes every invoice a payment touches in the payment's own
+/// transaction). Locks the invoice row and emits a change-feed update when
+/// something changed.
+pub async fn refresh_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    invoice_id: Uuid,
+) -> Result<PaymentState, AppError> {
     let row: Option<InvoiceRow> = sqlx::query_as(
         "SELECT status, grand_total::text, due_date::date, payment_status, \
                 written_off_total::text \
@@ -91,7 +104,7 @@ pub async fn refresh_status(
          FOR UPDATE",
     )
     .bind(invoice_id)
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     let Some((status, grand, due, current, written_off)) = row else {
@@ -108,7 +121,7 @@ pub async fn refresh_status(
            AND (is_active IS NULL OR is_active = true)",
     )
     .bind(invoice_id)
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     let grand = decimal(grand.as_deref());
@@ -123,7 +136,7 @@ pub async fn refresh_status(
         Utc::now().date_naive(),
         current.as_deref(),
     );
-    sqlx::query(
+    let changed = sqlx::query(
         "UPDATE invoice SET paid_total = $2::numeric, open_total = $3::numeric, \
              payment_status = $4, modified_at = now(), row_version = row_version + 1 \
          WHERE id = $1 AND (paid_total IS DISTINCT FROM $2::numeric \
@@ -133,10 +146,20 @@ pub async fn refresh_status(
     .bind(paid.to_string())
     .bind(open.to_string())
     .bind(derived)
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await
-    .map_err(AppError::internal)?;
-    attome_db::tx::commit(tx).await?;
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if changed > 0 {
+        attome_core::change_feed::emit_named(
+            tx,
+            "invoice",
+            invoice_id,
+            attome_core::change_feed::ChangeOperation::Update,
+            "billing.invoice_payment_status",
+        )
+        .await?;
+    }
     Ok(PaymentState {
         invoice_id,
         paid_total: paid.to_string(),
@@ -151,7 +174,8 @@ pub async fn overdue_sweep(state: &EngineState) -> Result<u64, AppError> {
     let today = Utc::now().date_naive();
     let mut marked = 0;
     loop {
-        let done = sqlx::query(
+        let mut tx = attome_db::tx::begin(&state.base.db).await?;
+        let ids: Vec<Uuid> = sqlx::query_scalar(
             "UPDATE invoice SET payment_status = 'overdue', modified_at = now(), \
                  row_version = row_version + 1 \
              WHERE id IN ( \
@@ -160,14 +184,23 @@ pub async fn overdue_sweep(state: &EngineState) -> Result<u64, AppError> {
                    AND COALESCE(payment_status, 'open') IN ('open', 'partly_paid') \
                    AND due_date::date < $1 AND open_total > 0 \
                    AND (is_active IS NULL OR is_active = true) \
-                 ORDER BY id LIMIT $2)",
+                 ORDER BY id LIMIT $2) \
+             RETURNING id",
         )
         .bind(today)
         .bind(OVERDUE_BATCH)
-        .execute(&state.base.db)
+        .fetch_all(&mut *tx)
         .await
-        .map_err(AppError::internal)?
-        .rows_affected();
+        .map_err(AppError::internal)?;
+        attome_core::change_feed::emit_many(
+            &mut tx,
+            "invoice",
+            &ids,
+            attome_core::change_feed::ChangeOperation::Update,
+        )
+        .await?;
+        attome_db::tx::commit(tx).await?;
+        let done = ids.len() as u64;
         marked += done;
         if done < OVERDUE_BATCH as u64 {
             break;

@@ -494,6 +494,14 @@ impl IssueHook for SendHook {
             if moved == 0 {
                 return Ok(());
             }
+            attome_core::change_feed::emit_named(
+                &mut tx,
+                "invoice",
+                invoice_id,
+                attome_core::change_feed::ChangeOperation::Update,
+                "billing.invoice_sent",
+            )
+            .await?;
             attome_jobs::enqueue_in_tx(
                 &mut tx,
                 attome_core::jobs::EngineJob::SendEmail(Box::new(message)),

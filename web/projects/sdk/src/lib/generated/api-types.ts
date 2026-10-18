@@ -8629,6 +8629,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/accounts/{id}/apply-credit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_apply_credit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/accounts/{id}/statement": {
         parameters: {
             query?: never;
@@ -8851,6 +8867,38 @@ export interface paths {
         get: operations["get_recurring"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/payments/{id}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_reverse"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14727,6 +14775,20 @@ export interface components {
             timeline: components["schemas"]["SwitchEvent"][];
             /** @description Turns over the last 24 hours, by how they ended. */
             turns_last_day: components["schemas"]["TurnCount"][];
+        };
+        /** @description One allocation written. */
+        AllocationLine: {
+            /** @description Decimal, as text. */
+            amount: string;
+            /** Format: uuid */
+            invoice_id: string;
+        };
+        /** @description One allocation the payer asked for. */
+        AllocationRequest: {
+            /** Format: double */
+            amount: number;
+            /** Format: uuid */
+            invoice_id: string;
         };
         AncestorRow: {
             /**
@@ -22446,6 +22508,26 @@ export interface components {
             settings?: string | null;
             slug?: string | null;
         };
+        /** @description A payment received outside a gateway (transfer, cheque, cash). */
+        NewPayment: {
+            /** @description How the payer said to split it; oldest due first when absent. */
+            allocations?: components["schemas"]["AllocationRequest"][] | null;
+            /** Format: double */
+            amount: number;
+            /** @description ISO 4217. */
+            currency: string;
+            /** @description One of the payment methods; `bank_transfer` by default. */
+            method?: string | null;
+            /** Format: uuid */
+            payer_account_id: string;
+            /**
+             * Format: date
+             * @description The day it was received (default today).
+             */
+            received_on?: string | null;
+            /** @description The bank or cheque reference. */
+            reference?: string | null;
+        };
         NewPortal: {
             description?: string | null;
             /** @description Defaults to false: a new portal serves nothing until it is enabled. */
@@ -26803,6 +26885,20 @@ export interface components {
         };
         /** @enum {string} */
         PauseReason: "waiting_customer" | "on_hold" | "out_of_scope";
+        /** @description What recording (or applying credit) did. */
+        PaymentRecorded: {
+            allocations: components["schemas"]["AllocationLine"][];
+            /** Format: uuid */
+            payment_id: string;
+            /** @description Left over as the customer's credit, decimal text. */
+            unallocated: string;
+        };
+        PaymentReversed: {
+            /** @description The invoices that reopened. */
+            invoices: string[];
+            /** Format: uuid */
+            payment_id: string;
+        };
         /** @description Why a turn stopped for a human. */
         PendingView: {
             action_id: string;
@@ -28662,6 +28758,9 @@ export interface components {
             proposed_at: string;
             status: string;
             target: string;
+        };
+        ReverseRequest: {
+            reason: string;
         };
         /**
          * @description Full replace, `null` clears — same convention as `SchedulePageBody`
@@ -62176,6 +62275,56 @@ export interface operations {
             };
         };
     };
+    post_apply_credit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The account */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What each payment's credit paid */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentRecorded"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not record payments */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another payment for the account is being recorded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_statement: {
         parameters: {
             query?: {
@@ -63023,6 +63172,138 @@ export interface operations {
                 };
             };
             /** @description period_days is 0 or above 366 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewPayment"];
+            };
+        };
+        responses: {
+            /** @description The payment and how it was allocated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentRecorded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not record payments */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another payment for the account is being recorded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad amount, currency, method or allocation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_reverse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The payment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReverseRequest"];
+            };
+        };
+        responses: {
+            /** @description Reversed; its invoices reopened */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentReversed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not reverse payments */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such payment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already reversed, or the account is busy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason */
             422: {
                 headers: {
                     [name: string]: unknown;

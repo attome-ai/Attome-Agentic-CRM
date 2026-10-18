@@ -184,6 +184,14 @@ pub async fn do_write_off(
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    attome_core::change_feed::emit_named(
+        &mut tx,
+        "invoice",
+        invoice_id,
+        attome_core::change_feed::ChangeOperation::Update,
+        "billing.invoice_written_off",
+    )
+    .await?;
     sqlx::query(
         "INSERT INTO billing_posting_outbox (id, invoice_ref, posting_kind, payload) \
          VALUES ($1, $2, 'write_off', $3)",

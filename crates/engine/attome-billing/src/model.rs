@@ -54,6 +54,19 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/invoices/{id}/cancel",
                 post(crate::notes::post_cancel),
             )
+            // F5-T3: manual payments, reversal and applying credit.
+            .route(
+                "/api/v1/billing/payments",
+                post(crate::payment::service::post_payment),
+            )
+            .route(
+                "/api/v1/billing/payments/{id}/reverse",
+                post(crate::payment::service::post_reverse),
+            )
+            .route(
+                "/api/v1/billing/accounts/{id}/apply-credit",
+                post(crate::payment::service::post_apply_credit),
+            )
             // AG2-T3: the invoice's e-invoice.
             .route(
                 "/api/v1/billing/invoices/{id}/einvoice",

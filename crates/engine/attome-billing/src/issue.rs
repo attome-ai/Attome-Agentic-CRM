@@ -280,15 +280,31 @@ pub async fn do_issue(
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    sqlx::query(
+    let locked_lines: Vec<Uuid> = sqlx::query_scalar(
         "UPDATE invoice_line SET is_locked = true, modified_at = now(), \
              row_version = row_version + 1 \
-         WHERE invoice_ref = $1 AND (is_active IS NULL OR is_active = true)",
+         WHERE invoice_ref = $1 AND (is_active IS NULL OR is_active = true) RETURNING id",
     )
     .bind(invoice_id)
-    .execute(&mut *tx)
+    .fetch_all(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    // The change feed: these writes skip the generic record path.
+    attome_core::change_feed::emit_named(
+        &mut tx,
+        "invoice",
+        invoice_id,
+        attome_core::change_feed::ChangeOperation::Update,
+        "billing.invoice_issued",
+    )
+    .await?;
+    attome_core::change_feed::emit_many(
+        &mut tx,
+        "invoice_line",
+        &locked_lines,
+        attome_core::change_feed::ChangeOperation::Update,
+    )
+    .await?;
     sqlx::query(
         "INSERT INTO billing_posting_outbox (id, invoice_ref, posting_kind, payload) \
          VALUES ($1, $2, 'issue', $3)",
