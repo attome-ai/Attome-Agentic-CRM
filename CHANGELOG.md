@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Invoicing permission tests: a Billing Clerk cannot issue, credit or write off; a user scoped to
+  their own accounts sees only those in the ageing and statements and cannot recompute; a new tax
+  rate never changes an issued invoice. Statements and ageing now apply the same account scope as
+  record reads (the owner arm and conditional grants were missing).
 - `POST /api/v1/billing/invoices/{id}/write-off` (`billing.write_off`) writes off part or all of
   an issued invoice's open amount with a reason, posting a `write_off` ledger row; above
   `billing.write_off_approval_threshold` it waits for a `billing.write_off` approval. The amount is

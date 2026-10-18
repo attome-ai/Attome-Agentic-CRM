@@ -18,8 +18,8 @@ use std::str::FromStr;
 
 use attome_core::EngineState;
 use attome_security::{
-    RecordAction, SecurityContextExt, bind_rls_predicate_as, resolve_entity_access_level,
-    rls_predicate,
+    ConditionAwarePredicate, RecordAction, SecurityContextExt, resolve_entity_access_level,
+    resolve_owner_visible, rls_predicate_with_conditions,
 };
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
@@ -94,32 +94,14 @@ async fn can_read_account(
     if ctx.require("account", "read").is_err() {
         return Ok(false);
     }
-    let Some(entity_id) = state.entities.load().get("account").map(|m| m.entity_id) else {
-        return Ok(false);
-    };
-    let db = &state.base.db;
-    let level =
-        resolve_entity_access_level(db, ctx.user_id, entity_id, "account", RecordAction::Read)
-            .await?;
-    let predicate = rls_predicate(
-        ctx,
-        entity_id,
-        "a",
-        level,
-        RecordAction::Read.share_capability(),
-        2,
-    );
-    let rls = predicate.as_ref().map_or("", |p| p.sql.as_str());
+    let scope = account_scope(state, ctx).await?;
+    let rls = scope.as_ref().map_or("", |p| p.sql.as_str());
     let sql = format!(
-        "SELECT a.id FROM account a WHERE a.id = $1 \
-           AND (a.is_active IS NULL OR a.is_active = true) {rls}"
+        "SELECT a.id FROM account a WHERE a.id = $1 AND (a.is_active IS NULL OR a.is_active = true) {rls}"
     );
-    let mut query = sqlx::query_as::<_, (Uuid,)>(&sql).bind(account);
-    if let Some(p) = &predicate {
-        query = bind_rls_predicate_as(query, &p.binds);
-    }
+    let query = bind_scope(sqlx::query_as::<_, (Uuid,)>(&sql).bind(account), &scope);
     Ok(query
-        .fetch_optional(db)
+        .fetch_optional(&state.base.db)
         .await
         .map_err(AppError::internal)?
         .is_some())
@@ -303,34 +285,65 @@ fn amounts(row: &BucketRow) -> [String; 6] {
     ]
 }
 
-/// The caller's account scope on alias `a`, from placeholder `$2`.
+/// The caller's account scope on alias `a`, from placeholder `$2`: the
+/// same predicate the generic record reads apply (tier, shares, the owner
+/// arm and conditional grants). `None` reads every account.
 async fn account_scope(
     state: &EngineState,
     ctx: &SecurityContext,
-) -> Result<Option<attome_security::RlsPredicate>, AppError> {
+) -> Result<Option<ConditionAwarePredicate>, AppError> {
     ctx.require("account", "read")?;
-    let entity_id = state
+    let meta = state
         .entities
         .load()
         .get("account")
-        .map(|m| m.entity_id)
+        .cloned()
         .ok_or(AppError::NotFound)?;
+    let db = &state.base.db;
     let level = resolve_entity_access_level(
-        &state.base.db,
+        db,
         ctx.user_id,
-        entity_id,
+        meta.entity_id,
         "account",
         RecordAction::Read,
     )
     .await?;
-    Ok(rls_predicate(
+    let owner_visible = resolve_owner_visible(
+        db,
+        ctx.user_id,
+        meta.entity_id,
+        "account",
+        RecordAction::Read,
+    )
+    .await?;
+    Ok(rls_predicate_with_conditions(
         ctx,
-        entity_id,
+        meta.entity_id,
         "a",
         level,
         RecordAction::Read.share_capability(),
+        "account.read",
+        &meta.attrs,
+        owner_visible,
         2,
     ))
+}
+
+/// Binds an account scope's values after the query's own (`$1`).
+fn bind_scope<'q, O>(
+    mut q: sqlx::query::QueryAs<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments>,
+    scope: &'q Option<ConditionAwarePredicate>,
+) -> sqlx::query::QueryAs<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments> {
+    let Some(scope) = scope else {
+        return q;
+    };
+    if let Some(tier) = &scope.tier_binds {
+        q = attome_security::bind_rls_predicate_as(q, tier);
+    }
+    for value in &scope.condition_binds {
+        q = q.bind(value);
+    }
+    q
 }
 
 type AgeingDbRow = (
@@ -362,10 +375,7 @@ pub async fn ageing(
          HAVING SUM(open) <> 0"
     );
     let count_sql = format!("SELECT COUNT(*) FROM ({grouped}) g");
-    let mut count = sqlx::query_as::<_, (i64,)>(&count_sql).bind(as_of);
-    if let Some(p) = &scope {
-        count = bind_rls_predicate_as(count, &p.binds);
-    }
+    let count = bind_scope(sqlx::query_as::<_, (i64,)>(&count_sql).bind(as_of), &scope);
     let (total,) = count
         .fetch_one(&state.base.db)
         .await
@@ -375,10 +385,10 @@ pub async fn ageing(
          LIMIT {} OFFSET {}",
         window.page_size, window.offset
     );
-    let mut rows = sqlx::query_as::<_, AgeingDbRow>(&page_sql).bind(as_of);
-    if let Some(p) = &scope {
-        rows = bind_rls_predicate_as(rows, &p.binds);
-    }
+    let rows = bind_scope(
+        sqlx::query_as::<_, AgeingDbRow>(&page_sql).bind(as_of),
+        &scope,
+    );
     let rows = rows
         .fetch_all(&state.base.db)
         .await
@@ -434,10 +444,7 @@ pub async fn ageing_totals(
         "SELECT currency, {BUCKET_SUMS} FROM ({docs}) d \
          GROUP BY currency ORDER BY currency"
     );
-    let mut query = sqlx::query_as::<_, TotalsDbRow>(&sql).bind(as_of);
-    if let Some(p) = &scope {
-        query = bind_rls_predicate_as(query, &p.binds);
-    }
+    let query = bind_scope(sqlx::query_as::<_, TotalsDbRow>(&sql).bind(as_of), &scope);
     Ok(query
         .fetch_all(&state.base.db)
         .await
