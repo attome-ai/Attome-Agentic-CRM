@@ -170,6 +170,12 @@ impl Compiled {
     pub fn eval_traced(&self, ctx: &Context) -> Result<(Value, Trace), RulesError> {
         eval::eval_traced(&self.expr, ctx, &self.budgets, &self.schema, &self.regexes)
     }
+
+    /// Z11-T8: the tree, schema and patterns, for evaluating this as a user
+    /// function's body inside another evaluation.
+    pub(crate) fn parts(&self) -> (&Expr, &Schema, &eval::Regexes) {
+        (&self.expr, &self.schema, &self.regexes)
+    }
 }
 
 #[cfg(test)]

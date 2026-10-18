@@ -406,7 +406,20 @@ fn typecheck_call(
                 Err(RulesError::RegexNotLiteral)
             }
         }
-        other => Err(RulesError::UnknownFunction(other.to_owned())),
+        other => match schema.user_function(other) {
+            // Z11-T8: its arguments against its parameters.
+            Some(f) => arity(name, args.len(), f.params.len(), f.params.len()).and_then(|()| {
+                for ((param, ty), actual) in f.params.iter().zip(&arg_types) {
+                    if ty.unify(actual).is_none() {
+                        return Err(type_err(format!(
+                            "{name}'s {param} takes {ty}, not {actual}"
+                        )));
+                    }
+                }
+                Ok(f.returns.clone())
+            }),
+            None => Err(RulesError::UnknownFunction(other.to_owned())),
+        },
     };
     result.map_err(RulesDiagnostic::without_span)
 }

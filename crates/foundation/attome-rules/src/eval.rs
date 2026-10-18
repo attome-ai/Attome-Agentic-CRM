@@ -664,8 +664,43 @@ impl Evaluator<'_> {
                     other => Err(eval_type_err(name, "text", other)),
                 }
             }
-            other => Err(RulesError::UnknownFunction(other.to_owned())),
+            other => match self.schema.user_function(other).cloned() {
+                Some(f) => self.eval_user(other, &f, args, trace),
+                None => Err(RulesError::UnknownFunction(other.to_owned())),
+            },
         }
+    }
+
+    /// Z11-T8: a user function's body, with only its arguments in scope and
+    /// its steps charged to this evaluation's budget.
+    fn eval_user(
+        &mut self,
+        name: &str,
+        f: &crate::functions::CompiledFunction,
+        args: &[Expr],
+        trace: &mut Trace,
+    ) -> Result<Value, RulesError> {
+        if args.len() != f.params.len() {
+            return Err(arity_err(name, &f.params.len().to_string(), args.len()));
+        }
+        let mut ctx = self.ctx.without_fields();
+        for ((param, _), arg) in f.params.iter().zip(args) {
+            let value = self.eval(arg, trace)?;
+            ctx = ctx.with_field(param.clone(), value);
+        }
+        let (expr, schema, regexes) = f.body.parts();
+        let mut inner = Evaluator {
+            ctx: &ctx,
+            budgets: self.budgets,
+            schema,
+            regexes,
+            steps: self.steps,
+            start: self.start,
+            record_trace: self.record_trace,
+        };
+        let value = inner.eval(expr, trace);
+        self.steps = inner.steps;
+        value
     }
 
     /// Evaluates exactly n args (erroring on any other arity) and returns

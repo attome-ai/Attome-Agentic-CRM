@@ -59,7 +59,8 @@
 //! rules.lookup.multi_hop, rules.function.unknown, rules.function.arity,
 //! rules.eval.divide_by_zero, rules.eval.failed, rules.number.non_finite,
 //! rules.null.operand, rules.context.type_mismatch,
-//! rules.context.unknown_timezone, and one code per budget
+//! rules.context.unknown_timezone, rules.function.invalid,
+//! rules.function.recursive, and one code per budget
 //! kind (rules.budget.ast_nodes, rules.budget.recursion_depth,
 //! rules.budget.eval_steps, rules.budget.wall_clock, rules.budget.string_length,
 //! rules.budget.source_length, rules.budget.list_length,
@@ -107,6 +108,7 @@ pub mod currency;
 pub mod decision_table;
 mod error;
 mod eval;
+pub mod functions;
 mod lexer;
 mod parser;
 mod trace;
@@ -121,6 +123,7 @@ pub use compile::{Compiled, compile, compile_versioned, compile_with_budgets};
 pub use context::{Context, Schema};
 pub use decision_table::{CompiledTable, DecisionRow, DecisionTable, HitPolicy, TableIssue};
 pub use error::{BudgetKind, RulesDiagnostic, RulesError, Spans};
+pub use functions::{FunctionLibrary, UserFunction, compile_with_library};
 pub use trace::{Trace, TraceEntry};
 pub use value::{Type, Value};
 pub use version::{LanguageVersion, upgrade};

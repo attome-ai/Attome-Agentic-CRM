@@ -159,6 +159,15 @@ pub enum RulesError {
     /// Z11-T6: the pattern does not compile or is over the size limit.
     #[error("invalid pattern: {0}")]
     RegexInvalid(String),
+
+    /// Z11-T8: a user function's name, parameters or library size is not
+    /// allowed (a built-in name, a bad name, too many).
+    #[error("invalid function: {0}")]
+    InvalidFunction(String),
+
+    /// Z11-T8: a user function calls itself, directly or through others.
+    #[error("function {0} is recursive")]
+    Recursive(String),
 }
 
 impl RulesError {
@@ -186,6 +195,8 @@ impl RulesError {
             Self::NoRate(_) => "rules.currency.no_rate",
             Self::RegexNotLiteral => "rules.regex.not_literal",
             Self::RegexInvalid(_) => "rules.regex.invalid",
+            Self::InvalidFunction(_) => "rules.function.invalid",
+            Self::Recursive(_) => "rules.function.recursive",
             Self::Budget(kind) => kind.code(),
         }
     }
@@ -319,6 +330,8 @@ mod tests {
                 field: "amount".to_owned(),
             },
             RulesError::UnknownTimezone("Mars/Olympus".to_owned()),
+            RulesError::InvalidFunction("round".to_owned()),
+            RulesError::Recursive("f".to_owned()),
         ];
         for kind in [
             BudgetKind::AstNodes,

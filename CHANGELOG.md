@@ -38,6 +38,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rules: user-defined functions (`attome_rules::FunctionLibrary`, `compile_with_library`, Z11-T8).
+  Typed, pure V2 expressions over their own parameters; built once in call order, recursion
+  (`rules.function.recursive`) and built-in names (`rules.function.invalid`) refused; at most 200
+  functions of 8 parameters; a call's steps count against the calling rule's budget.
 - Rules: decision tables (`attome_rules::DecisionTable`, Z11-T9). Rows of V2 conditions on named
   inputs (`it >= 100 and it < 500`, `it == "gold"`, `in(it, [...])`, or empty for any) with a
   result, first-match or all-matches, compiled once; `check()` reports number gaps, overlapping rows

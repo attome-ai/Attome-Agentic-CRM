@@ -33,9 +33,29 @@ use crate::value::{Type, Value};
 pub struct Schema {
     fields: HashMap<String, Type>,
     related: HashMap<String, HashMap<String, Type>>,
+    /// Z11-T8: the user functions a rule may call.
+    functions: Option<std::sync::Arc<crate::functions::FunctionLibrary>>,
 }
 
 impl Schema {
+    /// Z11-T8: lets rules checked against this schema call `library`'s
+    /// functions (see [`crate::compile_with_library`]).
+    #[must_use]
+    pub fn with_functions(
+        mut self,
+        library: std::sync::Arc<crate::functions::FunctionLibrary>,
+    ) -> Self {
+        self.functions = Some(library);
+        self
+    }
+
+    pub(crate) fn user_function(
+        &self,
+        name: &str,
+    ) -> Option<&std::sync::Arc<crate::functions::CompiledFunction>> {
+        self.functions.as_ref()?.get(name)
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -166,6 +186,18 @@ impl Context {
     pub fn with_field(mut self, name: impl Into<String>, value: Value) -> Self {
         self.fields.insert(name.into(), value);
         self
+    }
+
+    /// Z11-T8: this context's clock, zone and rates with no fields and no
+    /// related records, for a user function's body.
+    pub(crate) fn without_fields(&self) -> Context {
+        Context {
+            now: self.now,
+            timezone: self.timezone,
+            fields: HashMap::new(),
+            related: HashMap::new(),
+            rates: self.rates.clone(),
+        }
     }
 
     #[must_use]
