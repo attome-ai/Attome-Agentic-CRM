@@ -11,8 +11,13 @@
 //! atomicity claim (a rolled-back transaction leaves the record `pending`,
 //! not `completed`) — see `attome-server/tests/idempotency_durable.rs`.
 //!
-//! D-207 follow-up (never live-verified — added in a code-only session, see
-//! that decision's own TODO list): before this, a request that crashed after
+//! Over HTTP (Z5-T12), `attome-api/tests/bulk_mutation.rs` drives the whole
+//! tier through the middleware: a byte-identical replay with one operation,
+//! `409 idempotency_conflict` for the same key with another body, and a key
+//! run again after the retention sweep.
+//!
+//! D-207 follow-up (live-verified by the stale-pending tests in
+//! `attome-server/tests/idempotency_durable.rs`): before this, a request that crashed after
 //! `acquire_or_check` returned `Acquired` but before `complete_in_tx`/
 //! `complete_best_effort`/`release_on_failure` ever ran left that identity's
 //! row stuck at `state = 'pending'` permanently — `core_idempotency_record_

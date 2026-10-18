@@ -2058,6 +2058,150 @@ async fn bulk_enqueue_completes_its_durable_record_in_its_own_transaction() {
     );
 }
 
+// ── Z5-T12: the durable tier end to end over HTTP ─────────────────────────────
+
+async fn bulk_operations_for(db: &attome_db::DbPool, logicalname: &str) -> i64 {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM automation_bulk_operation WHERE entity_logicalname = $1",
+    )
+    .bind(logicalname)
+    .fetch_one(db)
+    .await
+    .unwrap()
+}
+
+async fn body_bytes(res: axum::response::Response) -> Vec<u8> {
+    axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap()
+        .to_vec()
+}
+
+// op: POST /api/v1/{entity}/bulk
+#[tokio::test]
+async fn durable_tier_replays_same_response_over_http() {
+    let system = skip_if_no_db!(mandatory_tier_system().await);
+    let (_, _, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let (logicalname, _) = provision_entity(&app, &admin_cookie, "durreplay", false).await;
+    let uri = format!("/api/v1/{logicalname}/bulk");
+    let body = bulk_body("create", None, vec![json!({ "data": { "title": "once" } })]);
+    let key = format!("durable-replay-{}", Uuid::now_v7());
+
+    let first = app
+        .clone()
+        .oneshot(idempotent_post(&uri, &admin_cookie, &key, Some(&body)))
+        .await
+        .unwrap();
+    assert_eq!(first.status(), StatusCode::ACCEPTED);
+    let first = body_bytes(first).await;
+    let replay = app
+        .clone()
+        .oneshot(idempotent_post(&uri, &admin_cookie, &key, Some(&body)))
+        .await
+        .unwrap();
+    assert_eq!(replay.status(), StatusCode::ACCEPTED);
+    assert_eq!(
+        replay
+            .headers()
+            .get("idempotency-replayed")
+            .map(|v| v.to_str().unwrap()),
+        Some("true")
+    );
+    assert_eq!(
+        body_bytes(replay).await,
+        first,
+        "the replay is byte-identical"
+    );
+    assert_eq!(
+        bulk_operations_for(&db, &logicalname).await,
+        1,
+        "one operation only"
+    );
+}
+
+// negative: POST /api/v1/{entity}/bulk
+#[tokio::test]
+async fn durable_tier_conflict_on_different_body() {
+    let system = skip_if_no_db!(mandatory_tier_system().await);
+    let (_, _, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let (logicalname, _) = provision_entity(&app, &admin_cookie, "durconflict", false).await;
+    let uri = format!("/api/v1/{logicalname}/bulk");
+    let key = format!("durable-conflict-{}", Uuid::now_v7());
+    let one = bulk_body("create", None, vec![json!({ "data": { "title": "one" } })]);
+    let two = bulk_body("create", None, vec![json!({ "data": { "title": "two" } })]);
+
+    let first = app
+        .clone()
+        .oneshot(idempotent_post(&uri, &admin_cookie, &key, Some(&one)))
+        .await
+        .unwrap();
+    assert_eq!(first.status(), StatusCode::ACCEPTED);
+    let other = app
+        .clone()
+        .oneshot(idempotent_post(&uri, &admin_cookie, &key, Some(&two)))
+        .await
+        .unwrap();
+    // idempotency.rs: a durable key reused for a different request is
+    // AppError::IdempotencyConflict.
+    assert_eq!(other.status(), StatusCode::CONFLICT);
+    assert_eq!(body_json(other).await["error"], "idempotency_conflict");
+    assert_eq!(
+        bulk_operations_for(&db, &logicalname).await,
+        1,
+        "the second never ran"
+    );
+}
+
+// op: POST /api/v1/{entity}/bulk
+#[tokio::test]
+async fn durable_tier_expired_key_executes_again() {
+    let system = skip_if_no_db!(mandatory_tier_system().await);
+    let (_, _, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let (logicalname, _) = provision_entity(&app, &admin_cookie, "durexpire", false).await;
+    let uri = format!("/api/v1/{logicalname}/bulk");
+    let body = bulk_body(
+        "create",
+        None,
+        vec![json!({ "data": { "title": "again" } })],
+    );
+    let key = format!("durable-expire-{}", Uuid::now_v7());
+
+    let first = accepted_id(
+        app.clone()
+            .oneshot(idempotent_post(&uri, &admin_cookie, &key, Some(&body)))
+            .await
+            .unwrap(),
+    )
+    .await;
+    // The retention sweep (PruneIdempotencyRecords) soft-deletes an old
+    // record; on this throwaway database the test does what it does.
+    let swept = sqlx::query(
+        "UPDATE idempotency_record SET is_deleted = true WHERE operation = $1 AND client_key = $2",
+    )
+    .bind(BULK_ENQUEUE)
+    .bind(&key)
+    .execute(&db)
+    .await
+    .unwrap()
+    .rows_affected();
+    assert_eq!(swept, 1);
+    let second = accepted_id(
+        app.clone()
+            .oneshot(idempotent_post(&uri, &admin_cookie, &key, Some(&body)))
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_ne!(second, first, "an expired key runs the operation again");
+    assert_eq!(bulk_operations_for(&db, &logicalname).await, 2);
+}
+
 #[tokio::test]
 async fn staged_import_approve_completes_its_durable_record_in_its_own_transaction() {
     let system = skip_if_no_db!(mandatory_tier_system().await);

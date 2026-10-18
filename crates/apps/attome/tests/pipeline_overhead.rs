@@ -692,6 +692,10 @@ fn print_window(title: &str, w: &Window) {
 // ── The measurement ──────────────────────────────────────────────────────────
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+/// Z5-T12: the median overhead budget of a session-cookie request, in
+/// microseconds (1 ms).
+const PIPELINE_BUDGET_US: f64 = 1000.0;
+
 #[ignore = "benchmark: run explicitly in release, see the module doc"]
 async fn measure_middleware_overhead() {
     install_sql_capture();
@@ -774,13 +778,30 @@ async fn measure_middleware_overhead() {
             full[2] - bare[2]
         );
     };
+    let mut cookie_overhead_us = None;
     for (name, uri, peer, auth) in &scenarios {
         run_sequential(&app, uri, *peer, auth, WARMUP).await;
         let seq = percentiles(run_sequential(&app, uri, *peer, auth, SEQUENTIAL).await);
         row(name, 1, seq, bare_seq);
+        if matches!(auth, Auth::Cookie(_)) {
+            cookie_overhead_us = Some(seq[0] - bare_seq[0]);
+        }
         let conc = percentiles(run_concurrent(&app, uri, *peer, auth).await);
         row(name, CONCURRENCY, conc, bare_conc);
     }
+
+    // Z5-T12: the pipeline's cost budget, the median overhead of a
+    // session-cookie request over the bare handler.
+    let cookie_overhead_us = cookie_overhead_us.expect("the cookie scenario ran");
+    println!(
+        "\nmedian per-request overhead, cookie session: {cookie_overhead_us:.0} us \
+         (budget {PIPELINE_BUDGET_US:.0} us)"
+    );
+    assert!(
+        cookie_overhead_us < PIPELINE_BUDGET_US,
+        "the middleware pipeline costs {cookie_overhead_us:.0} us per cookie request, over \
+         its {PIPELINE_BUDGET_US:.0} us budget"
+    );
 
     println!("\n## Per-layer Redis commands and SQL statements");
     for (name, uri, peer, auth) in &scenarios {
