@@ -128,6 +128,17 @@ Attome never sees a card number.
   payment link each time; after the last try the invoice is handed to collections
   (`billing.invoice.collections_handoff` on the change feed). HyperPay's card updater keeps a saved
   card's number and expiry current.
+- Refunds: `POST /api/v1/billing/payments/{id}/refunds` (`payment.refund`, Finance Manager) refunds
+  part or all of a paid payment, never more than is left after earlier refunds. Above
+  `billing.refund.approval_threshold` (0 = never) it waits for a `billing.refund` approval. The refund
+  goes back through the payment's gateway (or, for a transfer, is recorded for a person to pay back);
+  the payment becomes `partially_refunded` or `refunded`, and each invoice it paid gets a draft credit
+  note for its share, for finance to review and issue.
+- Disputes: a chargeback the gateway reports (HyperPay) opens a `payment_dispute` with its evidence
+  deadline (seven days when the gateway names none), marks the payment `disputed` and tells the
+  Finance Managers in the app. `GET /api/v1/billing/disputes/{id}/evidence` lists the paid invoices'
+  PDFs and the files attached to those invoices and to the link's order; a person submits the evidence
+  to the gateway.
 - The gateway's webhook URL is `https://<deployment>/api/v1/billing/gateways/<system id>/webhook`.
   A call whose secret (Moyasar) or encryption (HyperPay) does not verify gets `401`. Each verified
   event is stored once and applied by a background job, so a redelivered event never changes a

@@ -584,6 +584,7 @@ dependencies = [
  "attome-integration",
  "attome-jobs",
  "attome-modules",
+ "attome-notification",
  "attome-records",
  "attome-security",
  "attome-server",

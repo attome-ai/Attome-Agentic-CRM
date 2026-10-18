@@ -8693,6 +8693,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/disputes/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/gateways/{system}/webhook": {
         parameters: {
             query?: never;
@@ -8915,6 +8931,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/payments/{id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_refund"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19276,6 +19308,24 @@ export interface components {
             size_bytes?: number | null;
             source_field?: string | null;
         };
+        /** @description One document that can answer a dispute. */
+        DocumentRef: {
+            /**
+             * Format: uuid
+             * @description The `attome_document` row, for an attachment.
+             */
+            document_id?: string | null;
+            /** @description The record it belongs to. */
+            entity: string;
+            /** @description The file field to download it from. */
+            field: string;
+            folder?: string | null;
+            /** @description `invoice_document` (the invoice's PDF) or `attachment` (a K1 file). */
+            kind: string;
+            name?: string | null;
+            /** Format: uuid */
+            record_id: string;
+        };
         /** @description An invoice's e-invoice as people and the billing engine see it. */
         DocumentState: {
             /** Format: int32 */
@@ -28406,6 +28456,22 @@ export interface components {
             from_ref: string;
             mode: string;
             to: string;
+        };
+        /** @description What a refund request did. */
+        RefundOutcome: {
+            /** Format: uuid */
+            approval_id?: string | null;
+            /** Format: uuid */
+            payment_id: string;
+            /** Format: uuid */
+            refund_id: string;
+            /** @description `pending` (the job refunds it) or `pending_approval`. */
+            status: string;
+        };
+        RefundRequest: {
+            /** Format: double */
+            amount: number;
+            reason: string;
         };
         RegisterRequest: {
             email: string;
@@ -62596,6 +62662,56 @@ export interface operations {
             };
         };
     };
+    get_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dispute */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The documents that can answer it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentRef"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read disputes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dispute in the caller's scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_webhook: {
         parameters: {
             query?: never;
@@ -63487,6 +63603,78 @@ export interface operations {
                 };
             };
             /** @description A bad amount, currency, method or allocation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_refund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The payment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundRequest"];
+            };
+        };
+        responses: {
+            /** @description The refund, pending or waiting for an approval */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not refund payments */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such payment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a paid payment, or another refund of it is being recorded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, or more than is left to refund */
             422: {
                 headers: {
                     [name: string]: unknown;

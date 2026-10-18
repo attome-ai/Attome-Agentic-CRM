@@ -863,6 +863,23 @@ impl PaymentGateway for HyperPayGateway {
         if transaction.id.is_empty() {
             return Ok(Vec::new());
         }
+        if transaction.payment_type == "CB" {
+            // A chargeback: the payer's bank disputes the payment.
+            return Ok(vec![GatewayEvent {
+                event_id: format!("{}:chargeback", transaction.id),
+                gateway_reference: transaction
+                    .merchant_transaction_id
+                    .clone()
+                    .unwrap_or_else(|| transaction.id.clone()),
+                status: GatewayStatus::Pending,
+                card_update: None,
+                dispute: Some(super::DisputeOpened {
+                    amount: transaction.amount(),
+                    reason_code: Some(transaction.result.code.clone()).filter(|c| !c.is_empty()),
+                    evidence_due: None,
+                }),
+            }]);
+        }
         Ok(vec![GatewayEvent {
             // One transaction moves (pending, then paid): each move counts.
             event_id: format!("{}:{}", transaction.id, transaction.result.code),
@@ -872,6 +889,7 @@ impl PaymentGateway for HyperPayGateway {
                 .unwrap_or_else(|| transaction.id.clone()),
             status: transaction_status(&transaction),
             card_update: None,
+            dispute: None,
         }])
     }
 
@@ -902,6 +920,7 @@ fn registration_update(payload: Option<&Value>) -> Option<GatewayEvent> {
         ),
         gateway_reference: token.clone(),
         status: GatewayStatus::Pending,
+        dispute: None,
         card_update: Some(super::CardUpdate {
             token,
             brand: text(Some(payload), "paymentBrand"),

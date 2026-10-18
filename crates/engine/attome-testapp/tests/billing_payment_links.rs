@@ -379,6 +379,7 @@ fn link_used_once() {
                     fee: None,
                 },
                 card_update: None,
+                dispute: None,
             }],
         )
         .await

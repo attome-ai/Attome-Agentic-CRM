@@ -135,6 +135,18 @@ pub struct GatewayEvent {
     /// card updater); `status` is then `Pending` and means nothing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_update: Option<CardUpdate>,
+    /// A chargeback opened against the payment; `status` is then `Pending`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dispute: Option<DisputeOpened>,
+}
+
+/// A chargeback the gateway reported.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DisputeOpened {
+    pub amount: Decimal,
+    pub reason_code: Option<String>,
+    /// When evidence is due, when the gateway says.
+    pub evidence_due: Option<NaiveDate>,
 }
 
 /// A saved card's new details, keyed by its token.

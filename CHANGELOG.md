@@ -34,6 +34,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: refunds and disputes (F5-T10). `POST /api/v1/billing/payments/{id}/refunds`
+  (`payment.refund`) refunds up to what is left of a payment under its refund lock; above
+  `billing.refund.approval_threshold` it waits for a `billing.refund` approval; the
+  `BillingExecuteRefund` job refunds through the gateway (key `refund:{id}`), sets the payment
+  `refunded` or `partially_refunded` and drafts proportional credit notes. Gateway chargebacks
+  (`GatewayEvent.dispute`; HyperPay `CB`) open a `payment_dispute`, mark the payment `disputed` and
+  notify Finance Managers; `GET /api/v1/billing/disputes/{id}/evidence` lists the invoices' PDFs and
+  K1 attachments. Pack changeset 0018 adds the privileges.
 - Billing: recurring charges to saved methods (F5-T9). The daily `BillingChargeDue` job (only when
   `billing.saved_methods.enabled`) charges due invoices to the account's default saved method with
   the key `invoice:{id}:attempt:{n}`, re-asks a pending attempt with the same key, retries failures

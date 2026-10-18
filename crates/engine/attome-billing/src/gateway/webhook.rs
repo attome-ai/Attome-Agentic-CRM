@@ -214,14 +214,25 @@ pub async fn apply_events(state: &EngineState) -> Result<usize, AppError> {
                 let mut inner = sqlx::Acquire::begin(&mut *tx)
                     .await
                     .map_err(AppError::internal)?;
-                let outcome = match &event.card_update {
-                    Some(update) => {
+                let outcome = match (&event.card_update, &event.dispute) {
+                    (_, Some(dispute)) => {
+                        crate::payment::dispute::open_dispute_in_tx(
+                            &mut inner,
+                            state,
+                            system_id,
+                            &event.gateway_reference,
+                            dispute,
+                            actor,
+                        )
+                        .await
+                    }
+                    (Some(update), None) => {
                         crate::payment::recurring::apply_card_update_in_tx(
                             &mut inner, system_id, update,
                         )
                         .await
                     }
-                    None => {
+                    (None, None) => {
                         crate::payment::service::apply_gateway_status_in_tx(
                             &mut inner,
                             state,

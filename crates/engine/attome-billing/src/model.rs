@@ -84,6 +84,15 @@ impl EngineModel for BillingModel {
                 "/api/v1/pay/{token}/checkout",
                 post(crate::payment::link::post_checkout),
             )
+            // F5-T10: refunds, and the evidence a dispute can draw on.
+            .route(
+                "/api/v1/billing/payments/{id}/refunds",
+                post(crate::payment::refund::post_refund),
+            )
+            .route(
+                "/api/v1/billing/disputes/{id}/evidence",
+                get(crate::payment::dispute::get_evidence),
+            )
             // AG2-T3: the invoice's e-invoice.
             .route(
                 "/api/v1/billing/invoices/{id}/einvoice",

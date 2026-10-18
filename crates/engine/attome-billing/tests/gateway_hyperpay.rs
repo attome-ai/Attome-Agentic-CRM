@@ -529,6 +529,21 @@ async fn hyperpay_webhook_decrypts() {
     );
     assert_eq!(update.brand.as_deref(), Some("VISA"));
 
+    // A chargeback opens a dispute on the order's payment.
+    let (body, tag) = seal(
+        &json!({ "type": "PAYMENT", "payload": transaction(
+            "8a829449515d198b01517d5601df9999", "CB", "92.00", "000.100.110", "invoice:42:attempt:1"
+        ) }),
+        iv,
+    );
+    let events = gateway
+        .verify_webhook(&headers(&hex::encode(iv), &tag), body.as_bytes(), KEY_HEX)
+        .unwrap();
+    assert_eq!(events[0].gateway_reference, "invoice:42:attempt:1");
+    let dispute = events[0].dispute.clone().unwrap();
+    assert_eq!(dispute.amount, sar("92.00"));
+    assert_eq!(events[0].status, GatewayStatus::Pending);
+
     // Registrations and test pings carry no payment event.
     let (body, tag) = seal(
         &json!({ "type": "REGISTRATION", "action": "CREATED", "payload": {} }),

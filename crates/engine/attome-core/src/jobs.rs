@@ -326,6 +326,8 @@ pub enum EngineJob {
     /// document, sending) for one invoice, enqueued in the issuing
     /// transaction. Pure pointer; each hook is idempotent.
     BillingAfterIssue { invoice_id: Uuid },
+    /// F5-T10: refunds one pending refund through its gateway.
+    BillingExecuteRefund { refund_id: Uuid },
     /// TECHNICAL-DUE-DILIGENCE-2026-08-24 finding 3.2 (T2-2) — the async half
     /// of `attome_server::entity_mutation::apply_dependents_on_delete`'s
     /// `OnTargetDelete::CascadeDeactivate` handling. A dependent group at or
@@ -1007,6 +1009,7 @@ impl EngineJob {
             | Self::ExecuteApprovedRequest { .. }
             | Self::FleetPoll
             | Self::BillingAfterIssue { .. }
+            | Self::BillingExecuteRefund { .. }
             | Self::FleetRolloutStep { .. } => false,
         }
     }
@@ -1059,6 +1062,7 @@ impl EngineJob {
             EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CommissionRecalcPreview { .. } => "CommissionRecalcPreview",
             EngineJob::BillingAfterIssue { .. } => "BillingAfterIssue",
+            EngineJob::BillingExecuteRefund { .. } => "BillingExecuteRefund",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
             EngineJob::ComputeMetricSnapshots => "ComputeMetricSnapshots",
             EngineJob::EventsDispatchTick => "EventsDispatchTick",
@@ -1265,6 +1269,7 @@ impl EngineJob {
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::BillingAfterIssue { .. }
+            | Self::BillingExecuteRefund { .. }
             | Self::BillingGatewayEventApply
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
         }
@@ -1419,6 +1424,7 @@ impl EngineJob {
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::BillingAfterIssue { .. }
+            | Self::BillingExecuteRefund { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
             | Self::DataProfile(_)
@@ -2018,6 +2024,13 @@ mod tests {
     #[test]
     fn workflow_entity_trigger_dispatch_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::WorkflowEntityTriggerDispatch);
+    }
+
+    #[test]
+    fn billing_execute_refund_round_trips() {
+        assert_round_trips(EngineJob::BillingExecuteRefund {
+            refund_id: Uuid::now_v7(),
+        });
     }
 
     #[test]

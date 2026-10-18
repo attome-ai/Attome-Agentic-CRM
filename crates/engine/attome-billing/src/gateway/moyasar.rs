@@ -470,6 +470,7 @@ impl PaymentGateway for MoyasarGateway {
                 .unwrap_or_else(|| payment.id.clone()),
             status: payment_status(&payment),
             card_update: None,
+            dispute: None,
         }])
     }
 

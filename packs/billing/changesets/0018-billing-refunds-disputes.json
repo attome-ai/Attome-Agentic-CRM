@@ -1,0 +1,152 @@
+{
+  "author": "packs",
+  "checksum": "sha256:5a5d6e16ed204d1f0e0c495cf09a58b93841632b596deac0982c4419130431f1",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Refunds and disputes (F5-T10): finance managers refund payments; finance and receivables staff read refunds and disputes.",
+  "format": "attome-changeset/v1",
+  "id": "01a14d63-67a6-728e-b5db-ae1244fdaf3c",
+  "layer": "product",
+  "name": "billing-refunds-disputes",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment.refund"
+      },
+      "args": {
+        "definition": {
+          "description": "Refund a payment",
+          "key": "payment.refund",
+          "name": "payment.refund"
+        }
+      },
+      "seq": 1
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_refund.read"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on payment_refund",
+          "key": "payment_refund.read",
+          "name": "payment_refund.read"
+        }
+      },
+      "seq": 2
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_dispute.read"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on payment_dispute",
+          "key": "payment_dispute.read",
+          "name": "payment_dispute.read"
+        }
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment.refund",
+        "role": "Finance Manager"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_refund.read",
+        "role": "Finance Manager"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_dispute.read",
+        "role": "Finance Manager"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_refund.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_dispute.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 8
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_refund.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 9
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_dispute.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 10
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 18,
+  "title": "Pack: refunds and disputes"
+}

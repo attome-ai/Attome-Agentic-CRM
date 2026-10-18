@@ -1119,6 +1119,15 @@ async fn dispatch_approved(
                     .await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
+        attome_billing::payment::refund::ACTION_REFUND => {
+            // F5-T10: a refund above the threshold, refunded once approved.
+            let payload: attome_billing::payment::refund::RefundPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response =
+                attome_billing::payment::refund::do_refund_approved(state, &payload, approver_id)
+                    .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
         attome_commission::close::ACTION_PERIOD_CLOSE => {
             // F10-T7: finance's approval locks the period.
             #[derive(serde::Deserialize)]

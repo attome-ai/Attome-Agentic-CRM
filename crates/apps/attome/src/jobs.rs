@@ -819,6 +819,16 @@ async fn dispatch_platform_job(
             tracing::info!(%period_id, written, "commission recalc preview: complete");
         }
         // F4-T6: the work that follows an issued invoice.
+        // F5-T10: one refund through its gateway.
+        EngineJob::BillingExecuteRefund { refund_id } => {
+            attome_billing::payment::refund::execute_refund(
+                &attome_state,
+                refund_id,
+                &attome_billing::payment::recurring::LiveAdapters,
+            )
+            .await?;
+            tracing::info!(%refund_id, "billing refund: settled");
+        }
         EngineJob::BillingAfterIssue { invoice_id } => {
             attome_billing::issue::run_after_issue(&attome_state, invoice_id).await?;
             tracing::info!(%invoice_id, "billing after-issue hooks: complete");

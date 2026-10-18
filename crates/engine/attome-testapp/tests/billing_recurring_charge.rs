@@ -320,6 +320,7 @@ fn charge_retry_same_attempt_charges_once() {
                 event_id: format!("tok_123:updated:{}", Uuid::now_v7()),
                 gateway_reference: "tok_123".into(),
                 status: GatewayStatus::Pending,
+                dispute: None,
                 card_update: Some(attome_billing::gateway::CardUpdate {
                     token: "tok_123".into(),
                     brand: Some("visa".into()),

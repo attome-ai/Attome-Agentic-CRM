@@ -137,6 +137,14 @@ fn billing_settings() -> Vec<SettingDescriptor> {
             || json!("SA"),
         ),
         SettingDescriptor::new(
+            "billing.refund.approval_threshold",
+            "Refunds larger than this amount wait for a finance manager's approval (0 = never).",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
             "billing.saved_methods.enabled",
             "Charge due invoices to the customer's default saved card each day, with retries.",
             || json!({"type": "boolean"}),
