@@ -699,6 +699,20 @@ pub async fn create_record_for(
     let mut body = body;
     if let Some(fields) = body.as_object_mut() {
         super::upsert::resolve_lookups_by_external_id(&state, &attrs, fields).await?;
+        // A27-T2: a typed entity's new record is of a type the caller's
+        // roles may use, and the type's defaults fill fields left out.
+        if attrs
+            .iter()
+            .any(|a| a.logicalname == attome_metadata::provision::record_type::ATTRIBUTE)
+        {
+            attome_metadata::provision::record_type::apply_on_create(
+                &state.base.db,
+                entity_id,
+                ctx.role_ids.as_deref(),
+                fields,
+            )
+            .await?;
+        }
     }
     let obj = body
         .as_object()

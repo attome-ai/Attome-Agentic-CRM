@@ -6,8 +6,13 @@
 //! { "entity": "<entity id>", "code": "complaint",
 //!   "label_en": "Complaint", "label_ar": "شكوى",
 //!   "form": "<form id>", "state_model": "<state model id>",
-//!   "defaults": { "priority": "high" }, "is_default": false }
+//!   "defaults": { "priority": "high" }, "is_default": false,
+//!   "roles": ["<role id>"], "default_for_roles": ["<role id>"] }
 //! ```
+//!
+//! A27-T2: `roles` are the roles that may create records of the type (none
+//! named: every role); `default_for_roles` the roles whose new records get
+//! it when they name no type (`attome_metadata::provision::record_type`).
 //!
 //! Publishing the first type of an entity gives its table a `record_type`
 //! text column (`attome_metadata::provision::record_type`). A record whose
@@ -31,7 +36,7 @@ pub const STATE_MODEL: KindName = KindName("state_model");
 /// The record attribute that holds a record's type code.
 pub const RECORD_TYPE_ATTRIBUTE: &str = "record_type";
 
-const PROPERTIES: [&str; 8] = [
+const PROPERTIES: [&str; 10] = [
     "entity",
     "code",
     "label_en",
@@ -40,6 +45,8 @@ const PROPERTIES: [&str; 8] = [
     "state_model",
     "defaults",
     "is_default",
+    "roles",
+    "default_for_roles",
 ];
 
 /// Longest label.
@@ -84,7 +91,9 @@ impl Kind for RecordTypeKind {
                 "form": { "type": "string", "format": "uuid" },
                 "state_model": { "type": "string", "format": "uuid" },
                 "defaults": { "type": "object" },
-                "is_default": { "type": "boolean" }
+                "is_default": { "type": "boolean" },
+                "roles": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+                "default_for_roles": { "type": "array", "items": { "type": "string", "format": "uuid" } }
             }
         })
     }
@@ -166,6 +175,19 @@ impl Kind for RecordTypeKind {
                 "invalid",
                 "a type's defaults cannot set the type itself",
             ));
+        }
+        for key in ["roles", "default_for_roles"] {
+            if doc.get(key).is_some_and(|roles| {
+                roles
+                    .as_array()
+                    .is_none_or(|ids| ids.iter().any(|id| uuid_at(id).is_none()))
+            }) {
+                issues.push(Issue::new(
+                    format!("/{key}"),
+                    "invalid",
+                    format!("{key} is a list of role ids"),
+                ));
+            }
         }
         if doc.get("is_default").is_some_and(|d| !d.is_boolean()) {
             issues.push(Issue::new(
@@ -277,6 +299,19 @@ mod tests {
         assert!(
             kind.validate_shape(&json!({
                 "entity": entity(), "code": "complaint", "label_en": "x", "colour": "red"
+            }))
+            .is_err()
+        );
+        assert!(
+            kind.validate_shape(&json!({
+                "entity": entity(), "code": "quote", "label_en": "Quote",
+                "roles": [Uuid::now_v7().to_string()], "default_for_roles": []
+            }))
+            .is_ok()
+        );
+        assert!(
+            kind.validate_shape(&json!({
+                "entity": entity(), "code": "quote", "label_en": "Quote", "roles": ["sales"]
             }))
             .is_err()
         );

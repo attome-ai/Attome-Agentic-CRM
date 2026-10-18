@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Record types per role (A27-T2): a record type may name the roles that may create it (`roles`) and the roles
+  it is the default for (`default_for_roles`). A create that names no type gets its role's default, else the
+  entity's default, and the type's `defaults` fill fields left out; a type the caller's roles may not use
+  answers 403, and an unknown one 422.
 - Record types (A27-T1): a `record_type` metadata kind (entity, code, English and Arabic labels, form, stage
   process, default values, a default flag). Publishing an entity's first type gives its table a nullable
   `record_type` text attribute, without rewriting existing rows: an empty type means the entity's default.
