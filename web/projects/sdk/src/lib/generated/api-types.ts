@@ -10939,7 +10939,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** This API's own OpenAPI 3.1 document */
+        /**
+         * This API's own OpenAPI 3.1 document, as this caller may use it
+         * @description Only the operations of the modules switched on here, and none under `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the `ETag` back in `If-None-Match` to get a 304 while nothing has changed.
+         */
         get: operations["openapi_json"];
         put?: never;
         post?: never;
@@ -71114,14 +71117,24 @@ export interface operations {
     openapi_json: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of a document the client holds */
+                "If-None-Match"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The generated OpenAPI 3.1 document */
+            /** @description The generated OpenAPI 3.1 document, filtered for the caller */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unchanged since the ETag in If-None-Match */
+            304: {
                 headers: {
                     [name: string]: unknown;
                 };
