@@ -1211,6 +1211,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Idempotency keys on consequential operations (custom actions, bulk jobs, billing and payment
+  changes, messages sent) always use the durable Postgres tier, and on a deployment without Redis
+  every key does (S9-T2); a bulk job's record is kept for `idempotency.bulk_retention_hours`
+  (seven days by default) instead of the general window.
 - A single-valued choice field may be part of a business key (the sales pack keys its stages by
   pipeline and stage); multi-valued fields still may not.
 - The sales, commission, marketing, vendor-supplier, contract-management and finance packs install

@@ -158,6 +158,10 @@ pub struct IdempotencySection {
     /// window as the Redis tier's TTL (`idempotency.rs::TTL_SECS`).
     #[serde(default = "default_idempotency_durable_retention_hours")]
     pub durable_retention_hours: u64,
+    /// S9-T2: how long a bulk job's durable record is kept (a bulk job may
+    /// be retried days later). Seven days by default.
+    #[serde(default = "default_idempotency_bulk_retention_hours")]
+    pub bulk_retention_hours: u64,
     /// Largest successful response body the Redis idempotency gate stores
     /// for replay. A larger response still reaches the client in full, but a
     /// same-key retry gets `idempotency_replay_unavailable` instead of a
@@ -165,6 +169,11 @@ pub struct IdempotencySection {
     /// coordination Redis. Must be at least 1.
     #[serde(default = "default_idempotency_replay_max_bytes")]
     pub replay_max_bytes: usize,
+}
+
+/// S9-T2: seven days.
+fn default_idempotency_bulk_retention_hours() -> u64 {
+    7 * 24
 }
 
 // A derived `Default` would zero `durable_retention_hours` — serde's
@@ -180,6 +189,7 @@ impl Default for IdempotencySection {
         Self {
             mandatory_operations: Vec::new(),
             durable_retention_hours: default_idempotency_durable_retention_hours(),
+            bulk_retention_hours: default_idempotency_bulk_retention_hours(),
             replay_max_bytes: default_idempotency_replay_max_bytes(),
         }
     }

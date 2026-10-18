@@ -1946,13 +1946,16 @@ pub async fn prune_idempotency_records(
     db: &DbPool,
     config: &AppConfig,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // S9-T2: a bulk job's record keeps its own, longer window.
     let result = sqlx::query(
         "UPDATE idempotency_record \
          SET is_deleted = TRUE, updated_at = NOW(), row_version = row_version + 1 \
          WHERE is_deleted = FALSE \
-           AND created_at < now() - make_interval(hours => $1)",
+           AND created_at < now() - make_interval(hours => \
+               CASE WHEN operation LIKE '%/bulk' THEN $2 ELSE $1 END)",
     )
     .bind(config.idempotency.durable_retention_hours as i32)
+    .bind(config.idempotency.bulk_retention_hours as i32)
     .execute(db)
     .await?;
     if result.rows_affected() > 0 {

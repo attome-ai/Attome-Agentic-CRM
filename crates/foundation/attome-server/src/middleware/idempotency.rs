@@ -123,6 +123,25 @@ pub(crate) fn operation_name(req: &Request) -> String {
     format!("{} {}", req.method(), path)
 }
 
+/// S9-T2: whether `operation` (`"{METHOD} {route}"`) is consequential: a
+/// custom action, a bulk job, a payment or invoice change, or a message sent
+/// to someone. Such a key always takes the durable Postgres tier, whose
+/// record survives a Redis restart; the rest use Redis when it is there.
+pub fn is_consequential(operation: &str) -> bool {
+    let Some(path) = operation.strip_prefix("POST ") else {
+        return false;
+    };
+    path.starts_with("/api/v1/actions/")
+        || path.starts_with("/api/v1/billing/")
+        || path.starts_with("/api/v1/pay/")
+        || path.contains("/actions/")
+        || path.ends_with("/bulk")
+        || path.ends_with("/bulk-edit")
+        || path.ends_with("/bulk-edit/undo")
+        || path.ends_with("/bulk-transform")
+        || path.contains("/communications")
+}
+
 /// Idempotency gate. A client key is scoped to user, method and route; its
 /// content type and exact body are fingerprinted separately.
 ///
@@ -194,7 +213,13 @@ pub async fn idempotency(State(state): State<AppState>, req: Request, next: Next
     let request_digest = request_digest(&parts.headers, &body);
     let req = Request::from_parts(parts, Body::from(body));
 
-    if mandatory {
+    // S9-T2: a consequential operation, and every key on a deployment
+    // without Redis (whose in-process store a restart empties), takes the
+    // durable tier too.
+    let durable = mandatory
+        || is_consequential(&operation)
+        || matches!(state.redis_coordination, attome_cache::Store::Memory(_));
+    if durable {
         return idempotency_durable_flow(
             state,
             req,
@@ -837,6 +862,24 @@ fn base64_encode(bytes: &[u8]) -> String {
 fn base64_decode(s: &str) -> Option<Vec<u8>> {
     use base64::Engine;
     base64::engine::general_purpose::STANDARD.decode(s).ok()
+}
+
+#[cfg(test)]
+mod consequential_tests {
+    use super::is_consequential;
+
+    #[test]
+    fn consequential_operations_take_the_durable_tier() {
+        assert!(is_consequential("POST /api/v1/actions/{id}/invoke"));
+        assert!(is_consequential("POST /api/v1/{entity}/bulk"));
+        assert!(is_consequential("POST /api/v1/billing/payments"));
+        assert!(is_consequential(
+            "POST /api/v1/{entity}/{id}/communications"
+        ));
+        assert!(!is_consequential("POST /api/v1/{entity}"));
+        assert!(!is_consequential("PATCH /api/v1/{entity}/{id}"));
+        assert!(!is_consequential("POST /api/v1/{entity}/bulk-edit/preview"));
+    }
 }
 
 #[cfg(test)]
