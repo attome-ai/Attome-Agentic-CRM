@@ -13,7 +13,7 @@
       "is_append_only": false,
       "attributes": [
         { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "kind", "display_name": "Kind", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["rest", "mailbox", "channel", "esign", "calendar", "file_drop"], "multi": false } },
+        { "logicalname": "kind", "display_name": "Kind", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["rest", "mailbox", "channel", "esign", "calendar", "file_drop", "payment_gateway"], "multi": false } },
         { "logicalname": "base_url", "display_name": "Base URL", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "auth_type", "display_name": "Authentication", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["api_key", "oauth2_client_credentials", "basic", "hmac"], "multi": false } },
         { "logicalname": "credential_ref", "display_name": "Credential Reference", "field_type": "text" },

@@ -15,6 +15,7 @@ attome-audit.workspace = true
 attome-core.workspace = true
 attome-db.workspace = true
 attome-html.workspace = true
+attome-integration.workspace = true
 attome-email.workspace = true
 attome-docgen.workspace = true
 attome-einvoice.workspace = true
@@ -27,6 +28,7 @@ attome-types.workspace = true
 axum.workspace = true
 object_store.workspace = true
 qrcode.workspace = true
+reqwest.workspace = true
 base64.workspace = true
 chrono.workspace = true
 moka.workspace = true
@@ -38,6 +40,11 @@ thiserror.workspace = true
 tracing.workspace = true
 utoipa.workspace = true
 uuid.workspace = true
+zeroize.workspace = true
+
+[features]
+# A plain HTTP client for gateway adapters' tests (`GatewayHttp::for_tests`).
+test-support = []
 
 [dev-dependencies]
 attome-testkit.workspace = true

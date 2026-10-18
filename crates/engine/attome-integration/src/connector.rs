@@ -30,6 +30,9 @@ pub enum ConnectorKind {
     Esign,
     Calendar,
     FileDrop,
+    /// F5-T4: a payment gateway; its calls go through attome-billing's
+    /// `PaymentGateway` trait, not pull/push.
+    PaymentGateway,
 }
 
 impl ConnectorKind {
@@ -41,6 +44,7 @@ impl ConnectorKind {
             Self::Esign => "esign",
             Self::Calendar => "calendar",
             Self::FileDrop => "file_drop",
+            Self::PaymentGateway => "payment_gateway",
         }
     }
 
@@ -52,6 +56,7 @@ impl ConnectorKind {
             "esign" => Some(Self::Esign),
             "calendar" => Some(Self::Calendar),
             "file_drop" => Some(Self::FileDrop),
+            "payment_gateway" => Some(Self::PaymentGateway),
             _ => None,
         }
     }
@@ -148,7 +153,9 @@ pub fn connector_for(kind: ConnectorKind) -> &'static dyn Connector {
     static MAILBOX: adapters::mailbox::MailboxAdapter = adapters::mailbox::MailboxAdapter;
     static WEBCHAT: adapters::webchat::WebChatAdapter = adapters::webchat::WebChatAdapter;
     match kind {
-        ConnectorKind::Rest => &REST,
+        // A gateway system's health check and base URL use the REST adapter;
+        // payments go through attome-billing's gateway adapters.
+        ConnectorKind::Rest | ConnectorKind::PaymentGateway => &REST,
         // M53 Phase 1 (D-474): `channel` now has a real adapter — the
         // module plan's own choice of web chat as the first channel, because
         // it needs no third-party credential (`attome-api`'s

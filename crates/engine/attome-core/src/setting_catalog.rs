@@ -137,6 +137,15 @@ fn billing_settings() -> Vec<SettingDescriptor> {
             || json!("SA"),
         ),
         SettingDescriptor::new(
+            "billing.gateway.rules",
+            "Which payment gateway takes a payment: rules in order, the first whose currency, \
+             country and amount range match wins.",
+            || json!({"type": "array", "items": {"type": "object", "required": ["system_id"]}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
+        SettingDescriptor::new(
             "billing.issue_approval_threshold",
             "Invoices whose grand total is above this wait for an approval before          they are issued; zero issues every invoice without one.",
             || json!({"type": "number", "minimum": 0}),

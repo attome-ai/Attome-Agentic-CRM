@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The payment gateway seam (F5-T4): integration systems of the new kind `payment_gateway` hold a
+  gateway's base URL and credential; `attome_billing::gateway` defines the `PaymentGateway` trait
+  (hosted checkout, status, token charge, refund, payouts, webhook verification), an SSRF-guarded
+  HTTP client with a 15-second timeout, and the `billing.gateway.rules` setting that picks the
+  gateway by currency, country and amount. The Moyasar and HyperPay adapters follow.
 - Payments (F5-T3): `POST /api/v1/billing/payments` records a payment received outside a gateway and
   allocates it to the payer's open invoices (oldest due first, or as given), refreshing their paid
   and open totals and payment status in the same transaction; what is left over stays as the

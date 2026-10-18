@@ -251,7 +251,7 @@ fn payment_concurrent_same_account_conflict() {
         let payer = account(&app).await;
         issued(&app, payer, "100", 10).await;
         // Another payment for the account holds its balance lock.
-        let mut held = app.db().begin().await.unwrap();
+        let mut held = attome_db::tx::begin(app.db()).await.unwrap();
         let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
             .bind(attome_billing::ADVISORY_LOCK_NAMESPACE)
             .bind(format!("attome-billing/account-balance:{payer}"))

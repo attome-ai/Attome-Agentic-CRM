@@ -7,6 +7,7 @@
 pub mod deposit;
 pub mod document;
 pub mod einvoice;
+pub mod gateway;
 pub mod invoice;
 pub mod issue;
 pub mod lookup;
