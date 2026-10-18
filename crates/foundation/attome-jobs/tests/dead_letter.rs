@@ -269,13 +269,14 @@ async fn replay_racing_an_uncommitted_same_key_row_names_it_instead_of_erroring(
     };
 
     // The replay's UPDATE blocks in the unique check on the producer's
-    // uncommitted index entry; commit only once it is waiting there.
+    // uncommitted index entry; commit only once it is waiting there. The
+    // statement starts with its Z2-T8 tag comment, so match anywhere.
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
         let waiting: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM pg_stat_activity \
              WHERE datname = current_database() AND wait_event_type = 'Lock' \
-               AND query LIKE 'UPDATE apalis.jobs SET status = ''Pending''%'",
+               AND query LIKE '%UPDATE apalis.jobs SET status = ''Pending''%'",
         )
         .fetch_one(&pool)
         .await
