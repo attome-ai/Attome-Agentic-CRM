@@ -38,6 +38,7 @@ pub use sections::database::{
     StatementClassTimeouts,
 };
 pub use sections::docgen::DocgenSection;
+pub use sections::einvoice::EinvoiceSection;
 pub use sections::events::EventsSection;
 pub use sections::fleet::FleetSection;
 pub use sections::inference::{
@@ -197,6 +198,10 @@ pub struct AppConfig {
     /// see `IntegrationSection`'s doc comment.
     #[serde(default)]
     pub integration: IntegrationSection,
+    /// AG2 — e-invoicing. Ships dark (`enabled: false`): see
+    /// `EinvoiceSection`'s doc comment.
+    #[serde(default)]
+    pub einvoice: EinvoiceSection,
     /// M57 Phase 1 — Document Generation. The isolated render sidecar's
     /// address plus its explicit timeout/size caps. See `DocgenSection`'s
     /// doc comment.

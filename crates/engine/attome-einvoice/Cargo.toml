@@ -11,13 +11,19 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+attome-auth.workspace   = true
+attome-config.workspace = true
+attome-types.workspace  = true
 base64.workspace       = true
 chrono.workspace       = true
+k256.workspace         = true
 quick-xml.workspace    = true
+rand.workspace         = true
 rust_decimal.workspace = true
 serde.workspace        = true
 sha2.workspace         = true
 thiserror.workspace    = true
+zeroize.workspace      = true
 
 [lints]
 workspace = true

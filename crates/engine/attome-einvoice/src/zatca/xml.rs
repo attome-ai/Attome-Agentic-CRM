@@ -429,6 +429,14 @@ fn tax_category(w: &mut W, tag: &str, category: &TaxCategory, rate: Decimal) {
     w.close(tag);
 }
 
+/// The invoice's net and VAT totals: the sums of its lines.
+pub fn totals(inv: &ZatcaInvoice) -> (Decimal, Decimal) {
+    (
+        inv.lines.iter().map(|l| l.net).sum(),
+        inv.lines.iter().map(|l| l.vat).sum(),
+    )
+}
+
 /// The placeholder extensions block, replaced when the invoice is stamped.
 pub const EXTENSIONS_PLACEHOLDER: &str = "<ext:UBLExtensions></ext:UBLExtensions>";
 
@@ -536,8 +544,7 @@ pub fn invoice_xml(inv: &ZatcaInvoice, stamp: &Stamp) -> Result<String, XmlError
     w.close("cac:PaymentMeans");
 
     let subs = subtotals(&inv.lines);
-    let net: Decimal = inv.lines.iter().map(|l| l.net).sum();
-    let vat: Decimal = inv.lines.iter().map(|l| l.vat).sum();
+    let (net, vat) = totals(inv);
     // The VAT total in SAR, then the document-currency total with its subtotals.
     w.open("cac:TaxTotal");
     w.money("cbc:TaxAmount", "SAR", inv.vat_in_sar.unwrap_or(vat));

@@ -3709,7 +3709,7 @@ fn hex_64() -> String {
 #[test]
 fn validate_rejects_non_hex_key_material_rings() {
     type Break = fn(&mut AppConfig);
-    let cases: [(&str, Break); 5] = [
+    let cases: [(&str, Break); 6] = [
         ("auth.mfa_encryption_key", |c| {
             c.auth.mfa_policy = "optional".into();
             c.auth.mfa_encryption_key = KeyRing::single(non_hex_64());
@@ -3721,6 +3721,10 @@ fn validate_rejects_non_hex_key_material_rings() {
         ("integration.credential_encryption_key", |c| {
             c.integration.enabled = true;
             c.integration.credential_encryption_key = KeyRing::single(non_hex_64());
+        }),
+        ("einvoice.key_encryption_key", |c| {
+            c.einvoice.enabled = true;
+            c.einvoice.key_encryption_key = KeyRing::single(non_hex_64());
         }),
         ("audit.erasure_key_encryption_key", |c| {
             c.audit.erasure_key_encryption_key = KeyRing::single(non_hex_64());
@@ -3748,6 +3752,8 @@ fn validate_accepts_64_hex_key_material_rings() {
     config.s2s.key_encryption_key = KeyRing::single(hex_64());
     config.integration.enabled = true;
     config.integration.credential_encryption_key = KeyRing::single(hex_64());
+    config.einvoice.enabled = true;
+    config.einvoice.key_encryption_key = KeyRing::single(hex_64());
     config.audit.erasure_key_encryption_key = KeyRing::single(hex_64());
     config.inference.provider_credential_key = KeyRing::single(hex_64());
     config

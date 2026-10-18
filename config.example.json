@@ -202,6 +202,10 @@
     "credential_encryption_key": "${INTEGRATION_CREDENTIAL_ENCRYPTION_KEY}",
     "request_timeout_secs": 15
   },
+  "einvoice": {
+    "_comment": "AG2 — ZATCA e-invoicing (Fatoora phase 2). Ships dark. To turn it on, set enabled to true and add \"key_encryption_key\": \"${EINVOICE_KEY_ENCRYPTION_KEY}\" (64 hex chars, openssl rand -hex 32): its own KeyRing (D-069) encrypting the devices' signing keys at rest.",
+    "enabled": false
+  },
   "inference": {
     "_embedding_prefix_comment": "BIN-D6 — optional embedding_query_prefix / embedding_document_prefix (strings, default unset). Unset, the prefix is chosen from the embedding model's name (e.g. Qwen3-Embedding gets its instruction prefix); set either one — even to \"\" — and it wins over that heuristic for queries or documents respectively.",
     "_provider_credential_key_comment": "Encrypts AI provider API keys at rest (xrm_ai_provider_credential). Its own KeyRing (D-069). 64 hex chars (openssl rand -hex 32). Leave unset only if no provider needs an API key; saving a key is refused without it.",

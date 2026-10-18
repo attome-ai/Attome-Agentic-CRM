@@ -833,6 +833,17 @@ impl AppConfig {
                 reason: "must be at least 1".into(),
             });
         }
+        if self.einvoice.enabled {
+            Self::check_secret_ring(
+                "einvoice.key_encryption_key",
+                &self.einvoice.key_encryption_key,
+                production,
+            )?;
+            Self::check_hex_key_ring(
+                "einvoice.key_encryption_key",
+                &self.einvoice.key_encryption_key,
+            )?;
+        }
         if self.integration.enabled {
             Self::check_secret_ring(
                 "integration.credential_encryption_key",

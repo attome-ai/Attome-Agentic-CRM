@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- ZATCA stamping (AG2-T2): `attome-einvoice` signs the invoice hash with a device's ECDSA
+  secp256k1 key (pure Rust `k256`), writes the XAdES `ext:UBLExtensions` block (certificate and
+  signed-properties digests as ZATCA's validator computes them) and the QR code TLV (tags 1 to 8,
+  and 9 for simplified invoices); device keys are encrypted at rest under the new
+  `einvoice.key_encryption_key` ring (config section `einvoice`, off by default).
 - ZATCA e-invoicing groundwork (AG2-T1): a new `attome-einvoice` crate writes the UBL 2.1 invoice
   ZATCA receives (standard and simplified; invoices, credit and debit notes, prepayments), the
   canonical form it hashes (C14N in Rust, no native XML-security library) and the invoice hash with
