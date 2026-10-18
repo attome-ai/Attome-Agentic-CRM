@@ -162,6 +162,21 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "K1-T1 password-protected share: the token plus an Argon2id-checked password open one stored file. Bypass-listed and rate-limited (password_reset) against guessing; expiry, revocation and the download limit are checked inside the handler.",
     ),
     (
+        "POST",
+        "/api/v1/billing/gateways/{system}/webhook",
+        "F5-T7 payment gateway webhook: the gateway has no session. Bypass-listed by an exact segment match and rate-limited per address; the adapter verifies every call with the gateway's webhook secret (Moyasar's secret token in constant time, HyperPay's AES-GCM tag) before anything is stored, and the job that applies the events is audited.",
+    ),
+    (
+        "GET",
+        "/api/v1/pay/{token}",
+        "F5-T8 payment page: the link's random secret, stored only as a peppered hash, is the credential for one link. Bypass-listed by an exact match and rate-limited per address; a wrong, expired, used or cancelled link is the same 404.",
+    ),
+    (
+        "POST",
+        "/api/v1/pay/{token}/checkout",
+        "F5-T8 payment page checkout: the same link secret is the credential; it only saves a pending payment and asks the gateway for a checkout. Bypass-listed by an exact match and rate-limited per address; the payment is audited when it succeeds.",
+    ),
+    (
         "GET",
         "/api/v1/branding/asset",
         "A published logo, favicon or font for the sign-in page, before anyone signs in. Bypass-listed; the guidelines PDF is refused, and nothing user-specific is served.",

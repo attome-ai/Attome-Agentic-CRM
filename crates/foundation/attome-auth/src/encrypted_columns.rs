@@ -27,6 +27,9 @@ const fn col(table: &'static str, column: &'static str, domain: &'static str) ->
 /// Every encrypted column, by table.
 pub const ENCRYPTED_COLUMNS: &[EncryptedColumn] = &[
     col("ai_provider_credential", "secret_encrypted", "ai_provider"),
+    col("einvoice_device", "compliance_secret_encrypted", "einvoice"),
+    col("einvoice_device", "private_key_encrypted", "einvoice"),
+    col("einvoice_device", "production_secret_encrypted", "einvoice"),
     col(
         "environment_variable_value",
         "value_encrypted",
@@ -60,6 +63,16 @@ pub const PLAIN_BY_DESIGN: &[(&str, &str, &str)] = &[
         "oidc_domain",
         "verification_token",
         "published in the domain's DNS TXT record by design",
+    ),
+    (
+        "einvoice_device",
+        "compliance_token",
+        "ZATCA's compliance CSID: the certificate it issued (public); its secret is encrypted apart",
+    ),
+    (
+        "einvoice_device",
+        "production_token",
+        "ZATCA's production CSID: the certificate it issued (public); its secret is encrypted apart",
     ),
     (
         "theme",
