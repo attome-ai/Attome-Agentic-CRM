@@ -171,8 +171,8 @@ pub use business_rules::{
 };
 pub use change_feed::{ChangeEvent, ChangeOperation, CursorPosition};
 pub use change_log::{
-    ChangeKind, ChangeLogRow, acquire_metadata_write_lock, append_change_log, changes_since,
-    log_watermark,
+    ChangeKind, ChangeLogRow, METADATA_CHANGE_CHANNEL, acquire_metadata_write_lock,
+    append_change_log, changes_since, log_watermark,
 };
 pub use data_domain::resolve_steward_for_domain;
 pub use feature_flag_descriptor::{

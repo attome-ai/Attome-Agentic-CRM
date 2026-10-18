@@ -62,6 +62,8 @@ pub mod hook;
 /// CLEANUP-REVIEW 3.4: the one SQL identifier validator and `quote_ident`.
 pub mod ident;
 mod migrate;
+/// Y8-T1 — `LISTEN` on a Postgres channel.
+pub mod notify;
 mod pool;
 mod schema;
 mod session;

@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Metadata changes ring a Postgres doorbell (Y8-T1): `append_change_log` runs
+  `pg_notify('attome_metadata_change', id)` in the writer's transaction, and every node listens on
+  one runtime-identity connection to the `database.direct_url` endpoint and catches up on each
+  notice or reconnect. Other nodes hear a committed change without Redis; with Redis both
+  doorbells feed the same debounced catch-up.
 - Caching: `attome_cache::tiered::TieredCache` (Z3-T2), one declared cache over an in-process tier,
   the shared store and the loader: one load per key per node for concurrent callers, TTL with
   per-entry jitter, `LocalOnly` values never leaving the process, and a store failure either

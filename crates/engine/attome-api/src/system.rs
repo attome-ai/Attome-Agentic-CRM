@@ -1199,6 +1199,58 @@ impl EngineSystemBuilder {
             });
         }
         {
+            // Y8-T1: the Postgres doorbell. `append_change_log` rings
+            // `METADATA_CHANGE_CHANNEL` in the writer's transaction, so this
+            // fires on commit with or without Redis, into the same debounced
+            // catch-up. A dropped connection waits a second, reconnects and
+            // catches up, since a notice may have been missed meanwhile.
+            let pending = debounce_pending.clone();
+            let entities = state.entities.clone();
+            let db = state.base.db.clone();
+            let redis = state.base.redis.clone();
+            let watermark = last_applied.clone();
+            let config = state.base.config.clone();
+            let ring = move || {
+                spawn_debounced_catch_up(
+                    pending.clone(),
+                    entities.clone(),
+                    db.clone(),
+                    redis.clone(),
+                    watermark.clone(),
+                );
+            };
+            tokio::spawn(async move {
+                loop {
+                    match attome_db::notify::listen(&config, attome_core::METADATA_CHANGE_CHANNEL)
+                        .await
+                    {
+                        Ok(mut listener) => {
+                            ring();
+                            loop {
+                                match listener.try_recv().await {
+                                    Ok(Some(_)) => ring(),
+                                    Ok(None) => {
+                                        tracing::warn!(
+                                            "metadata listener: connection lost; reconnecting"
+                                        );
+                                        break;
+                                    }
+                                    Err(error) => {
+                                        tracing::warn!(%error, "metadata listener failed; reconnecting");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        Err(error) => {
+                            tracing::warn!(%error, "metadata listener could not connect; retrying");
+                        }
+                    }
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            });
+        }
+        {
             // P-metadata-sync-hardening Phase 1 (a): a third trigger into the
             // *same* debounced catch-up entry point as on_message/on_reconnect
             // above — not a parallel mechanism. on_reconnect's comment already

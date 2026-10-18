@@ -125,6 +125,13 @@ pub async fn publish(
         .execute(&mut **tx)
         .await
         .map_err(AppError::internal)?;
+        // Y8-T1: ring the Postgres doorbell as `append_change_log` does
+        // (`attome_core::METADATA_CHANGE_CHANNEL`; this crate sits below it).
+        // The payload is unused: a listener reads the change log itself.
+        sqlx::query("SELECT pg_notify('attome_metadata_change', '')")
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
     }
     Ok(Published {
         object_id,

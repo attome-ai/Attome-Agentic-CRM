@@ -62,6 +62,11 @@ use uuid::Uuid;
 const THROWAWAY_JWT_SECRET: &str = "test-only-throwaway-secret-do-not-use-in-prod";
 
 fn test_config() -> AppConfig {
+    test_config_polling(5)
+}
+
+/// [`test_config`] with the watermark poll at `poll_secs`.
+fn test_config_polling(poll_secs: u64) -> AppConfig {
     let json = format!(
         r#"{{
             "app": {{
@@ -83,7 +88,8 @@ fn test_config() -> AppConfig {
                 "host": "{redis_host}", "port": {redis_port}, "password": "",
                 "db": 0, "connection_pool_size": 4, "timeout": 2000,
                 "l1_cache_size_mb": 8, "l1_cache_ttl_seconds": 60,
-                "metadata_registry_enabled": true
+                "metadata_registry_enabled": true,
+                "metadata_poll_interval_secs": {poll_secs}
             }},
             "storage": {{
                 "s3_endpoint": "http://localhost:9000", "s3_public_endpoint": "",
@@ -117,6 +123,7 @@ fn test_config() -> AppConfig {
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         jwt_secret = THROWAWAY_JWT_SECRET,
+        poll_secs = poll_secs,
     );
 
     attome_testkit::with_test_database(
@@ -129,9 +136,12 @@ fn test_config() -> AppConfig {
 /// poller — sharing Postgres + Redis with every other node built this way.
 /// Identical to `metadata_cache.rs::test_node`.
 async fn test_node() -> Option<EngineSystem> {
+    test_node_with(test_config()).await
+}
+
+async fn test_node_with(config: AppConfig) -> Option<EngineSystem> {
     attome_testkit::migrated_db_url()?;
 
-    let config = test_config();
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect DATABASE_URL");
@@ -535,6 +545,44 @@ async fn committed_write_whose_doorbell_never_fired_is_recovered_by_the_watermar
              recovery still came from the change log"
         }
     );
+}
+
+/// Y8-T1: a write that never rang Redis reaches another node through the
+/// Postgres doorbell alone. Node A commits through the engine without the
+/// Redis publish (as in the test above), and node B's watermark poll is set
+/// to an hour, so only the `pg_notify` in `append_change_log` can tell it.
+#[tokio::test]
+async fn notify_triggers_catch_up_without_redis() {
+    let node_a = skip_if_no_db!(test_node().await);
+    let node_b = skip_if_no_db!(test_node_with(test_config_polling(3600)).await);
+    let cookie_b = seed_admin(&node_b).await;
+    let app_b = full_app(node_b);
+    let logicalname = fresh_logicalname();
+    assert!(!registry_knows(&app_b, &cookie_b, &logicalname).await);
+    // The listener connects in the background after boot.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    let db_a = node_a.state().base.db_migrator.clone();
+    provision::reconcile_entity(
+        &db_a,
+        &EntityDesc {
+            logicalname: logicalname.clone(),
+            display_name: "Metadata Notify Doorbell".into(),
+            primary_name_attribute: None,
+            is_append_only: false,
+            is_audited: false,
+            category: None,
+        },
+        ReconcilePolicy::Admin,
+    )
+    .await
+    .expect("commit the metadata write on node A");
+
+    let elapsed =
+        wait_until_registry_knows(&app_b, &cookie_b, &logicalname, Duration::from_secs(2))
+            .await
+            .expect("node B must hear the committed write through pg_notify within 2s");
+    eprintln!("node B applied the write {elapsed:?} after commit, through LISTEN/NOTIFY");
 }
 
 // ── Crash window 3: a subscriber killed mid-catch-up ────────────────────────

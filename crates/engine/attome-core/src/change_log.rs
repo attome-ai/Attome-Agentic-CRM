@@ -70,16 +70,22 @@ pub async fn acquire_metadata_write_lock(tx: &mut Tx<'_>) -> Result<(), AppError
     .await
 }
 
+/// Y8-T1: the Postgres channel every metadata change rings, with the new
+/// change-log id as its payload.
+pub const METADATA_CHANGE_CHANNEL: &str = "attome_metadata_change";
+
 /// Appends one row to `metadata_change_log`. Call as the last statement
 /// before `commit()` so the row and the metadata change it describes always
-/// land in the same transaction.
+/// land in the same transaction. It also rings [`METADATA_CHANGE_CHANNEL`]
+/// in that transaction (Y8-T1), so other nodes hear of it on commit, with or
+/// without Redis.
 pub async fn append_change_log(
     tx: &mut Tx<'_>,
     entity_ref: Uuid,
     logicalname: &str,
     kind: ChangeKind,
 ) -> Result<i64, AppError> {
-    sqlx::query_scalar(
+    let id: i64 = sqlx::query_scalar(
         "INSERT INTO metadata_change_log (entity_ref, logicalname, change_kind) \
          VALUES ($1, $2, $3) RETURNING id",
     )
@@ -88,7 +94,14 @@ pub async fn append_change_log(
     .bind(kind.as_str())
     .fetch_one(&mut **tx)
     .await
-    .map_err(AppError::internal)
+    .map_err(AppError::internal)?;
+    sqlx::query("SELECT pg_notify($1, $2)")
+        .bind(METADATA_CHANGE_CHANNEL)
+        .bind(id.to_string())
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(id)
 }
 
 /// Highest committed id in `table` — the watermark shape every
