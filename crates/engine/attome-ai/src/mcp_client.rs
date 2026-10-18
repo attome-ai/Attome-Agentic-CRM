@@ -21,9 +21,22 @@
 //! method, through the dial guard (`DialClient::post_json`, the same
 //! reachability rules as model providers); a JSON or an event-stream reply
 //! is accepted. No server text is logged or returned in an error.
+//!
+//! **Resilience (AB6-T10).** Each server host has its own
+//! `attome_outbound::Service`: a circuit breaker, a bulkhead and a timeout
+//! inside the request's deadline. A call is never retried automatically: a
+//! tool call may have effects, and a retry the model asks for is itself a
+//! tool step counted against the agent's limits, so no retry escapes them.
+//! An open breaker answers at once with a tool error the agent cannot retry
+//! around until the breaker lets a probe through.
 
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::{Arc, LazyLock, Mutex, PoisonError};
+use std::time::Duration;
+
+use attome_outbound::{CallClass, OutboundError, Policy, Retryable, Service};
 
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
@@ -119,20 +132,115 @@ async fn load_server(state: &EngineState, id: Uuid) -> Result<ServerTarget, AppE
     })
 }
 
-/// `initialize`, then `method` with `params`, against one server.
+// ── Resilience (AB6-T10) ────────────────────────────────────────────────────
+
+/// One server host's breaker, bulkhead and timeout, made on first use. The
+/// hosts are the registered servers, a short administrator-made list, and the
+/// state is observational: a restart only forgets recent failures.
+fn service_for(url: &str) -> Arc<Service> {
+    static SERVICES: LazyLock<Mutex<HashMap<String, Arc<Service>>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
+    let host = reqwest::Url::parse(url)
+        .ok()
+        .and_then(|u| {
+            u.host_str()
+                .map(|h| format!("{h}:{}", u.port_or_known_default().unwrap_or(0)))
+        })
+        .unwrap_or_else(|| url.to_owned());
+    let mut services = SERVICES.lock().unwrap_or_else(PoisonError::into_inner);
+    Arc::clone(
+        services
+            .entry(host)
+            .or_insert_with(|| Arc::new(Service::new("mcp", mcp_policy()))),
+    )
+}
+
+fn mcp_policy() -> Policy {
+    Policy {
+        // The HTTP client's own timeout ends the attempt first.
+        timeout: Duration::from_secs(CALL_TIMEOUT_SECS + 5),
+        ..Policy::default()
+    }
+}
+
+/// A failed exchange with a server: what the caller sees, and whether the
+/// server may answer later (it was unreachable, or said 429 or 5xx). A
+/// refusal or an unreadable reply is the server answering, not failing.
+#[derive(Debug)]
+struct WireError {
+    error: AppError,
+    retryable: bool,
+}
+
+impl WireError {
+    fn refused(error: AppError) -> Self {
+        Self {
+            error,
+            retryable: false,
+        }
+    }
+}
+
+impl Retryable for WireError {
+    fn retryable(&self) -> bool {
+        self.retryable
+    }
+}
+
+impl std::fmt::Display for WireError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("outside MCP call failed")
+    }
+}
+
+/// Runs `attempt` once through `svc`, never retrying it (see the module
+/// doc); an open breaker, a full bulkhead or a timeout is a fixed tool error.
+async fn guarded<F, Fut>(svc: &Service, attempt: F) -> Result<Value, AppError>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<Value, WireError>>,
+{
+    match attome_outbound::call(svc, CallClass::Interactive, false, attempt).await {
+        Ok(value) => Ok(value),
+        Err(OutboundError::Failed(wire)) => Err(wire.error),
+        Err(OutboundError::Open { .. }) => Err(AppError::Validation(
+            "the MCP server is failing and is paused; try again later".into(),
+        )),
+        Err(OutboundError::Busy) => Err(AppError::Validation(
+            "the MCP server is busy; try again later".into(),
+        )),
+        Err(OutboundError::Timeout) => Err(AppError::Validation(
+            "the MCP server did not answer in time".into(),
+        )),
+    }
+}
+
+/// `initialize`, then `method` with `params`, against one server, through
+/// its host's breaker.
 async fn rpc(
     state: &EngineState,
     server: &ServerTarget,
     method: &str,
     params: Value,
 ) -> Result<Value, AppError> {
+    let svc = service_for(&server.url);
+    guarded(&svc, || rpc_once(state, server, method, params.clone())).await
+}
+
+async fn rpc_once(
+    state: &EngineState,
+    server: &ServerTarget,
+    method: &str,
+    params: Value,
+) -> Result<Value, WireError> {
     let dial = crate::provider_models::http_client_for(
         &server.url,
         &state.base.config.inference,
         server.allow_external,
         CALL_TIMEOUT_SECS,
     )
-    .await?;
+    .await
+    .map_err(WireError::refused)?;
     let mut headers: Vec<(&str, String)> = vec![
         ("accept", "application/json, text/event-stream".to_owned()),
         ("mcp-protocol-version", PROTOCOL_VERSION.to_owned()),
@@ -146,7 +254,10 @@ async fn rpc(
         async move {
             dial.post_json(&url, &headers, &body).await.map_err(|e| {
                 tracing::warn!(error = %e, "outside MCP server unreachable");
-                AppError::Validation("the MCP server could not be reached".into())
+                WireError {
+                    error: AppError::Validation("the MCP server could not be reached".into()),
+                    retryable: true,
+                }
             })
         }
     };
@@ -168,7 +279,8 @@ async fn rpc(
             .unwrap_or("application/json")
             .to_owned()
     };
-    reply_result(reply_message(&content_type(&init.headers), &init.body))?;
+    reply_result(reply_message(&content_type(&init.headers), &init.body))
+        .map_err(WireError::refused)?;
     if let Some(session) = init
         .headers
         .get("mcp-session-id")
@@ -188,12 +300,13 @@ async fn rpc(
     )
     .await?;
     if !(200..300).contains(&reply.status) {
-        return Err(AppError::Validation(format!(
-            "the MCP server answered {}",
-            reply.status
-        )));
+        return Err(WireError {
+            error: AppError::Validation(format!("the MCP server answered {}", reply.status)),
+            retryable: reply.status == 429 || reply.status >= 500,
+        });
     }
     reply_result(reply_message(&content_type(&reply.headers), &reply.body))
+        .map_err(WireError::refused)
 }
 
 // ── Admin routes ────────────────────────────────────────────────────────────
@@ -778,6 +891,56 @@ mod tests {
         let refused = reply_result(reply_message("application/json", error)).unwrap_err();
         assert!(!refused.to_string().contains("secret"));
         assert!(reply_result(reply_message("application/json", b"not json")).is_err());
+    }
+
+    #[tokio::test]
+    async fn agent_retry_counts_against_budget() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+
+        // A breaker that opens after two failures.
+        let svc = Service::new(
+            "mcp-test",
+            Policy {
+                breaker: attome_outbound::BreakerConfig {
+                    window: 4,
+                    min_calls: 2,
+                    failure_rate: 0.5,
+                    open_for: Duration::from_secs(60),
+                    probes: 1,
+                },
+                ..mcp_policy()
+            },
+        );
+        let attempts = AtomicU32::new(0);
+        let failing = || {
+            attempts.fetch_add(1, Ordering::SeqCst);
+            async {
+                Err::<Value, _>(WireError {
+                    error: AppError::Validation("the MCP server could not be reached".into()),
+                    retryable: true,
+                })
+            }
+        };
+
+        // A retryable failure is not retried: the model's own retry is the
+        // next tool step, counted like any other.
+        assert!(guarded(&svc, failing).await.is_err());
+        assert_eq!(
+            attempts.load(Ordering::SeqCst),
+            1,
+            "one attempt per tool step"
+        );
+        assert!(guarded(&svc, failing).await.is_err());
+        assert_eq!(attempts.load(Ordering::SeqCst), 2);
+
+        // The breaker is open now: the next step fails at once, without a
+        // call, with a fixed tool error.
+        let refused = guarded(&svc, failing).await.unwrap_err();
+        assert_eq!(attempts.load(Ordering::SeqCst), 2, "no call while open");
+        assert!(
+            matches!(&refused, AppError::Validation(m) if m.contains("paused")),
+            "{refused:?}"
+        );
     }
 
     #[test]

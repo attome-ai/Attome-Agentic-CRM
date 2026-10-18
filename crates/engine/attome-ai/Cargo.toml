@@ -26,6 +26,7 @@ attome-metadata.workspace     = true
 attome-model.workspace        = true
 attome-modules.workspace      = true
 attome-notification.workspace = true
+attome-outbound.workspace     = true
 attome-records.workspace      = true
 attome-search.workspace       = true
 attome-sales.workspace        = true

@@ -383,6 +383,7 @@ dependencies = [
  "attome-model",
  "attome-modules",
  "attome-notification",
+ "attome-outbound",
  "attome-project",
  "attome-records",
  "attome-sales",
