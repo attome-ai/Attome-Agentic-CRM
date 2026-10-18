@@ -6481,6 +6481,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/slo/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_slo_reports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/slo/reports/{period}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_slo_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/slo/targets/{class_id}": {
         parameters: {
             query?: never;
@@ -26573,6 +26605,31 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_SloReport: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: date
+                 * @description The month's first day (UTC).
+                 */
+                period_start: string;
+                /**
+                 * @description `{period_start, period_end, latency, classes: [{id, name_en, name_ar,
+                 *     kind, status, objective, good, bad, error_ratio, budget_remaining}]}`.
+                 */
+                report: Record<string, never>;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_SnapshotRow: {
             items: {
                 /** Format: double */
@@ -30785,6 +30842,23 @@ export interface components {
             classes: components["schemas"]["SloClassStatus"][];
             /** @description `solo` or `team`, the profile whose reference targets apply. */
             profile: string;
+        };
+        /** @description One month's report. */
+        SloReport: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description The month's first day (UTC).
+             */
+            period_start: string;
+            /**
+             * @description `{period_start, period_end, latency, classes: [{id, name_en, name_ar,
+             *     kind, status, objective, good, bad, error_ratio, budget_remaining}]}`.
+             */
+            report: Record<string, never>;
         };
         SloTargetBody: {
             /** Format: int32 */
@@ -55806,6 +55880,114 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_slo_reports: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Monthly SLO reports, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SloReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_slo_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The month, `YYYY-MM` */
+                period: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The month's report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SloReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No report for that month */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a month */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

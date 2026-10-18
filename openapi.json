@@ -34519,6 +34519,155 @@
         ]
       }
     },
+    "/api/v1/admin/slo/reports": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "list_slo_reports",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monthly SLO reports, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SloReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/slo/reports/{period}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "get_slo_report",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "description": "The month, `YYYY-MM`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The month's report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SloReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No report for that month",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a month",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/slo/targets/{class_id}": {
       "put": {
         "tags": [
@@ -107170,6 +107319,62 @@
           }
         }
       },
+      "PaginatedResponse_SloReport": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One month's report.",
+              "required": [
+                "id",
+                "period_start",
+                "report",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "period_start": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "The month's first day (UTC)."
+                },
+                "report": {
+                  "type": "object",
+                  "description": "`{period_start, period_end, latency, classes: [{id, name_en, name_ar,\nkind, status, objective, good, bad, error_ratio, budget_remaining}]}`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_SnapshotRow": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -117916,6 +118121,35 @@
           "profile": {
             "type": "string",
             "description": "`solo` or `team`, the profile whose reference targets apply."
+          }
+        }
+      },
+      "SloReport": {
+        "type": "object",
+        "description": "One month's report.",
+        "required": [
+          "id",
+          "period_start",
+          "report",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date",
+            "description": "The month's first day (UTC)."
+          },
+          "report": {
+            "type": "object",
+            "description": "`{period_start, period_end, latency, classes: [{id, name_en, name_ar,\nkind, status, objective, good, bad, error_ratio, budget_remaining}]}`."
           }
         }
       },
