@@ -144,3 +144,10 @@ pub use version::{LanguageVersion, upgrade};
 pub fn parse(src: &str) -> Result<Expr, RulesError> {
     parser::parse(src, &Budgets::default())
 }
+
+/// Z11-T15: `pattern` compiled as `matches` compiles it: a full-string match
+/// (`^(?:pattern)$`) under the language's size limits. Field masks use it, so
+/// a mask and a rule's `matches` mean the same thing.
+pub fn full_match_regex(pattern: &str) -> Result<regex::Regex, RulesError> {
+    compile::build_regex(pattern)
+}

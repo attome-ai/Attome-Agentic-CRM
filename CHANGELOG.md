@@ -43,6 +43,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Workflows: a Condition node may carry `expression`, V2 rule text evaluated by `attome-rules`
+  against the node's input (nested objects read as `deal.amount` and up to three-hop paths); it
+  wins over the legacy `{field, op, value}`, parses at publish, and takes the false branch on a
+  type or evaluation error (Z11-T15). `condition::condition_to_expression` writes a legacy
+  condition as its expression.
+- Fields: a text mask compiles as the rule language's `matches` (`^(?:pattern)$` under its size
+  limits), so every alternative of `a|b` is anchored (Z11-T15).
 - Rules: `attome_core::rules_sql::to_sql` (Z11-T10) turns the SQL-safe part of a rule expression
   into a bound predicate: literals as parameters, columns quoted from the entity's metadata,
   null-safe equality, `in`, `is_null`, `lower`/`upper`, `contains`/`startswith`/`endswith` (an

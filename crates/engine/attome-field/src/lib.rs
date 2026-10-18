@@ -464,14 +464,11 @@ fn compiled_pattern(pattern: &str) -> Result<Arc<regex::Regex>, AppError> {
         return Ok(Arc::clone(re));
     }
 
-    let anchored = match (pattern.starts_with('^'), pattern.ends_with('$')) {
-        (true, true) => pattern.to_owned(),
-        (true, false) => format!("{pattern}$"),
-        (false, true) => format!("^{pattern}"),
-        (false, false) => format!("^{pattern}$"),
-    };
+    // Z11-T15: the rule language's `matches` compile, so a mask is the same
+    // full match (`^(?:pattern)$`, which also anchors every alternative of
+    // `a|b`) under the same size limits.
     let re = Arc::new(
-        regex::Regex::new(&anchored)
+        attome_rules::full_match_regex(pattern)
             .map_err(|e| AppError::Validation(format!("invalid mask pattern '{pattern}': {e}")))?,
     );
 
@@ -1515,6 +1512,28 @@ mod tests {
     /// two `compiled_pattern` calls of a separate identity test and fail it
     /// spuriously. Sequencing them here — identity first, then the fill that
     /// may clear — removes that race entirely.
+    #[test]
+    fn pattern_validation_uses_base_rules() {
+        // The same full match as a rule's `matches`: every alternative is
+        // anchored, and an already-anchored pattern still works.
+        let alt = compiled_pattern("ab|cd").expect("valid pattern");
+        assert!(alt.is_match("ab") && alt.is_match("cd"));
+        assert!(!alt.is_match("abx") && !alt.is_match("xcd"));
+        let anchored = compiled_pattern(r"^[0-9]+$").expect("valid pattern");
+        assert!(anchored.is_match("123") && !anchored.is_match("12a"));
+        let opts = TextOptions {
+            pattern: Some("[A-Z]{2}".to_owned()),
+            ..TextOptions::default()
+        };
+        assert!(validate_text_mask("AB", &opts).is_ok());
+        let err = validate_text_mask("ABC", &opts).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("does not match the required format"),
+            "{err}"
+        );
+    }
+
     #[test]
     fn mask_regex_is_compiled_once_bounded_and_not_cached_when_invalid() {
         // Same pattern twice hands back the *same* compiled regex, not a copy.

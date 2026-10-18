@@ -22,6 +22,7 @@ attome-metadata.workspace     = true
 attome-modules.workspace      = true
 attome-notification.workspace = true
 attome-records.workspace      = true
+attome-rules.workspace        = true
 attome-security.workspace     = true
 attome-server.workspace       = true
 attome-storage.workspace  = true

@@ -1046,6 +1046,7 @@ name = "attome-field"
 version = "0.1.0"
 dependencies = [
  "attome-core",
+ "attome-rules",
  "attome-types",
  "chrono",
  "proptest",
@@ -2020,6 +2021,7 @@ dependencies = [
  "attome-modules",
  "attome-notification",
  "attome-records",
+ "attome-rules",
  "attome-security",
  "attome-server",
  "attome-storage",

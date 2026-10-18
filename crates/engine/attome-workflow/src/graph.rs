@@ -153,6 +153,16 @@ pub fn validate(graph: &Graph) -> Result<String, ValidationError> {
             ))
         })?;
         typed.insert(node.id.as_str(), node_type);
+        // Z11-T15: a Condition's expression parses at publish.
+        if node_type == NodeType::Condition
+            && let Some(expression) = crate::condition::expression_of(&node.config)
+        {
+            let src = expression.as_str().ok_or_else(|| {
+                ValidationError(format!("node {:?}: expression must be text", node.id))
+            })?;
+            crate::condition::check_expression(src)
+                .map_err(|message| ValidationError(format!("node {:?}: {message}", node.id)))?;
+        }
     }
 
     let entry_nodes: Vec<&str> = graph

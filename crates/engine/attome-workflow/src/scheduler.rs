@@ -1374,6 +1374,12 @@ async fn execute_node(
 }
 
 pub(crate) fn eval_condition(config: &Value, value: &Value) -> bool {
+    // Z11-T15: a V2 expression wins over the legacy comparison.
+    if let Some(expression) = crate::condition::expression_of(config) {
+        return expression
+            .as_str()
+            .is_some_and(|src| crate::condition::expression_holds(src, value));
+    }
     let op = config.get("op").and_then(Value::as_str).unwrap_or("eq");
     let expected = config.get("value").cloned().unwrap_or(Value::Null);
     let field = config.get("field").and_then(Value::as_str);

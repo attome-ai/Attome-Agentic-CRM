@@ -12,6 +12,7 @@ publish.workspace      = true
 
 [dependencies]
 attome-core.workspace  = true
+attome-rules.workspace = true
 attome-types.workspace = true
 chrono.workspace       = true
 regex.workspace        = true
