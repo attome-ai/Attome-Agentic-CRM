@@ -43,6 +43,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendars: loading follows inheritance (Z12-T4). A calendar merges its parent chain (at most
+  three levels; a loop is refused): the nearest non-empty working days and hours win, holidays
+  are unioned, and a nearer exception wins on its date. Holiday rules and seasons expand for last
+  year to two years ahead, a confirmed moon sighting moving a sighted Hijri holiday. Hours accept
+  an overnight range (22:00 to 06:00 runs into the next weekday). `LoadedCalendar::version` is
+  the content version, bumped once when the loaded definition changes.
 - Workflows: a Condition node may carry `expression`, V2 rule text evaluated by `attome-rules`
   against the node's input (nested objects read as `deal.amount` and up to three-hop paths); it
   wins over the legacy `{field, op, value}`, parses at publish, and takes the false branch on a

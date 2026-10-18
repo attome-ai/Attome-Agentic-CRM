@@ -40,7 +40,7 @@ use attome_calendar::{
 };
 use attome_db::DbPool;
 use attome_types::AppError;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -89,6 +89,9 @@ pub struct LoadedCalendar {
     /// caller that records the hash as evidence records this beside it
     /// (D-621, amending D-517 ruling 2).
     pub tzdb_version: &'static str,
+    /// Z12-T4: the calendar's content version, bumped when its loaded
+    /// definition (inherited parts included) changes.
+    pub version: i32,
 }
 
 #[derive(Deserialize)]
@@ -99,6 +102,13 @@ struct WireRange {
 }
 
 const WEEKDAY_HINT: &str = "use one of mon, tue, wed, thu, fri, sat, sun";
+
+/// The minute a day ends (a 24/7 day is `[0, DAY_END)`).
+const DAY_END: u16 = 1440;
+
+/// Z12-T4: the most calendars in an inheritance chain (a calendar, its
+/// parent and its grandparent).
+pub const MAX_CALENDAR_DEPTH: usize = 3;
 
 /// Validates a calendar definition in its stored/wire shape — `tz` an IANA
 /// zone name, `working_days` weekday codes, `hours` an object of weekday code
@@ -156,7 +166,8 @@ pub fn build_calendar(
     let Some(hours) = hours.as_object() else {
         return Err(invalid("hours must be an object keyed by weekday".into()));
     };
-    let mut ranges_by_day = HashMap::new();
+    let mut ranges_by_day: HashMap<chrono::Weekday, Vec<TimeRange>> = HashMap::new();
+    let mut given = HashSet::new();
     for (code, ranges) in hours {
         let day = parse_weekday_code(code.trim()).ok_or_else(|| {
             invalid(format!(
@@ -168,15 +179,34 @@ pub fn build_calendar(
                 "hours for '{code}' must be a list of {{\"start_minute\", \"end_minute\"}} ranges: {e}"
             ))
         })?;
-        let ranges: Vec<TimeRange> = wire
-            .into_iter()
-            .map(|r| TimeRange::new(r.start_minute, r.end_minute))
-            .collect();
-        if ranges_by_day.insert(day, ranges).is_some() {
+        if !given.insert(day) {
             return Err(invalid(format!(
                 "hours for '{}' are given more than once",
                 weekday_code(day)
             )));
+        }
+        for r in wire {
+            if r.start_minute > r.end_minute && r.start_minute < DAY_END {
+                // Z12-T4: an overnight range (22:00 to 06:00) runs to midnight
+                // and on into the next weekday, which it makes a working day.
+                ranges_by_day
+                    .entry(day)
+                    .or_default()
+                    .push(TimeRange::new(r.start_minute, DAY_END));
+                if r.end_minute > 0 {
+                    let next = day.succ();
+                    ranges_by_day
+                        .entry(next)
+                        .or_default()
+                        .push(TimeRange::new(0, r.end_minute));
+                    days.insert(next);
+                }
+            } else {
+                ranges_by_day
+                    .entry(day)
+                    .or_default()
+                    .push(TimeRange::new(r.start_minute, r.end_minute));
+            }
         }
     }
 
@@ -248,61 +278,300 @@ pub fn parse_calendar_ref(raw: Option<&str>) -> Result<Option<Uuid>, CalendarUnr
     }
 }
 
-/// Loads an active calendar with its active holidays and exceptions. The
-/// outer `Result` is infrastructure failure; the inner one is whether this
-/// calendar is usable.
+/// One calendar of an inheritance chain, as stored.
+#[derive(Debug, Clone, Default)]
+pub struct CalendarLayer {
+    pub tz: String,
+    pub working_days: Vec<String>,
+    pub hours: serde_json::Value,
+    pub holidays: Vec<NaiveDate>,
+    pub exceptions: Vec<(NaiveDate, serde_json::Value)>,
+    /// `(rule id, rule, needs a sighting)`.
+    pub rules: Vec<(Uuid, attome_calendar::rules::HolidayRule, bool)>,
+    pub seasons: Vec<attome_calendar::rules::Season>,
+}
+
+/// A chain merged root first: the definition a calendar answers with.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MergedDefinition {
+    pub tz: String,
+    pub working_days: Vec<String>,
+    pub hours: serde_json::Value,
+    pub holidays: BTreeSet<NaiveDate>,
+    pub exceptions: BTreeMap<NaiveDate, Vec<TimeRange>>,
+}
+
+fn hours_given(hours: &serde_json::Value) -> bool {
+    hours.as_object().is_some_and(|o| !o.is_empty())
+}
+
+/// Z12-T4: merges `layers` (root first, the calendar itself last). A layer's
+/// non-empty working days and hours replace the ones above it, and its zone
+/// is the zone; holidays are unioned, and per date a layer's exception (or
+/// season hours, which its own exceptions override) wins over its parent's.
+/// Holiday rules and seasons are expanded for `years`, a confirmed sighting
+/// (`sightings`, by rule and Hijri year) moving a sighted Hijri holiday.
+pub fn merge_layers(
+    layers: &[CalendarLayer],
+    sightings: &HashMap<(Uuid, i32), NaiveDate>,
+    years: std::ops::RangeInclusive<i32>,
+) -> Result<MergedDefinition, InvalidCalendarDefinition> {
+    let invalid = |e: CalendarError| InvalidCalendarDefinition(e.to_string());
+    let mut merged = MergedDefinition {
+        tz: String::new(),
+        working_days: Vec::new(),
+        hours: serde_json::json!({}),
+        holidays: BTreeSet::new(),
+        exceptions: BTreeMap::new(),
+    };
+    for layer in layers {
+        if !layer.tz.trim().is_empty() {
+            merged.tz.clone_from(&layer.tz);
+        }
+        if !layer.working_days.is_empty() {
+            merged.working_days.clone_from(&layer.working_days);
+        }
+        if hours_given(&layer.hours) {
+            merged.hours = layer.hours.clone();
+        }
+        merged.holidays.extend(layer.holidays.iter().copied());
+        for (id, rule, needs_sighting) in &layer.rules {
+            for year in years.clone() {
+                merged.holidays.extend(
+                    rule_dates(*id, rule, *needs_sighting, sightings, year).map_err(invalid)?,
+                );
+            }
+        }
+        let mut own = BTreeMap::new();
+        for season in &layer.seasons {
+            for year in years.clone() {
+                own.extend(attome_calendar::rules::expand_season(season, year).map_err(invalid)?);
+            }
+        }
+        for (date, ranges) in &layer.exceptions {
+            own.insert(*date, parse_exception_ranges(*date, ranges)?);
+        }
+        merged.exceptions.extend(own);
+    }
+    Ok(merged)
+}
+
+/// The dates `rule` closes for holidays starting in `year`; for a sighted
+/// Hijri rule, a confirmed start replaces the expected one for that Hijri
+/// year.
+pub fn rule_dates(
+    rule_id: Uuid,
+    rule: &attome_calendar::rules::HolidayRule,
+    needs_sighting: bool,
+    sightings: &HashMap<(Uuid, i32), NaiveDate>,
+    year: i32,
+) -> Result<Vec<NaiveDate>, CalendarError> {
+    use attome_calendar::rules::{HolidayRule, expand};
+    let HolidayRule::Hijri {
+        month,
+        day,
+        span_days,
+    } = rule
+    else {
+        return expand(rule, year);
+    };
+    if !needs_sighting {
+        return expand(rule, year);
+    }
+    let first_only = HolidayRule::Hijri {
+        month: *month,
+        day: *day,
+        span_days: 1,
+    };
+    let mut out = Vec::new();
+    for expected in expand(&first_only, year)? {
+        let hijri_year = i32::from(attome_calendar::hijri::to_hijri(expected)?.year);
+        let start = sightings
+            .get(&(rule_id, hijri_year))
+            .copied()
+            .unwrap_or(expected);
+        out.extend(
+            (0..i64::from(*span_days))
+                .filter_map(|n| start.checked_add_signed(chrono::Duration::days(n))),
+        );
+    }
+    out.sort_unstable();
+    out.dedup();
+    Ok(out)
+}
+
+type CalendarRow = (String, Vec<String>, serde_json::Value, Option<Uuid>);
+
+/// The chain from `calendar_id` up, the calendar itself first.
+async fn load_chain(
+    db: &DbPool,
+    calendar_id: Uuid,
+) -> Result<Result<Vec<(Uuid, CalendarRow)>, CalendarUnresolved>, AppError> {
+    let mut chain = Vec::new();
+    let mut next = Some(calendar_id);
+    while let Some(id) = next {
+        if chain.iter().any(|(seen, _)| *seen == id) {
+            return Ok(Err(CalendarUnresolved::Invalid(format!(
+                "calendar {calendar_id} inherits from itself through {id}"
+            ))));
+        }
+        if chain.len() == MAX_CALENDAR_DEPTH {
+            return Ok(Err(CalendarUnresolved::Invalid(format!(
+                "calendar {calendar_id} inherits through more than {MAX_CALENDAR_DEPTH} levels"
+            ))));
+        }
+        let row: Option<CalendarRow> = sqlx::query_as(
+            "SELECT tz, working_days, hours, parent_calendar_id FROM calendar \
+              WHERE id = $1 AND is_active = true",
+        )
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?;
+        let Some(row) = row else {
+            if id == calendar_id {
+                tracing::warn!(calendar_id = %calendar_id, "calendar: no active calendar has this id");
+                return Ok(Err(CalendarUnresolved::NotFound));
+            }
+            return Ok(Err(CalendarUnresolved::Invalid(format!(
+                "calendar {calendar_id} inherits from {id}, which is not an active calendar"
+            ))));
+        };
+        next = row.3;
+        chain.push((id, row));
+    }
+    Ok(Ok(chain))
+}
+
+/// Loads an active calendar with what it inherits (Z12-T4): its parent chain
+/// merged ([`merge_layers`]), holiday rules and seasons expanded for last
+/// year to two years ahead, confirmed sightings applied, and its content
+/// version kept ([`LoadedCalendar::version`]). The outer `Result` is
+/// infrastructure failure; the inner one is whether this calendar is usable.
 pub async fn load_calendar(
     db: &DbPool,
     calendar_id: Uuid,
 ) -> Result<Result<LoadedCalendar, CalendarUnresolved>, AppError> {
-    let row: Option<(String, Vec<String>, serde_json::Value)> = sqlx::query_as(
-        "SELECT tz, working_days, hours FROM calendar WHERE id = $1 AND is_active = true",
+    let chain = match load_chain(db, calendar_id).await? {
+        Ok(chain) => chain,
+        Err(unresolved) => return Ok(Err(unresolved)),
+    };
+    let ids: Vec<Uuid> = chain.iter().map(|(id, _)| *id).collect();
+
+    let holidays: Vec<(Uuid, NaiveDate)> = sqlx::query_as(
+        "SELECT calendar_id, holiday_date FROM calendar_holiday \
+          WHERE calendar_id = ANY($1) AND is_active = true",
     )
-    .bind(calendar_id)
-    .fetch_optional(db)
+    .bind(&ids)
+    .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
-    let Some((tz, working_days, hours)) = row else {
-        tracing::warn!(calendar_id = %calendar_id, "calendar: no active calendar has this id");
-        return Ok(Err(CalendarUnresolved::NotFound));
+    let exceptions: Vec<(Uuid, NaiveDate, serde_json::Value)> = sqlx::query_as(
+        "SELECT calendar_id, exception_date, ranges FROM calendar_exception \
+          WHERE calendar_id = ANY($1) AND is_active = true",
+    )
+    .bind(&ids)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let rules: Vec<(Uuid, Uuid, serde_json::Value, bool)> = sqlx::query_as(
+        "SELECT calendar_id, id, rule, needs_sighting FROM calendar_holiday_rule \
+          WHERE calendar_id = ANY($1) AND is_active = true",
+    )
+    .bind(&ids)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let seasons: Vec<(Uuid, serde_json::Value)> = sqlx::query_as(
+        "SELECT calendar_id, definition FROM calendar_season \
+          WHERE calendar_id = ANY($1) AND is_active = true",
+    )
+    .bind(&ids)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let rule_ids: Vec<Uuid> = rules.iter().map(|r| r.1).collect();
+    let sightings: HashMap<(Uuid, i32), NaiveDate> = if rule_ids.is_empty() {
+        HashMap::new()
+    } else {
+        sqlx::query_as::<_, (Uuid, i32, NaiveDate)>(
+            "SELECT rule_id, hijri_year, confirmed_start FROM calendar_sighting \
+              WHERE rule_id = ANY($1)",
+        )
+        .bind(&rule_ids)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?
+        .into_iter()
+        .map(|(rule, year, start)| ((rule, year), start))
+        .collect()
     };
 
-    let holidays: Vec<NaiveDate> = sqlx::query_scalar(
-        "SELECT holiday_date FROM calendar_holiday WHERE calendar_id = $1 AND is_active = true",
-    )
-    .bind(calendar_id)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
+    let mut layers = Vec::with_capacity(chain.len());
+    // Root first: the chain was read from the calendar up.
+    for (id, (tz, working_days, hours, _)) in chain.into_iter().rev() {
+        let mut layer = CalendarLayer {
+            tz,
+            working_days,
+            hours,
+            ..CalendarLayer::default()
+        };
+        layer.holidays = holidays
+            .iter()
+            .filter(|(c, _)| *c == id)
+            .map(|(_, d)| *d)
+            .collect();
+        layer.exceptions = exceptions
+            .iter()
+            .filter(|(c, _, _)| *c == id)
+            .map(|(_, d, r)| (*d, r.clone()))
+            .collect();
+        for (c, rule_id, rule, needs_sighting) in &rules {
+            if *c != id {
+                continue;
+            }
+            match serde_json::from_value(rule.clone()) {
+                Ok(rule) => layer.rules.push((*rule_id, rule, *needs_sighting)),
+                Err(e) => {
+                    return Ok(Err(invalid_definition(
+                        calendar_id,
+                        format!("holiday rule {rule_id} is not a rule: {e}"),
+                    )));
+                }
+            }
+        }
+        for (c, definition) in &seasons {
+            if *c != id {
+                continue;
+            }
+            match serde_json::from_value(definition.clone()) {
+                Ok(season) => layer.seasons.push(season),
+                Err(e) => {
+                    return Ok(Err(invalid_definition(
+                        calendar_id,
+                        format!("a season of calendar {id} is not a season: {e}"),
+                    )));
+                }
+            }
+        }
+        layers.push(layer);
+    }
 
-    let exception_rows: Vec<(NaiveDate, serde_json::Value)> = sqlx::query_as(
-        "SELECT exception_date, ranges FROM calendar_exception WHERE calendar_id = $1 AND is_active = true",
-    )
-    .bind(calendar_id)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
-
-    let built = exception_rows
-        .iter()
-        .map(|(date, ranges)| parse_exception_ranges(*date, ranges).map(|r| (*date, r)))
-        .collect::<Result<BTreeMap<_, _>, _>>()
-        .and_then(|exceptions| {
-            build_calendar(
-                &tz,
-                &working_days,
-                &hours,
-                holidays.into_iter().collect(),
-                exceptions,
-            )
-        });
+    let this_year = chrono::Utc::now().year();
+    let built = merge_layers(&layers, &sightings, this_year - 1..=this_year + 2)
+        .and_then(|m| build_calendar(&m.tz, &m.working_days, &m.hours, m.holidays, m.exceptions));
     match built {
-        Ok(calendar) => Ok(Ok(LoadedCalendar {
-            id: calendar_id,
-            content_hash: content_hash(&calendar),
-            tzdb_version: TZDB_VERSION,
-            calendar,
-        })),
+        Ok(calendar) => {
+            let hash = content_hash(&calendar);
+            let version = record_version(db, calendar_id, &calendar, &hash).await?;
+            Ok(Ok(LoadedCalendar {
+                id: calendar_id,
+                content_hash: hash,
+                tzdb_version: TZDB_VERSION,
+                version,
+                calendar,
+            }))
+        }
         Err(InvalidCalendarDefinition(reason)) => {
             tracing::error!(
                 calendar_id = %calendar_id,
@@ -312,6 +581,92 @@ pub async fn load_calendar(
             Ok(Err(CalendarUnresolved::Invalid(reason)))
         }
     }
+}
+
+fn invalid_definition(calendar_id: Uuid, reason: String) -> CalendarUnresolved {
+    tracing::error!(
+        calendar_id = %calendar_id,
+        reason = %reason,
+        "calendar: stored calendar definition is invalid; fix it under /api/v1/admin/calendars"
+    );
+    CalendarUnresolved::Invalid(reason)
+}
+
+/// Z12-T4: the calendar's content version for `hash`. The same hash as the
+/// latest version reads it; a new one writes the next version and moves
+/// `calendar.current_version`, under a per-calendar try-lock (a busy lock
+/// means another node is writing it: this one reads the version instead).
+/// Migration 0087's empty version 1 is filled in place.
+async fn record_version(
+    db: &DbPool,
+    calendar_id: Uuid,
+    calendar: &BusinessCalendar,
+    hash: &str,
+) -> Result<i32, AppError> {
+    let read = "SELECT version, content_hash FROM calendar_version \
+                 WHERE calendar_id = $1 ORDER BY version DESC LIMIT 1";
+    let (version, stored): (i32, String) = sqlx::query_as(read)
+        .bind(calendar_id)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?
+        .unwrap_or_default();
+    if version > 0 && stored == hash {
+        return Ok(version);
+    }
+    let mut tx = attome_db::tx::begin(db).await?;
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-core/calendar-version:{calendar_id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let (version, stored): (i32, String) = sqlx::query_as(read)
+        .bind(calendar_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .unwrap_or_default();
+    if !locked || stored == hash {
+        attome_db::tx::commit(tx).await?;
+        return Ok(version.max(1));
+    }
+    let canonical = calendar.canonical_form();
+    let next = if version == 1 && stored.is_empty() {
+        sqlx::query(
+            "UPDATE calendar_version SET canonical = $2, content_hash = $3 \
+              WHERE calendar_id = $1 AND version = 1",
+        )
+        .bind(calendar_id)
+        .bind(&canonical)
+        .bind(hash)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        1
+    } else {
+        let next = version + 1;
+        sqlx::query(
+            "INSERT INTO calendar_version (calendar_id, version, canonical, content_hash) \
+             VALUES ($1, $2, $3, $4) ON CONFLICT (calendar_id, version) DO NOTHING",
+        )
+        .bind(calendar_id)
+        .bind(next)
+        .bind(&canonical)
+        .bind(hash)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        next
+    };
+    sqlx::query("UPDATE calendar SET current_version = $2 WHERE id = $1")
+        .bind(calendar_id)
+        .bind(next)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(next)
 }
 
 /// The deployment's single active default calendar, if one is configured.
@@ -628,5 +983,116 @@ mod tests {
             parse_calendar_ref(Some("uae-hq")),
             Err(CalendarUnresolved::MalformedReference("uae-hq".into()))
         );
+    }
+
+    fn layer(tz: &str, working: &[&str], hours: serde_json::Value) -> CalendarLayer {
+        CalendarLayer {
+            tz: tz.to_owned(),
+            working_days: days(working),
+            hours,
+            ..CalendarLayer::default()
+        }
+    }
+
+    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    }
+
+    #[test]
+    fn child_overrides_parent_hours() {
+        let mut parent = layer(
+            "Asia/Riyadh",
+            &["sun", "mon"],
+            json!({ "sun": nine_to_five(), "mon": nine_to_five() }),
+        );
+        parent.holidays = vec![d(2026, 9, 23)];
+        parent.exceptions = vec![(d(2026, 3, 1), json!([]))];
+        // The child changes the hours only; the zone, days, holiday and the
+        // parent's exception come down, and its own exception on that date wins.
+        let mut child = layer(
+            "",
+            &[],
+            json!({ "sun": [{ "start_minute": 480, "end_minute": 960 }],
+                    "mon": [{ "start_minute": 480, "end_minute": 960 }] }),
+        );
+        child.exceptions = vec![(
+            d(2026, 3, 1),
+            json!([{ "start_minute": 600, "end_minute": 720 }]),
+        )];
+        let merged = merge_layers(&[parent, child], &HashMap::new(), 2026..=2026).unwrap();
+        assert_eq!(merged.tz, "Asia/Riyadh");
+        assert_eq!(merged.working_days, days(&["sun", "mon"]));
+        assert_eq!(merged.hours["sun"][0]["start_minute"], 480);
+        assert!(merged.holidays.contains(&d(2026, 9, 23)));
+        assert_eq!(
+            merged.exceptions[&d(2026, 3, 1)],
+            vec![TimeRange::new(600, 720)]
+        );
+        let cal = build_calendar(
+            &merged.tz,
+            &merged.working_days,
+            &merged.hours,
+            merged.holidays,
+            merged.exceptions,
+        )
+        .unwrap();
+        assert_eq!(cal.working_days().len(), 2);
+    }
+
+    #[test]
+    fn overnight_range_is_split() {
+        use chrono::Weekday;
+        let hours = json!({ "thu": [{ "start_minute": 1320, "end_minute": 360 }] });
+        let cal = build_calendar(
+            "UTC",
+            &days(&["thu"]),
+            &hours,
+            BTreeSet::new(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(cal.hours()[&Weekday::Thu], vec![TimeRange::new(1320, 1440)]);
+        assert_eq!(cal.hours()[&Weekday::Fri], vec![TimeRange::new(0, 360)]);
+        assert!(cal.working_days().contains(&Weekday::Fri));
+        // 24/7: every day, the whole day.
+        let all = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+        let whole = json!([{ "start_minute": 0, "end_minute": 1440 }]);
+        let hours: serde_json::Map<String, serde_json::Value> = all
+            .iter()
+            .map(|c| ((*c).to_owned(), whole.clone()))
+            .collect();
+        let cal = build_calendar(
+            "UTC",
+            &days(&all),
+            &serde_json::Value::Object(hours),
+            BTreeSet::new(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(cal.working_days().len(), 7);
+    }
+
+    #[test]
+    fn sighting_overrides_expected_date() {
+        use attome_calendar::rules::HolidayRule;
+        let rule_id = Uuid::now_v7();
+        // Eid al-Fitr, 1 Shawwal, three days.
+        let rule = HolidayRule::Hijri {
+            month: 10,
+            day: 1,
+            span_days: 3,
+        };
+        let expected = rule_dates(rule_id, &rule, true, &HashMap::new(), 2026).unwrap();
+        assert_eq!(expected.len(), 3);
+        let first = expected[0];
+        let hijri_year = i32::from(attome_calendar::hijri::to_hijri(first).unwrap().year);
+        let sighted = first.succ_opt().unwrap();
+        let sightings = HashMap::from([((rule_id, hijri_year), sighted)]);
+        let moved = rule_dates(rule_id, &rule, true, &sightings, 2026).unwrap();
+        assert_eq!(moved[0], sighted);
+        assert_eq!(moved.len(), 3);
+        // A rule that needs no sighting ignores one.
+        let fixed = rule_dates(rule_id, &rule, false, &sightings, 2026).unwrap();
+        assert_eq!(fixed, expected);
     }
 }
