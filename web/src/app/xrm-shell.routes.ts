@@ -447,6 +447,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.EventsMonitorComponent),
           },
           {
+            // Z15-T15: customer tests — write, run and read results.
+            path: 'customer-tests',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/customer-tests').then(m => m.CustomerTestListComponent),
+          },
+          {
             // A30-T3: this deployment's environment variable values.
             path: 'env-variables',
             canActivate: [authGuard],
