@@ -1307,8 +1307,12 @@ fn plan_rows(plan: &Value) -> i64 {
         None,
         "executes a stored query against the read-only pool; persists nothing",
     )))),
+    params(
+        ("If-None-Match" = Option<String>, Header, description = "AA7-T3: the ETag of an earlier answer; 304 when nothing it depends on has changed"),
+    ),
     responses(
-        (status = 200, description = "A bounded query page", body = ExecResponse),
+        (status = 200, description = "A bounded query page, with its ETag when the query is over one entity", body = ExecResponse),
+        (status = 304, description = "AA7-T3: unchanged since the ETag in If-None-Match"),
         (status = 422, description = "Invalid filter, ordering, or pagination contract"),
     ),
 )]
@@ -1321,40 +1325,139 @@ fn plan_rows(plan: &Value) -> i64 {
 /// AA4-T9: an identical repeat of the same caller's query within five
 /// seconds is answered from [`REPEATS`], unless it asks for a total or sends
 /// `Cache-Control: no-cache`.
+///
+/// AA7-T3: a query over one entity answers with an ETag ([`query_etag`]); a
+/// request whose `If-None-Match` names the current one gets `304` without
+/// the query running.
 async fn execute(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped>,
     headers: axum::http::HeaderMap,
     Json(body): Json<ExecuteQueryRequest>,
-) -> Result<Json<Value>, AppError> {
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse;
+
+    // An ETag is an optimisation: when it cannot be computed, the query runs.
+    let etag = query_etag(&state, &ctx, &body).await.ok().flatten();
+    if let Some(tag) = &etag
+        && if_none_match_matches(&headers, tag)
+    {
+        return Ok((
+            axum::http::StatusCode::NOT_MODIFIED,
+            [(axum::http::header::ETAG, tag.clone())],
+        )
+            .into_response());
+    }
+    let page = execute_cached(&state, &ctx, &headers, body).await?;
+    Ok(match etag {
+        Some(tag) => ([(axum::http::header::ETAG, tag)], Json(page)).into_response(),
+        None => Json(page).into_response(),
+    })
+}
+
+/// AA7-T3: whether `If-None-Match` lists `tag` (or `*`), comparing weakly.
+fn if_none_match_matches(headers: &axum::http::HeaderMap, tag: &str) -> bool {
+    let bare = |t: &str| t.trim().trim_start_matches("W/").to_owned();
+    let want = bare(tag);
+    headers
+        .get_all(axum::http::header::IF_NONE_MATCH)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(','))
+        .any(|t| t.trim() == "*" || bare(t) == want)
+}
+
+/// AA7-T3: the ETag of `body`'s answer for `ctx`, or `None` when it has
+/// none: a total was asked for, the query is not over one entity, or the
+/// caller would be refused (so a `304` never answers a request the query
+/// itself would refuse). It hashes the request, the caller and their
+/// permission set, the stored query's definition and the entity change
+/// feed's newest position. The position is the whole feed's, not only this
+/// entity's: an entity's stored SQL may join other tables.
+pub async fn query_etag(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    body: &ExecuteQueryRequest,
+) -> Result<Option<String>, AppError> {
+    use sha2::{Digest, Sha256};
+
+    if body.include_total {
+        return Ok(None);
+    }
+    let db = state.base.readonly_query_pool(ctx.user_id).await;
+    let qrow = lookup(db, body).await?;
+    let Some(entity) = qrow.entity_logical_name.and_then(|id| {
+        state
+            .entities
+            .load()
+            .get_by_id(id)
+            .map(|meta| meta.logicalname.clone())
+    }) else {
+        return Ok(None);
+    };
+    let gated = match &qrow.required_privilege {
+        Some(key) => ctx.require_key(key),
+        None => ctx.require_admin(),
+    };
+    if gated.is_err() || ctx.require(&entity, "read").is_err() {
+        return Ok(None);
+    }
+    let position: Option<i64> = sqlx::query_scalar("SELECT max(seq) FROM entity_change_event")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    let request = serde_json::to_string(body).map_err(AppError::internal)?;
+    let mut hash = Sha256::new();
+    for part in [
+        request.as_str(),
+        &ctx.user_id.to_string(),
+        &ctx.permission_fingerprint(),
+        &qrow.id.to_string(),
+        &qrow.view_id.map(|v| v.to_string()).unwrap_or_default(),
+        &qrow.sql_query,
+        qrow.table_definition.as_deref().unwrap_or_default(),
+        &position.unwrap_or_default().to_string(),
+    ] {
+        hash.update(part.as_bytes());
+        hash.update([0u8]);
+    }
+    let hex: String = hash
+        .finalize()
+        .iter()
+        .take(16)
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    Ok(Some(format!("W/\"{hex}\"")))
+}
+
+/// [`execute`]'s run, through the AA4-T9 repeat cache.
+async fn execute_cached(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    headers: &axum::http::HeaderMap,
+    body: ExecuteQueryRequest,
+) -> Result<Value, AppError> {
     let no_cache = headers
         .get(axum::http::header::CACHE_CONTROL)
         .and_then(|v| v.to_str().ok())
         .is_some_and(|v| v.contains("no-cache"));
     let user_key = ctx.user_id.to_string();
-    let ctx = &ctx;
-    let run = |body: ExecuteQueryRequest| {
-        let state = state.clone();
-        async move {
-            let response = execute_stored_query(&state, ctx, body).await?;
-            serde_json::to_value(response).map_err(AppError::internal)
-        }
+    let run = |body: ExecuteQueryRequest| async move {
+        let response = execute_stored_query(state, ctx, body).await?;
+        serde_json::to_value(response).map_err(AppError::internal)
     };
     let Some(cache) = REPEATS
         .as_ref()
         .filter(|_| !no_cache && !body.include_total)
     else {
-        return run(body).await.map(Json);
+        return run(body).await;
     };
-    let key = match repeat_key(&state, &body).await {
+    let key = match repeat_key(state, &body).await {
         Ok(key) => key,
         // The cache is a convenience: without a position, run the query.
-        Err(_) => return run(body).await.map(Json),
+        Err(_) => return run(body).await,
     };
-    cache
-        .get_or_load_for(&user_key, &key, run(body))
-        .await
-        .map(Json)
+    cache.get_or_load_for(&user_key, &key, run(body)).await
 }
 
 /// AA4-T9: identical repeat queries within a short window.

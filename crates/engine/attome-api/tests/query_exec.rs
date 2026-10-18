@@ -2929,3 +2929,237 @@ fn filter_on_an_unreadable_field_is_refused_not_ignored() {
         );
     })
 }
+
+// ── AA7-T3: ETags ────────────────────────────────────────────────────────────
+
+/// An admin user and their session cookie.
+async fn seed_admin_with_id(system: &TestSystem) -> (Uuid, String) {
+    let db = &system.state().base.db;
+    let user_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
+        .bind(user_id)
+        .bind(format!("query-etag-admin-{user_id}"))
+        .execute(db)
+        .await
+        .expect("insert etag admin");
+    let privilege_id: Uuid =
+        sqlx::query_scalar("SELECT id FROM privilege WHERE key = 'system.admin'")
+            .fetch_one(db)
+            .await
+            .expect("system.admin is seeded");
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         VALUES ($1, $2, $3, true, NOW())",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user_id)
+    .bind(privilege_id)
+    .execute(db)
+    .await
+    .expect("grant etag admin");
+    (user_id, session_cookie(user_id))
+}
+
+/// An entity with a `title` field, one record, and a stored query over it.
+/// Returns (logical name, query id, record id).
+async fn etag_fixture(
+    system: &TestSystem,
+    app: &axum::Router,
+    cookie: &str,
+) -> (String, Uuid, Uuid) {
+    let logicalname = format!("etag_{}", &Uuid::now_v7().simple().to_string()[20..]);
+    let entity_id = create_entity(app, cookie, &logicalname).await;
+    create_text_field(app, cookie, entity_id, "title").await;
+    sync_registry(system.state()).await;
+    let record_id = create_titled_record(app, cookie, &logicalname, "first").await;
+    let qid = seed_entity_query(
+        system.state(),
+        &format!("SELECT id, title FROM \"{logicalname}\" WHERE is_active = true"),
+        entity_id,
+        "[]",
+    )
+    .await;
+    (logicalname, qid, record_id)
+}
+
+async fn create_titled_record(
+    app: &axum::Router,
+    cookie: &str,
+    logicalname: &str,
+    title: &str,
+) -> Uuid {
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/{logicalname}"))
+        .header("cookie", cookie)
+        .header("sec-fetch-site", "same-origin")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            serde_json::json!({ "title": title }).to_string(),
+        ))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.expect("create record");
+    let status = res.status();
+    let body = body_json(res).await;
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "create record failed: {body:?}"
+    );
+    Uuid::parse_str(body["id"].as_str().expect("record id")).expect("record UUID")
+}
+
+/// Runs the query, optionally with `If-None-Match`; (status, ETag, body).
+async fn execute_conditional(
+    app: &axum::Router,
+    cookie: &str,
+    query_id: Uuid,
+    if_none_match: Option<&str>,
+) -> (StatusCode, Option<String>, Vec<u8>) {
+    let mut req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/query/execute")
+        .header("cookie", cookie)
+        .header("sec-fetch-site", "same-origin")
+        .header("content-type", "application/json")
+        // A fresh run each time, not the five-second repeat cache.
+        .header("cache-control", "no-cache");
+    if let Some(tag) = if_none_match {
+        req = req.header("if-none-match", tag);
+    }
+    let req = req
+        .body(Body::from(format!(r#"{{"query_id":"{query_id}"}}"#)))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.expect("request");
+    let status = res.status();
+    let etag = res
+        .headers()
+        .get("etag")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .expect("body")
+        .to_vec();
+    (status, etag, bytes)
+}
+
+#[test]
+fn list_etag_unchanged_returns_304() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (_, qid, _) = etag_fixture(&system, &app, &cookie).await;
+
+        let (status, etag, _) = execute_conditional(&app, &cookie, qid, None).await;
+        assert_eq!(status, StatusCode::OK);
+        let etag = etag.expect("an entity query answers with an ETag");
+        assert!(etag.starts_with("W/\""), "{etag}");
+
+        let (status, again, body) = execute_conditional(&app, &cookie, qid, Some(&etag)).await;
+        assert_eq!(status, StatusCode::NOT_MODIFIED);
+        assert_eq!(again.as_deref(), Some(etag.as_str()));
+        assert!(body.is_empty(), "a 304 has no body");
+    })
+}
+
+#[test]
+fn list_etag_changes_after_write() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, qid, _) = etag_fixture(&system, &app, &cookie).await;
+        let (_, before, _) = execute_conditional(&app, &cookie, qid, None).await;
+        let before = before.expect("etag");
+
+        create_titled_record(&app, &cookie, &logicalname, "second").await;
+
+        let (status, after, body) = execute_conditional(&app, &cookie, qid, Some(&before)).await;
+        assert_eq!(status, StatusCode::OK, "a write changes the answer");
+        assert_ne!(after.as_deref(), Some(before.as_str()));
+        let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+        assert_eq!(
+            body["data"]["records"].as_array().map(Vec::len),
+            Some(2),
+            "{body}"
+        );
+    })
+}
+
+#[test]
+fn list_etag_changes_after_role_change() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (user_id, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (_, qid, _) = etag_fixture(&system, &app, &cookie).await;
+        let (_, before, _) = execute_conditional(&app, &cookie, qid, None).await;
+        let before = before.expect("etag");
+
+        // A new privilege for the same user changes their permission set.
+        let db = &system.state().base.db;
+        let key = format!("test.etag.{}", Uuid::now_v7());
+        let privilege_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer) \
+             VALUES ($1, $2, $2, true, NOW(), 'project')",
+        )
+        .bind(privilege_id)
+        .bind(&key)
+        .execute(db)
+        .await
+        .expect("insert privilege");
+        sqlx::query(
+            "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+             VALUES ($1, $2, $3, true, NOW())",
+        )
+        .bind(Uuid::now_v7())
+        .bind(user_id)
+        .bind(privilege_id)
+        .execute(db)
+        .await
+        .expect("grant privilege");
+        system.state().base.security.invalidate(user_id).await;
+
+        let (status, after, _) = execute_conditional(&app, &cookie, qid, Some(&before)).await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "a permission change is a new answer"
+        );
+        assert_ne!(after.as_deref(), Some(before.as_str()));
+    })
+}
+
+#[test]
+fn list_etag_deleted_record_returns_200() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, qid, record_id) = etag_fixture(&system, &app, &cookie).await;
+        let (_, before, _) = execute_conditional(&app, &cookie, qid, None).await;
+        let before = before.expect("etag");
+
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!("/api/v1/{logicalname}/{record_id}"))
+            .header("cookie", &cookie)
+            .header("sec-fetch-site", "same-origin")
+            .body(Body::empty())
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("delete");
+        assert!(res.status().is_success(), "delete failed: {}", res.status());
+
+        let (status, _, body) = execute_conditional(&app, &cookie, qid, Some(&before)).await;
+        assert_eq!(status, StatusCode::OK);
+        let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+        assert_eq!(
+            body["data"]["records"].as_array().map(Vec::len),
+            Some(0),
+            "{body}"
+        );
+    })
+}
