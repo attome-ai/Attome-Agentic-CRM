@@ -70,6 +70,9 @@ Usage:
                                 means (docs/perf-history/<v>.json)
   attome perf compare [--base <v>] [--current <v>]
                                 Compare with the previous release on the same machine
+  attome sdk generate <deployment.json> [--out <dir>]
+                                Typed Rust structs and TypeScript interfaces for
+                                this deployment's entities
   attome version           Print the version
   attome help              Print this help
 ";
@@ -93,7 +96,7 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             })
         }
-        ["slo" | "test" | "perf", ..] => {
+        ["slo" | "test" | "perf" | "sdk", ..] => {
             let all: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
             attome_release::dispatch(&all).unwrap_or_else(|| {
                 eprintln!("attome slo/test: unknown arguments\n\n{USAGE}");

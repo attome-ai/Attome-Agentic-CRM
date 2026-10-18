@@ -38,6 +38,8 @@ pub mod perf;
 pub mod release;
 pub mod repro;
 pub mod sbom;
+/// M17-T3 — typed entity code from a deployment's OpenAPI document.
+pub mod sdk_generate;
 pub mod slo;
 pub mod slo_report;
 pub mod supply;
@@ -389,6 +391,32 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             _ => None,
         },
         Some("perf") => perf_cmd(&args[1..]),
+        // M17-T3: `attome sdk generate <deployment.json> [--out <dir>]`.
+        Some("sdk") => {
+            let mut rest = args.get(1..)?.iter();
+            if rest.next().map(String::as_str) != Some("generate") {
+                return None;
+            }
+            let input = PathBuf::from(rest.next()?);
+            let mut out = PathBuf::from(".");
+            while let Some(arg) = rest.next() {
+                match arg.as_str() {
+                    "--out" => out = PathBuf::from(rest.next()?),
+                    _ => return None,
+                }
+            }
+            Some(match sdk_generate::run(&input, &out) {
+                Ok((rust, typescript)) => {
+                    say(&format!("wrote {}", rust.display()));
+                    say(&format!("wrote {}", typescript.display()));
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("attome sdk generate: {error}");
+                    ExitCode::FAILURE
+                }
+            })
+        }
         Some("advisories") => Some(
             match workspace_root().and_then(|root| {
                 advisories::run(&root, &test_flaky::date_from_unix(unix_seconds()))
