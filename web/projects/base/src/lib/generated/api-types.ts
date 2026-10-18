@@ -20506,6 +20506,8 @@ export interface components {
          *     }
          */
         ErrorResponse: {
+            /** @description The same value as `error`. */
+            code?: string | null;
             /**
              * @description Present on a version conflict: the server's current row for the
              *     fields the caller touched, as a JSON object. The owning engine filters
@@ -20520,6 +20522,8 @@ export interface components {
              *     winner wrote. Omitted when the conflict is not version-based.
              */
             current_version?: number | null;
+            /** @description The same text as `message`. */
+            detail?: string | null;
             details?: null | components["schemas"]["ErrorDetails"];
             /**
              * @description Present on `field_locked` / `field_locked_required`: `hidden` or
@@ -20543,6 +20547,11 @@ export interface components {
              */
             error: string;
             /**
+             * @description Every field-level failure on a `validation_error`, as
+             *     `{attribute, rule, message, fix}`.
+             */
+            errors?: unknown[] | null;
+            /**
              * @description Present on `field_locked` / `field_locked_required` (D-789): the first
              *     refused field (every one is in `details.fields`); on
              *     `attribute_not_writable` (Q15-T4): the attribute the caller may not
@@ -20555,6 +20564,8 @@ export interface components {
              *     not read.
              */
             hidden?: number | null;
+            /** @description The request path the problem happened at. */
+            instance?: string | null;
             /**
              * @description Present on `duplicate_detected` (A15-T4): the existing records the
              *     save matches that the caller may read (record, rule, score).
@@ -20575,6 +20586,11 @@ export interface components {
              */
             retry_after_sec?: number | null;
             /**
+             * @description Whether the same request may succeed later (the error catalogue's
+             *     verdict for `code`).
+             */
+            retryable?: boolean | null;
+            /**
              * Format: uuid
              * @description Present on a `rule_violation` response (D-472): the id of the
              *     `xrm_core_rule` whose failing expression produced this 422, so a
@@ -20590,6 +20606,15 @@ export interface components {
              *     of the rule that locks `field`.
              */
             rule_name?: string | null;
+            /**
+             * Format: int32
+             * @description The HTTP status code.
+             */
+            status?: number | null;
+            /** @description The HTTP status phrase, e.g. `Not Found`. */
+            title?: string | null;
+            /** @description Z14-T1 (RFC 9457): `about:blank`; the problem is named by `code`. */
+            type?: string | null;
         };
         EvalRun: {
             /** Format: uuid */
