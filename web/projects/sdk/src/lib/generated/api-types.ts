@@ -17347,6 +17347,8 @@ export interface components {
             allowed_cidrs?: string[] | null;
             /** Format: int32 */
             auto_disable_days: number;
+            /** @description S1-T10: may name a user to act as. */
+            can_act_as_user: boolean;
             client_id: string;
             /** Format: date-time */
             created_at: string;
@@ -18329,6 +18331,8 @@ export interface components {
             allowed_cidrs?: string[] | null;
             /** Format: int32 */
             auto_disable_days?: number;
+            /** @description S1-T10: the client may name a user to act as (`x-attome-act-as`). */
+            can_act_as_user?: boolean;
             /** @description Machine-readable slug, e.g. "sap-erp". Immutable after creation. */
             client_id: string;
             description?: string | null;
@@ -32809,6 +32813,8 @@ export interface components {
             allowed_cidrs?: string[] | null;
             /** Format: int32 */
             auto_disable_days?: number | null;
+            /** @description S1-T10: grant or withdraw acting as a user. */
+            can_act_as_user?: boolean | null;
             description?: string | null;
             /** Format: int32 */
             max_concurrent?: number | null;

@@ -83309,6 +83309,7 @@
           "max_concurrent",
           "max_payload_bytes",
           "auto_disable_days",
+          "can_act_as_user",
           "row_version",
           "created_at",
           "updated_at",
@@ -83328,6 +83329,10 @@
           "auto_disable_days": {
             "type": "integer",
             "format": "int32"
+          },
+          "can_act_as_user": {
+            "type": "boolean",
+            "description": "S1-T10: may name a user to act as."
           },
           "client_id": {
             "type": "string"
@@ -85723,6 +85728,10 @@
           "auto_disable_days": {
             "type": "integer",
             "format": "int32"
+          },
+          "can_act_as_user": {
+            "type": "boolean",
+            "description": "S1-T10: the client may name a user to act as (`x-attome-act-as`)."
           },
           "client_id": {
             "type": "string",
@@ -123554,6 +123563,13 @@
               "null"
             ],
             "format": "int32"
+          },
+          "can_act_as_user": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "S1-T10: grant or withdraw acting as a user."
           },
           "description": {
             "type": [
