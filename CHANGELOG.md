@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Runtime limit settings (AA9-T3): `limits.bulk.max_records_per_request` and
+  `limits.query.timeout_ms.{interactive,report,export}` are deployment settings in the catalogue
+  (Operations area). A stored value takes effect without a restart; with none stored the boot
+  configuration (or the code default) applies, so nothing changes until an operator sets one.
 - `GET /.well-known/jwks.json` publishes the public halves of the Ed25519 token-signing keys
   (Z4-T4) as a JSON Web Key Set, public and cacheable for five minutes, so another service can
   verify EdDSA tokens without a shared secret. It is empty while signing stays HS256.

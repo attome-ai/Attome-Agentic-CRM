@@ -33,7 +33,55 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(commission_settings());
     all.extend(billing_settings());
     all.extend(records_settings());
+    all.extend(limit_settings());
     all
+}
+
+/// AA9-T3: the limits an operator may change at run time (the
+/// `RuntimeSetting` entries of `attome_config::limits`), as `limits.{key}`.
+/// Deployment scope only. The schema's bounds are the limit's floor and
+/// ceiling; a stored value wins over the boot configuration, and with none
+/// stored the boot value (or the code default) applies.
+fn limit_settings() -> Vec<SettingDescriptor> {
+    const DEPLOYMENT: &[SettingScope] = &[SettingScope::Deployment];
+    vec![
+        SettingDescriptor::new(
+            "limits.bulk.max_records_per_request",
+            "Records one bulk request may carry; a larger set goes through a \
+             staged import. 1 to 10,000.",
+            || json!({ "type": "integer", "minimum": 1, "maximum": 10_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(500),
+        ),
+        SettingDescriptor::new(
+            "limits.query.timeout_ms.interactive",
+            "Milliseconds an ordinary list or view query may run before it is \
+             cancelled. 100 to 3,600,000.",
+            || json!({ "type": "integer", "minimum": 100, "maximum": 3_600_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(5_000),
+        ),
+        SettingDescriptor::new(
+            "limits.query.timeout_ms.report",
+            "Milliseconds a stored query flagged as a report may run before it \
+             is cancelled. 100 to 3,600,000.",
+            || json!({ "type": "integer", "minimum": 100, "maximum": 3_600_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(60_000),
+        ),
+        SettingDescriptor::new(
+            "limits.query.timeout_ms.export",
+            "Milliseconds an export's query may run before it is cancelled. \
+             100 to 3,600,000.",
+            || json!({ "type": "integer", "minimum": 100, "maximum": 3_600_000 }),
+            DEPLOYMENT,
+            false,
+            || json!(60_000),
+        ),
+    ]
 }
 
 /// B5-T3: record settings.

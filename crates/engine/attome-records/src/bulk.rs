@@ -391,7 +391,18 @@ fn atomic_rejection_message(preflight: &[(i32, String)]) -> String {
     format!("batch rejected (batch_mode=\"atomic\"): {items}")
 }
 
-fn validate_request_shape(body: &BulkRequestBody) -> Result<(), AppError> {
+/// AA9-T3: the records one bulk request may carry: the runtime setting
+/// `limits.bulk.max_records_per_request` when one is stored, else
+/// [`MAX_BULK_RECORDS`].
+fn bulk_cap(state: &EngineState) -> usize {
+    state
+        .runtime_limit("bulk.max_records_per_request")
+        .and_then(|v| usize::try_from(v).ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(MAX_BULK_RECORDS)
+}
+
+fn validate_request_shape(body: &BulkRequestBody, max_records: usize) -> Result<(), AppError> {
     if !valid_bulk_operation(&body.operation) {
         return Err(AppError::Validation(format!(
             "operation must be create, update, or delete, got: {}",
@@ -420,11 +431,11 @@ fn validate_request_shape(body: &BulkRequestBody) -> Result<(), AppError> {
     if body.records.is_empty() {
         return Err(AppError::Validation("records must not be empty".into()));
     }
-    if body.records.len() > MAX_BULK_RECORDS {
+    if body.records.len() > max_records {
         // AA9-T4: named, with the way forward.
         return Err(AppError::LimitExceeded {
             limit: "bulk.max_records",
-            value: MAX_BULK_RECORDS as i64,
+            value: max_records as i64,
             next: attome_types::error::NextStep::Split,
         });
     }
@@ -618,7 +629,7 @@ async fn enqueue_inner(
         entity_crud::resolve_entity(&state, entity_input).await?;
     // The route's extractor checks this too; a caller in code has none.
     ctx.require(&entity_name, "bulk")?;
-    validate_request_shape(&body)?;
+    validate_request_shape(&body, bulk_cap(&state))?;
     if body.mapping_ref.is_some() {
         return Err(AppError::Validation(
             "mapping_ref is only supported on staged-import".into(),
@@ -2196,7 +2207,7 @@ async fn staged_import(
     body.mark_skip_defaults();
     let (entity_id, entity_name, attrs, is_append_only) =
         entity_crud::resolve_entity(&state, &entity_input).await?;
-    validate_request_shape(&body)?;
+    validate_request_shape(&body, bulk_cap(&state))?;
     if is_append_only {
         return Err(AppError::Forbidden);
     }
@@ -2675,6 +2686,21 @@ mod tests {
     use super::{BulkRecordEnvelope, validate_record_envelope};
     use serde_json::json;
     use uuid::Uuid;
+
+    /// AA9-T3: the cap is the one passed in (the runtime setting's value).
+    #[test]
+    fn bulk_cap_follows_setting() {
+        let body: super::BulkRequestBody = serde_json::from_value(json!({
+            "operation": "create",
+            "records": [{ "data": {} }, { "data": {} }, { "data": {} }, { "data": {} }],
+        }))
+        .expect("a bulk body");
+        match super::validate_request_shape(&body, 3) {
+            Err(attome_types::AppError::LimitExceeded { value, .. }) => assert_eq!(value, 3),
+            other => panic!("4 records over a cap of 3: {other:?}"),
+        }
+        assert!(super::validate_request_shape(&body, 4).is_ok());
+    }
 
     #[test]
     fn create_envelope_rejects_selector_and_version() {

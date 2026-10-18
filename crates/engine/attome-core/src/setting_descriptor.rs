@@ -237,6 +237,7 @@ pub fn area(key: &str) -> &'static str {
         Some("billing") => "sales",
         Some("records") => "data",
         Some("customer_tests") => "data",
+        Some("limits") => "operations",
         _ => "other",
     }
 }
@@ -254,6 +255,18 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
             "هل يبدأ المستخدمون الجدد بالوضع الداكن؛ يغلب اختيار المستخدم إن وُجد."
         }
         "core.time_zone" => "المنطقة الزمنية التي تُعرض بها التواريخ والأوقات، مثل Asia/Riyadh.",
+        "limits.bulk.max_records_per_request" => {
+            "عدد السجلات التي يحملها طلب جماعي واحد؛ تمر المجموعة الأكبر عبر استيراد مرحلي. من 1 إلى 10000."
+        }
+        "limits.query.timeout_ms.interactive" => {
+            "المدة بالملّي ثانية التي يعمل خلالها استعلام قائمة أو عرض عادي قبل إلغائه."
+        }
+        "limits.query.timeout_ms.report" => {
+            "المدة بالملّي ثانية التي يعمل خلالها استعلام مخزّن مُعلَّم كتقرير قبل إلغائه."
+        }
+        "limits.query.timeout_ms.export" => {
+            "المدة بالملّي ثانية التي يعمل خلالها استعلام التصدير قبل إلغائه."
+        }
         "core.calendar" => {
             "التقويم الذي تُعرض به التواريخ: ميلادي أو هجري (أم القرى) أو كلاهما؛ يغلب خيار عرض الحقل نفسه."
         }

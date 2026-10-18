@@ -103,6 +103,17 @@ impl SettingsSnapshot {
         Self { by_key }
     }
 
+    /// AA9-T3: the stored value of the runtime limit `key` (setting
+    /// `limits.{key}`), or `None` when no value is stored, so the caller
+    /// keeps its boot value or code default.
+    pub fn runtime_limit(&self, key: &str) -> Option<i64> {
+        let descriptor = crate::setting_registry().get(&format!("limits.{key}"))?;
+        match self.resolve(descriptor, None, None) {
+            (_, SettingSource::CodeDefault) => None,
+            (value, _) => value.as_i64(),
+        }
+    }
+
     pub fn rows_for(&self, key: &str) -> &[SettingRow] {
         self.by_key.get(key).map(Vec::as_slice).unwrap_or(&[])
     }
@@ -282,6 +293,30 @@ pub fn validate_against_schema(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn a_stored_limit_wins_and_none_stored_means_the_boot_value() {
+        assert_eq!(
+            SettingsSnapshot::from_rows(Vec::new()).runtime_limit("bulk.max_records_per_request"),
+            None
+        );
+        let snapshot = SettingsSnapshot::from_rows(vec![SettingRow {
+            id: Uuid::now_v7(),
+            key: "limits.bulk.max_records_per_request".into(),
+            scope: "deployment".into(),
+            scope_ref: None,
+            value: json!(3),
+            schema: json!({}),
+            row_version: 0,
+            updated_at: Utc::now(),
+        }]);
+        assert_eq!(
+            snapshot.runtime_limit("bulk.max_records_per_request"),
+            Some(3)
+        );
+        assert_eq!(snapshot.runtime_limit("query.timeout_ms.report"), None);
+        assert_eq!(snapshot.runtime_limit("no.such.limit"), None);
+    }
 
     #[test]
     fn resolves_user_over_organization_over_deployment_over_default() {

@@ -2016,13 +2016,18 @@ pub async fn execute_stored_query_with_definition(
     // flagged is_report (guidelines §14.1).
     let mut tx = attome_db::tx::begin(db).await?;
     // AA4-T7: the deployment's limits, by kind of request.
+    // AA9-T3: a stored runtime setting wins over the boot value.
     let limits = state.base.config.query.timeouts_ms;
-    let timeout_ms = if qrow.is_report {
-        limits.report
+    let (key, boot) = if qrow.is_report {
+        ("query.timeout_ms.report", limits.report)
     } else {
-        limits.interactive
-    }
-    .max(1);
+        ("query.timeout_ms.interactive", limits.interactive)
+    };
+    let timeout_ms = state
+        .runtime_limit(key)
+        .and_then(|v| u32::try_from(v).ok())
+        .unwrap_or(boot)
+        .max(1);
     sqlx::query(&attome_db::tag_dynamic(
         "query.execute",
         &format!("SET LOCAL statement_timeout = {timeout_ms}"),

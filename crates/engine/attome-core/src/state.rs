@@ -421,6 +421,12 @@ impl EngineState {
         value.as_str().unwrap_or("en-US").to_owned()
     }
 
+    /// AA9-T3: the stored value of the runtime limit `key`, read from the
+    /// settings snapshot (no database call); `None` keeps the boot value.
+    pub fn runtime_limit(&self, key: &str) -> Option<i64> {
+        self.settings.load().runtime_limit(key)
+    }
+
     /// B21-T3: the `core.locale` a user has chosen, else the deployment's.
     /// An organization-level choice is not consulted here (the caller's
     /// organization is not at hand on every path).
