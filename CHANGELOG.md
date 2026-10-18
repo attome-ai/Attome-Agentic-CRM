@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The middleware order is pinned (Z5-T1): `attome_server::app::PIPELINE_ORDER` names the layers outermost
+  first. A debug build with `app.debug_pipeline_trace` adds `x-attome-layers` to every response, and
+  `middleware_pipeline.rs` checks the two match. New tests prove the size, rate, CSRF and authentication
+  rejections answer without reading the request body.
 - The release gate requires a version adapter for every breaking change (S8-T5): the OpenAPI document
   publishes `x-api-version` and the adapter chain as `x-version-adapters`, `attome release --check` fails on a
   break no adapter step covers, and `attome release --tag` writes `docs/api-versions/v{version}.md` listing

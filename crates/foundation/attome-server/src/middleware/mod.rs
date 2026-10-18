@@ -19,6 +19,8 @@ pub mod json_shape;
 /// Y8-T6 — a builder sees their own metadata write on every node.
 pub mod metadata_pin;
 pub mod mutation_gate;
+/// Z5-T1 — a debug-only trace of the layers a request passes.
+pub mod pipeline_trace;
 pub mod profiler;
 pub mod rate_limit;
 pub mod request_id_body;

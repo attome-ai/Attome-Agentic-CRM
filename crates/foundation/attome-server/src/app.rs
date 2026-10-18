@@ -318,6 +318,7 @@ pub fn request_span(request: &Request) -> Span {
 /// Must be the LAST call in the assembly sequence — see `system.rs` / `main.rs`
 /// for why (Router::layer's last call becomes outermost).
 pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
+    use crate::middleware::pipeline_trace::mark;
     let max_bytes = config.app.max_body_size_bytes;
     let request_timeout = config.request_timeout();
     let request_meta_config = std::sync::Arc::new(config.clone());
@@ -325,9 +326,12 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
     // Q21-T4: wraps the router itself, so it runs inside every layer below
     // (the body it reads is already bounded by the body limit) and before
     // the auth and handler layers `apply_inner_layers` put on the router.
-    let router = router.layer(middleware::from_fn(json_shape::reject_oversized_json_shape));
+    let router = router
+        .layer(middleware::from_fn(json_shape::reject_oversized_json_shape))
+        .layer(mark(config, "json_shape"));
     let router = router.layer(
         ServiceBuilder::new()
+            .layer(mark(config, "request_id"))
             .layer(middleware::from_fn(drop_unsafe_request_id))
             .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
             // Pure capture (request id/IP/UA into an ambient task-local for
@@ -348,12 +352,16 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
                 trace_context::trace_context(trace_context_config.clone(), req, next)
             }))
             .layer(PropagateRequestIdLayer::x_request_id())
+            .layer(mark(config, "cors"))
             .layer(cors_layer(config))
+            .layer(mark(config, "catch_panic"))
             .layer(CatchPanicLayer::custom(panic_response))
+            .layer(mark(config, "body_limit"))
             .layer(middleware::from_fn(move |req, next| {
                 body_limit::reject_declared_oversized_body(max_bytes, req, next)
             }))
             .layer(RequestBodyLimitLayer::new(max_bytes))
+            .layer(mark(config, "timeout"))
             .layer(HandleErrorLayer::new(timeout_response))
             .layer(TimeoutLayer::new(config.request_timeout()))
             // AB6-T2: inside the timeout, so the deadline outside calls see
@@ -487,40 +495,51 @@ async fn timeout_response(err: BoxError) -> Response {
 /// `.layer()` call in the assembly sequence, applied to the bare merged router
 /// before `apply_s2s_layer`/`apply_outer_layers`.
 pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
+    use crate::middleware::pipeline_trace::mark;
+    let config = state.config.clone();
     router.layer(
         ServiceBuilder::new()
             // AA7-T1: outermost of this stack, so a rejection by any layer
             // below also says how it may be cached.
+            .layer(mark(&config, "cache_policy"))
             .layer(middleware::from_fn(
                 crate::middleware::cache_policy::cache_policy,
             ))
+            .layer(mark(&config, "authn"))
             .layer(middleware::from_fn_with_state(state.clone(), auth::authn))
+            .layer(mark(&config, "csrf"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 csrf::csrf_protect,
             ))
+            .layer(mark(&config, "authz"))
             .layer(middleware::from_fn_with_state(state.clone(), auth::authz))
+            .layer(mark(&config, "rate_limit"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 rate_limit::rate_limit,
             ))
             // AB5-T7: after authentication and rate limiting, so a shed
             // request has already been counted against its caller.
+            .layer(mark(&config, "shed"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 crate::middleware::shed::shed,
             ))
+            .layer(mark(&config, "idempotency"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 idempotency::idempotency,
             ))
             // Y8-T6: innermost, so a throttled or replayed request never
             // waits on a catch-up.
+            .layer(mark(&config, "metadata_pin"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 crate::middleware::metadata_pin::metadata_pin,
             ))
             // S8-T1: the caller is known here, so its pinned version is too.
+            .layer(mark(&config, "api_version"))
             .layer(middleware::from_fn_with_state(
                 state,
                 crate::middleware::api_version::api_version,
@@ -536,10 +555,13 @@ pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
 /// `apply_outer_layers` (so RequestId/Trace/CORS/Timeout/BodyLimit still wrap/run
 /// before this) — see `main.rs` for the exact sequence.
 pub fn apply_pre_auth_rate_limit(router: Router, state: AppState) -> Router {
-    router.layer(middleware::from_fn_with_state(
-        state,
-        rate_limit::pre_auth_rate_limit,
-    ))
+    let trace = crate::middleware::pipeline_trace::mark(&state.config, "pre_auth_rate_limit");
+    router
+        .layer(middleware::from_fn_with_state(
+            state,
+            rate_limit::pre_auth_rate_limit,
+        ))
+        .layer(trace)
 }
 
 /// P-audit-chain-hardening item (e) — the ingest circuit breaker
@@ -558,10 +580,13 @@ pub fn apply_pre_auth_rate_limit(router: Router, state: AppState) -> Router {
 /// `middleware_pipeline.rs`'s
 /// `the_mutation_gate_and_the_pre_auth_limiter_both_answer_before_authn`.
 pub fn apply_mutation_gate(router: Router, state: AppState) -> Router {
-    router.layer(middleware::from_fn_with_state(
-        state,
-        mutation_gate::mutation_gate,
-    ))
+    let trace = crate::middleware::pipeline_trace::mark(&state.config, "mutation_gate");
+    router
+        .layer(middleware::from_fn_with_state(
+            state,
+            mutation_gate::mutation_gate,
+        ))
+        .layer(trace)
 }
 
 /// P-environment-promotion Phase 0 — the metadata authoring gate
@@ -580,11 +605,42 @@ pub fn apply_mutation_gate(router: Router, state: AppState) -> Router {
 /// decided with zero I/O; Redis is touched only for a request that would
 /// otherwise be rejected.
 pub(crate) fn apply_authoring_gate(router: Router, state: AppState) -> Router {
-    router.layer(middleware::from_fn_with_state(
-        state,
-        authoring_gate::authoring_gate,
-    ))
+    let trace = crate::middleware::pipeline_trace::mark(&state.config, "authoring_gate");
+    router
+        .layer(middleware::from_fn_with_state(
+            state,
+            authoring_gate::authoring_gate,
+        ))
+        .layer(trace)
 }
+
+/// Z5-T1: the layers a staff request passes, outermost first, as the
+/// pipeline trace (`middleware::pipeline_trace`) names them. It changes
+/// together with the assembly in `apply_outer_layers`, `builder.rs`'s
+/// `build` and `apply_inner_layers`: `middleware_pipeline.rs`'s
+/// `pipeline_order_matches_constant` fails when the two disagree. Layers
+/// that only decorate a response, the host gate and the S2S layer are not
+/// marked.
+pub const PIPELINE_ORDER: &[&str] = &[
+    "request_id",
+    "cors",
+    "catch_panic",
+    "body_limit",
+    "timeout",
+    "json_shape",
+    "authoring_gate",
+    "mutation_gate",
+    "pre_auth_rate_limit",
+    "cache_policy",
+    "authn",
+    "csrf",
+    "authz",
+    "rate_limit",
+    "shed",
+    "idempotency",
+    "metadata_pin",
+    "api_version",
+];
 
 #[cfg(test)]
 mod tests {

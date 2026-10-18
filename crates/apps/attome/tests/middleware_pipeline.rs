@@ -2217,3 +2217,116 @@ async fn a_wrong_host_gets_the_json_not_found_envelope() {
     )
     .await;
 }
+
+// ── Z5-T1: the order, and rejections that never read the body ────────────────
+
+/// A body that panics the moment anything reads it. `CatchPanicLayer` turns
+/// the panic into a 500, so a test expecting a specific rejection fails if
+/// any layer before that rejection polls the body.
+fn panic_on_poll() -> Body {
+    Body::from_stream(futures_util::stream::poll_fn(
+        |_| -> std::task::Poll<Option<Result<axum::body::Bytes, std::io::Error>>> {
+            panic!("the request body was read before the rejection")
+        },
+    ))
+}
+
+#[tokio::test]
+async fn pipeline_order_matches_constant() {
+    let mut config = test_config(1000, 1000);
+    config.app.debug_pipeline_trace = true;
+    let (app, state) = skip_if_no_db!(test_app(config).await);
+    let (_, cookie) = seed_user_and_cookie(&state).await;
+    let req = Request::builder()
+        .method("GET")
+        .uri("/api/v1/limits/me")
+        .header("cookie", cookie)
+        .header("origin", ALLOWED_ORIGIN)
+        .header("x-forwarded-for", unique_client_ip())
+        .body(Body::empty())
+        .unwrap();
+    let res = app.oneshot(req).await.expect("request");
+    let layers = res
+        .headers()
+        .get(attome_server::middleware::pipeline_trace::HEADER)
+        .and_then(|v| v.to_str().ok())
+        .expect("the debug pipeline trace header")
+        .to_owned();
+    assert_eq!(layers, attome_server::app::PIPELINE_ORDER.join(","));
+}
+
+#[tokio::test]
+async fn oversized_rejected_without_reading_body() {
+    let (app, _state) = skip_if_no_db!(test_app(test_config(1000, 1000)).await);
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/auth/api-keys")
+        .header("content-type", "application/octet-stream")
+        .header("content-length", "4096")
+        .header("origin", ALLOWED_ORIGIN)
+        .header("x-forwarded-for", unique_client_ip())
+        .body(panic_on_poll())
+        .unwrap();
+    let res = app.oneshot(req).await.expect("request");
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn rate_limited_without_reading_body() {
+    let (app, _state) = skip_if_no_db!(test_app(test_config(3, 1000)).await);
+    let ip = unique_client_ip();
+    for _ in 0..3 {
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/v1/auth/login")
+            .header("content-type", "application/json")
+            .header("x-forwarded-for", &ip)
+            .body(Body::from(
+                r#"{"email":"nobody@example.com","password":"wrong"}"#,
+            ))
+            .unwrap();
+        app.clone().oneshot(req).await.expect("request");
+    }
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/auth/login")
+        .header("content-type", "application/octet-stream")
+        .header("x-forwarded-for", &ip)
+        .body(panic_on_poll())
+        .unwrap();
+    let res = app.oneshot(req).await.expect("request");
+    assert_eq!(res.status(), StatusCode::TOO_MANY_REQUESTS);
+}
+
+#[tokio::test]
+async fn csrf_rejected_without_reading_body() {
+    let (app, state) = skip_if_no_db!(test_app(test_config(1000, 1000)).await);
+    let (_, cookie) = seed_user_and_cookie(&state).await;
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/auth/api-keys")
+        .header("cookie", cookie)
+        .header("content-type", "application/octet-stream")
+        .header("origin", "http://evil.example")
+        .header("sec-fetch-site", "cross-site")
+        .header("x-forwarded-for", unique_client_ip())
+        .body(panic_on_poll())
+        .unwrap();
+    let res = app.oneshot(req).await.expect("request");
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn unauthenticated_rejected_without_reading_body() {
+    let (app, _state) = skip_if_no_db!(test_app(test_config(1000, 1000)).await);
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/auth/api-keys")
+        .header("content-type", "application/octet-stream")
+        .header("origin", ALLOWED_ORIGIN)
+        .header("x-forwarded-for", unique_client_ip())
+        .body(panic_on_poll())
+        .unwrap();
+    let res = app.oneshot(req).await.expect("request");
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+}

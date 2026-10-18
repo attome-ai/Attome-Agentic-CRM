@@ -85,6 +85,11 @@ pub struct AppSection {
     /// the API only and the web app is hosted separately.
     #[serde(default)]
     pub web_root: Option<String>,
+    /// Z5-T1: in a debug build, every response carries `x-attome-layers`,
+    /// the layers the request passed, outermost first, so a test can pin
+    /// the middleware order. Ignored in a release build.
+    #[serde(default)]
+    pub debug_pipeline_trace: bool,
     /// Packs applied at every boot, in order (`attome init --pack crm`): each
     /// pack's changesets from `<packs_root>/<name>/changesets/`, through the
     /// changeset ledger, so a second boot changes nothing.
