@@ -927,6 +927,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "attome-einvoice"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "chrono",
+ "quick-xml",
+ "rust_decimal",
+ "serde",
+ "sha2 0.10.9",
+ "thiserror",
+]
+
+[[package]]
 name = "attome-email"
 version = "0.1.0"
 dependencies = [

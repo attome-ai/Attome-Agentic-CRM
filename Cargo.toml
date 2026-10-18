@@ -39,6 +39,7 @@ members = [
     "crates/engine/attome-callintel",
     "crates/engine/attome-marketing",
     "crates/engine/attome-billing",
+    "crates/engine/attome-einvoice",
     "crates/engine/attome-commission",
     "crates/engine/attome-partner",
     "crates/engine/attome-fulfilment",
@@ -120,6 +121,7 @@ attome-sales     = { path = "crates/engine/attome-sales" }
 attome-callintel = { path = "crates/engine/attome-callintel" }
 attome-marketing = { path = "crates/engine/attome-marketing" }
 attome-billing   = { path = "crates/engine/attome-billing" }
+attome-einvoice  = { path = "crates/engine/attome-einvoice" }
 attome-commission = { path = "crates/engine/attome-commission" }
 attome-partner   = { path = "crates/engine/attome-partner" }
 attome-fulfilment = { path = "crates/engine/attome-fulfilment" }
@@ -181,6 +183,7 @@ rand          = "0.8"
 regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 rsa           = "0.9"
+quick-xml     = "0.41"
 rust_decimal  = { version = "1.36", features = ["serde-with-str"] }
 rust_xlsxwriter = "0.100"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }

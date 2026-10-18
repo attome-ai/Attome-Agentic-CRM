@@ -1,0 +1,23 @@
+[package]
+name         = "attome-einvoice"
+description  = "Attome's e-invoicing: ZATCA (Saudi Arabia) invoice XML, hashes, stamps and the clearance and reporting APIs."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+base64.workspace       = true
+chrono.workspace       = true
+quick-xml.workspace    = true
+rust_decimal.workspace = true
+serde.workspace        = true
+sha2.workspace         = true
+thiserror.workspace    = true
+
+[lints]
+workspace = true

@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- ZATCA e-invoicing groundwork (AG2-T1): a new `attome-einvoice` crate writes the UBL 2.1 invoice
+  ZATCA receives (standard and simplified; invoices, credit and debit notes, prepayments), the
+  canonical form it hashes (C14N in Rust, no native XML-security library) and the invoice hash with
+  the per-device counter and previous-hash chain; it reproduces the hashes of signed sample invoices.
 - Invoicing (F4) is documented in `docs/invoicing.md`: records, issue and numbering, the
   after-issue document and sending, corrections, requests and schedules, payment status,
   statements, ageing, write-offs, roles and agent tools. No breaking change to `/api/v1`.
