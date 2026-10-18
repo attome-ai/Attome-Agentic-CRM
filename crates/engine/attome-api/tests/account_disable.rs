@@ -239,6 +239,15 @@ async fn stepped_up_cookie(system: &TestSystem, user_id: Uuid) -> String {
     .execute(&state.db)
     .await
     .expect("record a password step-up on the family");
+    // A password step-up needs a password: an account with no factor is
+    // refused with `totp_enrollment_required` (step_up rule 4).
+    sqlx::query(
+        "UPDATE user_account SET password_hash = COALESCE(password_hash, 'test-only-hash')          WHERE id = $1",
+    )
+    .bind(user_id)
+    .execute(&state.db)
+    .await
+    .expect("give the stepped-up user a password");
     let token = attome_auth::accounts::issue_access_token(
         &state.db,
         user_id,

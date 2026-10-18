@@ -738,9 +738,12 @@ fn titles(list: &Value) -> Vec<String> {
     t
 }
 
+/// A body without what differs per request: its `request_id`, and its
+/// `instance` (Z14-T1), which echoes the path the caller itself sent.
 fn without_request_id(mut v: Value) -> Value {
     if let Some(o) = v.as_object_mut() {
         o.remove("request_id");
+        o.remove("instance");
     }
     v
 }

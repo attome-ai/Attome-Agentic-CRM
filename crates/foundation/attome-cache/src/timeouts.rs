@@ -54,6 +54,12 @@ pub const STREAM_BLOCK_SLACK: Duration = Duration::from_millis(500);
 /// cycle.
 pub const CONNECT: Duration = Duration::from_secs(2);
 
+/// How often a tiered cache warns that its shared store is unavailable while
+/// it reads the source instead: once a minute per cache, not once per read.
+/// Not an operation bound; kept here with every other duration this crate
+/// picks.
+pub const DEGRADED_WARNING_EVERY: Duration = Duration::from_secs(60);
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -304,7 +304,7 @@ where
             .last_degraded_warning
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let due = last.is_none_or(|at| at.elapsed() >= Duration::from_secs(60));
+        let due = last.is_none_or(|at| at.elapsed() >= crate::timeouts::DEGRADED_WARNING_EVERY);
         if due {
             *last = Some(Instant::now());
             tracing::warn!(event = "cache.redis_degraded", cache = self.spec.name, %error, "cache store unavailable; reading the source");

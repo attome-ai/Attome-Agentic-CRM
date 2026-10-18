@@ -153,6 +153,13 @@ async fn assign(db: &DbPool, subject_type: &str, subject: Uuid, calendar: Uuid) 
 }
 
 async fn join_team(db: &DbPool, user: Uuid, team: Uuid) {
+    // The membership's team must exist (user_account_mm_team_team_ref_fkey).
+    sqlx::query("INSERT INTO team (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING")
+        .bind(team)
+        .bind(format!("calendar-test-{team}"))
+        .execute(db)
+        .await
+        .expect("create team");
     sqlx::query("INSERT INTO user_account_mm_team (user_ref, team_ref) VALUES ($1, $2)")
         .bind(user)
         .bind(team)

@@ -248,6 +248,9 @@ fn link_wrong_secret_is_404() {
             // Each answer has its own request id; the rest is the same.
             body["request_id"] = Value::Null;
             unknown_body["request_id"] = Value::Null;
+            // Z14-T1: `instance` echoes the path the caller sent.
+            body["instance"] = Value::Null;
+            unknown_body["instance"] = Value::Null;
             assert_eq!(body, unknown_body, "a miss tells nothing about why");
             assert_eq!(checkout(&app, bad).await, StatusCode::NOT_FOUND);
         }
