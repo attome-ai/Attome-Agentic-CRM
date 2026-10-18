@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Caching: `attome_cache::spec::CacheSpec` (Z3-T1), one declaration per cache of what guidelines
+  section 5 asks (source of truth, key shape, TTL and jitter, L1 capacity, partition, sensitivity,
+  failure mode, invalidation, cold start), validated and registered once per process.
 - Tests: query budgets (Z2-T10). `attome_testkit::query_counter` (feature `query-counter`)
   counts the SQL statements a task runs; `attome-testapp`'s `query_budget` holds GET one record
   and a 50-row list to a statement budget and fails when a list's count grows with its page size.

@@ -45,6 +45,8 @@ pub mod memory;
 pub mod persistence;
 pub mod rate_limit;
 pub mod redis_pool;
+/// Z3-T1: every cache's declaration and the process registry of them.
+pub mod spec;
 pub mod sticky_primary;
 pub mod store;
 pub mod stream_buffer;
