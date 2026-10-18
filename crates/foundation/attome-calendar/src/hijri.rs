@@ -336,6 +336,11 @@ pub fn year_bounds(year: u16) -> Result<(NaiveDate, NaiveDate), CalendarError> {
     HijriCalendar::umm_al_qura().year_bounds(year)
 }
 
+/// A month's length, 29 or 30 days, in the published table (Z12-T1).
+pub fn month_length(year: u16, month: u8) -> Result<u8, CalendarError> {
+    HijriCalendar::umm_al_qura().month_length(year, month)
+}
+
 const MONTHS_AR: [&str; 12] = [
     "محرم",
     "صفر",
@@ -413,6 +418,10 @@ mod tests {
             (HijriDate::new(1447, 9, 1), d(2026, 2, 18)),
             (HijriDate::new(1447, 1, 1), d(2025, 6, 26)),
             (HijriDate::new(1446, 10, 1), d(2025, 3, 30)),
+            // Z12-T1's reference dates.
+            (HijriDate::new(1446, 9, 1), d(2025, 3, 1)),
+            (HijriDate::new(1445, 10, 1), d(2024, 4, 10)),
+            (HijriDate::new(1445, 1, 1), d(2023, 7, 19)),
             (HijriDate::new(FIRST_YEAR, 1, 1), d(1937, 3, 13)),
         ] {
             assert_eq!(from_hijri(hijri).unwrap(), gregorian, "{hijri}");
@@ -441,9 +450,7 @@ mod tests {
         }
         for year in FIRST_YEAR..=LAST_YEAR {
             for month in 1..=12 {
-                let length = HijriCalendar::umm_al_qura()
-                    .month_length(year, month)
-                    .unwrap();
+                let length = month_length(year, month).unwrap();
                 assert!((29..=30).contains(&length), "{year}-{month}");
             }
         }
