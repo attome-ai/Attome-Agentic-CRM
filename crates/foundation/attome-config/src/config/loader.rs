@@ -931,6 +931,12 @@ impl AppConfig {
                     .into(),
             });
         }
+        if self.query.trigram_index_min_rows < 1 {
+            return Err(ConfigError::Invalid {
+                field: "query.trigram_index_min_rows".into(),
+                reason: "must be at least 1".into(),
+            });
+        }
         if self.idempotency.replay_max_bytes == 0 {
             return Err(ConfigError::Invalid {
                 field: "idempotency.replay_max_bytes".into(),

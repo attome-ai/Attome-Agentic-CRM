@@ -53,7 +53,8 @@ pub use attribute::{
     MAX_ATTRIBUTES_PER_ENTITY, attribute_index_requires_async, backfill_lookup_indexes,
     count_duplicate_values, ensure_attribute, ensure_entity, lookup_columns_without_index,
     sync_attribute_index, sync_attribute_index_on_connection, sync_external_id_index,
-    sync_field_constraints, table_row_count_exceeds,
+    sync_field_constraints, sync_trigram_index, sync_trigram_index_on_connection,
+    table_row_count_exceeds, trigram_index_candidates,
 };
 pub use bundle_walk::seed_bundle_for_tests;
 pub use business_key::{
@@ -71,7 +72,7 @@ pub use fixture_gate::run_bundle_fixture;
 pub use grants::{backfill_readonly_grants, grant_readonly_select};
 pub use identifiers::{
     MAX_IDENTIFIER_LEN, attribute_index_name, external_id_index_name, is_multi_valued,
-    physical_field_type, valid_field_type, valid_identifier,
+    physical_field_type, trigram_index_name, valid_field_type, valid_identifier,
 };
 pub use reconcile::{
     AttributeDesc, EntityDesc, RECONCILE_SCHEMA_CHANGE_INLINE_ROW_LIMIT, ReconcileOutcome,

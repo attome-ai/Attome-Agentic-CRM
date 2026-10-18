@@ -252,6 +252,173 @@ pub async fn lookup_columns_without_index(db: &DbPool) -> Result<Vec<(String, St
     .map_err(AppError::internal)
 }
 
+/// AA4-T5: the live, filterable text attributes (`type` 3) whose table's
+/// estimated row count (`pg_class.reltuples`) is at least `min_rows` and
+/// whose column has no GIN index yet, as `(entity, field)`.
+pub async fn trigram_index_candidates(
+    db: &DbPool,
+    min_rows: i64,
+) -> Result<Vec<(String, String)>, AppError> {
+    sqlx::query_as(
+        "SELECT e.logicalname::text, a.logicalname::text
+           FROM attribute_info a
+           JOIN entity_info e ON e.id = a.entity_ref
+           JOIN pg_class t ON t.relname::text = e.logicalname::text
+                          AND t.relnamespace = current_schema()::regnamespace
+                          AND t.relkind = 'r'
+           JOIN pg_attribute c ON c.attrelid = t.oid AND c.attname::text = a.logicalname::text
+                              AND NOT c.attisdropped
+          WHERE a.type = 3
+            AND COALESCE(a.is_filterable, false)
+            AND COALESCE(a.is_active, true) AND COALESCE(e.is_active, true)
+            AND t.reltuples >= $1
+            AND NOT EXISTS (SELECT 1 FROM pg_index i
+                              JOIN pg_class ic ON ic.oid = i.indexrelid
+                              JOIN pg_am am ON am.oid = ic.relam
+                             WHERE i.indrelid = t.oid AND i.indkey[0] = c.attnum
+                               AND am.amname = 'gin')
+          ORDER BY 1, 2",
+    )
+    .bind(min_rows as f64)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// AA4-T5: brings a text field's trigram index in line with what it should
+/// have: built (`CONCURRENTLY`, partial on live rows) when the field is a
+/// filterable text field and its table holds at least `min_rows` rows by
+/// the planner's estimate; dropped when it is no longer a filterable text
+/// field; left as it is when only the table is still small. Runs on one
+/// direct migrator session under a session advisory lock, like
+/// [`sync_attribute_index`], and only from the index-build job, never on a
+/// request thread.
+#[expect(
+    clippy::expect_used,
+    reason = "the semaphore is a static that is never closed"
+)]
+pub async fn sync_trigram_index(
+    config: &AppConfig,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    min_rows: i64,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, field={field_logicalname}"
+        )));
+    }
+    let _permit = ATTRIBUTE_INDEX_CONNECTION_LIMIT
+        .acquire()
+        .await
+        .expect("ATTRIBUTE_INDEX_CONNECTION_LIMIT is never closed");
+    let mut conn = attome_db::UnpooledSession::new(
+        attome_db::create_migrator_connection(config)
+            .await
+            .map_err(AppError::internal)?,
+    );
+    let result = sync_trigram_index_on_connection(
+        &mut conn,
+        entity_logicalname,
+        field_logicalname,
+        min_rows,
+    )
+    .await;
+    let _ = conn.close().await;
+    result
+}
+
+/// [`sync_trigram_index`] on one direct session the caller owns: the lock,
+/// the checks and the concurrent DDL share it.
+pub async fn sync_trigram_index_on_connection(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    min_rows: i64,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, field={field_logicalname}"
+        )));
+    }
+    let lock_key =
+        format!("attome-metadata/trigram-index:{entity_logicalname}:{field_logicalname}");
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(&lock_key)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Err(AppError::Conflict(
+            "trigram index build already in progress",
+        ));
+    }
+    let result =
+        sync_trigram_index_locked(conn, entity_logicalname, field_logicalname, min_rows).await;
+    let _ = sqlx::query_scalar::<_, bool>("SELECT pg_advisory_unlock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(&lock_key)
+        .fetch_optional(&mut *conn)
+        .await;
+    result
+}
+
+async fn sync_trigram_index_locked(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    min_rows: i64,
+) -> Result<(), AppError> {
+    let index_name = super::identifiers::trigram_index_name(entity_logicalname, field_logicalname)?;
+    let field: Option<(i32, bool)> = sqlx::query_as(
+        "SELECT a.type, COALESCE(a.is_filterable, false)
+           FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref
+          WHERE e.logicalname = $1 AND a.logicalname = $2
+            AND COALESCE(a.is_active, true) AND COALESCE(e.is_active, true)",
+    )
+    .bind(entity_logicalname)
+    .bind(field_logicalname)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    let eligible = matches!(field, Some((3, true)));
+    // (estimated rows, partitioned)
+    let table: Option<(f32, bool)> = sqlx::query_as(
+        "SELECT reltuples, relkind = 'p' FROM pg_class WHERE oid = to_regclass(quote_ident($1))",
+    )
+    .bind(entity_logicalname)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((rows, partitioned)) = table else {
+        return Ok(());
+    };
+    if partitioned {
+        return Ok(());
+    }
+    if eligible && f64::from(rows) >= min_rows as f64 {
+        sqlx::query(&format!(
+            r#"CREATE INDEX CONCURRENTLY IF NOT EXISTS "{index_name}" ON "{entity_logicalname}" USING gin ("{field_logicalname}" gin_trgm_ops) WHERE is_active = TRUE"#
+        ))
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, index = %index_name, "trigram index build failed");
+            AppError::internal(e)
+        })?;
+        tracing::info!(index = %index_name, rows, "trigram index built");
+    } else if !eligible {
+        sqlx::query(&format!(
+            r#"DROP INDEX CONCURRENTLY IF EXISTS "{index_name}""#
+        ))
+        .execute(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    Ok(())
+}
+
 /// Y2-T3: builds the missing lookup-column indexes found by
 /// [`lookup_columns_without_index`], each `CONCURRENTLY` (no write lock), at
 /// most four at a time ([`ATTRIBUTE_INDEX_CONNECTION_LIMIT`]). A column whose

@@ -619,6 +619,15 @@ async fn dispatch_platform_job(
                     wanted,
                 )
                 .await?;
+                // AA4-T5: and the trigram index a large filterable text
+                // field's `contains` filter uses.
+                attome_metadata::provision::sync_trigram_index(
+                    &config,
+                    &entity_logicalname,
+                    &field_logicalname,
+                    config.query.trigram_index_min_rows,
+                )
+                .await?;
             }
         }
         // Solution 7 Phase 2 (D-787 rule 7): the unique index of a declared
@@ -745,6 +754,25 @@ async fn dispatch_platform_job(
                 config.jobs.workflow_payload_retention_days,
             )
             .await?;
+        }
+        EngineJob::TrigramIndexSweep => {
+            let candidates = attome_metadata::provision::trigram_index_candidates(
+                &db,
+                config.query.trigram_index_min_rows,
+            )
+            .await?;
+            let mut queued = 0usize;
+            for (entity, field) in candidates {
+                let key = format!("trigram-index:{entity}:{field}");
+                let job = EngineJob::BuildAttributeIndex {
+                    entity_logicalname: entity,
+                    field_logicalname: field,
+                };
+                if attome_jobs::enqueue_dedup(&db, job, &key).await? {
+                    queued += 1;
+                }
+            }
+            tracing::info!(queued, "trigram index sweep: builds queued");
         }
         EngineJob::RevalidateQueryPlans => {
             let summary =
@@ -2356,6 +2384,7 @@ const DEDUP_KEY_PRUNE_NOTIFICATION_PARTITIONS: &str = "prune-notification-partit
 const DEDUP_KEY_PRUNE_EXPIRED_UPLOAD_SESSIONS: &str = "prune-expired-upload-sessions";
 const DEDUP_KEY_PRUNE_APALIS_JOB_HISTORY: &str = "prune-apalis-job-history";
 const DEDUP_KEY_REVALIDATE_QUERY_PLANS: &str = "revalidate-query-plans";
+const DEDUP_KEY_TRIGRAM_INDEX_SWEEP: &str = "trigram-index-sweep";
 const DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS: &str = "prune-idempotency-records";
 const DEDUP_KEY_PRUNE_AUTH_TOKENS: &str = "prune-auth-tokens";
 const DEDUP_KEY_PRUNE_RECOVERY_ARCHIVE: &str = "prune-recovery-archive";
@@ -2449,6 +2478,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::PruneExpiredUploadSessions => DEDUP_KEY_PRUNE_EXPIRED_UPLOAD_SESSIONS,
         EngineJob::PruneApalisJobHistory => DEDUP_KEY_PRUNE_APALIS_JOB_HISTORY,
         EngineJob::RevalidateQueryPlans => DEDUP_KEY_REVALIDATE_QUERY_PLANS,
+        EngineJob::TrigramIndexSweep => DEDUP_KEY_TRIGRAM_INDEX_SWEEP,
         EngineJob::RevalidateFieldSecurityProfiles => DEDUP_KEY_REVALIDATE_FIELD_SECURITY_PROFILES,
         EngineJob::AuditV1CutoverCheckpoint => DEDUP_KEY_AUDIT_V1_CUTOVER_CHECKPOINT,
         EngineJob::PruneChangeFeed => DEDUP_KEY_PRUNE_CHANGE_FEED,
@@ -2686,6 +2716,17 @@ pub fn spawn_apalis_job_history_prune_scheduler(db: DbPool, interval: std::time:
 /// drift check keeps a run that finds nothing changed cheap). Enqueues the
 /// durable job rather than re-planning directly from the timer tick, for the
 /// same restart-safety reason every other scheduler here does.
+/// AA4-T5: enqueues `EngineJob::TrigramIndexSweep` once a day.
+pub fn spawn_trigram_index_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::TrigramIndexSweep,
+        DEDUP_KEY_TRIGRAM_INDEX_SWEEP,
+        "trigram index sweep",
+    );
+}
+
 pub fn spawn_query_plan_revalidation_scheduler(db: DbPool, interval: std::time::Duration) {
     spawn_dedup_scheduler(
         db,

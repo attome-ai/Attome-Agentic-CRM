@@ -292,6 +292,15 @@ pub struct QuerySection {
     /// export.
     #[serde(default)]
     pub timeouts_ms: QueryTimeouts,
+    /// AA4-T5: a filterable text attribute gets a trigram (GIN) index, so a
+    /// `contains` filter is index-backed, once its table's estimated row
+    /// count reaches this. At least 1; default 100,000.
+    #[serde(default = "default_trigram_index_min_rows")]
+    pub trigram_index_min_rows: i64,
+}
+
+fn default_trigram_index_min_rows() -> i64 {
+    100_000
 }
 
 /// AA4-T7: statement time limits in milliseconds, by kind of request.
@@ -329,6 +338,7 @@ impl Default for QuerySection {
             cursor_default: true,
             max_offset_rows: default_query_max_offset_rows(),
             timeouts_ms: QueryTimeouts::default(),
+            trigram_index_min_rows: default_trigram_index_min_rows(),
         }
     }
 }

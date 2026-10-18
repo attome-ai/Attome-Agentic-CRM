@@ -57,6 +57,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),
     );
+    // AA4-T5: tables grow past the trigram threshold slowly; once a day.
+    crate::jobs::spawn_trigram_index_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // D-188: keeps field_security_profile_field's logicalname
     // references from drifting silently stale between admin actions —
     // same reactive-lint containment shape as query plan revalidation

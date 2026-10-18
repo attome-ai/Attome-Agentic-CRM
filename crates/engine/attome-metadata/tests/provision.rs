@@ -29,7 +29,8 @@ use attome_db::DbPool;
 use attome_metadata::provision::{
     ensure_attribute, ensure_default_query, ensure_entity, ensure_entity_list_views,
     lookup_columns_without_index, resync_seeded_query_sql, set_default_query_display_column,
-    sync_attribute_index_on_connection,
+    sync_attribute_index_on_connection, sync_trigram_index_on_connection, trigram_index_candidates,
+    trigram_index_name,
 };
 use attome_testkit::skip_if_no_db;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -1450,4 +1451,82 @@ async fn provisioning_a_new_entity_and_field_succeeds_on_a_single_connection_poo
              pool connection while the metadata transaction still holds the only one"
         ),
     }
+}
+
+/// AA4-T5: an entity with a filterable text `title`, 20 rows and fresh
+/// statistics.
+async fn trigram_fixture(db: &DbPool) -> String {
+    let logicalname = format!("test_trgm_{}", &Uuid::now_v7().simple().to_string()[20..]);
+    let entity_id = ensure_entity(db, &logicalname, "Trigram Test", Some("title"), false)
+        .await
+        .expect("ensure_entity");
+    ensure_attribute(
+        db, entity_id, "title", "Title", "text", false, false, false, true, None, None,
+    )
+    .await
+    .expect("ensure_attribute title (filterable)");
+    sqlx::query(&format!(
+        r#"INSERT INTO "{logicalname}" (title) SELECT 'row ' || g FROM generate_series(1, 20) g"#
+    ))
+    .execute(db)
+    .await
+    .expect("insert rows");
+    sqlx::query(&format!(r#"ANALYZE "{logicalname}""#))
+        .execute(db)
+        .await
+        .expect("analyze");
+    logicalname
+}
+
+#[tokio::test]
+async fn trigram_index_enqueued_above_threshold() {
+    let db = skip_if_no_db!(test_db().await);
+    let logicalname = trigram_fixture(&db).await;
+    let pair = (logicalname.clone(), "title".to_owned());
+
+    let candidates = trigram_index_candidates(&db, 10).await.expect("candidates");
+    assert!(
+        candidates.contains(&pair),
+        "20 rows is past a threshold of 10"
+    );
+
+    let mut conn = skip_if_no_db!(direct_connection().await);
+    sync_trigram_index_on_connection(&mut conn, &logicalname, "title", 10)
+        .await
+        .expect("build the trigram index");
+    conn.close().await.expect("close direct session");
+    let index_name = trigram_index_name(&logicalname, "title").expect("name");
+    assert!(index_exists(&db, &logicalname, &index_name).await);
+    assert!(
+        !trigram_index_candidates(&db, 10)
+            .await
+            .expect("candidates")
+            .contains(&pair),
+        "a field with its GIN index is no longer a candidate"
+    );
+}
+
+#[tokio::test]
+async fn no_trigram_index_below_threshold() {
+    let db = skip_if_no_db!(test_db().await);
+    let logicalname = trigram_fixture(&db).await;
+    let pair = (logicalname.clone(), "title".to_owned());
+
+    assert!(
+        !trigram_index_candidates(&db, 1_000)
+            .await
+            .expect("candidates")
+            .contains(&pair),
+        "20 rows is below a threshold of 1,000"
+    );
+    let mut conn = skip_if_no_db!(direct_connection().await);
+    sync_trigram_index_on_connection(&mut conn, &logicalname, "title", 1_000)
+        .await
+        .expect("sync below the threshold");
+    conn.close().await.expect("close direct session");
+    let index_name = trigram_index_name(&logicalname, "title").expect("name");
+    assert!(
+        !index_exists(&db, &logicalname, &index_name).await,
+        "no index while the table is small"
+    );
 }

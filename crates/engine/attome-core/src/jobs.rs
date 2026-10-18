@@ -179,6 +179,11 @@ pub enum EngineJob {
     /// readonly pool, rather than replaying an enqueue-time snapshot of
     /// which queries existed.
     RevalidateQueryPlans,
+    /// AA4-T5: daily, queues a `BuildAttributeIndex` for every filterable
+    /// text attribute whose table has grown past
+    /// `query.trigram_index_min_rows` without a trigram index; the build
+    /// adds it.
+    TrigramIndexSweep,
     /// P-retention-archive-completion §3b/§3c — daily proposal sweep:
     /// identifies partitions of `audit_header`/`audit_detail`/
     /// `audit_snapshot`/`s2s_access_log` older than
@@ -944,6 +949,7 @@ impl EngineJob {
             | Self::PruneExpiredUploadSessions
             | Self::PruneApalisJobHistory
             | Self::RevalidateQueryPlans
+            | Self::TrigramIndexSweep
             | Self::ProposeRetentionActions
             | Self::ExecuteRetentionAction { .. }
             | Self::PruneIdempotencyRecords
@@ -1055,6 +1061,7 @@ impl EngineJob {
             EngineJob::PruneExpiredUploadSessions => "PruneExpiredUploadSessions",
             EngineJob::PruneApalisJobHistory => "PruneApalisJobHistory",
             EngineJob::RevalidateQueryPlans => "RevalidateQueryPlans",
+            EngineJob::TrigramIndexSweep => "TrigramIndexSweep",
             EngineJob::ProposeRetentionActions => "ProposeRetentionActions",
             EngineJob::ExecuteRetentionAction { .. } => "ExecuteRetentionAction",
             EngineJob::PruneIdempotencyRecords => "PruneIdempotencyRecords",
@@ -1206,6 +1213,7 @@ impl EngineJob {
             | Self::PruneExpiredUploadSessions
             | Self::PruneApalisJobHistory
             | Self::RevalidateQueryPlans
+            | Self::TrigramIndexSweep
             | Self::ProposeRetentionActions
             | Self::PruneIdempotencyRecords
             | Self::PruneAuthTokens
@@ -1356,6 +1364,7 @@ impl EngineJob {
             | Self::PruneExpiredUploadSessions
             | Self::PruneApalisJobHistory
             | Self::RevalidateQueryPlans
+            | Self::TrigramIndexSweep
             | Self::ProposeRetentionActions
             | Self::PruneIdempotencyRecords
             | Self::PruneAuthTokens
@@ -1799,6 +1808,12 @@ mod tests {
     #[test]
     fn revalidate_query_plans_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::RevalidateQueryPlans);
+    }
+
+    #[test]
+    fn trigram_index_sweep_round_trips_as_a_bare_unit_variant() {
+        assert_round_trips(EngineJob::TrigramIndexSweep);
+        assert!(!EngineJob::TrigramIndexSweep.is_batch());
     }
 
     #[test]

@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Index-backed `contains` filters on large tables (AA4-T5): a filterable text attribute gets a
+  trigram (GIN, `pg_trgm`) index, built `CONCURRENTLY` by the index-build job, once its table's
+  estimated row count reaches `query.trigram_index_min_rows` (default 100,000). A daily
+  `TrigramIndexSweep` job queues the builds for tables that have grown past the threshold.
 - Service limits per deployment profile (Y5-T3): `attome service install --profile solo|team|ha|scale`
   (default `solo`; `none` sets no limit) caps the service: `MemoryHigh`, `MemoryMax` and `CPUQuota`
   in the systemd unit, a Job Object memory limit for the Windows service. The values per profile

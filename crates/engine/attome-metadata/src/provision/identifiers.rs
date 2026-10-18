@@ -111,6 +111,12 @@ pub fn attribute_index_name(entity: &str, field: &str) -> Result<String, AppErro
     field_index_name("idx", "sf", entity, field)
 }
 
+/// AA4-T5: the trigram (GIN) index of a text field, named like
+/// [`attribute_index_name`].
+pub fn trigram_index_name(entity: &str, field: &str) -> Result<String, AppError> {
+    field_index_name("trgm", "tg", entity, field)
+}
+
 /// A29-T1: the unique index of an external-id field, named the same way as
 /// [`attribute_index_name`].
 pub fn external_id_index_name(entity: &str, field: &str) -> Result<String, AppError> {
