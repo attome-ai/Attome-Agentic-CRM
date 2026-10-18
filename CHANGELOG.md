@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Records: `GET /api/v1/{entity}` (S1-T2), a keyset-paged list through the query engine (the
+  entity's default view, its record scoping and masking): `select=a,b`,
+  `filter[<field>][<op>]=<value>` (the column-filter operators; `in` and `contains_any/all` take a
+  comma list), `sort=field` or `sort=-field`, `page_size` (1 to 200) and `cursor`; the answer is a
+  `CursorPage`.
 - Metadata: reserved names and layer locks (Y11-T10). Through the admin routes a new entity or
   field may not take a platform name or the prefixes `attome_` and `xrm_`; an item a layer locked
   in `metadata_lock` refuses changes (409 `metadata_locked`), and an add-only one takes additions

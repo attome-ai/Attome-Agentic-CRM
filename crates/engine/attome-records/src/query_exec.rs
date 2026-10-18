@@ -103,6 +103,11 @@ pub struct ExecuteQueryRequest {
     /// 422 `unknown attribute`.
     #[serde(default)]
     select: Option<Vec<String>>,
+    /// S1-T2: page by keyset whatever `query.cursor_default` says (the
+    /// generic list route's contract is a cursor page). Never sent by a
+    /// client.
+    #[serde(skip)]
+    force_cursor: bool,
 }
 
 impl std::fmt::Debug for ExecuteQueryRequest {
@@ -140,7 +145,31 @@ impl ExecuteQueryRequest {
             related_to: None,
             query_version_id,
             select: None,
+            force_cursor: false,
         }
+    }
+
+    /// S1-T2: the request `GET /api/v1/{entity}` runs: the entity's default
+    /// view, a keyset page from `after_id`, no total.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_entity_list(
+        entity: String,
+        filters: Vec<Filter>,
+        order_by: String,
+        order_dir: String,
+        page_size: i64,
+        after_id: Option<Uuid>,
+        select: Option<Vec<String>>,
+    ) -> Self {
+        let mut request = Self::for_published_widget(Uuid::nil(), None, page_size, filters);
+        request.query_id = None;
+        request.entity = Some(entity);
+        request.order_by = order_by;
+        request.order_dir = order_dir;
+        request.after_id = after_id;
+        request.select = select;
+        request.force_cursor = true;
+        request
     }
 
     /// Dashboard 10/10 Phase 2.3 — an editor's draft preview of a widget: its
@@ -1178,6 +1207,17 @@ pub struct ExecResponse {
     data: ExecData,
 }
 
+impl ExecResponse {
+    /// S1-T2: the records as a cursor page (`next_cursor` the last record's
+    /// id when the page was full).
+    pub fn into_cursor_page(self) -> attome_types::CursorPage<Value> {
+        attome_types::CursorPage::new(
+            self.data.records,
+            self.data.next_cursor.map(|id| id.to_string()),
+        )
+    }
+}
+
 impl std::fmt::Debug for ExecResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExecResponse").finish_non_exhaustive()
@@ -2142,6 +2182,7 @@ pub async fn execute_stored_query_with_definition(
     // starts a fresh cursor page; it runs in offset mode unless the caller
     // continues a cursor.
     let use_cursor = body.after_id.is_some()
+        || body.force_cursor
         || body.seek.is_some()
         || (!body.include_total && cursor_default && !qrow.is_report);
     // AA4-T3: an offset page reads and discards every row before it; past the

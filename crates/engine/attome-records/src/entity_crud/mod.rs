@@ -15,6 +15,8 @@ mod hierarchy;
 /// record-scoped, field-security-filtered change history.
 pub mod history;
 mod key_address;
+/// S1-T2: `GET /api/v1/{entity}`, the keyset list.
+mod list;
 /// M01-core C-05: the shared, RLS-aware lookup/polymorphic-reference
 /// display-name batch — see its module doc comment.
 mod lookup_names;
@@ -147,6 +149,7 @@ use serde_json::Value;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = mutations::openapi_fragment();
     doc.merge(upsert::openapi_fragment());
+    doc.merge(list::openapi_fragment());
     doc.merge(hierarchy::openapi_fragment());
     doc.merge(merge::openapi_fragment());
     doc.merge(related::openapi_fragment());
@@ -219,7 +222,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route(
             "/api/v1/{entity}",
-            axum::routing::post(mutations::create_record),
+            get(list::list_records).post(mutations::create_record),
         )
         .route(
             "/api/v1/{entity}/upsert",
