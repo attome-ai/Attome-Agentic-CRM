@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: generated permission tests (Z15-T8, `attome-testapp` test `generated_permissions`): a user
+  holding only one seeded role reads every entity's list (200 with `{entity}.read`, 403 without), is
+  refused creating without `{entity}.create`, and never sees a sensitive attribute without a field
+  profile. 11 roles by 232 entities, 5,091 checks, no leaks.
 - Tests: fault injection (Z15-T7). `attome_testapp::faults` has a fake S3 endpoint that fails or
   slows down on a `FaultPlan`, and a dead Redis URL; `TestApp::start_with` builds an app of its own
   with an edited configuration. `faults.rs` proves an upload whose store fails answers a masked 5xx
