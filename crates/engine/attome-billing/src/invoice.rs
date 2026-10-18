@@ -93,7 +93,9 @@ pub fn seller_country(state: &EngineState) -> String {
 
 type RateRow = (String, Option<String>, String, NaiveDate, Option<NaiveDate>);
 
-async fn load_rates(state: &EngineState) -> Result<std::sync::Arc<Vec<TaxRateRow>>, AppError> {
+pub(crate) async fn load_rates(
+    state: &EngineState,
+) -> Result<std::sync::Arc<Vec<TaxRateRow>>, AppError> {
     let db = state.base.db.clone();
     tax_rates()
         .get_or_load(|| async move {

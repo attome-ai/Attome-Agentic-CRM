@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing agent actions: `billing.find_invoices`, `billing.account_balance` and `billing.explain_tax`
+  read as the person (the tax facts come from the tax engine), and `billing.draft_invoice` and
+  `billing.draft_credit_note` file drafts after a person confirms. No action issues, cancels, issues
+  a credit note or writes off.
 - Invoicing permission tests: a Billing Clerk cannot issue, credit or write off; a user scoped to
   their own accounts sees only those in the ageing and statements and cannot recompute; a new tax
   rate never changes an issued invoice. Statements and ageing now apply the same account scope as

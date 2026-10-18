@@ -15,6 +15,7 @@
 pub mod agent_playground;
 pub mod agent_supervise;
 pub mod ai_field;
+pub mod billing;
 pub mod bin;
 pub mod bot_handoff;
 pub mod bulk;
@@ -92,6 +93,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(commission::descriptors());
     all.extend(sales_lines::descriptors());
     all.extend(sales_competitors::descriptors());
+    all.extend(billing::descriptors());
     all.extend(sales_team::descriptors());
     all
 }
@@ -141,6 +143,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(commission::executors());
     all.extend(sales_lines::executors());
     all.extend(sales_competitors::executors());
+    all.extend(billing::executors());
     all.extend(sales_team::executors());
     all
 }

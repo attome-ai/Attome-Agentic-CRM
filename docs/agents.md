@@ -77,6 +77,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `sales.winloss.draft_review` (a deal's win-loss review drafted from the deal and its notes, emails
   and call findings) and `sales.battlecard.draft_update` (a card update drafted from the last 20 loss
   reviews). All read as the person; the drafts are never saved or published.
+- Billing: `billing.find_invoices` (invoices the person may read, by account, status, payment status
+  or number), `billing.account_balance` (what an account owes per currency), `billing.explain_tax`
+  (a line's VAT facts and the tax engine's decision, in Arabic and English) and the draft-only
+  `billing.draft_invoice` and `billing.draft_credit_note`, which an agent's call files only after a
+  person confirms. Issuing, cancelling, issuing a credit note and writing off stay with people.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
 

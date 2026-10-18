@@ -343,3 +343,88 @@ fn tax_rate_change_does_not_alter_issued_invoice() {
         attome_billing::invoice::tax_rates().invalidate().await;
     });
 }
+
+// feature: F4
+#[test]
+fn lookups_find_only_readable_invoices_and_explain_tax() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let admin = attome_security::resolve_uncached(app.db(), app.admin.id)
+            .await
+            .expect("admin context");
+        let mine_owner = attome_testapp::seed_user(app.db(), "finder").await;
+        let role = own_accounts_role(&app, &["account.read", "invoice.read"]).await;
+        sqlx::query(
+            "INSERT INTO user_account_mm_role (user_ref, role_ref) \
+             SELECT $1, id FROM role WHERE name = $2",
+        )
+        .bind(mine_owner.id)
+        .bind(&role)
+        .execute(app.db())
+        .await
+        .expect("grant role");
+        // Invoices too at team depth with the owner arm: only their own.
+        sqlx::query(
+            "INSERT INTO role_mm_entity_access (role_ref, entity_ref, read_access_level, \
+                 write_access_level, delete_access_level, read_owner_visible, owner_layer) \
+             SELECT r.id, e.id, 1, 1, 1, true, 'customer' FROM role r, entity_info e \
+             WHERE r.name = $1 AND e.logicalname = 'invoice'",
+        )
+        .bind(&role)
+        .execute(app.db())
+        .await
+        .expect("invoice access");
+        let invoice = draft(&app, account(&app, app.admin.id).await, "100").await;
+        sqlx::query("UPDATE invoice SET owner_ref = $2, owner_type = 0 WHERE id = $1")
+            .bind(invoice)
+            .bind(app.admin.id)
+            .execute(app.db())
+            .await
+            .expect("owner");
+
+        // The administrator finds it by account; a user who owns nothing does not.
+        let account_id: Uuid = sqlx::query_scalar("SELECT account_ref FROM invoice WHERE id = $1")
+            .bind(invoice)
+            .fetch_one(app.db())
+            .await
+            .expect("account");
+        let filter = attome_billing::lookup::InvoiceFilter {
+            account_id: Some(account_id),
+            ..Default::default()
+        };
+        let found = attome_billing::lookup::find_invoices(&app.state, &admin, &filter)
+            .await
+            .expect("find");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].id, invoice);
+        let user = attome_security::resolve_uncached(app.db(), mine_owner.id)
+            .await
+            .expect("user context");
+        let found = attome_billing::lookup::find_invoices(&app.state, &user, &filter)
+            .await
+            .expect("find as user");
+        assert!(found.is_empty(), "{found:?}");
+
+        // A standard line in Saudi Arabia: 15%, no reason, no reverse charge.
+        let line: Uuid = sqlx::query_scalar("SELECT id FROM invoice_line WHERE invoice_ref = $1")
+            .bind(invoice)
+            .fetch_one(app.db())
+            .await
+            .expect("line");
+        let why = attome_billing::lookup::explain_line(&app.state, &admin, line)
+            .await
+            .expect("explain");
+        assert_eq!(why.rate_pct, "15");
+        assert_eq!(why.seller_country, "SA");
+        assert!(!why.reverse_charge);
+        assert!(why.reason_code.is_none());
+        let hidden = attome_billing::lookup::explain_line(&app.state, &user, line).await;
+        assert!(
+            matches!(hidden, Err(attome_types::AppError::NotFound)),
+            "{hidden:?}"
+        );
+    });
+}

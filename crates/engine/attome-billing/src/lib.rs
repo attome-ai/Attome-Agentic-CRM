@@ -7,11 +7,13 @@
 pub mod deposit;
 pub mod invoice;
 pub mod issue;
+pub mod lookup;
 pub mod metrics;
 pub mod model;
 pub mod notes;
 pub mod payment;
 pub mod requests;
+pub(crate) mod scope;
 pub mod statements;
 pub mod status;
 pub mod subscription;

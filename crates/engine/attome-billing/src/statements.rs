@@ -17,10 +17,7 @@
 use std::str::FromStr;
 
 use attome_core::EngineState;
-use attome_security::{
-    ConditionAwarePredicate, RecordAction, SecurityContextExt, resolve_entity_access_level,
-    resolve_owner_visible, rls_predicate_with_conditions,
-};
+use attome_security::SecurityContextExt;
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use chrono::{NaiveDate, Utc};
@@ -28,6 +25,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+
+use crate::scope::bind_scope;
 
 /// The documents that count: issued, not void, not pro forma.
 const COUNTED: &str = "COALESCE(i.status, 'draft') NOT IN ('draft', 'void') \
@@ -285,65 +284,12 @@ fn amounts(row: &BucketRow) -> [String; 6] {
     ]
 }
 
-/// The caller's account scope on alias `a`, from placeholder `$2`: the
-/// same predicate the generic record reads apply (tier, shares, the owner
-/// arm and conditional grants). `None` reads every account.
+/// The caller's account scope on alias `a`, from placeholder `$2`.
 async fn account_scope(
     state: &EngineState,
     ctx: &SecurityContext,
-) -> Result<Option<ConditionAwarePredicate>, AppError> {
-    ctx.require("account", "read")?;
-    let meta = state
-        .entities
-        .load()
-        .get("account")
-        .cloned()
-        .ok_or(AppError::NotFound)?;
-    let db = &state.base.db;
-    let level = resolve_entity_access_level(
-        db,
-        ctx.user_id,
-        meta.entity_id,
-        "account",
-        RecordAction::Read,
-    )
-    .await?;
-    let owner_visible = resolve_owner_visible(
-        db,
-        ctx.user_id,
-        meta.entity_id,
-        "account",
-        RecordAction::Read,
-    )
-    .await?;
-    Ok(rls_predicate_with_conditions(
-        ctx,
-        meta.entity_id,
-        "a",
-        level,
-        RecordAction::Read.share_capability(),
-        "account.read",
-        &meta.attrs,
-        owner_visible,
-        2,
-    ))
-}
-
-/// Binds an account scope's values after the query's own (`$1`).
-fn bind_scope<'q, O>(
-    mut q: sqlx::query::QueryAs<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments>,
-    scope: &'q Option<ConditionAwarePredicate>,
-) -> sqlx::query::QueryAs<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments> {
-    let Some(scope) = scope else {
-        return q;
-    };
-    if let Some(tier) = &scope.tier_binds {
-        q = attome_security::bind_rls_predicate_as(q, tier);
-    }
-    for value in &scope.condition_binds {
-        q = q.bind(value);
-    }
-    q
+) -> Result<Option<attome_security::ConditionAwarePredicate>, AppError> {
+    crate::scope::read_scope(state, ctx, "account", "a", 2).await
 }
 
 type AgeingDbRow = (

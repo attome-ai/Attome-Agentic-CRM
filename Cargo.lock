@@ -357,6 +357,7 @@ dependencies = [
  "attome-approval",
  "attome-audit",
  "attome-auth",
+ "attome-billing",
  "attome-cache",
  "attome-commission",
  "attome-config",
