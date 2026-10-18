@@ -22,6 +22,8 @@ mod bundle_walk;
 /// reference hook.
 pub mod business_key;
 mod category_backfill;
+/// Y12-T3 — how a proposed structure change will run, with an estimate.
+pub mod change_plan;
 /// Solution 7 Phase 1 (D-785) — owner-layer stamping and changeset recording
 /// for the entity, attribute and relationship primitives.
 pub mod changeset;

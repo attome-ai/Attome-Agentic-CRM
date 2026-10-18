@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: the change plan (Y12-T3). `POST /api/v1/admin/entities/{entity_id}/change-plan` classifies
+  proposed structure changes as `instant`, `online` (a concurrent index, a validated `max_length`
+  CHECK) or `background` (a type change, backfill or delete), each with an estimate from the
+  median rate of the last finished runs of its kind (20,000 rows a second until one is
+  measured). A table at or under the inline limit runs everything inline. It writes nothing.
 - Calendars: loading follows inheritance (Z12-T4). A calendar merges its parent chain (at most
   three levels; a loop is refused): the nearest non-empty working days and hours win, holidays
   are unioned, and a nearer exception wins on its date. Holiday rules and seasons expand for last

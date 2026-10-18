@@ -16,6 +16,8 @@
 
 mod attribute;
 /// Y12-T2: the per-entity DDL ledger.
+/// Y12-T3: how proposed structure changes will run.
+mod change_plan;
 mod ddl_log;
 #[cfg(debug_assertions)]
 mod dev_scaffold;
@@ -151,6 +153,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(attribute::openapi_fragment());
     doc.merge(recovery_archive::openapi_fragment());
     doc.merge(ddl_log::openapi_fragment());
+    doc.merge(change_plan::openapi_fragment());
     doc.merge(orphans::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
     // Gated like every other reference to this module (lines 18/36/178): the
@@ -218,6 +221,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .merge(recovery_archive::routes())
         .merge(ddl_log::routes())
+        .merge(change_plan::routes())
         .merge(orphans::routes())
         .merge(release_report::routes());
 
