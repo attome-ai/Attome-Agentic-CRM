@@ -77,6 +77,8 @@ pub mod otp;
 pub mod password;
 /// Q7-T1: breached and reused passwords.
 pub mod password_policy;
+/// Q20-T3 — self-hosted proof-of-work challenge.
+pub mod pow;
 /// Z4-T2: principal kinds and the token type each carries.
 pub mod principal;
 pub mod refresh;

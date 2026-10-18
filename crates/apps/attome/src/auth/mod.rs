@@ -23,6 +23,7 @@ use axum::{
 use std::sync::Arc;
 
 mod address_throttle;
+mod challenge;
 mod dto;
 /// Audit plan 3.5 (D-541 rule 6): failed-login coalescing and its sweep.
 pub mod failed_login;
@@ -69,6 +70,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         oidc::openapi_fragment(),
         step_up::openapi_fragment(),
         jwks::openapi_fragment(),
+        challenge::openapi_fragment(),
     ] {
         doc.merge(fragment);
     }
@@ -96,6 +98,8 @@ pub fn public_routes(
     Router::new()
         // Z4-T4: the public signing keys.
         .route("/.well-known/jwks.json", get(jwks::get_jwks))
+        // Q20-T3: a proof-of-work challenge for a challenged sign-in.
+        .route("/api/v1/auth/challenge", get(challenge::get_challenge))
         .route("/api/v1/auth/google", post(google::google_login))
         .route("/api/v1/auth/google/config", get(google::google_config))
         .route("/api/v1/auth/register", post(local::register))

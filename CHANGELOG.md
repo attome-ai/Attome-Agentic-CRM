@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- A self-hosted proof-of-work challenge (Q20-T3): `portal.captcha.provider = "pow"` (the default
+  on a sovereign deployment with no provider) needs no outside service. `GET /api/v1/auth/challenge`
+  hands out a signed, two-minute challenge (`portal.captcha.pow_difficulty`, default 18 bits); an
+  answer is accepted once. A challenged sign-in's `429` carries `Attome-Challenge`, and the sign-in
+  page solves the challenge in a Web Worker and retries; portal sign-up accepts it too.
 - Session and pending tokens can be signed with Ed25519 (Z4-T3): `auth.jwt_signing_keys` holds
   32-byte seeds (64 hex characters) by key id. With an active key, new tokens are EdDSA under it;
   HS256 tokens already issued keep verifying under `auth.jwt_secret` until they expire, and any

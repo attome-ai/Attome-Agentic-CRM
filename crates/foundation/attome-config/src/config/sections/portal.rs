@@ -37,7 +37,13 @@ pub enum CaptchaProvider {
     None,
     Turnstile,
     Hcaptcha,
+    /// Q20-T3: a self-hosted proof-of-work challenge
+    /// (`attome_auth::pow`); no outside service and no secret to configure.
+    Pow,
 }
+
+/// Q20-T3: the default proof-of-work difficulty, in leading zero bits.
+pub const DEFAULT_POW_DIFFICULTY: u8 = 18;
 
 #[derive(Clone, Deserialize)]
 #[serde(default)]
@@ -46,6 +52,21 @@ pub struct CaptchaConfig {
     /// The provider's server-side secret, `${VAR}`-expanded.
     pub secret: Secret,
     pub timeout_ms: u64,
+    /// Q20-T3: leading zero bits a proof-of-work answer needs, 1 to 24.
+    pub pow_difficulty: u8,
+}
+
+impl CaptchaConfig {
+    /// Q20-T3: the provider in force: the configured one, or proof-of-work
+    /// when none is configured and the deployment is sovereign (it may not
+    /// send its users' browsers to an outside service).
+    pub fn effective_provider(&self, sovereign: bool) -> CaptchaProvider {
+        if self.provider == CaptchaProvider::None && sovereign {
+            CaptchaProvider::Pow
+        } else {
+            self.provider
+        }
+    }
 }
 
 /// Hand-written: `secret` is the CAPTCHA provider's server-side secret, and
@@ -57,6 +78,7 @@ impl std::fmt::Debug for CaptchaConfig {
             .field("provider", &self.provider)
             .field("secret", &"[REDACTED]")
             .field("timeout_ms", &self.timeout_ms)
+            .field("pow_difficulty", &self.pow_difficulty)
             .finish()
     }
 }
@@ -67,6 +89,7 @@ impl Default for CaptchaConfig {
             provider: CaptchaProvider::None,
             secret: Secret::default(),
             timeout_ms: 3_000,
+            pow_difficulty: DEFAULT_POW_DIFFICULTY,
         }
     }
 }
@@ -118,7 +141,17 @@ impl PortalSection {
     /// `production` selects the shipped-template denylist for the secrets
     /// (BCF-D1); the placeholder and minimum-length rules hold in every profile.
     pub(crate) fn check(&self, production: bool) -> Result<(), (String, String)> {
-        if self.captcha.provider != CaptchaProvider::None {
+        if !(1..=24).contains(&self.captcha.pow_difficulty) {
+            return Err((
+                "portal.captcha.pow_difficulty".into(),
+                "a proof-of-work difficulty is 1 to 24 leading zero bits".into(),
+            ));
+        }
+        // A proof-of-work challenge has no outside secret.
+        if matches!(
+            self.captcha.provider,
+            CaptchaProvider::Turnstile | CaptchaProvider::Hcaptcha
+        ) {
             if self.captcha.secret.expose().trim().is_empty() {
                 return Err((
                     "portal.captcha.secret".into(),

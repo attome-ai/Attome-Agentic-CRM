@@ -8,6 +8,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // Z4-T4: the public token-signing keys (a GET with no body, so no CSRF
     // entry); publishing a public key is the point.
     "/.well-known/jwks.json",
+    // Q20-T3: a proof-of-work challenge, asked for before any session exists;
+    // signed, so it stores nothing.
+    "/api/v1/auth/challenge",
     "/api/v1/auth/register",
     "/api/v1/auth/register/config",
     "/api/v1/auth/login",

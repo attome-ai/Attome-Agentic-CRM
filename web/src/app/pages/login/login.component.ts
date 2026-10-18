@@ -15,6 +15,7 @@ import {
   isMfaChallenge,
   type GoogleIdentityGlobal,
 } from '@attome/base';
+import { solvePow } from './pow';
 
 declare const google: GoogleIdentityGlobal;
 
@@ -435,9 +436,44 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.submitAttempted.set(false);
     this.loading.set(true);
     this.error.set(null);
+    this.signIn(null);
+  }
 
+  /**
+   * Q20-T3: a `429` may mean this address is being asked for a challenge
+   * after a password spray. When proof-of-work is the challenge in force the
+   * server hands one out; it is solved in a Web Worker and the sign-in is
+   * sent once more with the answer. Otherwise the `429` is shown as is.
+   */
+  private answerChallenge(err: ApiError): void {
+    this.auth.getPowChallenge().subscribe({
+      next: challenge => {
+        this.error.set(this.lang.translate('xrmLogin.checkingBrowser'));
+        this.solveInWorker(challenge.nonce, challenge.difficulty).then(
+          answer => { this.error.set(null); this.signIn(`${challenge.challenge}:${answer}`); },
+          () => { this.loading.set(false); this.error.set(this.lang.errorText(err)); },
+        );
+      },
+      error: () => { this.loading.set(false); this.error.set(this.lang.errorText(err)); },
+    });
+  }
+
+  private solveInWorker(nonce: string, difficulty: number): Promise<string> {
+    if (typeof Worker === 'undefined') return solvePow(nonce, difficulty);
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./pow.worker', import.meta.url), { type: 'module' });
+      worker.onmessage = ({ data }: MessageEvent<{ answer: string | null }>) => {
+        worker.terminate();
+        if (data.answer) resolve(data.answer); else reject(new Error('unsolved'));
+      };
+      worker.onerror = event => { worker.terminate(); reject(event); };
+      worker.postMessage({ nonce, difficulty });
+    });
+  }
+
+  private signIn(captchaToken: string | null): void {
     const { email, password } = this.form.value;
-    this.auth.login({ email: email!, password: password! }).subscribe({
+    this.auth.login({ email: email!, password: password!, captcha_token: captchaToken }).subscribe({
       next: res => {
         if (!isMfaChallenge(res)) {
           this.goHome();
@@ -461,6 +497,10 @@ export class LoginComponent implements OnInit, AfterViewInit {
         });
       },
       error: (err: ApiError) => {
+        if (err.status === 429 && captchaToken === null) {
+          this.answerChallenge(err);
+          return;
+        }
         this.loading.set(false);
         this.error.set(err.status === 401 ? this.lang.translate('xrmLogin.invalidCredentials') : this.lang.errorText(err));
       },

@@ -3621,6 +3621,7 @@ fn portal_captcha_secret_below_minimum_is_refused() {
         provider: CaptchaProvider::Turnstile,
         secret: "short-secret".into(),
         timeout_ms: 3_000,
+        ..CaptchaConfig::default()
     };
     let err = config.validate().unwrap_err();
     assert!(format!("{err}").contains("portal.captcha.secret"), "{err}");
@@ -3633,6 +3634,7 @@ fn portal_captcha_secret_at_the_minimum_is_accepted() {
         provider: CaptchaProvider::Turnstile,
         secret: "a".repeat(32).into(),
         timeout_ms: 3_000,
+        ..CaptchaConfig::default()
     };
     assert!(config.validate().is_ok());
 }

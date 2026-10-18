@@ -19,14 +19,50 @@ struct SiteVerify {
     success: bool,
 }
 
-/// Whether the CAPTCHA `token` a client sent is valid.
+/// Whether the CAPTCHA `token` a client sent is valid, for an outside
+/// provider. A proof-of-work provider needs the store and key this function
+/// does not have, so it refuses here: use [`verify_challenge`].
 pub async fn verify(config: &CaptchaConfig, token: Option<&str>, remote_ip: Option<&str>) -> bool {
     let url = match config.provider {
         CaptchaProvider::None => return true,
         CaptchaProvider::Turnstile => TURNSTILE_URL,
         CaptchaProvider::Hcaptcha => HCAPTCHA_URL,
+        CaptchaProvider::Pow => return false,
     };
     verify_at(url, config, token, remote_ip).await
+}
+
+/// Q20-T3: whether `token` passes the challenge in force
+/// ([`CaptchaConfig::effective_provider`]): an outside provider's token, or
+/// a solved proof-of-work challenge (`{challenge}:{answer}`, checked with
+/// `pow_secret` and spent in `store`). No provider passes, as before.
+pub async fn verify_challenge(
+    config: &CaptchaConfig,
+    sovereign: bool,
+    store: &attome_cache::Store,
+    pow_secret: Option<&str>,
+    token: Option<&str>,
+    remote_ip: Option<&str>,
+) -> bool {
+    match config.effective_provider(sovereign) {
+        CaptchaProvider::Pow => {
+            let (Some(secret), Some((challenge, answer))) =
+                (pow_secret, token.and_then(crate::pow::token_parts))
+            else {
+                return false;
+            };
+            crate::pow::verify(
+                store,
+                secret,
+                challenge,
+                answer,
+                chrono::Utc::now().timestamp(),
+            )
+            .await
+            .is_ok()
+        }
+        _ => verify(config, token, remote_ip).await,
+    }
 }
 
 /// [`verify`] against `url`, so tests can point it at a local endpoint.
@@ -89,9 +125,39 @@ mod tests {
             provider: CaptchaProvider::Turnstile,
             secret: "s".into(),
             timeout_ms: 50,
+            ..CaptchaConfig::default()
         };
         assert!(!verify(&turnstile, None, None).await);
         assert!(!verify(&turnstile, Some("  "), None).await);
+    }
+
+    #[tokio::test]
+    async fn a_sovereign_deployment_without_a_provider_needs_proof_of_work() {
+        let store = attome_cache::Store::Memory(std::sync::Arc::new(
+            attome_cache::memory::MemoryStore::new(),
+        ));
+        let config = CaptchaConfig {
+            pow_difficulty: 6,
+            ..CaptchaConfig::default()
+        };
+        let secret = "test-only-pow-secret-32-bytes-minimum!";
+        assert!(verify_challenge(&config, false, &store, Some(secret), None, None).await);
+        assert!(!verify_challenge(&config, true, &store, Some(secret), None, None).await);
+        let challenge = crate::pow::issue(secret, 6, chrono::Utc::now().timestamp());
+        let answer = (0u64..)
+            .map(|n| n.to_string())
+            .find(|a| {
+                use sha2::Digest;
+                let d = sha2::Sha256::digest(format!("{}{a}", challenge.nonce).as_bytes());
+                crate::pow::leading_zero_bits(&d) >= 6
+            })
+            .unwrap();
+        let token = format!("{}:{answer}", challenge.challenge);
+        assert!(verify_challenge(&config, true, &store, Some(secret), Some(&token), None).await);
+        assert!(
+            !verify_challenge(&config, true, &store, Some(secret), Some(&token), None).await,
+            "spent"
+        );
     }
 
     // ── BAU-18 (F10): the provider paths, against a local endpoint ──────────
@@ -103,6 +169,7 @@ mod tests {
             provider: CaptchaProvider::Turnstile,
             secret: "captcha-test-secret".into(),
             timeout_ms,
+            ..CaptchaConfig::default()
         }
     }
 

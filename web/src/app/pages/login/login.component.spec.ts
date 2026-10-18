@@ -330,3 +330,37 @@ describe('LoginComponent forced MFA enrollment', () => {
     expect(component.error()).toBe('xrmLogin.invalidCode');
   });
 });
+
+describe('LoginComponent password-spray challenge (Q20-T3)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('solves a proof-of-work challenge after a 429 and signs in with the answer', async () => {
+    const login = vi.fn()
+      .mockReturnValueOnce(throwError(() => apiError(429)))
+      .mockReturnValue(of({ user_id: 'user-1' }));
+    const getPowChallenge = vi.fn(() =>
+      of({ challenge: 'payload.signature', nonce: '00ff', difficulty: 1, expires_at: 0 }));
+    const { component } = mount({ login, getPowChallenge });
+
+    signIn(component);
+
+    await vi.waitFor(() => expect(login).toHaveBeenCalledTimes(2));
+    expect(getPowChallenge).toHaveBeenCalledTimes(1);
+    const retried = login.mock.calls[1][0] as { captcha_token: string };
+    expect(retried.captcha_token).toMatch(/^payload\.signature:\d+$/);
+  });
+
+  it('shows the 429 when no proof-of-work challenge is in force', () => {
+    const { component } = mount({
+      login:           vi.fn(() => throwError(() => apiError(429))),
+      getPowChallenge: vi.fn(() => throwError(() => apiError(404))),
+    });
+
+    signIn(component);
+
+    expect(component.error()).toBe('errors.internal');
+    expect(component.loading()).toBe(false);
+  });
+});

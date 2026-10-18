@@ -407,24 +407,42 @@ pub(super) async fn login(
     }
 
     // Q20-T2: an address challenged for a password spray signs in only with
-    // a CAPTCHA the configured provider accepts; with no provider, not at all
-    // until the challenge ends.
+    // a CAPTCHA the provider in force accepts; with no provider, not at all
+    // until the challenge ends. Q20-T3: the 429 names the challenge kind in
+    // `Attome-Challenge` so the sign-in page can solve it and retry.
     if let Some(key) = &address_key
         && let Some(left) = login_guard::challenge_active(&state.redis_coordination, key).await?
     {
         let captcha = &state.config.portal.captcha;
+        let provider = captcha.effective_provider(state.config.deployment.sovereign);
         let remote_ip = client_ip.map(|ip| ip.to_string());
-        let solved = !matches!(captcha.provider, attome_config::CaptchaProvider::None)
-            && attome_auth::captcha::verify(
+        let pow_secret = state.secrets.load().jwt_secret.active().map(str::to_owned);
+        let solved = provider != attome_config::CaptchaProvider::None
+            && attome_auth::captcha::verify_challenge(
                 captcha,
+                state.config.deployment.sovereign,
+                &state.redis_coordination,
+                pow_secret.as_deref(),
                 body.captcha_token.as_deref(),
                 remote_ip.as_deref(),
             )
             .await;
         if !solved {
-            return Err(AppError::TooManyRequests {
+            let mut refused = AppError::TooManyRequests {
                 retry_after_secs: Some(left),
-            });
+            }
+            .into_response();
+            let kind = match provider {
+                attome_config::CaptchaProvider::Pow => "pow",
+                attome_config::CaptchaProvider::Turnstile => "turnstile",
+                attome_config::CaptchaProvider::Hcaptcha => "hcaptcha",
+                attome_config::CaptchaProvider::None => "wait",
+            };
+            refused.headers_mut().insert(
+                "attome-challenge",
+                axum::http::HeaderValue::from_static(kind),
+            );
+            return Ok(refused);
         }
     }
 

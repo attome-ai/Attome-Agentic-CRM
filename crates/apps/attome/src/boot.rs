@@ -246,11 +246,15 @@ fn warn_if_public_portal_without_captcha(config: &AppConfig) {
 /// condition without a recording subscriber.
 pub fn public_portal_without_captcha_warning(config: &AppConfig) -> Option<String> {
     (config.app.deployment_profile == "production"
-        && config.portal.captcha.provider == CaptchaProvider::None)
+        && config
+            .portal
+            .captcha
+            .effective_provider(config.deployment.sovereign)
+            == CaptchaProvider::None)
         .then(|| {
             "portal.captcha.provider = \"none\" in production — any portal that offers \
              self-signup is protected only by provider-side reachability checks; configure \
-             turnstile or hcaptcha, or keep signup disabled"
+             turnstile, hcaptcha or pow, or keep signup disabled"
                 .to_string()
         })
 }

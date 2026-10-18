@@ -30,6 +30,15 @@ import {
   isMfaChallenge,
 } from './types';
 
+/** Q20-T3: a proof-of-work challenge (`GET /api/v1/auth/challenge`). */
+export interface PowChallenge {
+  challenge:  string;
+  nonce:      string;
+  difficulty: number;
+  /** Unix seconds. */
+  expires_at: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api    = inject(ApiService);
@@ -142,6 +151,15 @@ export class AuthService {
   /** P-registration-gating (D-128) — the register page/login page's sign-up link consult this to decide whether to render at all. */
   getRegistrationConfig(): Observable<RegistrationConfigInfo> {
     return this.api.get<RegistrationConfigInfo>('/api/v1/auth/register/config');
+  }
+
+  /**
+   * Q20-T3: a proof-of-work challenge, when that is the challenge in force
+   * (a 404 otherwise). Solve it and send `{challenge}:{answer}` as the
+   * sign-in's `captcha_token`.
+   */
+  getPowChallenge(): Observable<PowChallenge> {
+    return this.api.get<PowChallenge>('/api/v1/auth/challenge');
   }
 
   /**

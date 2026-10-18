@@ -173,8 +173,18 @@ async fn signup_request(
         return Ok(accepted);
     }
     let ip_text = ip.map(|i| i.to_string());
-    if !attome_auth::captcha::verify(
+    let pow_secret = state
+        .base
+        .secrets
+        .load()
+        .jwt_secret
+        .active()
+        .map(str::to_owned);
+    if !attome_auth::captcha::verify_challenge(
         &state.base.config.portal.captcha,
+        state.base.config.deployment.sovereign,
+        &state.base.redis_coordination,
+        pow_secret.as_deref(),
         body.captcha_token.as_deref(),
         ip_text.as_deref(),
     )
