@@ -1086,3 +1086,110 @@ async fn prune_racing_a_redeem_never_loses_the_live_row() {
             .expect("the replacement survived the prune");
     }
 }
+
+// ── Q8-T6: a concurrent-session limit ────────────────────────────────────────
+
+async fn issue_limited(
+    db: &DbPool,
+    user_id: Uuid,
+    limit: refresh::SessionLimit,
+) -> Result<refresh::IssuedSession, attome_types::AppError> {
+    let jwt = jwt_ring();
+    refresh::issue_session_with_limit(
+        db,
+        user_id,
+        &AuthContext::password(),
+        lifetimes(3600),
+        &ring(),
+        &access_spec(&jwt),
+        Some(limit),
+        &attome_db::NoHook,
+    )
+    .await
+}
+
+async fn live_families(db: &DbPool, user_id: Uuid) -> Vec<Uuid> {
+    sqlx::query_scalar(
+        "SELECT family_id FROM refresh_token \
+          WHERE user_ref = $1 AND revoked_at IS NULL AND used_at IS NULL ORDER BY family_id",
+    )
+    .bind(user_id)
+    .fetch_all(db)
+    .await
+    .expect("read live families")
+}
+
+#[tokio::test]
+async fn limit_ends_oldest_session() {
+    let db = skip_if_no_db!(pool().await);
+    let user_id = create_test_user(&db).await;
+    let limit = refresh::SessionLimit {
+        max_sessions: 2,
+        refuse_new: false,
+    };
+    let first = issue_limited(&db, user_id, limit).await.expect("first");
+    let second = issue_limited(&db, user_id, limit).await.expect("second");
+    // The first is the least recently active: it ends when a third begins.
+    sqlx::query("UPDATE refresh_token SET last_activity_at = NOW() WHERE family_id = $1")
+        .bind(second.family_id)
+        .execute(&db)
+        .await
+        .expect("mark the second active");
+    let third = issue_limited(&db, user_id, limit).await.expect("third");
+    let live = live_families(&db, user_id).await;
+    assert_eq!(live.len(), 2, "{live:?}");
+    assert!(!live.contains(&first.family_id), "the oldest session ended");
+    assert!(live.contains(&second.family_id) && live.contains(&third.family_id));
+
+    // Agent sessions never count against the limit.
+    sqlx::query("UPDATE refresh_token SET client_kind = 'agent' WHERE family_id = $1")
+        .bind(second.family_id)
+        .execute(&db)
+        .await
+        .expect("make the second an agent session");
+    issue_limited(&db, user_id, limit).await.expect("fourth");
+    assert!(
+        live_families(&db, user_id)
+            .await
+            .contains(&second.family_id),
+        "the agent session is kept"
+    );
+}
+
+#[tokio::test]
+async fn limit_refuses_new_session() {
+    let db = skip_if_no_db!(pool().await);
+    let user_id = create_test_user(&db).await;
+    let limit = refresh::SessionLimit {
+        max_sessions: 1,
+        refuse_new: true,
+    };
+    issue_limited(&db, user_id, limit).await.expect("first");
+    let before = user_token_count(&db, user_id).await;
+    let refused = issue_limited(&db, user_id, limit).await;
+    assert!(
+        matches!(
+            refused,
+            Err(attome_types::AppError::Conflict(
+                refresh::SESSION_LIMIT_REACHED
+            ))
+        ),
+        "{refused:?}"
+    );
+    assert_eq!(
+        user_token_count(&db, user_id).await,
+        before,
+        "nothing written"
+    );
+    // A limit of zero is no limit.
+    issue_limited(
+        &db,
+        user_id,
+        refresh::SessionLimit {
+            max_sessions: 0,
+            refuse_new: true,
+        },
+    )
+    .await
+    .expect("no limit");
+}

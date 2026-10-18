@@ -6,7 +6,7 @@ use attome_audit::security::{
     AuditHook, HookEvent, MandatoryCategory, SecurityAuditor, SecurityEvent, account_event_hook,
     x_audit,
 };
-use attome_audit::{AuditCategory, AuditOperation};
+use attome_audit::{AuditCategory, AuditOperation, AuditOutcome};
 use attome_auth::auth_context::AuthContext;
 use attome_auth::{SessionClaims, accounts, cookie, refresh, revocation};
 use attome_core::jobs::EngineJob;
@@ -67,14 +67,26 @@ pub(super) async fn issue_session_cookies_for(
         Some(hook) => hook,
         None => &attome_db::NoHook,
     };
+    // Q8-T6: the person's roles may cap their concurrent sessions.
+    let lifetimes = refresh_lifetimes(state);
+    let policy = attome_security::session_policy::load(
+        &state.db,
+        user_id,
+        attome_security::session_policy::SessionDefaults {
+            idle_secs: lifetimes.idle_secs,
+            absolute_secs: lifetimes.absolute_secs,
+        },
+    )
+    .await
+    .map_err(AppError::internal)?;
     // BAU-13c: the access token is minted inside the family's transaction,
     // so a failed mint leaves no orphan refresh row.
     let secrets = state.secrets.load();
-    let issued = refresh::issue_session_with(
+    let issued = refresh::issue_session_with_limit(
         &state.db,
         user_id,
         context,
-        refresh_lifetimes(state),
+        lifetimes,
         &state.pepper_ring(),
         &refresh::AccessTokenSpec {
             jwt_ring: &secrets.jwt_secret,
@@ -82,9 +94,28 @@ pub(super) async fn issue_session_cookies_for(
             audience: state.config.jwt_audience(),
             expiry_secs: state.config.access_token_expiry_secs() as i64,
         },
+        policy.limit(),
         hook,
     )
-    .await?;
+    .await;
+    // A refused sign-in wrote nothing; it is audited on its own.
+    if let (Err(AppError::Conflict(refresh::SESSION_LIMIT_REACHED)), Some((auditor, method))) =
+        (&issued, login)
+    {
+        let event = SecurityEvent::new(
+            MandatoryCategory::Security,
+            AuditOperation::Login,
+            user_id,
+            "user_account",
+            Some(user_id),
+        )
+        .named(format!("login {method} refused: session limit"))
+        .outcome(AuditOutcome::Failed);
+        if let Err(error) = auditor.write(event).await {
+            tracing::error!(%user_id, %error, "auth: the refused sign-in's audit event failed");
+        }
+    }
+    let issued = issued?;
     let refresh_cookie = cookie::build(
         cookie::refresh_cookie_name(secure),
         &issued.bearer,

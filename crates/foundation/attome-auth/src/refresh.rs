@@ -129,7 +129,7 @@ pub async fn issue_with(
     ring: &PepperRing,
     hook: &dyn attome_db::BeforeCommit<Uuid>,
 ) -> Result<IssuedRefresh, AppError> {
-    issue_inner(db, user_id, context, lifetimes, ring, None, hook)
+    issue_inner(db, user_id, context, lifetimes, ring, None, None, hook)
         .await
         .map(|(issued, _)| issued)
 }
@@ -173,8 +173,53 @@ pub async fn issue_session_with(
     access: &AccessTokenSpec<'_>,
     hook: &dyn attome_db::BeforeCommit<Uuid>,
 ) -> Result<IssuedSession, AppError> {
-    let (issued, access_token) =
-        issue_inner(db, user_id, context, lifetimes, ring, Some(access), hook).await?;
+    issue_session_with_limit(db, user_id, context, lifetimes, ring, access, None, hook).await
+}
+
+/// The `Conflict` a sign-in meets when the person is at their session limit
+/// and their roles refuse a new one (Q8-T6).
+pub const SESSION_LIMIT_REACHED: &str = "session_limit_reached";
+
+/// A person's concurrent-session limit (Q8-T6), from their roles'
+/// `role_auth_policy` rows. Agent families (`client_kind = 'agent'`) never
+/// count against it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionLimit {
+    /// The most live sessions the person may hold, the new one included.
+    pub max_sessions: i32,
+    /// At the limit, refuse the new sign-in (`true`) or end the sessions
+    /// least recently used (`false`).
+    pub refuse_new: bool,
+}
+
+/// [`issue_session_with`] under a concurrent-session limit (Q8-T6). The limit
+/// is applied in the family's own transaction, after the account row's
+/// update has locked it, so two sign-ins at once cannot both pass it: at the
+/// limit it either ends the person's least recently active staff sessions
+/// (activity, else start time) or refuses with
+/// `Conflict(SESSION_LIMIT_REACHED)`, writing nothing.
+#[allow(clippy::too_many_arguments)]
+pub async fn issue_session_with_limit(
+    db: &DbPool,
+    user_id: Uuid,
+    context: &AuthContext,
+    lifetimes: RefreshLifetimes,
+    ring: &PepperRing,
+    access: &AccessTokenSpec<'_>,
+    limit: Option<SessionLimit>,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<IssuedSession, AppError> {
+    let (issued, access_token) = issue_inner(
+        db,
+        user_id,
+        context,
+        lifetimes,
+        ring,
+        Some(access),
+        limit,
+        hook,
+    )
+    .await?;
     let access_token =
         access_token.ok_or_else(|| AppError::internal("session issued without an access token"))?;
     Ok(IssuedSession {
@@ -182,6 +227,52 @@ pub async fn issue_session_with(
         family_id: issued.family_id,
         access_token,
     })
+}
+
+/// Live staff families of `user_id`: an unused, unrevoked, unexpired row.
+const LIVE_STAFF_FAMILIES: &str = "SELECT family_id FROM refresh_token \
+     WHERE user_ref = $1 AND revoked_at IS NULL AND used_at IS NULL AND expires_at > NOW() \
+       AND client_kind <> 'agent'";
+
+/// Applies `limit` inside the issuing transaction (the account row is
+/// already locked by the caller's update).
+async fn enforce_limit(
+    tx: &mut attome_db::Tx<'_>,
+    user_id: Uuid,
+    limit: SessionLimit,
+) -> Result<(), AppError> {
+    if limit.max_sessions <= 0 {
+        return Ok(());
+    }
+    let live: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(DISTINCT family_id) FROM ({LIVE_STAFF_FAMILIES}) live"
+    ))
+    .bind(user_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let over = live - i64::from(limit.max_sessions) + 1;
+    if over <= 0 {
+        return Ok(());
+    }
+    if limit.refuse_new {
+        return Err(AppError::Conflict(SESSION_LIMIT_REACHED));
+    }
+    sqlx::query(
+        "UPDATE refresh_token SET revoked_at = NOW() \
+          WHERE revoked_at IS NULL AND family_id IN ( \
+                SELECT family_id FROM refresh_token \
+                 WHERE user_ref = $1 AND revoked_at IS NULL AND used_at IS NULL \
+                   AND expires_at > NOW() AND client_kind <> 'agent' \
+                 ORDER BY COALESCE(last_activity_at, family_started_at) ASC, family_id ASC \
+                 LIMIT $2)",
+    )
+    .bind(user_id)
+    .bind(over)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -192,6 +283,7 @@ async fn issue_inner(
     lifetimes: RefreshLifetimes,
     ring: &PepperRing,
     access: Option<&AccessTokenSpec<'_>>,
+    limit: Option<SessionLimit>,
     hook: &dyn attome_db::BeforeCommit<Uuid>,
 ) -> Result<(IssuedRefresh, Option<String>), AppError> {
     let family_id = Uuid::now_v7(); // D-018: no exceptions, even for opaque tokens
@@ -216,6 +308,9 @@ async fn issue_inner(
     .await
     .map_err(AppError::internal)?;
     let epoch = epoch.ok_or(AppError::Unauthorized)?;
+    if let Some(limit) = limit {
+        enforce_limit(&mut tx, user_id, limit).await?;
+    }
     sqlx::query(
         "INSERT INTO refresh_token
              (user_ref, public_id, secret_hash, family_id, family_started_at, expires_at,

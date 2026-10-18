@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Sign-in honours a role's concurrent-session limit (`role_auth_policy.max_sessions`, Q8-T6): at the
+  limit it ends the person's least recently active sessions, or with `max_sessions_mode =
+  refuse_new` refuses with `409 conflict` (`session_limit_reached`) and audits the refusal. Agent
+  sessions never count; the strictest of the person's roles applies.
 - ammonia 4.2.4 (RUSTSEC-2026-0373, CSS `url()` matched case-sensitively) and zip 9.0.5 through
   rust_xlsxwriter 0.100 (RUSTSEC-2026-0367, -0368, -0369, extraction permissions and symlinks).
 - An erasure answers with a certificate: what was erased, when, by whom, its SHA-256 digest and

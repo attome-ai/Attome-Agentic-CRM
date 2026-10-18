@@ -84,6 +84,40 @@ pub fn compile(
     }
 }
 
+/// The policy of `user_id` from the `role_auth_policy` rows of the roles they
+/// hold, with `system.admin` (held directly or through a role) making them an
+/// administrator.
+pub async fn load(
+    db: &attome_db::DbPool,
+    user_id: uuid::Uuid,
+    defaults: SessionDefaults,
+) -> Result<SessionPolicy, sqlx::Error> {
+    let rows: Vec<RoleSessionRow> = sqlx::query_as(
+        "SELECT p.idle_timeout_secs, p.absolute_lifetime_secs, p.max_sessions, p.max_sessions_mode            FROM role_auth_policy p            JOIN user_account_mm_role ur ON ur.role_ref = p.role_ref           WHERE ur.user_ref = $1 AND ur.is_deleted = false",
+    )
+    .bind(user_id)
+    .fetch_all(db)
+    .await?;
+    let is_admin: bool = sqlx::query_scalar(
+        "SELECT EXISTS (              SELECT 1 FROM user_account_mm_privilege up                JOIN privilege p ON p.id = up.privilege_ref               WHERE up.user_ref = $1 AND up.is_active = true AND p.is_active = true                 AND p.key = 'system.admin')              OR EXISTS (              SELECT 1 FROM user_account_mm_role ur                JOIN role_mm_privilege rp ON rp.role_ref = ur.role_ref                JOIN privilege p ON p.id = rp.privilege_ref               WHERE ur.user_ref = $1 AND ur.is_deleted = false AND rp.is_deleted = false                 AND p.is_active = true AND p.key = 'system.admin')",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+    Ok(compile(&rows, is_admin, defaults))
+}
+
+impl SessionPolicy {
+    /// The concurrent-session limit to issue a session under, when one is set.
+    pub fn limit(&self) -> Option<attome_auth::refresh::SessionLimit> {
+        self.max_sessions
+            .map(|max_sessions| attome_auth::refresh::SessionLimit {
+                max_sessions,
+                refuse_new: self.mode == MaxSessionsMode::RefuseNew,
+            })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +156,13 @@ mod tests {
         assert_eq!(p.absolute_secs, 86_400);
         assert_eq!(p.max_sessions, Some(2));
         assert_eq!(p.mode, MaxSessionsMode::RefuseNew);
+        assert_eq!(
+            p.limit(),
+            Some(attome_auth::refresh::SessionLimit {
+                max_sessions: 2,
+                refuse_new: true
+            })
+        );
+        assert_eq!(compile(&[], false, defaults()).limit(), None);
     }
 }
