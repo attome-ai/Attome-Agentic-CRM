@@ -20,6 +20,7 @@ attome-contract.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-docgen.workspace   = true
+attome-document.workspace = true
 attome-einvoice.workspace = true
 attome-modules.workspace  = true
 attome-records.workspace  = true
@@ -43,6 +44,7 @@ uuid.workspace            = true
 attome-billing = { workspace = true, features = ["test-support"] }
 attome-integration.workspace = true
 rust_decimal.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

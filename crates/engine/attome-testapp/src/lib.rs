@@ -227,6 +227,7 @@ async fn build() -> Option<TestApp> {
         .register(attome_security::model::SecurityModel)
         .register(attome_billing::BillingModel)
         .register(attome_einvoice::EinvoiceModel)
+        .register(attome_document::engine::DocumentModel)
         .build()
         .await
         .expect("build the engine system");
@@ -294,6 +295,47 @@ impl TestApp {
                     .body(Body::from(body))
                     .expect("a well-formed request"),
             )
+            .await
+            .expect("the router answers");
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("read the response body");
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
+    }
+
+    /// Sends one request as the administrator with extra `headers` (an
+    /// `If-Match`, say).
+    pub async fn request_with(
+        &self,
+        method: Method,
+        path: &str,
+        headers: &[(&str, &str)],
+        body: Option<Value>,
+    ) -> (StatusCode, Value) {
+        let mut builder = Request::builder()
+            .method(method)
+            .uri(path)
+            .header("cookie", self.admin.cookie.as_str())
+            .header("origin", "http://localhost:4200")
+            .header("sec-fetch-site", "same-origin");
+        for (name, value) in headers {
+            builder = builder.header(*name, *value);
+        }
+        let body = match body {
+            Some(value) => {
+                builder = builder.header("content-type", "application/json");
+                Body::from(value.to_string())
+            }
+            None => Body::empty(),
+        };
+        let response = self
+            .router
+            .clone()
+            .oneshot(builder.body(body).expect("a well-formed request"))
             .await
             .expect("the router answers");
         let status = response.status();

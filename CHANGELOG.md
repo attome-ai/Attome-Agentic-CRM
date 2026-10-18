@@ -34,6 +34,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: every entity in the registry is round-tripped through the generic record API (AC5-T8,
+  `attome-testapp` test `generated_entity_crud`): create, read, update with `If-Match`, a stale
+  update refused with 409, delete, and a create missing each required attribute refused with 422.
+  Two defects it found wait on a decision and are kept on a ratchet list (V2-D508).
+- Documents: an `attome_document` whose `record_id` is not a UUID is refused at write with 422;
+  before, it was accepted and every read of it failed with a 500 (found by AC5-T8).
 - Tests: criterion micro-benchmarks for the hot paths (AA14-T1): rules evaluation (`attome-rules`
   bench `eval`), the record-access predicate (`attome-security` bench `permission`) and list-query
   SQL building (`attome-core` bench `query_build`); `cargo bench -p <crate> --bench <name>`.

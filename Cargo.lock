@@ -1917,6 +1917,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-docgen",
+ "attome-document",
  "attome-einvoice",
  "attome-integration",
  "attome-modules",
@@ -1935,6 +1936,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tower",
+ "tracing-subscriber",
  "uuid",
 ]
 

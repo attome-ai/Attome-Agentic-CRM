@@ -8,9 +8,28 @@
 //! [`owned_entities`](EngineModel::owned_entities) — the `attome_document` entity's
 //! records on the generic CRUD path.
 
-use attome_core::{EngineModel, EngineState};
+use attome_core::model::RecordValidator;
+use attome_core::{EngineModel, EngineState, EntityMetaRegistry};
 use attome_modules::{MODULE_DOCUMENT, ModuleId};
 use axum::Router;
+use serde_json::{Map, Value};
+
+/// `attome_document.record_id` names the record a document belongs to: a
+/// UUID, or nothing. Anything else is refused at write (422), because the
+/// record-level read check compares it as a UUID and would otherwise fail
+/// every read of the row (AC5-T8 found the gap).
+pub fn validate_document_record(
+    obj: &Map<String, Value>,
+    _registry: &EntityMetaRegistry,
+) -> Result<(), String> {
+    match obj.get("record_id") {
+        None | Some(Value::Null) => Ok(()),
+        Some(Value::String(id)) if uuid::Uuid::parse_str(id.trim()).is_ok() => Ok(()),
+        Some(_) => {
+            Err("record_id must be the id (a UUID) of the record the document belongs to".into())
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct DocumentModel;
@@ -42,6 +61,10 @@ impl EngineModel for DocumentModel {
     fn owned_entities(&self) -> &'static [&'static str] {
         &["attome_document"]
     }
+
+    fn record_validators(&self) -> &'static [(&'static str, RecordValidator)] {
+        &[("attome_document", validate_document_record)]
+    }
 }
 
 #[cfg(test)]
@@ -66,6 +89,35 @@ mod tests {
     /// The D-383 half. `attome_document` is a provisioned entity, so leaving
     /// `owned_entities()` at the default `&[]` would gate the routes and leave
     /// the records open — which is exactly the hole this extraction closes.
+    #[test]
+    fn a_document_names_its_record_by_uuid() {
+        let registry = EntityMetaRegistry::default();
+        let body = |v: Value| v.as_object().cloned().unwrap_or_default();
+        let id = uuid::Uuid::now_v7().to_string();
+        assert!(
+            validate_document_record(&body(serde_json::json!({ "record_id": id })), &registry)
+                .is_ok()
+        );
+        assert!(
+            validate_document_record(&body(serde_json::json!({ "record_id": null })), &registry)
+                .is_ok()
+        );
+        assert!(
+            validate_document_record(&body(serde_json::json!({ "name": "x" })), &registry).is_ok()
+        );
+        assert!(
+            validate_document_record(
+                &body(serde_json::json!({ "record_id": "not-a-uuid" })),
+                &registry
+            )
+            .is_err()
+        );
+        assert!(
+            validate_document_record(&body(serde_json::json!({ "record_id": 7 })), &registry)
+                .is_err()
+        );
+    }
+
     #[test]
     fn the_provisioned_entity_is_declared() {
         assert_eq!(DocumentModel.owned_entities(), &["attome_document"]);
