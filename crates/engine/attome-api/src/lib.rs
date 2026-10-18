@@ -60,7 +60,7 @@ mod ratelimit_admin;
 /// AC7-T11 — `/api/v1/admin/sbom`.
 mod sbom_admin;
 /// AA13-T8 — `/api/v1/admin/slo`.
-mod slo_admin;
+pub mod slo_admin;
 // `kind = "chart"` view_metadata schema/validator. D-528 moved it to
 // `attome-core` so the dashboard crate can share its types;
 // `view_admin::validate_view_kind_metadata` keeps its crate-local path.

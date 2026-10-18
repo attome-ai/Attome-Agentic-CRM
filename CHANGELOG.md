@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Operations: monthly SLO reports (AA13-T9). The `SloMonthlyReport` job writes each finished month's
+  error budgets per class to `ops_slo_report` (migration 0109), read at `/api/v1/admin/slo/reports`
+  and `/api/v1/admin/slo/reports/{YYYY-MM}`; the `SloBurnCheck` job notifies administrators once per
+  class per hour when a class burns its budget at 14.4 times over the last hour and five minutes.
 - Tests: `attome_email::testing::FakeInbox` (feature `test-support`, Z15-T6), an in-process SMTP
   inbox that keeps every message sent through `attome_email::send`, readable by recipient.
 - Settings: `customer_tests.require_pass_before_publish` (off by default, Z15-T14). When on, a

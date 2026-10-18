@@ -506,6 +506,12 @@ pub enum EngineJob {
     AiFollowupItem { item_id: Uuid },
     /// Y2-T8: the daily table-health sample. Bare unit variant.
     TableHealthSample,
+    /// AA13-T9: writes the latest finished month's SLO report when it is
+    /// missing. Bare unit variant.
+    SloMonthlyReport,
+    /// AA13-T9: tells the administrators when an SLO class burns its error
+    /// budget fast, once per class per hour. Bare unit variant.
+    SloBurnCheck,
     /// D25-T4: competitor mentions in new emails and notes, off the change
     /// feed. Bare unit variant.
     SalesMentionScan,
@@ -982,6 +988,8 @@ impl EngineJob {
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
+            | Self::SloMonthlyReport
+            | Self::SloBurnCheck
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1107,6 +1115,8 @@ impl EngineJob {
             EngineJob::AiFollowupScan => "AiFollowupScan",
             EngineJob::AiFollowupItem { .. } => "AiFollowupItem",
             EngineJob::TableHealthSample => "TableHealthSample",
+            EngineJob::SloMonthlyReport => "SloMonthlyReport",
+            EngineJob::SloBurnCheck => "SloBurnCheck",
             EngineJob::SalesMentionScan => "SalesMentionScan",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
@@ -1233,6 +1243,8 @@ impl EngineJob {
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
+            | Self::SloMonthlyReport
+            | Self::SloBurnCheck
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1381,6 +1393,8 @@ impl EngineJob {
             | Self::AiFollowupScan
             | Self::AiFollowupItem { .. }
             | Self::TableHealthSample
+            | Self::SloMonthlyReport
+            | Self::SloBurnCheck
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1749,6 +1763,8 @@ mod tests {
             item_id: Uuid::nil(),
         });
         assert_round_trips(EngineJob::TableHealthSample);
+        assert_round_trips(EngineJob::SloMonthlyReport);
+        assert_round_trips(EngineJob::SloBurnCheck);
         assert_round_trips(EngineJob::SalesMentionScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),

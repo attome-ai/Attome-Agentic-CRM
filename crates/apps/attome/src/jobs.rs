@@ -978,6 +978,24 @@ async fn dispatch_platform_job(
             let sampled = attome_api::table_health::sample_all(&attome_state).await?;
             tracing::info!(sampled, "table health: daily sample taken");
         }
+        // AA13-T9: the monthly SLO report, written once per month.
+        EngineJob::SloMonthlyReport => {
+            if attome_api::slo_admin::monthly_report(&attome_state, chrono::Utc::now()).await? {
+                tracing::info!("slo: monthly report written");
+            }
+        }
+        // AA13-T9: fast burns of an SLO class's error budget.
+        EngineJob::SloBurnCheck => {
+            let notified = attome_api::slo_admin::burn_check(
+                &attome_state,
+                &config.notification,
+                chrono::Utc::now(),
+            )
+            .await?;
+            if !notified.is_empty() {
+                tracing::warn!(classes = ?notified, "slo: fast burn notified");
+            }
+        }
         // AI4-T5: the follow-up rules' stall scans.
         EngineJob::AiFollowupScan => {
             let now = chrono::Utc::now();
@@ -2331,6 +2349,8 @@ const DEDUP_KEY_SALES_DEAL_CLOSE_SWEEP: &str = "sales-deal-close-sweep";
 const DEDUP_KEY_SALES_LEAVER_SWEEP: &str = "sales-leaver-sweep";
 const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_TABLE_HEALTH_SAMPLE: &str = "table-health-sample";
+const DEDUP_KEY_SLO_MONTHLY_REPORT: &str = "slo-monthly-report";
+const DEDUP_KEY_SLO_BURN_CHECK: &str = "slo-burn-check";
 const DEDUP_KEY_SALES_MENTION_SCAN: &str = "sales-mention-scan";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
@@ -2413,6 +2433,8 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SalesLeaverSweep => DEDUP_KEY_SALES_LEAVER_SWEEP,
         EngineJob::AiFollowupScan => DEDUP_KEY_AI_FOLLOWUP_SCAN,
         EngineJob::TableHealthSample => DEDUP_KEY_TABLE_HEALTH_SAMPLE,
+        EngineJob::SloMonthlyReport => DEDUP_KEY_SLO_MONTHLY_REPORT,
+        EngineJob::SloBurnCheck => DEDUP_KEY_SLO_BURN_CHECK,
         EngineJob::SalesMentionScan => DEDUP_KEY_SALES_MENTION_SCAN,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
@@ -2749,6 +2771,28 @@ pub fn spawn_table_health_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TableHealthSample,
         DEDUP_KEY_TABLE_HEALTH_SAMPLE,
         "table health sample",
+    );
+}
+
+/// AA13-T9: hourly, the monthly SLO report (written once, when missing).
+pub fn spawn_slo_monthly_report_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::SloMonthlyReport,
+        DEDUP_KEY_SLO_MONTHLY_REPORT,
+        "slo monthly report",
+    );
+}
+
+/// AA13-T9: every five minutes, the SLO fast-burn check.
+pub fn spawn_slo_burn_check_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::SloBurnCheck,
+        DEDUP_KEY_SLO_BURN_CHECK,
+        "slo burn check",
     );
 }
 

@@ -46,3 +46,17 @@ cannot claim it. The report is unsigned until the release signing key exists (AC
 | S11 | Change-feed lag | `events_subscription_lag_max` | — | — | — | all ≤ 1000 rows | — | target | — |
 | S12 | Frontend vitals | the browser (Core Web Vitals) | — | — | — | LCP p75 ≤ 2500 ms, INP p75 ≤ 200 ms, CLS p75 ≤ 0.1 | — | target | — |
 <!-- END GENERATED slo-table -->
+
+## Monthly reports and fast burns
+
+On the first day of each month, from 02:00 UTC, the server writes the month just finished as one
+report: per class, its good and failed (5xx) requests, error ratio and the share of its budget left,
+from the built-in metrics store. Read them at `GET /api/v1/admin/slo/reports` (newest first) and
+`GET /api/v1/admin/slo/reports/{YYYY-MM}`. Latency is not in the report: the built-in store keeps no
+latency histograms, so the release gate's load tests and Prometheus judge it.
+
+Every five minutes the server checks each class for a fast burn: more than 14.4 times its allowed
+failure share over both the last hour and the last five minutes (with at least 20 requests in the
+five minutes), the same rule as `observability/alerts.yml`. A burning class notifies every
+administrator, at most once per class per hour.
+

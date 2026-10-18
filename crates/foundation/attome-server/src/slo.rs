@@ -162,13 +162,34 @@ pub async fn budget(db: &DbPool, class: &SloClass) -> Result<Option<Budget>, sql
     {
         return Ok(Some(cached));
     }
-    let (bad, total): (f64, f64) = sqlx::query_as(
+    let to = chrono::Utc::now();
+    let from = to - chrono::Duration::days(i64::from(PERIOD_DAYS));
+    let (bad, total) = counts_between(db, method, endpoint, from, to).await?;
+    let computed = budget_of(total - bad, bad, objective);
+    CACHE
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(key, (Instant::now(), computed));
+    Ok(Some(computed))
+}
+
+/// The 5xx and all responses of one route in `[from, to)`, from the rises
+/// of `axum_http_requests_total`, summed per series (a reset counts from
+/// zero).
+pub async fn counts_between(
+    db: &DbPool,
+    method: &str,
+    endpoint: &str,
+    from: chrono::DateTime<chrono::Utc>,
+    to: chrono::DateTime<chrono::Utc>,
+) -> Result<(f64, f64), sqlx::Error> {
+    sqlx::query_as(
         "WITH s AS ( \
              SELECT labels, value, \
                     lag(value) OVER (PARTITION BY labels ORDER BY ts) AS prev \
                FROM ops_metric_sample \
               WHERE name = 'axum_http_requests_total' \
-                AND ts > now() - make_interval(days => $3) \
+                AND ts >= $3 AND ts < $4 \
                 AND labels->>'method' = $1 AND labels->>'endpoint' = $2), \
          d AS ( \
              SELECT labels, CASE WHEN prev IS NULL THEN 0 \
@@ -180,15 +201,30 @@ pub async fn budget(db: &DbPool, class: &SloClass) -> Result<Option<Budget>, sql
     )
     .bind(method)
     .bind(endpoint)
-    .bind(PERIOD_DAYS)
+    .bind(from)
+    .bind(to)
     .fetch_one(db)
-    .await?;
-    let computed = budget_of(total - bad, bad, objective);
-    CACHE
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .insert(key, (Instant::now(), computed));
-    Ok(Some(computed))
+    .await
+}
+
+/// The fast-burn factor of `observability/alerts.yml` (Google SRE workbook
+/// ch. 5): a class burns when its bad ratio over both the last hour and the
+/// last five minutes is above this many times its objective.
+pub const FAST_BURN_FACTOR: f64 = 14.4;
+
+/// Below this many requests in five minutes a ratio is noise, not a burn
+/// (the same floor as the built-in `HighHttpErrorRate` rule).
+pub const MIN_BURN_REQUESTS: f64 = 20.0;
+
+/// Whether `(bad, total)` over one hour and over five minutes is a fast burn
+/// of `objective`.
+pub fn is_fast_burn(hour: (f64, f64), five_minutes: (f64, f64), objective: f64) -> bool {
+    let ratio = |(bad, total): (f64, f64)| if total > 0.0 { bad / total } else { 0.0 };
+    let limit = FAST_BURN_FACTOR * objective;
+    objective > 0.0
+        && five_minutes.1 >= MIN_BURN_REQUESTS
+        && ratio(hour) > limit
+        && ratio(five_minutes) > limit
 }
 
 #[cfg(test)]
@@ -225,5 +261,24 @@ mod tests {
         let gone = budget_of(9_980.0, 20.0, 0.001);
         assert!(gone.remaining_ratio < 0.0);
         assert_eq!(status(&gone), "exhausted");
+    }
+
+    #[test]
+    fn a_fast_burn_needs_both_windows_and_enough_traffic() {
+        // 0.1% objective: the limit is a 1.44% bad ratio.
+        assert!(is_fast_burn((30.0, 1_000.0), (5.0, 100.0), 0.001));
+        assert!(
+            !is_fast_burn((10.0, 1_000.0), (5.0, 100.0), 0.001),
+            "hour below"
+        );
+        assert!(
+            !is_fast_burn((30.0, 1_000.0), (1.0, 100.0), 0.001),
+            "5m below"
+        );
+        assert!(
+            !is_fast_burn((30.0, 1_000.0), (5.0, 10.0), 0.001),
+            "too few requests"
+        );
+        assert!(!is_fast_burn((30.0, 1_000.0), (5.0, 100.0), 0.0));
     }
 }
