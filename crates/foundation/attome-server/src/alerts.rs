@@ -342,9 +342,27 @@ async fn stored_state(db: &DbPool, name: &str) -> Result<AlertState, sqlx::Error
     })
 }
 
+/// What an alert is called and says: a rule's, or a job's (see
+/// [`set_job_alert`]).
+struct AlertText<'a> {
+    name: &'a str,
+    severity: &'a str,
+    summary: &'a str,
+}
+
+impl<'a> From<&'a AlertRule> for AlertText<'a> {
+    fn from(rule: &'a AlertRule) -> Self {
+        Self {
+            name: &rule.name,
+            severity: &rule.severity,
+            summary: &rule.summary,
+        }
+    }
+}
+
 async fn save(
     db: &DbPool,
-    rule: &AlertRule,
+    alert: AlertText<'_>,
     state: AlertState,
     transition: Transition,
     value: Option<f64>,
@@ -367,10 +385,10 @@ async fn save(
              resolved_at = COALESCE(EXCLUDED.resolved_at, ops_alert.resolved_at), \
              updated_at = now()",
     )
-    .bind(&rule.name)
+    .bind(alert.name)
     .bind(label)
-    .bind(&rule.severity)
-    .bind(&rule.summary)
+    .bind(alert.severity)
+    .bind(alert.summary)
     .bind(value)
     .bind(pending)
     .bind(firing)
@@ -387,10 +405,10 @@ async fn save(
             "INSERT INTO ops_alert_event (name, event, severity, summary, value) \
              VALUES ($1, $2, $3, $4, $5)",
         )
-        .bind(&rule.name)
+        .bind(alert.name)
         .bind(event)
-        .bind(&rule.severity)
-        .bind(&rule.summary)
+        .bind(alert.severity)
+        .bind(alert.summary)
         .bind(value)
         .execute(&mut *tx)
         .await?;
@@ -442,13 +460,40 @@ pub async fn evaluate_once(db: &DbPool, rules: &[AlertRule]) -> Result<usize, sq
             Transition::None => {}
         }
         if after != before || transition != Transition::None || value.is_some() {
-            save(db, rule, after, transition, value).await?;
+            save(db, AlertText::from(rule), after, transition, value).await?;
         }
         if transition != Transition::None {
             changed += 1;
         }
     }
     Ok(changed)
+}
+
+/// Raises (`firing`) or clears an alert a scheduled job owns rather than a
+/// rule of `builtin-alerts.json` (AA14-T8's latency regression check). It
+/// fires at once, appending a `firing` event the notifier sends, stays
+/// firing while the job keeps raising it, and appends `resolved` when the
+/// job clears it. `name` must not be a built-in rule's: the evaluator
+/// would overwrite it each minute. Returns what changed.
+pub async fn set_job_alert(
+    db: &DbPool,
+    name: &str,
+    severity: &str,
+    summary: &str,
+    value: Option<f64>,
+    firing: bool,
+) -> Result<Transition, sqlx::Error> {
+    let before = stored_state(db, name).await?;
+    let (after, transition) = step(before, firing, 0, Utc::now());
+    if after != before || transition != Transition::None || firing {
+        let alert = AlertText {
+            name,
+            severity,
+            summary,
+        };
+        save(db, alert, after, transition, value).await?;
+    }
+    Ok(transition)
 }
 
 /// Starts the once-a-minute evaluation. Process-lifetime supervision: a

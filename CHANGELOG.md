@@ -350,6 +350,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Operations: a daily latency regression check after an upgrade (AA14-T8). The built-in metrics
+  store now keeps the request-duration buckets of the nine SLO routes; the `PerfRegressionCheck` job
+  compares each class's p95 since the last upgrade with the week before and fires the built-in alert
+  `PerfRegression:<class>` when it rose more than 20% on at least 1,000 requests in each window.
 - Operations: monthly SLO reports (AA13-T9). The `SloMonthlyReport` job writes each finished month's
   error budgets per class to `ops_slo_report` (migration 0109), read at `/api/v1/admin/slo/reports`
   and `/api/v1/admin/slo/reports/{YYYY-MM}`; the `SloBurnCheck` job notifies administrators once per

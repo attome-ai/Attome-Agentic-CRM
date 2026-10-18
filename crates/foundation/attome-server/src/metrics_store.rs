@@ -6,7 +6,10 @@
 //! On by default on Solo (`cache.backend = "memory"`); set
 //! `observability.builtin_store` to choose. Histogram buckets are left out
 //! (their `_sum` and `_count` are kept), which keeps a minute's batch to the
-//! registry's plain series.
+//! registry's plain series, with one exception: the request-duration
+//! buckets of the routes an SLO class measures are kept, summed across
+//! status codes ([`SLO_LATENCY_BUCKETS`]), so a p95 per class can be read
+//! back (AA14-T8). Nine routes of sixteen buckets add at most 153 series.
 //!
 //! Partitions are DDL, so they are created and dropped through the migrator
 //! pool; samples go in through the runtime pool. A failed minute is logged
@@ -60,9 +63,21 @@ pub struct Sample {
     pub value: f64,
 }
 
+/// The stored name of the request-duration buckets [`parse`] keeps: one
+/// series per SLO route and bucket, labelled `method`, `endpoint` and `le`.
+pub const SLO_LATENCY_BUCKETS: &str = "axum_http_requests_duration_seconds_bucket";
+
 /// The samples in Prometheus exposition text: comments, histogram buckets and
-/// values that are not finite are left out.
+/// values that are not finite are left out, except the request-duration
+/// buckets of SLO routes, which are summed across status codes.
 pub fn parse(text: &str) -> Vec<Sample> {
+    let slo_routes: Vec<(&str, &str)> = crate::slo::catalogue()
+        .classes
+        .iter()
+        .filter_map(crate::slo::SloClass::http_route)
+        .collect();
+    let mut slo_buckets: std::collections::BTreeMap<(String, String, String), f64> =
+        std::collections::BTreeMap::new();
     let mut samples = Vec::new();
     for line in text.lines() {
         let line = line.trim();
@@ -80,7 +95,8 @@ pub fn parse(text: &str) -> Vec<Sample> {
             },
         };
         let name = series.split('{').next().unwrap_or(series).trim();
-        if name.is_empty() || name.ends_with("_bucket") {
+        let bucket = name.ends_with("_bucket");
+        if name.is_empty() || (bucket && name != SLO_LATENCY_BUCKETS) {
             continue;
         }
         let Some(value) = rest
@@ -91,12 +107,41 @@ pub fn parse(text: &str) -> Vec<Sample> {
         else {
             continue;
         };
+        if bucket {
+            let labels = crate::metrics::labels_of(series);
+            let get = |key: &str| {
+                labels
+                    .iter()
+                    .find(|(k, _)| k == key)
+                    .map(|(_, v)| v.as_str())
+            };
+            if let (Some(method), Some(endpoint), Some(le)) =
+                (get("method"), get("endpoint"), get("le"))
+                && slo_routes.contains(&(method, endpoint))
+            {
+                *slo_buckets
+                    .entry((method.to_owned(), endpoint.to_owned(), le.to_owned()))
+                    .or_default() += value;
+            }
+            continue;
+        }
         let labels = crate::metrics::labels_of(series)
             .into_iter()
             .map(|(k, v)| (k, Value::String(v)))
             .collect();
         samples.push(Sample {
             name: name.to_owned(),
+            labels,
+            value,
+        });
+    }
+    for ((method, endpoint, le), value) in slo_buckets {
+        let mut labels = Map::new();
+        labels.insert("method".to_owned(), Value::String(method));
+        labels.insert("endpoint".to_owned(), Value::String(endpoint));
+        labels.insert("le".to_owned(), Value::String(le));
+        samples.push(Sample {
+            name: SLO_LATENCY_BUCKETS.to_owned(),
             labels,
             value,
         });
@@ -270,6 +315,24 @@ mod tests {
             Some(&Value::String("2.0.0".into()))
         );
         assert!(node_name(7865).ends_with(":7865"));
+    }
+
+    #[test]
+    fn metrics_store_keeps_slo_route_buckets_summed_across_status() {
+        let text = "            axum_http_requests_duration_seconds_bucket{method=\"POST\",endpoint=\"/api/v1/query/execute\",status=\"200\",le=\"0.1\"} 7
+            axum_http_requests_duration_seconds_bucket{method=\"POST\",endpoint=\"/api/v1/query/execute\",status=\"500\",le=\"0.1\"} 2
+            axum_http_requests_duration_seconds_bucket{method=\"POST\",endpoint=\"/api/v1/query/execute\",status=\"200\",le=\"+Inf\"} 9
+            axum_http_requests_duration_seconds_bucket{method=\"GET\",endpoint=\"/api/v1/not-a-class\",status=\"200\",le=\"0.1\"} 4
+            other_seconds_bucket{method=\"POST\",endpoint=\"/api/v1/query/execute\",le=\"0.1\"} 1
+";
+        let samples = parse(text);
+        let kept: Vec<(&str, f64)> = samples
+            .iter()
+            .map(|s| (s.labels["le"].as_str().unwrap_or_default(), s.value))
+            .collect();
+        assert_eq!(kept, [("+Inf", 9.0), ("0.1", 9.0)]);
+        assert!(samples.iter().all(|s| s.name == SLO_LATENCY_BUCKETS));
+        assert!(samples.iter().all(|s| !s.labels.contains_key("status")));
     }
 
     #[test]

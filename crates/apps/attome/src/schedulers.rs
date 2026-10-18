@@ -96,6 +96,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         std::time::Duration::from_secs(3600),
     );
     crate::jobs::spawn_slo_burn_check_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // AA14-T8: p95 regressions since the last upgrade, daily.
+    crate::jobs::spawn_perf_regression_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // AI4-T5: follow-up stall scans, hourly.
     crate::jobs::spawn_ai_followup_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // D25-T3: win/loss reviews for big closes, every minute.

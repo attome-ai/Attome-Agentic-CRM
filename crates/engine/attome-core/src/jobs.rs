@@ -519,6 +519,10 @@ pub enum EngineJob {
     /// AA13-T9: tells the administrators when an SLO class burns its error
     /// budget fast, once per class per hour. Bare unit variant.
     SloBurnCheck,
+    /// AA14-T8: compares each SLO class's p95 in the week after the last
+    /// upgrade with the week before and alerts on a clear regression. Daily.
+    /// Bare unit variant.
+    PerfRegressionCheck,
     /// D25-T4: competitor mentions in new emails and notes, off the change
     /// feed. Bare unit variant.
     SalesMentionScan,
@@ -999,6 +1003,7 @@ impl EngineJob {
             | Self::AuditChainVerify
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
+            | Self::PerfRegressionCheck
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1128,6 +1133,7 @@ impl EngineJob {
             EngineJob::AuditChainVerify => "AuditChainVerify",
             EngineJob::SloMonthlyReport => "SloMonthlyReport",
             EngineJob::SloBurnCheck => "SloBurnCheck",
+            EngineJob::PerfRegressionCheck => "PerfRegressionCheck",
             EngineJob::SalesMentionScan => "SalesMentionScan",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
@@ -1258,6 +1264,7 @@ impl EngineJob {
             | Self::AuditChainVerify
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
+            | Self::PerfRegressionCheck
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1410,6 +1417,7 @@ impl EngineJob {
             | Self::AuditChainVerify
             | Self::SloMonthlyReport
             | Self::SloBurnCheck
+            | Self::PerfRegressionCheck
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1781,6 +1789,7 @@ mod tests {
         assert_round_trips(EngineJob::AuditChainVerify);
         assert_round_trips(EngineJob::SloMonthlyReport);
         assert_round_trips(EngineJob::SloBurnCheck);
+        assert_round_trips(EngineJob::PerfRegressionCheck);
         assert_round_trips(EngineJob::SalesMentionScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),

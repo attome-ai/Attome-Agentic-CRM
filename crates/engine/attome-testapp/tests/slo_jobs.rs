@@ -120,3 +120,109 @@ fn burn_check_notifies_once_per_hour() {
         assert!(told >= 1);
     });
 }
+
+/// Stores one minute of S5's (POST query/execute) request-duration buckets:
+/// `n` requests, `slow` of them in the 0.1-0.12 s bucket.
+async fn store_s5_buckets(app: &TestApp, node: &str, at: DateTime<Utc>, n: f64, slow: f64) {
+    for (le, value) in [
+        ("0.03", n - slow),
+        ("0.1", n - slow),
+        ("0.12", n),
+        ("+Inf", n),
+    ] {
+        sqlx::query(
+            "INSERT INTO ops_metric_sample (ts, name, labels, value) VALUES ($1, $2, $3, $4)",
+        )
+        .bind(at)
+        .bind(attome_server::metrics_store::SLO_LATENCY_BUCKETS)
+        .bind(
+            json!({ "method": "POST", "endpoint": "/api/v1/query/execute", "le": le,
+                      "node": node }),
+        )
+        .bind(value)
+        .execute(app.db())
+        .await
+        .unwrap();
+    }
+}
+
+// feature: AA14
+#[test]
+fn perf_regression_check_alerts_once_on_a_slower_upgrade() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let day = unique_day();
+        let upgraded: DateTime<Utc> = day.and_hms_opt(12, 0, 0).unwrap().and_utc();
+        let now = upgraded + Duration::days(2);
+        for offset in [-3, -2, 0, 1] {
+            attome_server::metrics_store::ensure_partitions(app.db(), day + Duration::days(offset))
+                .await
+                .unwrap();
+        }
+        let node = format!("perf-{day}");
+        for (version, started_at) in [
+            ("1.0.0-perf", upgraded - Duration::days(10)),
+            ("1.1.0-perf", upgraded),
+        ] {
+            sqlx::query(
+                "INSERT INTO deploy_event (node, version, kind, started_at, finished_at) \
+                 VALUES ($1, $2, 'start', $3, $3)",
+            )
+            .bind(&node)
+            .bind(version)
+            .bind(started_at)
+            .execute(app.db())
+            .await
+            .unwrap();
+        }
+        // The week before: 5,000 requests, 2% slow. Since: 5,000, 10% slow.
+        let before = upgraded - Duration::days(2);
+        store_s5_buckets(&app, &node, before, 0.0, 0.0).await;
+        store_s5_buckets(&app, &node, before + Duration::minutes(1), 5_000.0, 100.0).await;
+        let after = upgraded + Duration::days(1);
+        store_s5_buckets(&app, &node, after, 0.0, 0.0).await;
+        store_s5_buckets(&app, &node, after + Duration::minutes(1), 5_000.0, 500.0).await;
+
+        assert_eq!(
+            attome_server::slo::last_upgrade(app.db()).await.unwrap(),
+            Some(upgraded)
+        );
+        let findings = attome_server::slo::perf_regression_check(app.db(), now)
+            .await
+            .unwrap();
+        let s5 = findings.iter().find(|f| f.class == "S5").unwrap();
+        assert!(s5.regressed, "{s5:?}");
+        assert_eq!((s5.before_requests, s5.after_requests), (5_000, 5_000));
+        let s1 = findings.iter().find(|f| f.class == "S1").unwrap();
+        assert!(!s1.regressed, "no traffic is not a regression: {s1:?}");
+
+        let state: String =
+            sqlx::query_scalar("SELECT state FROM ops_alert WHERE name = 'PerfRegression:S5'")
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(state, "firing");
+        // A second day of the same regression keeps it firing without a
+        // second notification.
+        attome_server::slo::perf_regression_check(app.db(), now + Duration::hours(1))
+            .await
+            .unwrap();
+        let fired: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM ops_alert_event WHERE name = 'PerfRegression:S5' \
+             AND event = 'firing'",
+        )
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(fired, 1);
+        let s1_alert: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM ops_alert WHERE name = 'PerfRegression:S1' AND state = 'firing'",
+        )
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(s1_alert, 0);
+    });
+}
