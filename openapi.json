@@ -132716,6 +132716,6 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
