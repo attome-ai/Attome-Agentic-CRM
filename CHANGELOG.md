@@ -43,6 +43,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: index proposals (Y2-T10). `GET /api/v1/admin/entities/{entity_id}/index-proposals` reads
+  `pg_stat_statements` for statements on the entity averaging over 100 ms, finds the columns they
+  filter on, and proposes a single-column index for each attribute no index leads on; applying
+  one is making the attribute filterable, which builds the index concurrently. Without
+  `pg_stat_statements` (an operator's choice: `shared_preload_libraries` and the extension) the
+  answer is `available: false` with the reason.
 - Data: storage tuning (Y2-T9). With `metadata.storage_tuning_enabled` (default off), the daily
   table-health job sets each entity table's fill factor from its measured updates: 80 when it is
   updated more than inserted and most updates miss heap-only updates, 100 when it is append-only.

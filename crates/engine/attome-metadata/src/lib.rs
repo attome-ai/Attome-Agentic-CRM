@@ -1,4 +1,6 @@
 pub mod autovalue;
+/// Y2-T10: index proposals from slow statements in pg_stat_statements.
+pub mod index_advisor;
 pub mod kinds;
 pub mod model_edit;
 pub mod provision;
