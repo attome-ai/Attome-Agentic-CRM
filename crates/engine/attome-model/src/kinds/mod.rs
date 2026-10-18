@@ -8,6 +8,7 @@ pub mod form;
 pub mod navigation;
 pub mod option_set;
 pub mod prompt_override;
+pub mod record_type;
 pub mod reply_template;
 
 pub use agent::{AGENT, AgentKind};
@@ -17,4 +18,5 @@ pub use form::{ATTRIBUTE, ENTITY, FORM, FormKind};
 pub use navigation::{NAVIGATION, NavigationKind};
 pub use option_set::{OPTION_SET, OptionSetKind};
 pub use prompt_override::{PROMPT_OVERRIDE, PromptOverrideKind};
+pub use record_type::{RECORD_TYPE, RecordTypeKind};
 pub use reply_template::{REPLY_TEMPLATE, ReplyTemplateKind};

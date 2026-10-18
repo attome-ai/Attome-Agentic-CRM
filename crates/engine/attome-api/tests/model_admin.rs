@@ -297,6 +297,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "navigation",
                 "option_set",
                 "prompt_override",
+                "record_type",
                 "relationship",
                 "reply_template",
                 "rule",

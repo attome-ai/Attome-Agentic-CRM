@@ -27,6 +27,7 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::PromptOverrideKind),
         Arc::new(attome_model::kinds::ReplyTemplateKind),
         Arc::new(attome_model::kinds::EnvironmentVariableKind),
+        Arc::new(attome_model::kinds::RecordTypeKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));

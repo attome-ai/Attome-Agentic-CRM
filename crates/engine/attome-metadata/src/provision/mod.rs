@@ -40,6 +40,8 @@ pub mod lookup_fk;
 /// Y12-T6 — backfill batch sizes that follow the load.
 pub mod pacing;
 mod reconcile;
+/// A27-T1 — the `record_type` attribute an entity gets with its first type.
+pub mod record_type;
 /// M01 Core P3 gap (D-455) — physical join-table provisioning for the
 /// generic many-to-many relationship metadata object.
 mod relationship;

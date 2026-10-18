@@ -81,6 +81,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Record types (A27-T1): a `record_type` metadata kind (entity, code, English and Arabic labels, form, stage
+  process, default values, a default flag). Publishing an entity's first type gives its table a nullable
+  `record_type` text attribute, without rewriting existing rows: an empty type means the entity's default.
 - A safe-SQL census (Z2-T11): `crates/apps/attome/tests/safe_sql_census.rs` finds every `format!` that builds an
   SQL statement with an argument other than `quote_ident(...)`, a constant or a number. Today's 335, in 104
   files, are baselined per file in `safe_sql_census.json`; the counts may only fall.

@@ -619,6 +619,15 @@ async fn publish(
     }
     // Z15-T14: with the guard on, blocking customer tests pass first.
     attome_records::customer_tests::publish_guard(&state, &ctx).await?;
+    // A27-T1: an entity's first record type gives its table the
+    // `record_type` column, before the type goes live. A publish refused
+    // below leaves only an empty nullable column behind.
+    if kind.name() == attome_model::kinds::RECORD_TYPE {
+        let draft = attome_model::store::read(&state.base.db, id, None).await?;
+        if let Some(entity) = attome_model::kinds::record_type::entity_of(&draft.doc) {
+            attome_metadata::provision::record_type::ensure_column(&state.base.db, entity).await?;
+        }
+    }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let published = attome_model::publish::publish(
         &mut tx,
