@@ -44,3 +44,6 @@ Until `1.0`, every `0.x` minor may change anything; the changelog says what.
 
 Attome runs on Windows and Linux (x86-64), with PostgreSQL 18 (pgvector for vector search). A
 platform's support ends only in a major release, announced at least 6 months ahead.
+
+The HTTP API has its own dated versions, pinning and a 24-month support window: see
+[api-versions.md](api-versions.md).
