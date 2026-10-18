@@ -115,7 +115,10 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
 ];
 pub(crate) const DEFAULT_CATEGORY: &str = "api";
 
-fn category_for(method: &str, route_template: &str) -> &'static str {
+/// The rate-limit category of `method` on `route_template`: its
+/// `RATE_LIMIT_CATEGORIES` entry, else `api`. Q20-T1: the API document
+/// declares the same value as each operation's `x-rate-class`.
+pub fn category_for(method: &str, route_template: &str) -> &'static str {
     RATE_LIMIT_CATEGORIES
         .iter()
         .find(|(m, r, _)| *m == method && *r == route_template)

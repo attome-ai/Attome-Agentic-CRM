@@ -87,6 +87,8 @@ fn build() -> utoipa::openapi::OpenApi {
     attome_server::middleware::deprecation::apply_to_openapi(&mut doc);
     // S2-T2: every operation says how it is authenticated.
     declare_security(&mut doc);
+    // Q20-T1: and which rate-limit class it is counted in.
+    declare_rate_class(&mut doc);
     // S2-T8: the document names the release it describes.
     doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
     // Z14-T2: every error code, as one enum the SDK can generate.
@@ -153,6 +155,37 @@ fn declare_security(doc: &mut utoipa::openapi::OpenApi) {
     }
 }
 
+/// Q20-T1: `x-rate-class` on every operation: the rate-limit category the
+/// limiter counts it in (`attome_server::middleware::rate_limit::
+/// category_for`, the one table both read), `api` unless listed.
+fn declare_rate_class(doc: &mut utoipa::openapi::OpenApi) {
+    use utoipa::openapi::extensions::Extensions;
+    for (path, item) in doc.paths.paths.iter_mut() {
+        for (method, operation) in [
+            ("GET", &mut item.get),
+            ("PUT", &mut item.put),
+            ("POST", &mut item.post),
+            ("DELETE", &mut item.delete),
+            ("OPTIONS", &mut item.options),
+            ("HEAD", &mut item.head),
+            ("PATCH", &mut item.patch),
+            ("TRACE", &mut item.trace),
+        ] {
+            let Some(operation) = operation else {
+                continue;
+            };
+            let class = attome_server::middleware::rate_limit::category_for(method, path);
+            let extra: Extensions = [("x-rate-class", serde_json::Value::from(class))]
+                .into_iter()
+                .collect();
+            match &mut operation.extensions {
+                Some(existing) => existing.merge(extra),
+                None => operation.extensions = Some(extra),
+            }
+        }
+    }
+}
+
 pub fn document() -> Arc<utoipa::openapi::OpenApi> {
     Arc::clone(&DOCUMENT)
 }
@@ -207,6 +240,25 @@ mod tests {
             }
         }
         assert!(missing.is_empty(), "{missing:#?}");
+    }
+
+    /// Q20-T1: every operation names its rate-limit class.
+    #[test]
+    fn every_operation_has_a_rate_class() {
+        let doc = serde_json::to_value(&*super::document()).unwrap();
+        let mut missing = Vec::new();
+        for (path, item) in doc["paths"].as_object().unwrap() {
+            for (method, operation) in item.as_object().unwrap() {
+                if operation.get("responses").is_some() && !operation["x-rate-class"].is_string() {
+                    missing.push(format!("{} {path}", method.to_uppercase()));
+                }
+            }
+        }
+        assert!(missing.is_empty(), "{missing:#?}");
+        assert_eq!(
+            doc["paths"]["/api/v1/auth/login"]["post"]["x-rate-class"],
+            "credential"
+        );
     }
 
     /// S2-T2: the rules [`super::security_for`] applies.
