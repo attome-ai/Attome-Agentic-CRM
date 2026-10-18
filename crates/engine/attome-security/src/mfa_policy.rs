@@ -176,6 +176,20 @@ pub async fn load_role_policies(
     .map_err(AppError::internal)
 }
 
+/// Q5-T2: `user_id`'s effective policy in one query, for a sign-in to
+/// apply (Q5-T3). Not cached on the request's `SecurityContext`: sign-in
+/// runs before any context exists, and an authenticated request never needs
+/// it, so a cache would only add an invalidation path to keep right.
+pub async fn effective_for(
+    db: &DbPool,
+    user_id: Uuid,
+    is_admin: bool,
+    deployment_floor: &str,
+) -> Result<EffectiveMfaPolicy, AppError> {
+    let rows = load_role_policies(db, user_id).await?;
+    Ok(compile(&rows, is_admin, deployment_floor))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
