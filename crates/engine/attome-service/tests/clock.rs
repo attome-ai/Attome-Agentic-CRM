@@ -710,6 +710,17 @@ async fn an_unresolvable_calendar_leaves_the_sla_unresolved_until_recalculated()
         ("recalculate", "calculated")
     );
     assert_eq!(rows[1].2.as_ref().map(String::len), Some(64));
+    // Z12-T10 (sla_records_calendar_version): the calendar's content version
+    // sits beside its hash on the calculated row.
+    let versions: Vec<Option<i64>> = sqlx::query_scalar(
+        "SELECT calendar_version::bigint FROM service_sla_calculation          WHERE ticket_ref = $1 ORDER BY id",
+    )
+    .bind(ticket_id)
+    .fetch_all(db)
+    .await
+    .expect("read calendar versions");
+    assert_eq!(versions.len(), 2);
+    assert!(versions[1].is_some(), "{versions:?}");
     // D-621: the version the answer depended on is recorded beside the hash —
     // absent while the calendar could not be resolved.
     assert_eq!(

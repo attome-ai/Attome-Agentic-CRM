@@ -269,6 +269,9 @@ pub(crate) struct CalendarEvidence {
     /// the hash so a tz-database bump that moves a deadline is visible in the
     /// evidence (D-621).
     pub(crate) tzdb_version: Option<String>,
+    /// Z12-T10: the calendar's content version (`LoadedCalendar::version`),
+    /// so a later change to the calendar is visible beside the hash.
+    pub(crate) version: Option<i32>,
 }
 
 /// A calculation's result together with what it was computed against.
@@ -298,6 +301,7 @@ async fn resolve_business_time(
             .map(str::to_string),
         content_hash: None,
         tzdb_version: None,
+        version: None,
     };
     let calendar_id = match parse_calendar_ref(raw) {
         Ok(Some(id)) => id,
@@ -318,6 +322,7 @@ async fn resolve_business_time(
         Ok(loaded) => {
             evidence.content_hash = Some(loaded.content_hash);
             evidence.tzdb_version = Some(loaded.tzdb_version.to_string());
+            evidence.version = Some(loaded.version);
             Ok((Ok(BusinessTime::Calendar(loaded.calendar)), evidence))
         }
         Err(unresolved) => Ok((
@@ -490,9 +495,9 @@ pub(crate) async fn record_calculation(
     sqlx::query(
         "INSERT INTO service_sla_calculation \
              (id, ticket_ref, sla_policy_ref, calculation_type, outcome, unresolved_reason, detail, \
-              calendar_ref, calendar_content_hash, calendar_tzdb_version, start_at, end_at, \
-              target_business_seconds, business_seconds, result_due_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
+              calendar_ref, calendar_content_hash, calendar_tzdb_version, calendar_version, \
+              start_at, end_at, target_business_seconds, business_seconds, result_due_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
     )
     .bind(Uuid::now_v7())
     .bind(record.ticket_id)
@@ -508,6 +513,7 @@ pub(crate) async fn record_calculation(
     .bind(record.evidence.calendar_ref.as_deref())
     .bind(record.evidence.content_hash.as_deref())
     .bind(record.evidence.tzdb_version.as_deref())
+    .bind(record.evidence.version.map(i64::from))
     .bind(record.start_at)
     .bind(record.end_at)
     .bind(record.target_minutes.map(|m| m.saturating_mul(60)))

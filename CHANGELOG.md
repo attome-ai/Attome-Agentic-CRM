@@ -51,6 +51,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendar calculations (Z12-T10): `POST /api/v1/calendars/{id}/calculate` answers `add`,
+  `between`, `next` and `is_working` for any signed-in caller (or on a person's own calendar with
+  `user_id`, theirs or an administrator's to ask), with the calendar version and content hash it
+  used; SLA calculation rows now record `calendar_version` beside the hash.
 - API versions (S8-T1): a request may name the version it was written for in an `Attome-Version`
   header (today `2026-10`, the only one); an API key or S2S client that sends none is answered at
   its `pinned_api_version` (migration 0116), a browser session at the current version. Every

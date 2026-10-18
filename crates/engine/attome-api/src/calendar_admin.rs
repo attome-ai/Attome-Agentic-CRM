@@ -1723,11 +1723,132 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/calendars/{id}/exceptions/{exception_id}",
             axum::routing::delete(delete_exception),
         )
+        .route(
+            "/api/v1/calendars/{id}/calculate",
+            axum::routing::post(calculate),
+        )
         .route("/api/v1/admin/hijri-months", get(list_hijri_months))
         .route(
             "/api/v1/admin/hijri-months/{year}/{month}",
             axum::routing::put(correct_hijri_month),
         )
+}
+
+/// Z12-T10: one business-time question for a calendar.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+enum CalculateOp {
+    /// `minutes` of working time after `from`.
+    Add,
+    /// The working minutes between `from` and `to`.
+    Between,
+    /// The first working moment at or after `from`.
+    Next,
+    /// Whether `from` is inside working time.
+    IsWorking,
+}
+
+/// Z12-T10: `POST /api/v1/calendars/{id}/calculate`'s body.
+#[derive(Debug, Deserialize, ToSchema)]
+struct CalculateRequest {
+    op: CalculateOp,
+    from: chrono::DateTime<chrono::Utc>,
+    #[serde(default)]
+    to: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
+    minutes: Option<i64>,
+    /// Answer on this person's calendar, with their absences, instead of
+    /// `{id}`. Only the caller themselves, or an administrator.
+    #[serde(default)]
+    user_id: Option<Uuid>,
+}
+
+/// Z12-T10: the answer, and what it was computed against.
+#[derive(Debug, Serialize, ToSchema)]
+struct CalculateResponse {
+    /// A timestamp for `add` and `next`, minutes for `between`, a boolean
+    /// for `is_working`.
+    result: Value,
+    calendar_id: Uuid,
+    calendar_version: i32,
+    content_hash: String,
+}
+
+/// Z12-T10: business-time arithmetic on a calendar, for any signed-in
+/// caller: the same answers SLA clocks use, with the calendar version and
+/// content hash they were computed against.
+#[utoipa::path(
+    post,
+    path = "/api/v1/calendars/{id}/calculate",
+    tag = "calendars",
+    params(("id" = Uuid, Path, description = "The calendar")),
+    request_body = CalculateRequest,
+    responses(
+        (status = 200, description = "The answer, with the calendar version and hash", body = CalculateResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Asked about another person's calendar without being an administrator", body = ErrorResponse),
+        (status = 404, description = "No such active calendar", body = ErrorResponse),
+        (status = 422, description = "A missing operand, or a calendar that cannot answer", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::ReadOnly, None, "pure calculation; writes nothing")))),
+)]
+async fn calculate(
+    State(state): State<EngineState>,
+    ctx: Authorized<attome_server::authz::SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<CalculateRequest>,
+) -> Result<Json<CalculateResponse>, AppError> {
+    let db = &state.base.db;
+    let loaded = match body.user_id {
+        Some(user) if user != ctx.user_id && !ctx.is_admin => return Err(AppError::Forbidden),
+        Some(user) => attome_core::calendar::load_calendar_for_user(db, user).await?,
+        None => attome_core::calendar::load_calendar(db, id).await?,
+    };
+    let loaded = match loaded {
+        Ok(loaded) => loaded,
+        Err(attome_core::calendar::CalendarUnresolved::NotFound) => return Err(AppError::NotFound),
+        Err(unresolved) => return Err(AppError::Validation(unresolved.to_string())),
+    };
+    let calendar = &loaded.calendar;
+    let result = match body.op {
+        CalculateOp::Add => {
+            let minutes = body
+                .minutes
+                .ok_or_else(|| AppError::Validation("add needs minutes".into()))?;
+            if minutes < 0 {
+                return Err(AppError::Validation("minutes must not be negative".into()));
+            }
+            let duration = chrono::Duration::try_minutes(minutes)
+                .ok_or_else(|| AppError::Validation("minutes is too large".into()))?;
+            let at = calendar
+                .add_business_duration(body.from, duration)
+                .map_err(|e| AppError::Validation(e.to_string()))?;
+            serde_json::json!(at)
+        }
+        CalculateOp::Between => {
+            let to = body
+                .to
+                .ok_or_else(|| AppError::Validation("between needs to".into()))?;
+            let span = calendar
+                .business_duration_between(body.from, to)
+                .map_err(|e| AppError::Validation(e.to_string()))?;
+            serde_json::json!(span.num_minutes())
+        }
+        CalculateOp::Next => {
+            let at = calendar
+                .next_working_moment(body.from)
+                .map_err(|e| AppError::Validation(e.to_string()))?;
+            serde_json::json!(at)
+        }
+        CalculateOp::IsWorking => serde_json::json!(calendar.is_working(body.from)),
+    };
+    Ok(Json(CalculateResponse {
+        result,
+        calendar_id: loaded.id,
+        calendar_version: loaded.version,
+        content_hash: loaded.content_hash,
+    }))
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
@@ -1849,7 +1970,8 @@ async fn correct_hijri_month(
     create_exception,
     delete_exception,
     list_hijri_months,
-    correct_hijri_month
+    correct_hijri_month,
+    calculate
 ))]
 struct ApiDocFragment;
 

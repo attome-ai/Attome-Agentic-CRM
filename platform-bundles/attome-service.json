@@ -133,6 +133,7 @@
         { "logicalname": "calendar_ref", "display_name": "Calendar", "field_type": "text", "is_filterable": true },
         { "logicalname": "calendar_content_hash", "display_name": "Calendar Content Hash (SHA-256)", "field_type": "text", "is_filterable": true },
         { "logicalname": "calendar_tzdb_version", "display_name": "Calendar Time Zone Database Version", "field_type": "text", "is_filterable": true },
+        { "logicalname": "calendar_version", "display_name": "Calendar Version", "field_type": "number", "is_filterable": true },
         { "logicalname": "start_at", "display_name": "Start At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "end_at", "display_name": "End At", "field_type": "date", "is_sortable": true },
         { "logicalname": "target_business_seconds", "display_name": "Target Business Seconds", "field_type": "number" },
