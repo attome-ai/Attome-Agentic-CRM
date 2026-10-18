@@ -687,6 +687,11 @@ impl AppConfig {
         validate_shutdown_drain_delay_secs(self.app.shutdown_drain_delay_secs)?;
         // B1 (BSV-F05) — see `validate_request_timeout_secs`.
         validate_request_timeout_secs(self.app.request_timeout_secs)?;
+        // Z5-T5 — see `validate_flood_caps`.
+        validate_flood_caps(
+            self.app.max_concurrent_requests,
+            self.app.max_concurrent_per_ip,
+        )?;
         // B6 (BSV-F16) — see `validate_ipv6_bucket_prefix`.
         validate_ipv6_bucket_prefix(self.rate_limit.ipv6_bucket_prefix)?;
         // BAU-15a — see `validate_kdf`.
@@ -2397,6 +2402,26 @@ pub(crate) const REQUEST_TIMEOUT_MAX_SECS: u64 = 299;
 /// that owns it is still running, so the retry and the original both execute a
 /// mutation the durable tier exists to run once. Zero would time out every
 /// request before it could do anything.
+/// Z5-T5 — 0 would refuse every request, and a per-address cap above the
+/// global one can never bind.
+pub(crate) fn validate_flood_caps(global: usize, per_ip: usize) -> Result<(), ConfigError> {
+    if global == 0 || global > 1_000_000 {
+        return Err(ConfigError::Invalid {
+            field: "app.max_concurrent_requests".into(),
+            reason: format!("must be between 1 and 1000000, got {global}"),
+        });
+    }
+    if per_ip == 0 || per_ip > global {
+        return Err(ConfigError::Invalid {
+            field: "app.max_concurrent_per_ip".into(),
+            reason: format!(
+                "must be between 1 and app.max_concurrent_requests ({global}), got {per_ip}"
+            ),
+        });
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_request_timeout_secs(value: u64) -> Result<(), ConfigError> {
     if value == 0 || value > REQUEST_TIMEOUT_MAX_SECS {
         return Err(ConfigError::Invalid {

@@ -358,6 +358,22 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
             // after CORS so a refused browser request can read its 400.
             .layer(mark(config, "waf"))
             .layer(middleware::from_fn(crate::middleware::waf::basic_waf))
+            // Z5-T5: concurrency caps, before any authentication or database
+            // work.
+            .layer(mark(config, "flood"))
+            .layer(middleware::from_fn({
+                let guard =
+                    std::sync::Arc::new(crate::middleware::flood::FloodGuard::from_config(config));
+                let config = std::sync::Arc::new(config.clone());
+                move |req, next| {
+                    crate::middleware::flood::flood_guard(
+                        std::sync::Arc::clone(&guard),
+                        std::sync::Arc::clone(&config),
+                        req,
+                        next,
+                    )
+                }
+            }))
             .layer(mark(config, "catch_panic"))
             .layer(CatchPanicLayer::custom(panic_response))
             .layer(mark(config, "body_limit"))
@@ -629,6 +645,7 @@ pub const PIPELINE_ORDER: &[&str] = &[
     "request_id",
     "cors",
     "waf",
+    "flood",
     "catch_panic",
     "body_limit",
     "timeout",

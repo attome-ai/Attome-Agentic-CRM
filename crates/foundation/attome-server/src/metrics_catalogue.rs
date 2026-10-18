@@ -626,6 +626,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمليات البحث في الذاكرة المؤقتة الداخلية حسب الإصابة.",
     },
     MetricInfo {
+        name: "http_flood_untracked_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Requests from an address the flood guard could not track because its table was full.",
+        ar: "طلبات من عنوان لم يستطع حارس الإغراق تتبّعه لامتلاء جدوله.",
+    },
+    MetricInfo {
         name: "http_rejections_total",
         kind: "counter",
         unit: "requests",

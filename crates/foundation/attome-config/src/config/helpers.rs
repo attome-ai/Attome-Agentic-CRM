@@ -323,6 +323,16 @@ pub(crate) fn default_server_host() -> String {
 pub(crate) fn default_max_body() -> usize {
     10 * 1024 * 1024
 }
+/// Z5-T5: `app.max_concurrent_requests` when unset.
+pub(crate) fn default_max_concurrent_requests() -> usize {
+    1024
+}
+
+/// Z5-T5: `app.max_concurrent_per_ip` when unset.
+pub(crate) fn default_max_concurrent_per_ip() -> usize {
+    64
+}
+
 pub(crate) fn default_request_timeout() -> u64 {
     30
 }

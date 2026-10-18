@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Flood protection (Z5-T5), right after the web firewall and before sign-in: at most
+  `app.max_concurrent_requests` (default 1024) requests run at once on a node, past which a request
+  is `503 overloaded`, and at most `app.max_concurrent_per_ip` (default 64) from one address, past
+  which it is `429`; both with `Retry-After: 1`. Refusals count in
+  `http_rejections_total{layer="flood"}`.
 - A basic web firewall (Z5-T4) runs before body limits, rate limits and sign-in: more than 100
   headers, a header value or URI over 8 KiB, a `..` path segment (plain or percent-encoded), `%00`,
   a raw backslash, or a double-encoded dot, slash, backslash or NUL is `400 request_rejected` (new

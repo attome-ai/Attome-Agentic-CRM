@@ -30,6 +30,14 @@ pub struct AppSection {
     pub max_body_size_bytes: usize,
     #[serde(default = "default_request_timeout")]
     pub request_timeout_secs: u64,
+    /// Z5-T5: requests this node runs at once before answering 503 with
+    /// `Retry-After: 1`, ahead of authentication. 1 to 1,000,000.
+    #[serde(default = "crate::config::helpers::default_max_concurrent_requests")]
+    pub max_concurrent_requests: usize,
+    /// Z5-T5: requests one address runs at once before answering 429 with
+    /// `Retry-After: 1`. 1 to `max_concurrent_requests`.
+    #[serde(default = "crate::config::helpers::default_max_concurrent_per_ip")]
+    pub max_concurrent_per_ip: usize,
     /// S1 (BSV-F13 / BSV-D11) — how many seconds a draining node keeps
     /// answering `/health/ready` with 503 **before** it signals its HTTP
     /// listeners to stop accepting connections.
