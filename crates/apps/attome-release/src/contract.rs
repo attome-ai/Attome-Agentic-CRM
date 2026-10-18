@@ -12,7 +12,8 @@
 //! - a request or success-response property whose `type` changed.
 //!
 //! Additions (a new path, a new optional property, a new status) are not
-//! breaking. Schemas are compared after resolving `$ref`s into
+//! breaking. A `### Breaking` line announces a change by naming its path or
+//! its operation id (roadmap Y9-T5). Schemas are compared after resolving `$ref`s into
 //! `components.schemas`, one level deep, which is how every route here
 //! declares its bodies.
 
@@ -26,6 +27,8 @@ pub struct Breaking {
     pub method: String,
     pub path: String,
     pub what: String,
+    /// The operation's `operationId` in the earlier document, when it had one.
+    pub operation_id: Option<String>,
 }
 
 impl Breaking {
@@ -34,11 +37,15 @@ impl Breaking {
             method: method.to_uppercase(),
             path: path.to_owned(),
             what: what.into(),
+            operation_id: None,
         }
     }
 
     pub fn to_json(&self) -> Value {
-        serde_json::json!({ "method": self.method, "path": self.path, "change": self.what })
+        serde_json::json!({
+            "method": self.method, "path": self.path, "change": self.what,
+            "operation_id": self.operation_id,
+        })
     }
 }
 
@@ -102,96 +109,113 @@ pub fn breaking_changes(old: &Value, new: &Value) -> Vec<Breaking> {
     let mut out = Vec::new();
     let new_ops = operations(new);
     for ((method, path), old_op) in operations(old) {
-        let Some(new_op) = new_ops.get(&(method.clone(), path.clone())) else {
-            out.push(Breaking::new(&method, &path, "operation removed"));
-            continue;
-        };
-
-        // Response statuses, and the success responses' properties.
-        if let Some(old_responses) = old_op.get("responses").and_then(Value::as_object) {
-            for (status, old_response) in old_responses {
-                let Some(new_response) = new_op.pointer(&format!("/responses/{status}")) else {
-                    out.push(Breaking::new(
-                        &method,
-                        &path,
-                        format!("response {status} removed"),
-                    ));
-                    continue;
-                };
-                if !status.starts_with('2') {
-                    continue;
-                }
-                let (Some(old_body), Some(new_body)) =
-                    (json_body(old, old_response), json_body(new, new_response))
-                else {
-                    continue;
-                };
-                let new_props = properties(new_body);
-                for (name, old_prop) in properties(old_body) {
-                    match new_props.get(name) {
-                        None => out.push(Breaking::new(
-                            &method,
-                            &path,
-                            format!("response {status} property `{name}` removed"),
-                        )),
-                        Some(new_prop) => {
-                            if let (Some(was), Some(now)) =
-                                (type_of(old, old_prop), type_of(new, new_prop))
-                                && was != now
-                            {
-                                out.push(Breaking::new(
-                                    &method,
-                                    &path,
-                                    format!(
-                                        "response {status} property `{name}` changed type from {was} to {now}"
-                                    ),
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Request body: newly required properties and changed types.
-        let old_request = old_op
-            .get("requestBody")
-            .and_then(|body| json_body(old, body));
-        let new_request = new_op
-            .get("requestBody")
-            .and_then(|body| json_body(new, body));
-        if let Some(new_request) = new_request {
-            let was_required = old_request.map(required).unwrap_or_default();
-            for name in required(new_request) {
-                if !was_required.contains(name) {
-                    out.push(Breaking::new(
-                        &method,
-                        &path,
-                        format!("request property `{name}` newly required"),
-                    ));
-                }
-            }
-            if let Some(old_request) = old_request {
-                let new_props = properties(new_request);
-                for (name, old_prop) in properties(old_request) {
-                    if let Some(new_prop) = new_props.get(name)
-                        && let (Some(was), Some(now)) =
-                            (type_of(old, old_prop), type_of(new, new_prop))
-                        && was != now
-                    {
-                        out.push(Breaking::new(
-                            &method,
-                            &path,
-                            format!("request property `{name}` changed type from {was} to {now}"),
-                        ));
-                    }
-                }
-            }
+        let first = out.len();
+        breaking_in_operation(old, new, &new_ops, &method, &path, old_op, &mut out);
+        let operation_id = old_op.get("operationId").and_then(Value::as_str);
+        for change in &mut out[first..] {
+            change.operation_id = operation_id.map(str::to_owned);
         }
     }
     out.sort();
     out.dedup();
     out
+}
+
+/// The breaking changes of one operation of `old`, appended to `out`.
+fn breaking_in_operation(
+    old: &Value,
+    new: &Value,
+    new_ops: &BTreeMap<(String, String), &Value>,
+    method: &str,
+    path: &str,
+    old_op: &Value,
+    out: &mut Vec<Breaking>,
+) {
+    let Some(new_op) = new_ops.get(&(method.to_owned(), path.to_owned())) else {
+        out.push(Breaking::new(method, path, "operation removed"));
+        return;
+    };
+
+    // Response statuses, and the success responses' properties.
+    if let Some(old_responses) = old_op.get("responses").and_then(Value::as_object) {
+        for (status, old_response) in old_responses {
+            let Some(new_response) = new_op.pointer(&format!("/responses/{status}")) else {
+                out.push(Breaking::new(
+                    method,
+                    path,
+                    format!("response {status} removed"),
+                ));
+                continue;
+            };
+            if !status.starts_with('2') {
+                continue;
+            }
+            let (Some(old_body), Some(new_body)) =
+                (json_body(old, old_response), json_body(new, new_response))
+            else {
+                continue;
+            };
+            let new_props = properties(new_body);
+            for (name, old_prop) in properties(old_body) {
+                match new_props.get(name) {
+                    None => out.push(Breaking::new(
+                        method,
+                        path,
+                        format!("response {status} property `{name}` removed"),
+                    )),
+                    Some(new_prop) => {
+                        if let (Some(was), Some(now)) =
+                            (type_of(old, old_prop), type_of(new, new_prop))
+                            && was != now
+                        {
+                            out.push(Breaking::new(
+                                method,
+                                path,
+                                format!(
+                                    "response {status} property `{name}` changed type from {was} to {now}"
+                                ),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Request body: newly required properties and changed types.
+    let old_request = old_op
+        .get("requestBody")
+        .and_then(|body| json_body(old, body));
+    let new_request = new_op
+        .get("requestBody")
+        .and_then(|body| json_body(new, body));
+    if let Some(new_request) = new_request {
+        let was_required = old_request.map(required).unwrap_or_default();
+        for name in required(new_request) {
+            if !was_required.contains(name) {
+                out.push(Breaking::new(
+                    method,
+                    path,
+                    format!("request property `{name}` newly required"),
+                ));
+            }
+        }
+        if let Some(old_request) = old_request {
+            let new_props = properties(new_request);
+            for (name, old_prop) in properties(old_request) {
+                if let Some(new_prop) = new_props.get(name)
+                    && let (Some(was), Some(now)) = (type_of(old, old_prop), type_of(new, new_prop))
+                    && was != now
+                {
+                    out.push(Breaking::new(
+                        method,
+                        path,
+                        format!("request property `{name}` changed type from {was} to {now}"),
+                    ));
+                }
+            }
+        }
+    }
 }
 
 /// The `### Breaking` part of the `[Unreleased]` section of a changelog, or
@@ -223,13 +247,30 @@ fn unreleased_breaking(changelog: &str) -> String {
 }
 
 /// The breaking changes the changelog's `[Unreleased]` → `### Breaking`
-/// section does not name (by path).
+/// section does not name, by path or by operation id.
 pub fn unannounced<'a>(changes: &'a [Breaking], changelog: &str) -> Vec<&'a Breaking> {
     let announced = unreleased_breaking(changelog);
     changes
         .iter()
-        .filter(|change| !announced.contains(&change.path))
+        .filter(|change| {
+            !announced.contains(&change.path)
+                && !change
+                    .operation_id
+                    .as_deref()
+                    .is_some_and(|id| names_word(&announced, id))
+        })
         .collect()
+}
+
+/// Whether `text` holds `word` as a whole identifier (so `list_things`
+/// does not announce `list_things_admin`).
+fn names_word(text: &str, word: &str) -> bool {
+    let is_ident = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    text.match_indices(word).any(|(at, _)| {
+        let before = text[..at].chars().next_back();
+        let after = text[at + word.len()..].chars().next();
+        !before.is_some_and(is_ident) && !after.is_some_and(is_ident)
+    })
 }
 
 #[cfg(test)]
@@ -344,6 +385,23 @@ mod tests {
             unannounced(&changes, old_release).len(),
             1,
             "only [Unreleased] counts"
+        );
+    }
+
+    #[test]
+    fn a_breaking_change_can_be_announced_by_operation_id() {
+        let mut get = op(None, "Thing", &[]);
+        get["operationId"] = json!("list_things");
+        let old = doc(json!({ "/api/v1/things": { "get": get } }));
+        let changes = breaking_changes(&old, &doc(json!({})));
+        assert_eq!(changes[0].operation_id.as_deref(), Some("list_things"));
+        let by_id = "## [Unreleased]\n\n### Breaking\n- `list_things` is gone.\n";
+        assert!(unannounced(&changes, by_id).is_empty());
+        let other = "## [Unreleased]\n\n### Breaking\n- `list_things_admin` is gone.\n";
+        assert_eq!(
+            unannounced(&changes, other).len(),
+            1,
+            "a longer id is another operation"
         );
     }
 }
