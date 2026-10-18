@@ -512,8 +512,24 @@ impl IntoResponse for AppError {
             resp.headers_mut()
                 .insert(axum::http::header::RETRY_AFTER, value);
         }
+        // AA9-T5: the limit, for the layer that knows the caller to count.
+        if let AppError::LimitExceeded { limit, value, .. } = &self {
+            resp.extensions_mut().insert(LimitHit {
+                limit,
+                value: *value,
+            });
+        }
         resp
     }
+}
+
+/// AA9-T5: the limit a `LimitExceeded` response refused at, carried as a
+/// response extension so the rate-limit layer, which knows the caller,
+/// counts the hit (`attome_server::limit_usage`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LimitHit {
+    pub limit: &'static str,
+    pub value: i64,
 }
 
 #[cfg(test)]

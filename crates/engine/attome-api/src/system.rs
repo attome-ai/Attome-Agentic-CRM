@@ -1144,6 +1144,10 @@ impl EngineSystemBuilder {
         .await??;
         state.rules.swap(rules);
 
+        // AA9-T5: this node's limit-hit tally reaches the database every
+        // five minutes.
+        attome_server::limit_usage::spawn_flusher(state.base.db.clone());
+
         // Z3-T7: caches registered for warm start fill their L1 now, within
         // five seconds in all; any the budget cuts off start cold.
         let warmed = attome_cache::tiered::warm_registered(Duration::from_secs(5)).await;

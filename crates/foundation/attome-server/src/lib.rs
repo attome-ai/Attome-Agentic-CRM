@@ -9,6 +9,8 @@ pub mod capability;
 pub mod deploy_event;
 pub mod health;
 pub mod isolation;
+/// AA9-T5 — how often each limit is hit, and by whom.
+pub mod limit_usage;
 pub mod metrics;
 pub mod metrics_catalogue;
 pub mod metrics_store;

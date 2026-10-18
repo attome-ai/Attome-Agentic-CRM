@@ -287,6 +287,15 @@ async fn note_trip(redis: &Store, bucket: &str, category: &str, retry_after_secs
     }
 }
 
+/// AA9-T5: the caller as `limit_usage` counts it.
+fn principal(identity: &Identity) -> (&'static str, Option<uuid::Uuid>) {
+    match identity {
+        Identity::ApiKey(id) => ("api_key", Some(*id)),
+        Identity::User(id) => ("user", Some(*id)),
+        Identity::Anonymous => ("anonymous", None),
+    }
+}
+
 /// The 429 a banned caller gets: no handler runs, and `Retry-After` is what
 /// is left of the ban.
 fn banned_response(left_secs: u64) -> Response {
@@ -441,9 +450,19 @@ pub async fn rate_limit(
     }
 
     let key = format!("base:rl:{bucket}:{category}");
+    let (principal_kind, principal_id) = principal(&identity);
     match attome_cache::rate_limit::check(&state.redis_coordination, &key, limit as i32).await {
         Ok(outcome) if outcome.allowed => {
             let mut resp = next.run(req).await;
+            // AA9-T5: a limit the handler refused at, counted for this caller.
+            if let Some(hit) = resp.extensions().get::<crate::limit_usage::LimitHit>() {
+                crate::limit_usage::record_limit_hit(
+                    hit.limit,
+                    principal_kind,
+                    principal_id,
+                    hit.value,
+                );
+            }
             apply_rate_limit_headers(resp.headers_mut(), outcome, category);
             resp
         }
@@ -451,6 +470,12 @@ pub async fn rate_limit(
             // P-observability-completion — SecurityAnomalyRateHigh alert
             // source; no-op if no recorder was ever installed.
             metrics::counter!("security_rejection_total", "reason" => "rate_limit").increment(1);
+            crate::limit_usage::record_limit_hit(
+                &format!("rate_limit.{category}"),
+                principal_kind,
+                principal_id,
+                0,
+            );
             note_trip(
                 &state.redis_coordination,
                 &bucket,
@@ -515,6 +540,7 @@ pub async fn pre_auth_rate_limit(
         // response/headers exist yet to clobber.
         Ok(outcome) if outcome.allowed => next.run(req).await,
         Ok(outcome) => {
+            crate::limit_usage::record_limit_hit("rate_limit.pre_auth", "anonymous", None, 0);
             note_trip(
                 &state.redis_coordination,
                 &bucket,

@@ -40,6 +40,13 @@ pub(crate) async fn reject_declared_oversized_body(
     if let Some(len) = declared_len
         && len > max_bytes
     {
+        // AA9-T5: before sign-in, so the caller is not known yet.
+        crate::limit_usage::record_limit_hit(
+            "http.max_body_bytes",
+            "unknown",
+            None,
+            i64::try_from(len).unwrap_or(i64::MAX),
+        );
         return AppError::PayloadTooLarge.into_response();
     }
 

@@ -47,6 +47,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Limit hit counts (AA9-T5): every refusal by a rate limit, the body limit or a named limit adds to
+  `limit_hits_total{limit, principal_kind}` and to a daily table, `limit_usage_daily` (migration
+  0115), with hits and the peak value per limit and caller, flushed by each node every five
+  minutes.
 - Encrypted cache values (Z3-T3): a cache declared `EncryptedInRedis` seals each value with
   `cache.encryption_key` (AES-256-GCM, key-id tagged) before it reaches Redis, and refuses to start
   over Redis without that key; a `LocalOnly` cache never reaches Redis. A credential column may not

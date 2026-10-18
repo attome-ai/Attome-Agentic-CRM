@@ -675,6 +675,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "الوقت منذ آخر نجاح لكل مهمة مجدولة.",
     },
     MetricInfo {
+        name: "limit_hits_total",
+        kind: "counter",
+        unit: "hits",
+        en: "Requests a limit refused, by limit and kind of caller.",
+        ar: "طلبات رفضها حدٌّ ما، حسب الحد ونوع المستدعي.",
+    },
+    MetricInfo {
         name: "metadata_pin_unavailable_total",
         kind: "counter",
         unit: "requests",
