@@ -1,0 +1,191 @@
+{
+  "author": "packs",
+  "checksum": "sha256:fd871f46c03609ab4c5464ad112ec42329112f89e7ef9465e36a1bb74b7b70c1",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Payment links (F5-T8): a link names its payer, a gateway payment names the link it came from, and receivables staff create links.",
+  "format": "attome-changeset/v1",
+  "id": "01a14d33-614a-7071-965a-1e7d51d7a861",
+  "layer": "product",
+  "name": "billing-payment-links",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payer",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "payment_link",
+        "field": "account_ref"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "display_name": "الدافع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "payment_link.account_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payment Link",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "payment_link_ref",
+          "lookup_entity": "payment_link",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "payment_link_ref"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "display_name": "رابط الدفع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "customer_payment.payment_link_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 4
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.create"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on payment_link",
+          "key": "payment_link.create",
+          "name": "payment_link.create"
+        }
+      },
+      "seq": 5
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.read"
+      },
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on payment_link",
+          "key": "payment_link.read",
+          "name": "payment_link.read"
+        }
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.create",
+        "role": "Accounts Receivable"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.read",
+        "role": "Accounts Receivable"
+      },
+      "seq": 8
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.create",
+        "role": "Finance Manager"
+      },
+      "seq": 9
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.read",
+        "role": "Finance Manager"
+      },
+      "seq": 10
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "payment_link.read",
+        "role": "Billing Viewer"
+      },
+      "seq": 11
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 16,
+  "title": "Pack: payment links"
+}

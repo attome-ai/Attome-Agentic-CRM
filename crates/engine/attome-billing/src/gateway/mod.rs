@@ -355,7 +355,10 @@ type SystemRow = (
 /// Reads an active `payment_gateway` integration system.
 pub async fn system(state: &EngineState, id: Uuid) -> Result<GatewaySystem, AppError> {
     let row: Option<SystemRow> = sqlx::query_as(
-        "SELECT name, base_url, credential_ref, config::text, service_principal_ref::text          FROM integration_system          WHERE id = $1 AND kind = 'payment_gateway' AND COALESCE(status, 'active') = 'active'            AND (is_active IS NULL OR is_active = true)",
+        "SELECT name, base_url, credential_ref, config::text, service_principal_ref::text \
+         FROM integration_system \
+         WHERE id = $1 AND kind = 'payment_gateway' AND COALESCE(status, 'active') = 'active' \
+         AND (is_active IS NULL OR is_active = true)",
     )
     .bind(id)
     .fetch_optional(&state.base.db)

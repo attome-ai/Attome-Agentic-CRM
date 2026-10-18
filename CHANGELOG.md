@@ -34,6 +34,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: payment links (F5-T8). `POST /api/v1/billing/payment-links` (`payment_link.create`) makes
+  a single-use, expiring link for an invoice, an order or an amount; the public `GET
+  /api/v1/pay/{token}` and `POST /api/v1/pay/{token}/checkout` (exact bypass matches, rate limited,
+  one 404 for every miss) show it and start the gateway checkout after saving a pending payment. A
+  link is marked used when its payment succeeds, which allocates to the link's invoice first. Pack
+  changeset 0016 adds `payment_link.account_ref`, `customer_payment.payment_link_ref` and the link
+  privileges.
 - Billing: payment gateway webhooks at `POST /api/v1/billing/gateways/{system}/webhook` (an exact
   bypass match; the adapter verifies the call with the gateway's `webhook_secret`), stored once per
   event in the new `billing_gateway_event` table (migration 0106) and applied to their payments by

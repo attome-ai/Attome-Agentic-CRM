@@ -572,6 +572,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "attome-audit",
+ "attome-auth",
  "attome-billing",
  "attome-cache",
  "attome-core",
@@ -1913,6 +1914,7 @@ dependencies = [
  "axum",
  "base64 0.23.1",
  "chrono",
+ "rust_decimal",
  "serde_json",
  "sqlx",
  "tokio",

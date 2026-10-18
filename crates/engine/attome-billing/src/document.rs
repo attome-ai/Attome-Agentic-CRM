@@ -67,7 +67,7 @@ async fn qr_svg(state: &EngineState, invoice_id: Uuid) -> Result<Option<String>,
     ))
 }
 
-fn setting_text(state: &EngineState, key: &str) -> Option<String> {
+pub(crate) fn setting_text(state: &EngineState, key: &str) -> Option<String> {
     attome_core::setting_registry().get(key).and_then(|d| {
         let (value, _) = state.settings.load().resolve(d, None, None);
         value

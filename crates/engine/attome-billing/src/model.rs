@@ -73,6 +73,17 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/gateways/{system}/webhook",
                 post(crate::gateway::webhook::post_webhook),
             )
+            // F5-T8: payment links, and the payment page's two public calls
+            // (bypass-listed; the link's secret is the credential).
+            .route(
+                "/api/v1/billing/payment-links",
+                post(crate::payment::link::post_link),
+            )
+            .route("/api/v1/pay/{token}", get(crate::payment::link::get_pay))
+            .route(
+                "/api/v1/pay/{token}/checkout",
+                post(crate::payment::link::post_checkout),
+            )
             // AG2-T3: the invoice's e-invoice.
             .route(
                 "/api/v1/billing/invoices/{id}/einvoice",

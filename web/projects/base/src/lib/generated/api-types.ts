@@ -8889,6 +8889,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/payment-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/payments": {
         parameters: {
             query?: never;
@@ -10372,6 +10388,38 @@ export interface paths {
         get: operations["openapi_json"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pay/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_pay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pay/{token}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_checkout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16855,6 +16903,18 @@ export interface components {
             /** @description Why it is checked out, shown to others (at most 500 characters). */
             note?: string | null;
         };
+        CheckoutStart: {
+            /** @description The method the payer chose; card by default. */
+            method?: string | null;
+        };
+        CheckoutStarted: {
+            /** Format: uuid */
+            payment_id: string;
+            /** @description Send the payer here (a hosted page)... */
+            redirect_url?: string | null;
+            /** @description ...or embed this form (HyperPay). */
+            widget?: Record<string, never> | null;
+        };
         /** @description One session a supervisor delegated to (N8-T1's run tree). */
         ChildSession: {
             /**
@@ -21703,6 +21763,34 @@ export interface components {
              * @description The other side's record id to link/unlink.
              */
             id: string;
+        };
+        LinkCreated: {
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            link_id: string;
+            /** @description The link to send the payer; shown once. */
+            url: string;
+        };
+        /** @description What a link is for: an invoice, an order, or an amount for an account. */
+        LinkRequest: {
+            /**
+             * Format: uuid
+             * @description With `amount` and `currency`: a free amount for this account.
+             */
+            account_id?: string | null;
+            /** Format: double */
+            amount?: number | null;
+            currency?: string | null;
+            /**
+             * Format: int32
+             * @description 1 to 720; 72 by default.
+             */
+            expires_in_hours?: number | null;
+            /** Format: uuid */
+            invoice_id?: string | null;
+            /** Format: uuid */
+            order_id?: string | null;
         };
         /**
          * @description One field a business rule locks for the writer (D-789 §3.5): `effect` is
@@ -26901,6 +26989,18 @@ export interface components {
         };
         /** @enum {string} */
         PauseReason: "waiting_customer" | "on_hold" | "out_of_scope";
+        /** @description What the payment page shows. */
+        PayView: {
+            /** @description Decimal, as text. */
+            amount: string;
+            currency: string;
+            /** Format: date-time */
+            expires_at: string;
+            invoice_number?: string | null;
+            /** @description `ar` or `en`, from the payer's browser. */
+            locale: string;
+            seller_name?: string | null;
+        };
         /** @description What recording (or applying credit) did. */
         PaymentRecorded: {
             allocations: components["schemas"]["AllocationLine"][];
@@ -63277,6 +63377,66 @@ export interface operations {
             };
         };
     };
+    post_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The link, shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create payment links */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice, order or account in the caller's scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not one target, not payable, or a bad amount, currency or expiry */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_payment: {
         parameters: {
             query?: never;
@@ -67737,6 +67897,110 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_pay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link's `{public_id}.{secret}` */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the payer is asked to pay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayView"];
+                };
+            };
+            /** @description No live link (unknown, wrong, expired, used or cancelled) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many calls from this address */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link's `{public_id}.{secret}` */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutStart"];
+            };
+        };
+        responses: {
+            /** @description The checkout to send the payer to */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutStarted"];
+                };
+            };
+            /** @description No live link (unknown, wrong, expired, used or cancelled) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No gateway takes this payment, or the gateway refused it */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many calls from this address */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The gateway could not be reached */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

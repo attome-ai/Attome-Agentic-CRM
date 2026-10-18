@@ -542,7 +542,10 @@ pub async fn apply_gateway_status_in_tx(
         return Ok(false);
     }
     let found: Option<(Uuid, Option<Uuid>)> = sqlx::query_as(
-        "SELECT id, payer_account_ref FROM customer_payment          WHERE gateway_system_ref = $1 AND gateway_reference = $2            AND (is_active IS NULL OR is_active = true)          ORDER BY id LIMIT 1",
+        "SELECT id, payer_account_ref FROM customer_payment \
+         WHERE gateway_system_ref = $1 AND gateway_reference = $2 \
+         AND (is_active IS NULL OR is_active = true) \
+         ORDER BY id LIMIT 1",
     )
     .bind(system_id.to_string())
     .bind(gateway_reference)
@@ -558,14 +561,19 @@ pub async fn apply_gateway_status_in_tx(
     if let Some(account) = account {
         lock_account(tx, account).await?;
     }
-    let (amount, currency, current): (Option<String>, Option<String>, Option<String>) =
-        sqlx::query_as(
-            "SELECT amount::text, currency, status FROM customer_payment WHERE id = $1 FOR UPDATE",
-        )
-        .bind(payment)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(AppError::internal)?;
+    let (amount, currency, current, link): (
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<Uuid>,
+    ) = sqlx::query_as(
+        "SELECT amount::text, currency, status, payment_link_ref FROM customer_payment \
+         WHERE id = $1 FOR UPDATE",
+    )
+    .bind(payment)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
     let amount = text(amount.as_deref());
     let currency = currency
         .unwrap_or_else(|| "SAR".into())
@@ -583,19 +591,64 @@ pub async fn apply_gateway_status_in_tx(
                 )));
             }
             let received = Utc::now().date_naive();
+            // A payment through a link for an invoice pays that invoice
+            // first; any other is allocated oldest due first.
+            let link_invoice: Option<Uuid> = match link {
+                Some(link) => sqlx::query_scalar::<_, Option<Uuid>>(
+                    "SELECT invoice_ref FROM payment_link WHERE id = $1",
+                )
+                .bind(link)
+                .fetch_optional(&mut **tx)
+                .await
+                .map_err(AppError::internal)?
+                .flatten(),
+                None => None,
+            };
             let credit = match account {
                 Some(account) => {
                     let mut open = open_invoices(tx, account).await?;
                     open.retain(|i| i.currency == currency);
-                    let allocation =
-                        allocate(amount, &currency, &open, None).map_err(alloc_error)?;
+                    let explicit: Option<Vec<(Uuid, Decimal)>> = link_invoice.map(|invoice| {
+                        open.iter()
+                            .find(|i| i.id == invoice)
+                            .map(|i| vec![(invoice, i.open.min(amount))])
+                            .unwrap_or_default()
+                    });
+                    let allocation = allocate(amount, &currency, &open, explicit.as_deref())
+                        .map_err(alloc_error)?;
                     write_allocations(tx, payment, &allocation.lines, received, actor).await?;
                     allocation.credit
                 }
                 None => amount,
             };
+            // The link has done its work.
+            if let Some(link) = link {
+                let used = sqlx::query(
+                    "UPDATE payment_link SET status = 'used', used_at = now(), modified_at = now(), \
+                         row_version = row_version + 1 \
+                     WHERE id = $1 AND COALESCE(status, 'open') = 'open'",
+                )
+                .bind(link)
+                .execute(&mut **tx)
+                .await
+                .map_err(AppError::internal)?
+                .rows_affected();
+                if used > 0 {
+                    emit_named(
+                        tx,
+                        "payment_link",
+                        link,
+                        ChangeOperation::Update,
+                        "billing.payment_link.used",
+                    )
+                    .await?;
+                }
+            }
             sqlx::query(
-                "UPDATE customer_payment SET status = 'succeeded', fee = $2::numeric,                      unallocated = $3::numeric, received_on = $4, modified_at = now(),                      row_version = row_version + 1                  WHERE id = $1",
+                "UPDATE customer_payment SET status = 'succeeded', fee = $2::numeric, \
+                 unallocated = $3::numeric, received_on = $4, modified_at = now(), \
+                 row_version = row_version + 1 \
+                 WHERE id = $1",
             )
             .bind(payment)
             .bind(fee.map(|f| f.to_string()))
@@ -611,7 +664,8 @@ pub async fn apply_gateway_status_in_tx(
                 return Ok(false);
             }
             sqlx::query(
-                "UPDATE customer_payment SET status = 'failed', modified_at = now(),                      row_version = row_version + 1 WHERE id = $1",
+                "UPDATE customer_payment SET status = 'failed', modified_at = now(), \
+                 row_version = row_version + 1 WHERE id = $1",
             )
             .bind(payment)
             .execute(&mut **tx)
@@ -629,7 +683,8 @@ pub async fn apply_gateway_status_in_tx(
                 return Ok(false);
             }
             sqlx::query(
-                "UPDATE customer_payment SET status = $2, modified_at = now(),                      row_version = row_version + 1 WHERE id = $1",
+                "UPDATE customer_payment SET status = $2, modified_at = now(), \
+                 row_version = row_version + 1 WHERE id = $1",
             )
             .bind(payment)
             .bind(next)

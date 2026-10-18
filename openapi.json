@@ -46502,6 +46502,93 @@
         ]
       }
     },
+    "/api/v1/billing/payment-links": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_link",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The link, shown once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create payment links",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice, order or account in the caller's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not one target, not payable, or a bad amount, currency or expiry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/payments": {
       "post": {
         "tags": [
@@ -53283,6 +53370,143 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/pay/{token}": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_pay",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The link's `{public_id}.{secret}`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the payer is asked to pay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live link (unknown, wrong, expired, used or cancelled)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many calls from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pay/{token}/checkout": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_checkout",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The link's `{public_id}.{secret}`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The checkout to send the payer to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutStarted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live link (unknown, wrong, expired, used or cancelled)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No gateway takes this payment, or the gateway refused it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many calls from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The gateway could not be reached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-audit-exempt": {
+          "note": "public payer action; payment audited on success",
+          "reason": "delegated",
+          "via": "BillingGatewayEventApply -> payment::service::apply_gateway_status_in_tx"
+        }
       }
     },
     "/api/v1/portfolio/{id}/summary": {
@@ -80886,6 +81110,44 @@
           }
         }
       },
+      "CheckoutStart": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The method the payer chose; card by default."
+          }
+        }
+      },
+      "CheckoutStarted": {
+        "type": "object",
+        "required": [
+          "payment_id"
+        ],
+        "properties": {
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "redirect_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Send the payer here (a hosted page)..."
+          },
+          "widget": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "...or embed this form (HyperPay)."
+          }
+        }
+      },
       "ChildSession": {
         "type": "object",
         "description": "One session a supervisor delegated to (N8-T1's run tree).",
@@ -92779,6 +93041,78 @@
             "type": "string",
             "format": "uuid",
             "description": "The other side's record id to link/unlink."
+          }
+        }
+      },
+      "LinkCreated": {
+        "type": "object",
+        "required": [
+          "link_id",
+          "url",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "link_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "description": "The link to send the payer; shown once."
+          }
+        }
+      },
+      "LinkRequest": {
+        "type": "object",
+        "description": "What a link is for: an invoice, an order, or an amount for an account.",
+        "properties": {
+          "account_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "With `amount` and `currency`: a free amount for this account."
+          },
+          "amount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_in_hours": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1 to 720; 72 by default.",
+            "minimum": 0
+          },
+          "invoice_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -107402,6 +107736,45 @@
           "on_hold",
           "out_of_scope"
         ]
+      },
+      "PayView": {
+        "type": "object",
+        "description": "What the payment page shows.",
+        "required": [
+          "amount",
+          "currency",
+          "locale",
+          "expires_at"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Decimal, as text."
+          },
+          "currency": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locale": {
+            "type": "string",
+            "description": "`ar` or `en`, from the payer's browser."
+          },
+          "seller_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "PaymentRecorded": {
         "type": "object",

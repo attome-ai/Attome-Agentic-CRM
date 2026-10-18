@@ -133,6 +133,22 @@ fn is_billing_gateway_webhook_path(path: &str) -> bool {
     !system.is_empty() && is_webhook && no_trailing_segment
 }
 
+/// F5-T8: the payment page's two calls, `/api/v1/pay/{token}` and
+/// `/api/v1/pay/{token}/checkout`: one token segment, then nothing or the
+/// literal `checkout`, nothing after. The handlers
+/// (`attome_billing::payment::link`) verify the link's secret and answer the
+/// same 404 for every miss.
+fn is_payment_link_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/v1/pay/") else {
+        return false;
+    };
+    let mut segments = rest.split('/');
+    let token = segments.next().unwrap_or("");
+    let tail = segments.next();
+    let no_trailing_segment = segments.next().is_none();
+    !token.is_empty() && matches!(tail, None | Some("checkout")) && no_trailing_segment
+}
+
 /// The only public route families with intentionally dynamic child segments.
 /// Every entry ends in `/`, so `starts_with` cannot match a sibling such as
 /// `/api/v1/auth/oidc-admin`. (The integrations webhook USED to be a third
@@ -172,6 +188,7 @@ pub fn is_bypass(path: &str) -> bool {
             .any(|prefix| path.starts_with(prefix))
         || is_integrations_webhook_path(path)
         || is_billing_gateway_webhook_path(path)
+        || is_payment_link_path(path)
 }
 
 /// Paths that skip authn/authz (they are in `EXACT_BYPASS_PATHS` above) but
@@ -402,6 +419,22 @@ mod tests {
         assert!(!is_bypass("/api/v1/billing/gateways/"));
         assert!(!is_bypass("/api/v1/billing/gateways//webhook"));
         assert!(!is_bypass("/api/v1/billing/payments"));
+    }
+
+    #[test]
+    fn payment_link_paths_exact() {
+        let token = "0192f0a1-7c4b-7a39-9a51-6f2b8c3d4e5f.secret";
+        assert!(is_bypass(&format!("/api/v1/pay/{token}")));
+        assert!(is_bypass(&format!("/api/v1/pay/{token}/checkout")));
+        assert!(is_csrf_exempt(&format!("/api/v1/pay/{token}/checkout")));
+        // Nothing else under a token, nor the bare prefix, nor an empty token,
+        // nor the staff route that creates links.
+        assert!(!is_bypass(&format!("/api/v1/pay/{token}/refund")));
+        assert!(!is_bypass(&format!("/api/v1/pay/{token}/checkout/extra")));
+        assert!(!is_bypass("/api/v1/pay/"));
+        assert!(!is_bypass("/api/v1/pay//checkout"));
+        assert!(!is_bypass("/api/v1/pay"));
+        assert!(!is_bypass("/api/v1/billing/payment-links"));
     }
 
     #[test]

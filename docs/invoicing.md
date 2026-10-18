@@ -114,6 +114,13 @@ Attome never sees a card number.
     "webhook_secret": "<the webhook's 64-character hex key>"}`; mada always has its own entity.
 - `billing.gateway.rules` picks the gateway for a payment by currency, payer country and amount; the
   first rule that matches wins.
+- `POST /api/v1/billing/payment-links` (`payment_link.create`) makes a single-use link for an issued
+  invoice's open amount, an order's total, or an amount for an account, valid 72 hours unless
+  `expires_in_hours` (1 to 720) says otherwise. The link is shown once:
+  `<app.public_frontend_url>/pay/<public_id>.<secret>`; only a hash of the secret is kept. The page
+  reads `GET /api/v1/pay/{token}` and starts payment with `POST /api/v1/pay/{token}/checkout`; both
+  are public, rate limited, and answer the same 404 for a wrong, expired, used or cancelled link.
+  A link is used when its payment succeeds, which pays its invoice first.
 - The gateway's webhook URL is `https://<deployment>/api/v1/billing/gateways/<system id>/webhook`.
   A call whose secret (Moyasar) or encryption (HyperPay) does not verify gets `401`. Each verified
   event is stored once and applied by a background job, so a redelivered event never changes a

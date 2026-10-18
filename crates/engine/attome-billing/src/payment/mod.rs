@@ -2,4 +2,5 @@
 //! code) and the payment service built on it.
 
 pub mod allocate;
+pub mod link;
 pub mod service;
