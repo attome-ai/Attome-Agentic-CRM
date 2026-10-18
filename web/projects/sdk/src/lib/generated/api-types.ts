@@ -1832,7 +1832,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_run"];
+        get: operations["get_data_step_run"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1850,7 +1850,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cancel_run"];
+        post: operations["cancel_data_step_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1866,7 +1866,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["pause_run"];
+        post: operations["pause_data_step_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1882,7 +1882,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["resume_run"];
+        post: operations["resume_data_step_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2876,6 +2876,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_entity_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entities/{entity_id}/index-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["index_proposals"];
         put?: never;
         post?: never;
         delete?: never;
@@ -21717,6 +21733,31 @@ export interface components {
             /** Format: int64 */
             imported_count: number;
         };
+        /** @description The advice for one entity. */
+        IndexAdvice: {
+            /** @description `false` when pg_stat_statements cannot be read (see `reason`). */
+            available: boolean;
+            proposals: components["schemas"]["IndexProposalView"][];
+            reason?: string | null;
+        };
+        /** @description One proposed index. */
+        IndexProposalView: {
+            attribute: string;
+            /** Format: int64 */
+            calls: number;
+            /**
+             * Format: uuid
+             * @description The attribute to make filterable to build the index.
+             */
+            field_id?: string | null;
+            /**
+             * Format: int64
+             * @description Slow statements that filter on it, and their calls.
+             */
+            statements: number;
+            /** Format: double */
+            worst_mean_ms: number;
+        };
         /** @description The indexer's own state, shared by every collection. */
         IndexerStatus: {
             /**
@@ -40431,7 +40472,7 @@ export interface operations {
             };
         };
     };
-    get_run: {
+    get_data_step_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -40480,7 +40521,7 @@ export interface operations {
             };
         };
     };
-    cancel_run: {
+    cancel_data_step_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -40538,7 +40579,7 @@ export interface operations {
             };
         };
     };
-    pause_run: {
+    pause_data_step_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -40596,7 +40637,7 @@ export interface operations {
             };
         };
     };
-    resume_run: {
+    resume_data_step_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -44014,6 +44055,55 @@ export interface operations {
                 };
             };
             /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    index_proposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposed indexes, most called first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexAdvice"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
             403: {
                 headers: {
                     [name: string]: unknown;

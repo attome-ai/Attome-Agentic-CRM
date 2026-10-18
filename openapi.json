@@ -10450,7 +10450,7 @@
         "tags": [
           "admin"
         ],
-        "operationId": "get_run",
+        "operationId": "get_data_step_run",
         "parameters": [
           {
             "name": "id",
@@ -10519,7 +10519,7 @@
         "tags": [
           "admin"
         ],
-        "operationId": "cancel_run",
+        "operationId": "cancel_data_step_run",
         "parameters": [
           {
             "name": "id",
@@ -10607,7 +10607,7 @@
         "tags": [
           "admin"
         ],
-        "operationId": "pause_run",
+        "operationId": "pause_data_step_run",
         "parameters": [
           {
             "name": "id",
@@ -10695,7 +10695,7 @@
         "tags": [
           "admin"
         ],
-        "operationId": "resume_run",
+        "operationId": "resume_data_step_run",
         "parameters": [
           {
             "name": "id",
@@ -16073,6 +16073,75 @@
           },
           "403": {
             "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/index-proposals": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "index_proposals",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed indexes, most called first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexAdvice"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
             "content": {
               "application/json": {
                 "schema": {
@@ -93920,6 +93989,68 @@
           "imported_count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "IndexAdvice": {
+        "type": "object",
+        "description": "The advice for one entity.",
+        "required": [
+          "available",
+          "proposals"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "`false` when pg_stat_statements cannot be read (see `reason`)."
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndexProposalView"
+            }
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "IndexProposalView": {
+        "type": "object",
+        "description": "One proposed index.",
+        "required": [
+          "attribute",
+          "statements",
+          "calls",
+          "worst_mean_ms"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "calls": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "field_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The attribute to make filterable to build the index."
+          },
+          "statements": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Slow statements that filter on it, and their calls."
+          },
+          "worst_mean_ms": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
