@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Templates: `attome_html::tmpl` (Z13-T2), the one template language: text with `{{ expression }}`,
+  `{% if %}...{% else %}...{% end %}` and `{% for item in list limit N %}...{% end %}` (N at most
+  1,000; a longer list is an error), every expression a V2 rule compiled once against the
+  template's schema; errors carry their line and column; HTML output escapes every value.
 - Rules: Hijri, zone and working-day functions (Z11-T4, V2): `hijri_year`, `hijri_month`,
   `hijri_day`, `hijri_date`, `add_workdays`, `workdays_between`, `is_working` and `to_zone`; the
   working-day ones use the business calendar the caller supplies (`Context::with_calendar`) and

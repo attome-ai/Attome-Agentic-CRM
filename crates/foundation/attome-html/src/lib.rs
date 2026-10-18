@@ -33,6 +33,7 @@ use std::collections::{HashMap, HashSet};
 
 pub mod main_content;
 mod template;
+pub mod tmpl;
 pub use template::{escape_html, merge_placeholders};
 
 use ammonia::{Builder, UrlRelative};
