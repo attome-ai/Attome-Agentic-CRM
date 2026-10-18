@@ -7,6 +7,8 @@ use axum::{Router, routing::get};
 mod access;
 /// Y12-T8: a renamed attribute's old name during its alias period.
 pub(crate) mod aliases;
+/// A27-T3 — changing a record's type, with a preview.
+mod change_type;
 pub mod clone;
 mod expand;
 pub mod favourites;
@@ -152,6 +154,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(list::openapi_fragment());
     doc.merge(hierarchy::openapi_fragment());
     doc.merge(merge::openapi_fragment());
+    doc.merge(change_type::openapi_fragment());
     doc.merge(related::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(history::openapi_fragment());
@@ -321,6 +324,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/merge",
             axum::routing::post(merge::merge_records),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/change-type",
+            axum::routing::post(change_type::change_type),
         )
         .route(
             "/api/v1/{entity}/{id}/merge/preview",

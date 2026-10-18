@@ -61,6 +61,12 @@ pub struct RecordType {
     pub default_for_roles: Vec<Uuid>,
     #[serde(default)]
     pub defaults: Map<String, Value>,
+    /// A27-T3: the form a record of this type shows.
+    #[serde(default)]
+    pub form: Option<Uuid>,
+    /// A27-T3: the state model a record of this type moves through.
+    #[serde(default)]
+    pub state_model: Option<Uuid>,
 }
 
 /// The newest published version of every record type of `entity_id`.
@@ -84,6 +90,54 @@ pub async fn published_types(db: &DbPool, entity_id: Uuid) -> Result<Vec<RecordT
         .into_iter()
         .filter_map(|doc| serde_json::from_value(doc).ok())
         .collect())
+}
+
+/// A27-T3: the logical names of the attributes the published form `form`
+/// shows; `None` when the form has no published version.
+pub async fn form_attributes(
+    db: &DbPool,
+    form: Uuid,
+) -> Result<Option<std::collections::HashSet<String>>, AppError> {
+    let doc: Option<Value> = sqlx::query_scalar(
+        "SELECT v.doc FROM metadata_object o          JOIN metadata_object_version v ON v.object_id = o.id          WHERE o.id = $1 AND o.kind = 'form' AND o.is_active AND v.state = 'published'          ORDER BY v.version_no DESC LIMIT 1",
+    )
+    .bind(form)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(doc) = doc else {
+        return Ok(None);
+    };
+    let ids: Vec<Uuid> = doc["sections"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|section| section["fields"].as_array().into_iter().flatten())
+        .filter_map(|field| field.as_str().and_then(|s| Uuid::parse_str(s).ok()))
+        .collect();
+    let names: Vec<String> =
+        sqlx::query_scalar("SELECT logicalname FROM attribute_info WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(Some(names.into_iter().collect()))
+}
+
+/// A27-T3: the stage a record of a type starts in: its state model's id,
+/// state attribute and initial state.
+pub async fn initial_stage(
+    db: &DbPool,
+    state_model: Uuid,
+) -> Result<Option<(Uuid, String, String)>, AppError> {
+    let row: Option<(String, String)> = sqlx::query_as(
+        "SELECT state_field, initial_state FROM state_model          WHERE id = $1 AND is_active AND NOT is_deleted",
+    )
+    .bind(state_model)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(row.map(|(field, initial)| (state_model, field, initial)))
 }
 
 /// The type a new record gets: the one it names, else its role's default,

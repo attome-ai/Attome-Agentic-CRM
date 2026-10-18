@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Changing a record's type (A27-T3): `POST /api/v1/{entity}/{id}/change-type?preview=true` lists the attributes
+  holding a value the new type's form does not show and the stage a record of that type starts in; without
+  `preview` it changes the type through the ordinary audited update (`row_version` required), clearing only
+  the attributes named in `clear`.
 - Record types per role (A27-T2): a record type may name the roles that may create it (`roles`) and the roles
   it is the default for (`default_for_roles`). A create that names no type gets its role's default, else the
   entity's default, and the type's `defaults` fill fields left out; a type the caller's roles may not use
