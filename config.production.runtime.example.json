@@ -103,6 +103,7 @@
     "jwt_secret": "${JWT_SECRET}",
     "jwt_issuer": "attome",
     "jwt_audience": "",
+    "jwt_signing_keys": { "active_key_id": "", "keys": {} },
     "apikey_hash_pepper": "${APIKEY_HASH_PEPPER}",
     "apikey_hash_pepper_id": 0,
     "apikey_hash_previous_peppers": [],

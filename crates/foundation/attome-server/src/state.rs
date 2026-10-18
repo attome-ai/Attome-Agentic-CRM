@@ -212,6 +212,8 @@ impl AppState {
         crate::middleware::idempotency_durable::install_response_key(
             config.idempotency.response_encryption_key.as_ref(),
         );
+        // Z4-T3: the Ed25519 token-signing ring, when configured.
+        attome_auth::jwt::install_signing_keys(&config.auth.jwt_signing_keys);
         Self {
             config: Arc::new(config),
             db,

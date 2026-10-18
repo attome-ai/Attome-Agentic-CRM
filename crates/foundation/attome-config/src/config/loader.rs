@@ -714,6 +714,7 @@ impl AppConfig {
             validate_cache_timeout_ms("cache.roles.coordination.timeout", coordination.timeout)?;
         }
         Self::check_secret_ring("auth.jwt_secret", &self.auth.jwt_secret, production)?;
+        Self::check_signing_seeds("auth.jwt_signing_keys", &self.auth.jwt_signing_keys)?;
         // P-api-key-hashing (D-112, revised) — unconditional, unlike the
         // flag-gated secrets below: every deployment authenticates api-key
         // requests. Every pepper in the ring (current + previous) is
@@ -2198,6 +2199,34 @@ impl AppConfig {
     /// one (it still decrypts real data / verifies real tokens), so an
     /// unresolved `${VAR}` or too-short value anywhere in the map is just as
     /// much a boot error as one in the active slot.
+    /// Z4-T3: an Ed25519 seed ring is optional, but every key in it is 64 hex
+    /// characters and a non-empty ring names an active key. The message
+    /// names the key id, never its value.
+    fn check_signing_seeds(field: &str, ring: &KeyRing) -> Result<(), ConfigError> {
+        if ring.is_empty() {
+            return Ok(());
+        }
+        if ring.active().is_none() {
+            return Err(ConfigError::Invalid {
+                field: field.into(),
+                reason: format!(
+                    "active_key_id {:?} does not name any entry in keys",
+                    ring.active_key_id
+                ),
+            });
+        }
+        Self::check_key_ring_ids(field, ring)?;
+        for (key_id, seed) in &ring.keys {
+            if seed.len() != 64 || !seed.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return Err(ConfigError::Invalid {
+                    field: format!("{field}.keys.{key_id}"),
+                    reason: "an Ed25519 seed is 32 bytes written as 64 hex characters".into(),
+                });
+            }
+        }
+        Ok(())
+    }
+
     fn check_secret_ring(field: &str, ring: &KeyRing, production: bool) -> Result<(), ConfigError> {
         if ring.is_empty() {
             return Err(ConfigError::Insecure {

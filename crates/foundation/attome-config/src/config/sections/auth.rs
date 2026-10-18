@@ -27,6 +27,13 @@ pub struct AuthSection {
     /// (retired) entry left in the ring is accepted for verification during a
     /// rotation's overlap window and rejected once removed.
     pub jwt_secret: KeyRing,
+    /// Z4-T3: Ed25519 signing keys for session and pending tokens, each a
+    /// 32-byte seed as 64 hex characters, by key id. When the ring has an
+    /// active key, new tokens are signed EdDSA under it; `jwt_secret` keeps
+    /// verifying the HS256 tokens already issued until they expire, so the
+    /// cut-over logs nobody out. Empty (the default) keeps HS256.
+    #[serde(default)]
+    pub jwt_signing_keys: KeyRing,
     pub jwt_issuer: String,
     /// P-key-rotation-and-jwt (c) — the `aud` claim every session/pending
     /// token carries and is validated against. Empty (the default) means
@@ -252,6 +259,7 @@ impl std::fmt::Debug for AuthSection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AuthSection")
             .field("jwt_secret", &self.jwt_secret)
+            .field("jwt_signing_keys", &self.jwt_signing_keys)
             .field("jwt_issuer", &self.jwt_issuer)
             .field("jwt_audience", &self.jwt_audience)
             .field("access_token_expiry_mins", &self.access_token_expiry_mins)

@@ -555,6 +555,7 @@ dependencies = [
  "attome-types",
  "base64 0.23.1",
  "chrono",
+ "ed25519-dalek",
  "fred",
  "hex",
  "hmac 0.12.1",

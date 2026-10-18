@@ -194,6 +194,7 @@ fn path_text(path: &[String]) -> String {
 /// covers everything under it, so a key ring's `keys[n].secret` counts too.
 const SECRET_PATHS: &[&str] = &[
     "auth.jwt_secret",
+    "auth.jwt_signing_keys",
     "auth.mfa_encryption_key",
     "auth.oauth_google_client_secret",
     "auth.apikey_hash_pepper",

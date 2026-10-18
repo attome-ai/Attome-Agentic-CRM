@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Session and pending tokens can be signed with Ed25519 (Z4-T3): `auth.jwt_signing_keys` holds
+  32-byte seeds (64 hex characters) by key id. With an active key, new tokens are EdDSA under it;
+  HS256 tokens already issued keep verifying under `auth.jwt_secret` until they expire, and any
+  other `alg` is refused. Empty (the default) keeps HS256. A malformed seed fails config load,
+  naming the key id only.
 - Sign-in slows down and resists password spraying (Q20-T2): after three failed sign-ins in a row
   an account's attempts wait 1, 2, 4, 8, 16 and then 30 seconds (never past the request timeout
   less five seconds) before the password is checked, and a success clears the streak. Ten

@@ -11,17 +11,97 @@
 //! in the ring — same overlap-window mechanism as `envelope.rs`'s `KeyRing`
 //! use elsewhere, deliberately the same shape per plan §4).
 
+use std::sync::{Arc, PoisonError, RwLock};
+
 use crate::session::{SessionClaims, SessionId, TokenType};
 use attome_config::KeyRing;
 use attome_types::AppError;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, decode_header, encode};
+use jsonwebtoken::{
+    Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, decode_header, encode,
+};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
 
+// ── Z4-T3: EdDSA signing ─────────────────────────────────────────────────────
+//
+// `auth.jwt_signing_keys` holds Ed25519 seeds by key id. It is installed once
+// per configuration load ([`install_signing_keys`], from `AppState::new`),
+// so the public functions below keep taking only the HS256 ring every caller
+// already passes. With an active seed, new tokens are EdDSA; a token's header
+// `alg` picks the verifier, so HS256 tokens issued before the cut-over keep
+// verifying under `jwt_secret` until they expire. Any other `alg` is refused.
+
+static SIGNING_KEYS: RwLock<Option<Arc<KeyRing>>> = RwLock::new(None);
+
+/// Installs the Ed25519 ring (`auth.jwt_signing_keys`); an empty ring
+/// returns signing to HS256.
+pub fn install_signing_keys(ring: &KeyRing) {
+    let next = (!ring.is_empty()).then(|| Arc::new(ring.clone()));
+    *SIGNING_KEYS.write().unwrap_or_else(PoisonError::into_inner) = next;
+}
+
+fn signing_keys() -> Option<Arc<KeyRing>> {
+    SIGNING_KEYS
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone()
+}
+
+/// A seed from its hex form.
+fn ed25519_seed(hex_seed: &str) -> Result<[u8; 32], AppError> {
+    hex::decode(hex_seed)
+        .ok()
+        .and_then(|bytes| <[u8; 32]>::try_from(bytes).ok())
+        .ok_or_else(|| AppError::internal("auth.jwt_signing_keys holds a malformed seed"))
+}
+
+/// The PKCS#8 v1 document for an Ed25519 seed (RFC 8410), which is what
+/// `EncodingKey::from_ed_der` reads.
+fn ed25519_pkcs8(seed: &[u8; 32]) -> Vec<u8> {
+    const PREFIX: [u8; 16] = [
+        0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04,
+        0x20,
+    ];
+    let mut der = PREFIX.to_vec();
+    der.extend_from_slice(seed);
+    der
+}
+
+/// The raw public key for a seed, which is what `DecodingKey::from_ed_der`
+/// reads.
+fn ed25519_public(seed: &[u8; 32]) -> [u8; 32] {
+    ed25519_dalek::SigningKey::from_bytes(seed)
+        .verifying_key()
+        .to_bytes()
+}
+
 /// Mints a token for any claims type that carries `typ`/`iss`/`aud` the same
-/// way `SessionClaims`/`mfa::PendingClaims` do — signed under `ring`'s active
-/// key, with that key's id stamped in the header as `kid`.
+/// way `SessionClaims`/`mfa::PendingClaims` do — signed under the installed
+/// Ed25519 ring's active key when there is one (Z4-T3), else `ring`'s
+/// active HS256 key, with that key's id stamped in the header as `kid`.
 pub(crate) fn encode_claims<T: Serialize>(claims: &T, ring: &KeyRing) -> Result<String, AppError> {
+    encode_claims_with(claims, ring, signing_keys().as_deref())
+}
+
+/// [`encode_claims`] with the Ed25519 ring passed explicitly.
+pub(crate) fn encode_claims_with<T: Serialize>(
+    claims: &T,
+    ring: &KeyRing,
+    eddsa: Option<&KeyRing>,
+) -> Result<String, AppError> {
+    if let Some(eddsa) = eddsa
+        && let Some(seed) = eddsa.active()
+    {
+        let seed = ed25519_seed(seed)?;
+        let mut header = Header::new(Algorithm::EdDSA);
+        header.kid = Some(eddsa.active_key_id.clone());
+        return encode(
+            &header,
+            claims,
+            &EncodingKey::from_ed_der(&ed25519_pkcs8(&seed)),
+        )
+        .map_err(AppError::internal);
+    }
     let active_secret = ring
         .active()
         .ok_or_else(|| AppError::internal("auth.jwt_secret has no active key configured"))?;
@@ -55,10 +135,34 @@ pub(crate) fn decode_claims<T: DeserializeOwned>(
     token: &str,
     ring: &KeyRing,
 ) -> Result<T, AppError> {
-    let kid = decode_header(token)
-        .ok()
-        .and_then(|h| h.kid)
-        .ok_or(AppError::Unauthorized)?;
+    decode_claims_with(token, ring, signing_keys().as_deref())
+}
+
+/// [`decode_claims`] with the Ed25519 ring passed explicitly. The header's
+/// `alg` picks the ring: `EdDSA` the Ed25519 one, `HS256` `ring`; anything
+/// else is refused.
+pub(crate) fn decode_claims_with<T: DeserializeOwned>(
+    token: &str,
+    ring: &KeyRing,
+    eddsa: Option<&KeyRing>,
+) -> Result<T, AppError> {
+    let header = decode_header(token).map_err(|_| AppError::Unauthorized)?;
+    let kid = header.kid.ok_or(AppError::Unauthorized)?;
+    match header.alg {
+        Algorithm::HS256 => {}
+        Algorithm::EdDSA => {
+            let seed = eddsa
+                .and_then(|ring| ring.get(&kid))
+                .ok_or(AppError::Unauthorized)?;
+            let public = ed25519_public(&ed25519_seed(seed)?);
+            let mut validation = Validation::new(Algorithm::EdDSA);
+            validation.validate_aud = false;
+            return decode::<T>(token, &DecodingKey::from_ed_der(&public), &validation)
+                .map(|data| data.claims)
+                .map_err(|_| AppError::Unauthorized);
+        }
+        _ => return Err(AppError::Unauthorized),
+    }
     let secret = ring.get(&kid).ok_or(AppError::Unauthorized)?;
 
     // required_spec_claims defaults to {"exp"} — jsonwebtoken's own 60s
@@ -175,6 +279,94 @@ pub fn validate_session_token(
         return Err(AppError::Unauthorized);
     }
     Ok((claims, sid))
+}
+
+#[cfg(test)]
+mod eddsa_tests {
+    use super::*;
+
+    fn hs256() -> KeyRing {
+        KeyRing::single("test-only-hs256-secret-32-bytes-minimum".into())
+    }
+
+    fn eddsa(kid: &str, seed_byte: u8) -> KeyRing {
+        KeyRing {
+            keys: std::iter::once((kid.to_owned(), format!("{seed_byte:02x}").repeat(32)))
+                .collect(),
+            active_key_id: kid.to_owned(),
+        }
+    }
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    struct Claims {
+        sub: String,
+        exp: i64,
+    }
+
+    fn claims() -> Claims {
+        Claims {
+            sub: "someone".into(),
+            exp: chrono::Utc::now().timestamp() + 600,
+        }
+    }
+
+    #[test]
+    fn eddsa_token_round_trips() {
+        let ring = eddsa("ed1", 7);
+        let token = encode_claims_with(&claims(), &hs256(), Some(&ring)).unwrap();
+        let header = decode_header(&token).unwrap();
+        assert_eq!(header.alg, Algorithm::EdDSA);
+        assert_eq!(header.kid.as_deref(), Some("ed1"));
+        let back: Claims = decode_claims_with(&token, &hs256(), Some(&ring)).unwrap();
+        assert_eq!(back, claims_with_exp(back.exp));
+        // Another seed under the same kid does not verify it.
+        assert!(decode_claims_with::<Claims>(&token, &hs256(), Some(&eddsa("ed1", 8))).is_err());
+    }
+
+    fn claims_with_exp(exp: i64) -> Claims {
+        Claims {
+            sub: "someone".into(),
+            exp,
+        }
+    }
+
+    #[test]
+    fn hs256_token_still_verifies_during_cutover() {
+        let old = encode_claims_with(&claims(), &hs256(), None).unwrap();
+        assert_eq!(decode_header(&old).unwrap().alg, Algorithm::HS256);
+        let back: Claims = decode_claims_with(&old, &hs256(), Some(&eddsa("ed1", 7))).unwrap();
+        assert_eq!(back.sub, "someone");
+    }
+
+    #[test]
+    fn alg_none_is_refused() {
+        use base64::Engine;
+        let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let header = b64.encode(br#"{"alg":"none","typ":"JWT","kid":"legacy"}"#);
+        let body = b64.encode(serde_json::to_vec(&claims()).unwrap());
+        let token = format!("{header}.{body}.");
+        assert!(decode_claims_with::<Claims>(&token, &hs256(), Some(&eddsa("ed1", 7))).is_err());
+        // HS384 under a known kid is refused too: only HS256 and EdDSA verify.
+        let mut hs384 = Header::new(Algorithm::HS384);
+        hs384.kid = Some("legacy".into());
+        let token = encode(
+            &hs384,
+            &claims(),
+            &EncodingKey::from_secret(hs256().active().unwrap().as_bytes()),
+        )
+        .unwrap();
+        assert!(decode_claims_with::<Claims>(&token, &hs256(), None).is_err());
+    }
+
+    #[test]
+    fn eddsa_token_with_unknown_kid_is_refused() {
+        let token = encode_claims_with(&claims(), &hs256(), Some(&eddsa("ed1", 7))).unwrap();
+        assert!(decode_claims_with::<Claims>(&token, &hs256(), Some(&eddsa("ed2", 7))).is_err());
+        assert!(
+            decode_claims_with::<Claims>(&token, &hs256(), None).is_err(),
+            "no Ed25519 ring installed"
+        );
+    }
 }
 
 #[cfg(test)]
