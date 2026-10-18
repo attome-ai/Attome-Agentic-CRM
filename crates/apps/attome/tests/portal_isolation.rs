@@ -1077,7 +1077,10 @@ async fn t06_no_staff_route_accepts_a_portal_session() {
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let token = w.a1.cookie.split_once('=').unwrap().1.to_owned();
     let bypass = |p: &str| {
-        attome_server::middleware::bypass::EXACT_BYPASS_PATHS.contains(&p)
+        // The public routes the middleware itself bypasses, the
+        // segment-shaped ones (the payment page, webhooks) included.
+        attome_server::middleware::bypass::is_bypass(p)
+            || attome_server::middleware::bypass::EXACT_BYPASS_PATHS.contains(&p)
             || attome_server::middleware::bypass::BYPASS_SUBTREE_PREFIXES
                 .iter()
                 .any(|prefix| p.starts_with(prefix))
