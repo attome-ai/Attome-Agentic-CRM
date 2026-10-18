@@ -336,5 +336,10 @@
     "hour": 2,
     "pg_dump": null,
     "files": true
+  },
+  "_shed_comment": "AB5-T7: slots per request class; above interactive_high_water interactive requests in flight, reports, exports and AI calls run one at a time.",
+  "shed": {
+    "permits": { "report": 8, "export": 4, "ai": 8, "background": 4 },
+    "interactive_high_water": 200
   }
 }

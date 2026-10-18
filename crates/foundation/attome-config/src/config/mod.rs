@@ -54,6 +54,7 @@ pub use sections::observability::{
     SesSettings,
 };
 pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
+pub use sections::shed::{ShedPermits, ShedSection};
 pub use sections::storage::{S3Target, StorageSection};
 pub use sections::webchat::WebchatSection;
 pub use sections::webcrawl::WebcrawlSection;
@@ -227,6 +228,10 @@ pub struct AppConfig {
     /// U6-T1 — the daily local database backup. On by default.
     #[serde(default)]
     pub backup: BackupSection,
+
+    /// AB5-T7 — priority load shedding: slots per request class.
+    #[serde(default)]
+    pub shed: ShedSection,
 
     /// BCF-5 (D-615) — the `${VAR}` names `from_file` left unresolved,
     /// recorded so the production profile can refuse boot even under

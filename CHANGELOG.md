@@ -55,6 +55,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Priority load shedding (AB5-T7): reports, exports and AI calls each hold a number of slots
+  (`shed.permits`); while more than `shed.interactive_high_water` interactive requests are in
+  flight, each of those classes runs one request at a time, and a request that cannot get a slot
+  within two seconds is refused with 503 `overloaded` and `Retry-After: 5`. Counted in
+  `requests_shed_total`.
 - Configuration fingerprints (Z1-T7): every node start records a SHA-256 fingerprint of its loaded
   configuration with secrets masked (`config_start`, migration 0118);
   `GET /api/v1/admin/config/starts` lists starts and `/starts/diff?a=&b=` names the keys that

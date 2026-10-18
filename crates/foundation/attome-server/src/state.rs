@@ -167,6 +167,8 @@ pub struct AppState {
     /// change-log watermark, starting a catch-up); set once at engine start.
     pub metadata_hooks:
         Arc<std::sync::OnceLock<Arc<crate::middleware::metadata_pin::MetadataHooks>>>,
+    /// AB5-T7 — the load-shedding slots, sized from `shed` at start.
+    pub shedder: Arc<crate::middleware::shed::Shedder>,
     /// S3 (BSV-F15) — the same drain event as `AppState::draining`, in a form a
     /// long-lived stream can `.await`: a stream that holds the graceful-shutdown
     /// deadline open (xrm-ai's chat stream, trd-engine's quote stream) creates
@@ -204,6 +206,7 @@ impl AppState {
         storage: StorageClient,
     ) -> Self {
         let secrets = MetadataCache::new(SecretRings::from_config(&config));
+        let shedder = Arc::new(crate::middleware::shed::Shedder::new(&config.shed));
         Self {
             config: Arc::new(config),
             db,
@@ -227,6 +230,7 @@ impl AppState {
             metadata_lagging: Arc::new(AtomicBool::new(false)),
             metadata_version: Arc::new(std::sync::atomic::AtomicI64::new(0)),
             metadata_hooks: Arc::new(std::sync::OnceLock::new()),
+            shedder,
             // S3 — no receivers at construction, so the initial `send` is a
             // no-op; `shutdown_signal()` subscribes on demand.
             drain_signal: tokio::sync::watch::channel(false).0,

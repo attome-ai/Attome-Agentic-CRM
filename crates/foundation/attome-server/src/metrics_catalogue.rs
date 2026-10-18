@@ -871,6 +871,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "استطلاعات البيانات الوصفية التي أعادت بناء السجل كاملًا.",
     },
     MetricInfo {
+        name: "requests_shed_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Report, export and AI requests refused because the server was busy with interactive work.",
+        ar: "طلبات تقارير وتصدير وذكاء اصطناعي رُفضت لانشغال الخادم بالعمل التفاعلي.",
+    },
+    MetricInfo {
         name: "s2s_access_log_stream_pending",
         kind: "gauge",
         unit: "entries",

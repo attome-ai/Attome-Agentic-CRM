@@ -22,6 +22,7 @@ pub(crate) mod metadata;
 pub(crate) mod observability;
 pub(crate) mod platform;
 pub(crate) mod portal;
+pub(crate) mod shed;
 pub(crate) mod storage;
 pub(crate) mod webchat;
 pub(crate) mod webcrawl;

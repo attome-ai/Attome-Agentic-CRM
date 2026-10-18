@@ -259,5 +259,6 @@
     "_release_report_comment": "release_report omitted: the release report notifies system.admin holders by default; set metadata.release_report.notify_roles to name other roles (see config.example.json).",
     "_comment": "Solution 7 (D-785) — changeset recording; mode null = the profile default (auto on production). See config.example.json.",
     "changesets": { "mode": null, "auto_layer": "project" }
-  }
+  },
+  "_shed_comment": "AB5-T7: load shedding keeps its defaults (see config.example.json); size the slots to the server."
 }
