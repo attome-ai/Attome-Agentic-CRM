@@ -29,6 +29,7 @@
 
 use attome_config::KeyRing;
 use attome_types::AppError;
+use attome_types::secret::SecretString;
 use base64::{Engine, engine::general_purpose::STANDARD as B64};
 
 use aes_gcm::{
@@ -69,13 +70,14 @@ pub fn encrypt_bound(
 }
 
 /// Q18-T2: opens a value [`encrypt_bound`] wrote for `binding`, or a `0x01`
-/// value written by [`encrypt`] before the column was bound.
+/// value written by [`encrypt`] before the column was bound. Q18-T5: the
+/// plaintext comes back as a [`SecretString`].
 pub fn decrypt_bound(
     field_name: &str,
     ring: &KeyRing,
     encoded: &str,
     binding: RowBinding<'_>,
-) -> Result<String, AppError> {
+) -> Result<SecretString, AppError> {
     let combined = B64
         .decode(encoded)
         .map_err(|_| AppError::internal(format!("{field_name} ciphertext is not valid base64")))?;
@@ -86,6 +88,7 @@ pub fn decrypt_bound(
     };
     let plaintext = decrypt_bytes_with_aad(field_name, ring, &combined, &aad)?;
     String::from_utf8(plaintext)
+        .map(SecretString::new)
         .map_err(|_| AppError::internal(format!("{field_name} decrypted to invalid UTF-8")))
 }
 
@@ -235,7 +238,7 @@ impl attome_cache::tiered::ValueSealer for CacheSealer {
     }
 
     fn open(&self, sealed: &str) -> Result<String, AppError> {
-        decrypt("cache.encryption_key", &self.ring, sealed)
+        decrypt("cache.encryption_key", &self.ring, sealed).map(SecretString::into_exposed)
     }
 }
 
@@ -245,13 +248,15 @@ pub fn encrypt(field_name: &str, ring: &KeyRing, plaintext: &str) -> Result<Stri
     Ok(B64.encode(encrypt_bytes(field_name, ring, plaintext.as_bytes())?))
 }
 
-/// `String`/base64 convenience wrapper over [`decrypt_bytes`].
-pub fn decrypt(field_name: &str, ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
+/// `String`/base64 convenience wrapper over [`decrypt_bytes`]. Q18-T5: the
+/// plaintext comes back as a [`SecretString`].
+pub fn decrypt(field_name: &str, ring: &KeyRing, encoded: &str) -> Result<SecretString, AppError> {
     let combined = B64
         .decode(encoded)
         .map_err(|_| AppError::internal(format!("{field_name} ciphertext is not valid base64")))?;
     let plaintext = decrypt_bytes(field_name, ring, &combined)?;
     String::from_utf8(plaintext)
+        .map(SecretString::new)
         .map_err(|_| AppError::internal(format!("{field_name} decrypted to invalid UTF-8")))
 }
 
@@ -359,7 +364,7 @@ pub fn canary(field_name: &str, ring: &KeyRing) -> Result<(), AppError> {
     const CANARY_PLAINTEXT: &str = "P-key-rotation-and-jwt boot canary";
     let encrypted = encrypt(field_name, ring, CANARY_PLAINTEXT)?;
     let decrypted = decrypt(field_name, ring, &encrypted)?;
-    if decrypted != CANARY_PLAINTEXT {
+    if decrypted.expose_secret() != CANARY_PLAINTEXT {
         return Err(AppError::internal(format!(
             "{field_name} boot canary round-trip produced the wrong plaintext"
         )));
@@ -386,7 +391,9 @@ mod bound_tests {
         let sealed = encrypt_bound("f", &ring, "secret", binding(row)).unwrap();
         assert!(stored_is_bound(&sealed));
         assert_eq!(
-            decrypt_bound("f", &ring, &sealed, binding(row)).unwrap(),
+            decrypt_bound("f", &ring, &sealed, binding(row))
+                .unwrap()
+                .expose_secret(),
             "secret"
         );
         assert!(decrypt_bound("f", &ring, &sealed, binding(uuid::Uuid::now_v7())).is_err());
@@ -408,7 +415,9 @@ mod bound_tests {
         let legacy = encrypt("f", &ring, "old").unwrap();
         assert!(!stored_is_bound(&legacy));
         assert_eq!(
-            decrypt_bound("f", &ring, &legacy, binding(row)).unwrap(),
+            decrypt_bound("f", &ring, &legacy, binding(row))
+                .unwrap()
+                .expose_secret(),
             "old"
         );
         assert_eq!(stored_key_id(&legacy), stored_key_id(&legacy));
@@ -491,7 +500,10 @@ mod tests {
     fn encrypt_then_decrypt_roundtrips() {
         let ring = single_ring("k1", &key_hex(0x11));
         let encrypted = encrypt("test", &ring, "hello world").unwrap();
-        assert_eq!(decrypt("test", &ring, &encrypted).unwrap(), "hello world");
+        assert_eq!(
+            decrypt("test", &ring, &encrypted).unwrap().expose_secret(),
+            "hello world"
+        );
     }
 
     #[test]
@@ -512,7 +524,10 @@ mod tests {
         ring.keys.insert("k2".to_string(), key_hex(0x44));
         ring.active_key_id = "k2".to_string();
 
-        assert_eq!(decrypt("test", &ring, &encrypted).unwrap(), "old data");
+        assert_eq!(
+            decrypt("test", &ring, &encrypted).unwrap().expose_secret(),
+            "old data"
+        );
         // New writes now go out under k2.
         let new_encrypted = encrypt("test", &ring, "new data").unwrap();
         let combined = B64.decode(&new_encrypted).unwrap();

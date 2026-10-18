@@ -24,6 +24,7 @@ pub fn encrypt_secret(ring: &KeyRing, plaintext: &str) -> Result<String, AppErro
 
 pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 /// Q18-T2: `s2s_client_key.secret_encrypted` is bound to its row.
@@ -51,6 +52,7 @@ pub fn decrypt_key_secret(
     encoded: &str,
 ) -> Result<String, AppError> {
     attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, binding(key_id))
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 pub fn sha256_hex(data: &[u8]) -> String {

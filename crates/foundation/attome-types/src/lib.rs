@@ -35,6 +35,8 @@ pub mod error_codes;
 /// Z14-T3 — error titles in English and Arabic.
 pub mod error_messages;
 pub mod request_scope;
+/// Q18-T5 — a secret that cannot be printed or serialised.
+pub mod secret;
 pub mod text;
 pub mod types;
 pub mod w3c_trace;

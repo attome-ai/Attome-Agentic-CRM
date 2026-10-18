@@ -20,6 +20,7 @@ pub fn encrypt(ring: &KeyRing, secret_base32: &str) -> Result<String, AppError> 
 
 pub fn decrypt(ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 /// A fresh random base32 secret.

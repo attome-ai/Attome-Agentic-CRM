@@ -201,6 +201,7 @@ fn encrypt_secret(mfa_ring: &KeyRing, plaintext: &str) -> Result<String, AppErro
 
 fn decrypt_secret(mfa_ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
     crate::envelope::decrypt(FIELD_NAME, mfa_ring, encoded)
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 fn totp_for(secret_base32: &str, account_name: &str) -> Result<Totp, AppError> {

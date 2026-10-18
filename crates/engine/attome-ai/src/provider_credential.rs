@@ -36,6 +36,7 @@ pub fn encrypt_secret(ring: &KeyRing, plaintext: &str) -> Result<String, AppErro
 
 pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 /// Q18-T2: `ai_provider_credential.secret_encrypted` is bound to its row.
@@ -174,7 +175,10 @@ pub async fn resolve(
     .map_err(AppError::internal)?;
 
     encrypted
-        .map(|e| attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, &e, binding(id)))
+        .map(|e| {
+            attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, &e, binding(id))
+                .map(attome_types::secret::SecretString::into_exposed)
+        })
         .transpose()
 }
 

@@ -81,6 +81,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Decrypted secrets cannot be printed (Q18-T5): `attome_auth::envelope::decrypt` and `decrypt_bound` return
+  `attome_types::secret::SecretString`, whose `Debug` prints `[redacted]` and which has no `Display` or
+  `Serialize`; the buffer is zeroed on drop. Reading it is `expose_secret()` or `into_exposed()`.
 - Second administrator for an administrator's MFA reset (Q5-T8): `POST /api/v1/admin/security/users/{id}/mfa/reset`
   now needs a fresh step-up (`admin_mfa_reset`); resetting an administrator's factor answers `202` with an
   approval request (`security.mfa_reset_admin`) that a second administrator approves. The person is emailed

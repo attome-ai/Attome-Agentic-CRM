@@ -32,6 +32,7 @@ pub fn decrypt_credential(
     encoded: &str,
 ) -> Result<String, AppError> {
     attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, binding(credential_id))
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 /// Last 4 characters of a plaintext secret, for the "configured, ending in

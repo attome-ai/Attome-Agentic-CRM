@@ -37,6 +37,7 @@ pub fn encrypt_secret(ring: &KeyRing, plaintext: &str) -> Result<String, AppErro
 
 pub fn decrypt_secret(ring: &KeyRing, encoded: &str) -> Result<String, AppError> {
     attome_auth::envelope::decrypt(FIELD_NAME, ring, encoded)
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 /// Q18-T2: `event_subscription.webhook_secret_encrypted` is bound to its row.
@@ -62,6 +63,7 @@ pub fn decrypt_webhook_secret(
     encoded: &str,
 ) -> Result<String, AppError> {
     attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, binding(subscription_id))
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 /// `{timestamp_ms}.{body}` — the exact bytes HMAC'd and the exact bytes a

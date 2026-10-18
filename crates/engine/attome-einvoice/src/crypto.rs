@@ -34,6 +34,7 @@ pub fn encrypt_secret(ring: &KeyRing, secret: &str) -> Result<String, AppError> 
 /// A stored CSID secret.
 pub fn decrypt_secret(ring: &KeyRing, stored: &str) -> Result<String, AppError> {
     attome_auth::envelope::decrypt(FIELD_NAME, ring, stored)
+        .map(attome_types::secret::SecretString::into_exposed)
 }
 
 #[cfg(test)]
