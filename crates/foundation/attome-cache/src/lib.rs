@@ -51,6 +51,8 @@ pub mod sticky_primary;
 pub mod store;
 pub mod stream_buffer;
 pub mod subscriber;
+/// Z3-T2: the tiered cache (L1, then the shared store, then the loader).
+pub mod tiered;
 /// M101 slice 2 — the shared-state half of `attome_inference::budget`, which
 /// shipped with no way to learn what a caller had already consumed. See the
 /// module doc.

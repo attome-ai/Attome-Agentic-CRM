@@ -43,6 +43,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Caching: `attome_cache::tiered::TieredCache` (Z3-T2), one declared cache over an in-process tier,
+  the shared store and the loader: one load per key per node for concurrent callers, TTL with
+  per-entry jitter, `LocalOnly` values never leaving the process, and a store failure either
+  falling back to the source (a rate-limited `cache.redis_degraded` warning) or refusing
+  (`FailClosed`). Without a shared store it runs in process.
 - Web: a field change's background run shows its state, a progress bar, rows done and the time
   left, polled every five seconds, with Pause, Resume and Cancel (asking first), and Abandon once
   it has failed, in English and Arabic (Y12-T13).
