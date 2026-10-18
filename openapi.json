@@ -54283,6 +54283,160 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/cooked/{kind}": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "The current version's artefacts of a kind.",
+        "description": "Each artefact's key, content hash and URL. The list changes with every\npublish; the artefacts behind it never change.",
+        "operationId": "list_cooked_artefacts",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Artefact kind: `form` or `option_set`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The current version's artefacts of the kind, with their hash-named URLs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CookedRef"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a kind served here",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/cooked/{kind}/{hash}": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "One cooked artefact by its content hash.",
+        "description": "The bytes never change under this URL, so the response may be kept for\na year without asking again.",
+        "operationId": "get_cooked_artefact",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Artefact kind: `form` or `option_set`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hash",
+            "in": "path",
+            "description": "The artefact's SHA-256, lowercase hex",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "The artefact's hash in quotes, when the client holds it",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The artefact's JSON, cached as immutable",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "304": {
+            "description": "The client already holds this artefact"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a kind served here, or no artefact with this hash in the current version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-immutable",
+        "x-idempotent": "natural",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/data/duplicates/check": {
       "post": {
         "tags": [
@@ -59374,7 +59528,7 @@
         "security": [
           {}
         ],
-        "x-cache": "private-revalidate",
+        "x-cache": "no-store",
         "x-idempotent": "natural",
         "x-privilege": "public",
         "x-rate-class": "api",
@@ -66915,7 +67069,7 @@
         "security": [
           {}
         ],
-        "x-cache": "private-revalidate",
+        "x-cache": "no-store",
         "x-idempotent": "natural",
         "x-privilege": "public",
         "x-rate-class": "portal_status",
@@ -91527,6 +91681,29 @@
           }
         }
       },
+      "CookedRef": {
+        "type": "object",
+        "description": "One artefact of the current version.",
+        "required": [
+          "key",
+          "hash",
+          "url"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string",
+            "description": "SHA-256 of the artefact's bytes, lowercase hex."
+          },
+          "key": {
+            "type": "string",
+            "description": "The artefact key, `<kind>:<object id>`."
+          },
+          "url": {
+            "type": "string",
+            "description": "Where to fetch it: `/api/v1/cooked/{kind}/{hash}`."
+          }
+        }
+      },
       "CounterpartyDecideBody": {
         "type": "object",
         "required": [
@@ -108045,6 +108222,56 @@
                     "string",
                     "null"
                   ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_CookedRef": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One artefact of the current version.",
+              "required": [
+                "key",
+                "hash",
+                "url"
+              ],
+              "properties": {
+                "hash": {
+                  "type": "string",
+                  "description": "SHA-256 of the artefact's bytes, lowercase hex."
+                },
+                "key": {
+                  "type": "string",
+                  "description": "The artefact key, `<kind>:<object id>`."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Where to fetch it: `/api/v1/cooked/{kind}/{hash}`."
                 }
               }
             }
@@ -132907,6 +133134,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -132959,6 +133187,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
   "x-version-adapters": []
 }

@@ -9886,6 +9886,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cooked/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The current version's artefacts of a kind.
+         * @description Each artefact's key, content hash and URL. The list changes with every
+         *     publish; the artefacts behind it never change.
+         */
+        get: operations["list_cooked_artefacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cooked/{kind}/{hash}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One cooked artefact by its content hash.
+         * @description The bytes never change under this URL, so the response may be kept for
+         *     a year without asking again.
+         */
+        get: operations["get_cooked_artefact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/duplicates/check": {
         parameters: {
             query?: never;
@@ -18594,6 +18636,15 @@ export interface components {
             ticket_id: string;
             ticket_number: string;
         };
+        /** @description One artefact of the current version. */
+        CookedRef: {
+            /** @description SHA-256 of the artefact's bytes, lowercase hex. */
+            hash: string;
+            /** @description The artefact key, `<kind>:<object id>`. */
+            key: string;
+            /** @description Where to fetch it: `/api/v1/cooked/{kind}/{hash}`. */
+            url: string;
+        };
         CounterpartyDecideBody: {
             decision: components["schemas"]["Decision"];
         };
@@ -25016,6 +25067,23 @@ export interface components {
                 started_at: string;
                 surface: string;
                 title?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_CookedRef: {
+            items: {
+                /** @description SHA-256 of the artefact's bytes, lowercase hex. */
+                hash: string;
+                /** @description The artefact key, `<kind>:<object id>`. */
+                key: string;
+                /** @description Where to fetch it: `/api/v1/cooked/{kind}/{hash}`. */
+                url: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -67861,6 +67929,100 @@ export interface operations {
             };
             /** @description The proposal was already decided */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_cooked_artefacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Artefact kind: `form` or `option_set` */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current version's artefacts of the kind, with their hash-named URLs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CookedRef"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a kind served here */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_cooked_artefact: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The artefact's hash in quotes, when the client holds it */
+                "If-None-Match"?: string | null;
+            };
+            path: {
+                /** @description Artefact kind: `form` or `option_set` */
+                kind: string;
+                /** @description The artefact's SHA-256, lowercase hex */
+                hash: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The artefact's JSON, cached as immutable */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The client already holds this artefact */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a kind served here, or no artefact with this hash in the current version */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
