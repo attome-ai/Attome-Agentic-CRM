@@ -1,7 +1,8 @@
 //! Z5-T3: per-route policy read from the API document. Three operation
 //! extensions describe a route's handling, written with [`route_policy`]:
 //! `x-auth` (`session`, `api_key`, `s2s`, `public` or `portal`),
-//! `x-body-limit` (bytes) and `x-idempotent` (bool). The table is built once
+//! `x-body-limit` (bytes) and `x-idempotent` (a bool, or S2-T7's `key`,
+//! `natural` or `none`). The table is built once
 //! at start from the merged document ([`RoutePolicyTable::from_document`],
 //! by the app crate, which is the only one that sees every route) and
 //! installed here ([`install`]); the body-limit layer reads it by matched
@@ -98,8 +99,12 @@ impl RoutePolicyTable {
                 };
                 let idempotent = match operation.get("x-idempotent") {
                     Some(Value::Bool(flag)) => *flag,
+                    Some(Value::String(form)) if form == "key" || form == "natural" => true,
+                    Some(Value::String(form)) if form == "none" => false,
                     Some(_) => {
-                        return Err(format!("{method} {path}: x-idempotent must be a boolean"));
+                        return Err(format!(
+                            "{method} {path}: x-idempotent must be a boolean, key, natural or none"
+                        ));
                     }
                     None => false,
                 };
@@ -190,6 +195,26 @@ mod tests {
             "/x": { "post": { "responses": {}, "x-body-limit": "big" } }
         } });
         assert!(RoutePolicyTable::from_document(&document, 10).is_err());
+    }
+
+    #[test]
+    fn x_idempotent_reads_the_policy_forms() {
+        let document = serde_json::json!({ "paths": {
+            "/a": { "post": { "responses": {}, "x-idempotent": "key" } },
+            "/b": { "get": { "responses": {}, "x-idempotent": "natural" } },
+            "/c": { "post": { "responses": {}, "x-idempotent": "none" } },
+            "/d": { "post": { "responses": {}, "x-idempotent": "sometimes" } }
+        } });
+        assert!(RoutePolicyTable::from_document(&document, 10).is_err());
+        let document = serde_json::json!({ "paths": {
+            "/a": { "post": { "responses": {}, "x-idempotent": "key" } },
+            "/b": { "get": { "responses": {}, "x-idempotent": "natural" } },
+            "/c": { "post": { "responses": {}, "x-idempotent": "none" } }
+        } });
+        let table = RoutePolicyTable::from_document(&document, 10).unwrap();
+        assert!(table.get("POST", "/a").unwrap().idempotent);
+        assert!(table.get("GET", "/b").unwrap().idempotent);
+        assert!(!table.get("POST", "/c").unwrap().idempotent);
     }
 
     #[test]

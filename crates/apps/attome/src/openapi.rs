@@ -89,6 +89,8 @@ fn build() -> utoipa::openapi::OpenApi {
     declare_security(&mut doc);
     // Q20-T1: and which rate-limit class it is counted in.
     declare_rate_class(&mut doc);
+    // S2-T7: and its privilege, risk, idempotency and cache policy.
+    crate::openapi_policy::apply(&mut doc);
     // S2-T8: the document names the release it describes.
     doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
     // Z14-T2: every error code, as one enum the SDK can generate.
