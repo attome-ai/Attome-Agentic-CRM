@@ -34,6 +34,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: `attome test mutants` (AC5-T9) runs cargo-mutants over the scope in `.cargo/mutants.toml`
+  (the security and rules engines, and the record engine's access plan and query execution), scores
+  each crate as caught over caught plus missed (unviable and timed-out mutants listed, not counted),
+  and exits 2 when a missed mutant is not in `docs/testing/mutants-baseline.json`;
+  `--write-baseline` records a run. No baseline is written yet: the scope holds 2,109 mutants, a run
+  of well over 8 hours.
 - Tests: every entity in the registry is round-tripped through the generic record API (AC5-T8,
   `attome-testapp` test `generated_entity_crud`): create, read, update with `If-Match`, a stale
   update refused with 409, delete, and a create missing each required attribute refused with 422.

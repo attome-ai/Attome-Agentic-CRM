@@ -44,6 +44,7 @@ pub mod test_cmd;
 pub mod test_coverage;
 pub mod test_flaky;
 pub mod test_map;
+pub mod test_mutants;
 pub mod test_scan;
 pub mod test_stack;
 
@@ -346,6 +347,20 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     }
                 },
             )
+        }
+        Some("test") if args.get(1).map(String::as_str) == Some("mutants") => {
+            let write_baseline = match args.get(2..) {
+                Some([]) => false,
+                Some([flag]) if flag == "--write-baseline" => true,
+                _ => return None,
+            };
+            Some(match workspace_root() {
+                Ok(root) => test_mutants::run(&root, write_baseline),
+                Err(error) => {
+                    eprintln!("attome test mutants: {error}");
+                    ExitCode::FAILURE
+                }
+            })
         }
         Some("test") => {
             let parsed = test_cmd::parse_args(&args[1..])?;
@@ -1055,7 +1070,7 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
 
 /// Writes one line to standard output. A closed pipe is not an error worth
 /// failing a check over, so the write result is ignored.
-fn say(text: &str) {
+pub(crate) fn say(text: &str) {
     use std::io::Write;
     let mut out = std::io::stdout().lock();
     let _ = writeln!(out, "{text}");

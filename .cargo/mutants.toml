@@ -1,0 +1,9 @@
+# Mutation testing (roadmap AC5-T9): `attome test mutants`, or `cargo mutants`.
+# Only the core engines' decision code, not the whole workspace.
+examine_globs = [
+    "crates/engine/attome-security/src/**/*.rs",
+    "crates/foundation/attome-rules/src/**/*.rs",
+    "crates/engine/attome-records/src/access_plan.rs",
+    "crates/engine/attome-records/src/query_exec.rs",
+]
+timeout_multiplier = 3.0
