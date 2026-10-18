@@ -22,7 +22,9 @@ rules`; install Prometheus's `promtool`, or point `ATTOME_PROMTOOL` at it), the 
 (`attome init` into the empty database `ATTOME_INSTALL_DATABASE_URL` names, under ten minutes; not
 measured when it is unset), plus the web app with
 `--web` and, with `--reproducible`, two release builds whose `attome` binaries must hash the same
-(`target/release-gate/repro.json`).
+(`target/release-gate/repro.json`) and, with `--perf`, `attome perf compare`: the newest record in
+`docs/perf-history/` against the previous release's on the same machine (record one with
+`attome perf record --release <v>` after the load-test matrix; see that folder's README).
 
 Each run writes `target/release-gate/gate-<os>.json`: the commit, the OS, the toolchain and every
 step's outcome. CI does the same on every push and keeps the report as the `release-gate-<os>`
