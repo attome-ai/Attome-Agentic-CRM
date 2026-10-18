@@ -19,6 +19,7 @@ use uuid::Uuid;
 
 use crate::middleware::auth::{ApiKeyIdentity, CookieSession};
 use crate::middleware::deprecation;
+use crate::middleware::version_adapters;
 use crate::state::AppState;
 
 /// S8-T1: set by the S2S layer, naming the client whose pin applies.
@@ -108,7 +109,30 @@ pub async fn api_version(State(state): State<AppState>, mut req: Request, next: 
         return response;
     }
     req.extensions_mut().insert(ApiVersion(version));
+    // S8-T2: an older caller's request is rewritten up to the current
+    // version, and its response back down, for the operations an adapter
+    // names. Nothing is buffered otherwise.
+    let operation = req
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .map(|path| format!("{} {}", req.method(), path.as_str()))
+        .filter(|op| version_adapters::chain().applies(version, op));
+    if let Some(op) = &operation {
+        let (parts, body) = req.into_parts();
+        let body = version_adapters::rewrite_body(body, |value| {
+            version_adapters::chain().upgrade_request(version, op, value)
+        })
+        .await;
+        req = Request::from_parts(parts, body);
+        req.headers_mut().remove(axum::http::header::CONTENT_LENGTH);
+    }
     let mut response = next.run(req).await;
+    if let Some(op) = &operation {
+        response = version_adapters::rewrite_response(response, |value| {
+            version_adapters::chain().downgrade_response(version, op, value)
+        })
+        .await;
+    }
     response
         .headers_mut()
         .insert(api_version::HEADER, HeaderValue::from_static(version));
