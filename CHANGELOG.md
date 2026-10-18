@@ -81,6 +81,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- A safe-SQL census (Z2-T11): `crates/apps/attome/tests/safe_sql_census.rs` finds every `format!` that builds an
+  SQL statement with an argument other than `quote_ident(...)`, a constant or a number. Today's 335, in 104
+  files, are baselined per file in `safe_sql_census.json`; the counts may only fall.
 - The middleware order is pinned (Z5-T1): `attome_server::app::PIPELINE_ORDER` names the layers outermost
   first. A debug build with `app.debug_pipeline_trace` adds `x-attome-layers` to every response, and
   `middleware_pipeline.rs` checks the two match. New tests prove the size, rate, CSRF and authentication
