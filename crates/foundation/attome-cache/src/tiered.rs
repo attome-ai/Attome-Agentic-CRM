@@ -29,6 +29,14 @@
 //! without one; the in-process store keeps values in this process and is not
 //! sealed. This crate holds no cryptography: the sealer comes from
 //! `attome-auth` (`envelope::CacheSealer`, over `cache.encryption_key`).
+//!
+//! Warm start and quotas (Z3-T7): a cache built [`with_warm`](TieredCache::with_warm)
+//! can fill its L1 from a loader at start ([`warm_now`](TieredCache::warm_now)); one whose
+//! spec says `warm_on_start` and that its owner registers ([`register_warm`]) is warmed when
+//! the server starts, within a shared time budget ([`warm_registered`]). A cache built
+//! [`with_quota`](TieredCache::with_quota) bounds its L1 by the serialized size of its
+//! entries instead of their count, so an engine's or an extension's partition cannot grow
+//! past its share of memory.
 
 use std::collections::hash_map::RandomState;
 use std::future::Future;
@@ -88,6 +96,64 @@ pub trait ValueSealer: Send + Sync {
     fn open(&self, sealed: &str) -> Result<String, AppError>;
 }
 
+/// Z3-T7: what a cache's warm loader returns: `(id, value)` pairs.
+pub type WarmFuture<V> = std::pin::Pin<Box<dyn Future<Output = Vec<(String, V)>> + Send + 'static>>;
+
+/// Z3-T7: a cache's warm loader.
+pub type WarmLoader<V> = Box<dyn Fn() -> WarmFuture<V> + Send + Sync>;
+
+/// Z3-T7: a cache that can fill itself at start.
+pub trait Warmable: Send + Sync {
+    /// The cache's name, for the log.
+    fn cache_name(&self) -> &'static str;
+    /// Fills the L1; answers how many entries went in.
+    fn warm(&self) -> std::pin::Pin<Box<dyn Future<Output = usize> + Send + '_>>;
+}
+
+static WARMABLE: Mutex<Vec<std::sync::Weak<dyn Warmable>>> = Mutex::new(Vec::new());
+
+/// Z3-T7: registers a cache to be warmed at server start. Held weakly: a
+/// dropped cache is skipped.
+pub fn register_warm(cache: &std::sync::Arc<dyn Warmable>) {
+    WARMABLE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .push(std::sync::Arc::downgrade(cache));
+}
+
+/// Z3-T7: warms every registered cache in turn until `budget` runs out;
+/// answers how many entries went in. A cache the budget cuts off starts
+/// cold, as without warming.
+pub async fn warm_registered(budget: Duration) -> usize {
+    let caches: Vec<std::sync::Arc<dyn Warmable>> = WARMABLE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .iter()
+        .filter_map(std::sync::Weak::upgrade)
+        .collect();
+    let started = Instant::now();
+    let mut total = 0;
+    for cache in caches {
+        let Some(left) = budget.checked_sub(started.elapsed()) else {
+            tracing::warn!(
+                cache = cache.cache_name(),
+                "cache warm budget spent; starting cold"
+            );
+            continue;
+        };
+        match tokio::time::timeout(left, cache.warm()).await {
+            Ok(n) => {
+                tracing::info!(cache = cache.cache_name(), entries = n, "cache warmed");
+                total += n;
+            }
+            Err(_) => {
+                tracing::warn!(cache = cache.cache_name(), "cache warm ran out of budget");
+            }
+        }
+    }
+    total
+}
+
 /// An `AppError` again, for each caller that waited on one shared load.
 fn reissue(error: &AppError) -> AppError {
     match error {
@@ -107,6 +173,7 @@ pub struct TieredCache<V: Clone + Send + Sync + 'static> {
     l1: moka::future::Cache<String, V>,
     store: Option<Store>,
     sealer: Option<std::sync::Arc<dyn ValueSealer>>,
+    warm_loader: Option<WarmLoader<V>>,
     last_degraded_warning: Mutex<Option<Instant>>,
 }
 
@@ -160,8 +227,49 @@ where
             l1,
             store,
             sealer,
+            warm_loader: None,
             last_degraded_warning: Mutex::new(None),
         })
+    }
+
+    /// Z3-T7: the loader [`warm_now`](Self::warm_now) fills the L1 from.
+    pub fn with_warm(mut self, loader: WarmLoader<V>) -> Self {
+        self.warm_loader = Some(loader);
+        self
+    }
+
+    /// Z3-T7: bounds the L1 by the serialized size of its entries, at most
+    /// `bytes` in all, instead of by `l1_capacity` entries. Entries already
+    /// held are dropped.
+    pub fn with_quota(mut self, bytes: u64) -> Self {
+        self.l1 = moka::future::Cache::builder()
+            .max_capacity(bytes)
+            .weigher(|key: &String, value: &V| {
+                let size = key.len() + serde_json::to_vec(value).map_or(0, |b| b.len());
+                u32::try_from(size).unwrap_or(u32::MAX)
+            })
+            .expire_after(JitterExpiry {
+                ttl: self.spec.ttl,
+                jitter_pct: self.spec.jitter_pct,
+            })
+            .build();
+        self
+    }
+
+    /// Z3-T7: fills the L1 from the warm loader; answers how many entries
+    /// went in (none without a loader). Ids are as for
+    /// [`get_or_load`](Self::get_or_load) (a partitioned cache's loader
+    /// returns `"{reader}:{id}"`).
+    pub async fn warm_now(&self) -> usize {
+        let Some(loader) = &self.warm_loader else {
+            return 0;
+        };
+        let pairs = loader().await;
+        let n = pairs.len();
+        for (id, value) in pairs {
+            self.l1.insert(self.spec.key(&id), value).await;
+        }
+        n
     }
 
     fn shared_store(&self) -> Option<&Store> {
@@ -328,6 +436,25 @@ where
     }
 }
 
+impl<V> Warmable for TieredCache<V>
+where
+    V: Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
+{
+    fn cache_name(&self) -> &'static str {
+        self.spec.name
+    }
+
+    fn warm(&self) -> std::pin::Pin<Box<dyn Future<Output = usize> + Send + '_>> {
+        Box::pin(async move {
+            if self.spec.warm_on_start {
+                self.warm_now().await
+            } else {
+                0
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -404,6 +531,57 @@ mod tests {
         assert_eq!(jittered(ttl, 0, 12345), ttl);
         // Jitter over 50% is held to 50%.
         assert!(jittered(ttl, 90, 0) >= Duration::from_secs(50));
+    }
+
+    #[tokio::test]
+    async fn warm_now_fills_l1() {
+        static WARM: CacheSpec = CacheSpec {
+            warm_on_start: true,
+            ..spec(
+                "cache:tiered_warm",
+                "tiered_warm",
+                FailureMode::FallBackToSource,
+            )
+        };
+        let cache = Arc::new(
+            TieredCache::<u32>::new(&WARM, None)
+                .unwrap()
+                .with_warm(Box::new(|| -> WarmFuture<u32> {
+                    Box::pin(async { vec![("a".to_string(), 1), ("b".to_string(), 2)] })
+                })),
+        );
+        let as_warmable: Arc<dyn Warmable> = cache.clone();
+        register_warm(&as_warmable);
+        assert!(warm_registered(Duration::from_secs(5)).await >= 2);
+        let a = cache.get_or_load("a", async { Ok(99) }).await.unwrap();
+        assert_eq!(a, 1, "served from the warmed L1, not the loader");
+        assert_eq!(cache.warm_now().await, 2);
+    }
+
+    #[tokio::test]
+    async fn quota_evicts_over_limit() {
+        static QUOTA: CacheSpec = spec(
+            "cache:tiered_quota",
+            "tiered_quota",
+            FailureMode::FallBackToSource,
+        );
+        let cache = TieredCache::<String>::new(&QUOTA, None)
+            .unwrap()
+            .with_quota(1_000);
+        for i in 0..50 {
+            let value = format!("{i:0>100}");
+            cache
+                .get_or_load(&i.to_string(), async move { Ok(value) })
+                .await
+                .unwrap();
+        }
+        cache.l1.run_pending_tasks().await;
+        assert!(
+            cache.l1.weighted_size() <= 1_000,
+            "{}",
+            cache.l1.weighted_size()
+        );
+        assert!(cache.l1.entry_count() < 50);
     }
 
     static PER_PERMISSIONS: CacheSpec = CacheSpec {

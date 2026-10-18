@@ -1144,6 +1144,13 @@ impl EngineSystemBuilder {
         .await??;
         state.rules.swap(rules);
 
+        // Z3-T7: caches registered for warm start fill their L1 now, within
+        // five seconds in all; any the budget cuts off start cold.
+        let warmed = attome_cache::tiered::warm_registered(Duration::from_secs(5)).await;
+        if warmed > 0 {
+            tracing::info!(entries = warmed, "caches warmed at start");
+        }
+
         // Confirmed ready only now that DB + Redis were reachable enough to
         // seed, load the license, and pre-warm the registry.
         state.base.registry_ready.store(true, Ordering::Relaxed);
