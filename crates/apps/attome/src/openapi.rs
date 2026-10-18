@@ -155,7 +155,8 @@ fn declare_security(doc: &mut utoipa::openapi::OpenApi) {
     }
 }
 
-/// Q20-T1: `x-rate-class` on every operation: the rate-limit category the
+/// Q20-T1: `x-rate-class` on every operation, and `x-cache`, its cache
+/// class (AA7-T1): the rate-limit category the
 /// limiter counts it in (`attome_server::middleware::rate_limit::
 /// category_for`, the one table both read), `api` unless listed.
 fn declare_rate_class(doc: &mut utoipa::openapi::OpenApi) {
@@ -175,9 +176,24 @@ fn declare_rate_class(doc: &mut utoipa::openapi::OpenApi) {
                 continue;
             };
             let class = attome_server::middleware::rate_limit::category_for(method, path);
-            let extra: Extensions = [("x-rate-class", serde_json::Value::from(class))]
-                .into_iter()
-                .collect();
+            // AA7-T1: and how its responses may be cached.
+            let cache = match attome_server::middleware::cache_policy::class_for(
+                &axum::http::Method::from_bytes(method.as_bytes())
+                    .unwrap_or(axum::http::Method::GET),
+                path,
+            ) {
+                attome_server::middleware::cache_policy::CacheClass::NoStore => "no-store",
+                attome_server::middleware::cache_policy::CacheClass::PrivateRevalidate => {
+                    "private-revalidate"
+                }
+                attome_server::middleware::cache_policy::CacheClass::Immutable => "immutable",
+            };
+            let extra: Extensions = [
+                ("x-rate-class", serde_json::Value::from(class)),
+                ("x-cache", serde_json::Value::from(cache)),
+            ]
+            .into_iter()
+            .collect();
             match &mut operation.extensions {
                 Some(existing) => existing.merge(extra),
                 None => operation.extensions = Some(extra),
