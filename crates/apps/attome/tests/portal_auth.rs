@@ -1259,7 +1259,11 @@ async fn staff_bypass_lists_are_unchanged_and_staff_routes_still_need_a_session(
         assert!(!path.contains("{keyword}"), "{path}");
         assert!(!path.contains("webportal"), "{path}");
         assert!(
-            path.starts_with("/api/") || path.starts_with("/health") || *path == "/version",
+            path.starts_with("/api/")
+                || path.starts_with("/health")
+                || *path == "/version"
+                // Z4-T4: the public signing keys, at the standard well-known path.
+                || *path == "/.well-known/jwks.json",
             "a bypass outside the staff tree: {path}"
         );
     }
@@ -2292,6 +2296,9 @@ async fn t35_a_user_cannot_read_or_end_another_users_sessions() {
             let mut v: Value = serde_json::from_str(b).unwrap_or(Value::Null);
             if let Some(o) = v.as_object_mut() {
                 o.remove("request_id");
+                // Z14-T1: `instance` echoes the path the caller sent, so it
+                // differs by the id asked for and discloses nothing.
+                o.remove("instance");
             }
             v
         };

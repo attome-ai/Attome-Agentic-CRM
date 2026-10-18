@@ -15,6 +15,9 @@
 //! `/admin/metadata/...` already holds the bundle and sync routes, which a
 //! kind of the same name would otherwise be shadowed by.
 
+/// AA7-T5: cooked artefacts at hash-named URLs.
+pub(crate) mod cooked;
+
 use std::sync::{Arc, OnceLock};
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};

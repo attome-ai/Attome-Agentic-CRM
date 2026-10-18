@@ -31,7 +31,7 @@ use axum::{
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::model_admin::{cooked, refresh_cooked};
+use super::{cooked, refresh_cooked};
 
 /// The kinds a signed-in caller may fetch: their artefacts hold nothing a
 /// user cannot already read.

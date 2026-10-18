@@ -184,12 +184,36 @@ fn rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 fn production_lines(text: &str) -> Vec<&str> {
+    // Every line outside a `#[cfg(test)] mod` block. A file may hold a test
+    // module before more production code (query_exec.rs does), so a block is
+    // skipped to its closing brace rather than ending the scan.
     let lines: Vec<&str> = text.lines().collect();
-    let end = lines
-        .windows(2)
-        .position(|w| w[0].trim() == "#[cfg(test)]" && w[1].trim_start().starts_with("mod "))
-        .unwrap_or(lines.len());
-    lines[..end].to_vec()
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let opens_test_mod = lines[i].trim() == "#[cfg(test)]"
+            && lines
+                .get(i + 1)
+                .is_some_and(|next| next.trim_start().starts_with("mod "));
+        if !opens_test_mod {
+            out.push(lines[i]);
+            i += 1;
+            continue;
+        }
+        let mut depth = 0i64;
+        let mut opened = false;
+        i += 1;
+        while i < lines.len() {
+            depth += lines[i].matches('{').count() as i64;
+            depth -= lines[i].matches('}').count() as i64;
+            opened |= lines[i].contains('{');
+            i += 1;
+            if opened && depth <= 0 {
+                break;
+            }
+        }
+    }
+    out
 }
 
 fn builds_a_cache(text: &str) -> bool {

@@ -175,6 +175,18 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "SELECT list of indexable attributes for the search corpus.",
     ),
     (
+        "crates/engine/attome-search/src/fallback.rs",
+        "fallback_search",
+        Projection,
+        "AB5-T5: SELECT and ILIKE predicate on the entity's title attribute: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_exec.rs",
+        "entity_list_sql",
+        Projection,
+        "S1-T2: the keyset list's SELECT list and sort column: a read.",
+    ),
+    (
         "crates/engine/attome-records/src/entity_crud/hierarchy.rs",
         "list_ancestors",
         Projection,

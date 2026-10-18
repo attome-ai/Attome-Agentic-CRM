@@ -133,6 +133,7 @@ const BASELINE: &[&str] = &[
     "field_hooks",
     "jobs_admin",
     "license_admin",
+    "limits_admin",
     "live",
     // C4-T1: belongs in attome-notification; kept here until that crate
     // takes a record-access (attome-security) dependency.
@@ -173,7 +174,6 @@ const BASELINE: &[&str] = &[
     "settings_admin",
     // AA9-T6: the limits registry spans every engine (rate classes, bulk,
     // query time), so its read surface sits where they are composed.
-    "limits_admin",
     "sidebar",
     "sidebar_seed",
     "signoff",
