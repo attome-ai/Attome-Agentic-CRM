@@ -8809,6 +8809,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/invoices/{id}/write-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_write_off"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/metrics/recurring": {
         parameters: {
             query?: never;
@@ -30495,9 +30511,15 @@ export interface components {
              * @description The invoice the line is about.
              */
             invoice_id: string;
-            /** @description `invoice`, `credit_note`, `debit_note`, `deposit` or `payment`. */
+            /**
+             * @description `invoice`, `credit_note`, `debit_note`, `deposit`, `payment` or
+             *     `write_off`.
+             */
             kind: string;
-            /** @description The document number, or the payment's reference. */
+            /**
+             * @description The document number, the payment's reference, or the write-off's
+             *     reason.
+             */
             reference?: string | null;
         };
         StatusResponseBody: {
@@ -32627,6 +32649,22 @@ export interface components {
             /** Format: uuid */
             target_version_id: string;
             waiting: components["schemas"]["MoveMapping"][];
+        };
+        /** @description What the write-off did. */
+        WriteOffOutcome: {
+            /** Format: uuid */
+            approval_id?: string | null;
+            /** Format: uuid */
+            invoice_id: string;
+            /** @description What is still open after it (unchanged while pending). */
+            open_total?: string | null;
+            /** @description `written_off` (applied) or `pending_approval`. */
+            status: string;
+        };
+        WriteOffRequest: {
+            /** Format: double */
+            amount: number;
+            reason: string;
         };
         WritePolicy: {
             action_id: string;
@@ -62673,6 +62711,78 @@ export interface operations {
                 };
             };
             /** @description No VAT rate applies to a line */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_write_off: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The issued invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WriteOffRequest"];
+            };
+        };
+        responses: {
+            /** @description Written off, or waiting for an approval */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WriteOffOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not write off balances */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an issued invoice */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, or an amount above what is open */
             422: {
                 headers: {
                     [name: string]: unknown;

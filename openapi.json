@@ -46062,6 +46062,115 @@
         }
       }
     },
+    "/api/v1/billing/invoices/{id}/write-off": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_write_off",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The issued invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Written off, or waiting for an approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteOffOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not write off balances",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not an issued invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, or an amount above what is open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "execute"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/billing/metrics/recurring": {
       "get": {
         "tags": [
@@ -115955,14 +116064,14 @@
           },
           "kind": {
             "type": "string",
-            "description": "`invoice`, `credit_note`, `debit_note`, `deposit` or `payment`."
+            "description": "`invoice`, `credit_note`, `debit_note`, `deposit`, `payment` or\n`write_off`."
           },
           "reference": {
             "type": [
               "string",
               "null"
             ],
-            "description": "The document number, or the payment's reference."
+            "description": "The document number, the payment's reference, or the write-off's\nreason."
           }
         }
       },
@@ -121326,6 +121435,54 @@
             "items": {
               "$ref": "#/components/schemas/MoveMapping"
             }
+          }
+        }
+      },
+      "WriteOffOutcome": {
+        "type": "object",
+        "description": "What the write-off did.",
+        "required": [
+          "invoice_id",
+          "status"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "open_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What is still open after it (unchanged while pending)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`written_off` (applied) or `pending_approval`."
+          }
+        }
+      },
+      "WriteOffRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "reason"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
