@@ -30608,10 +30608,15 @@ export interface components {
             credential_value: string;
         };
         RotateCredentialResponse: {
-            /** @description "configured, ending in ****1234" — never the full value (D-424). */
-            secret_last4?: string | null;
+            /** @description Q18-T6: a credential is stored; no part of it is returned. */
+            is_set: boolean;
             /** Format: uuid */
             system_id: string;
+            /**
+             * Format: date-time
+             * @description When the stored credential was set.
+             */
+            updated_at: string;
         };
         RouteHintDto: {
             tool: string;
@@ -31495,13 +31500,18 @@ export interface components {
             api_key: string;
         };
         SetCredentialResponse: {
+            /**
+             * @description Q18-T6: a key is stored. The key itself, or any part of it, is never
+             *     returned.
+             */
+            is_set: boolean;
             /** Format: uuid */
             provider_id: string;
             /**
-             * @description `"****1234"`-style hint, or `null` for a key shorter than four
-             *     characters (where the hint would be the key).
+             * Format: date-time
+             * @description When the stored key was set.
              */
-            secret_last4?: string | null;
+            updated_at: string;
         };
         SetEnvVariable: {
             /**

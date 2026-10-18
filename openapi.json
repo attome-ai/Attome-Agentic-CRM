@@ -122952,19 +122952,23 @@
       "RotateCredentialResponse": {
         "type": "object",
         "required": [
-          "system_id"
+          "system_id",
+          "is_set",
+          "updated_at"
         ],
         "properties": {
-          "secret_last4": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "\"configured, ending in ****1234\" — never the full value (D-424)."
+          "is_set": {
+            "type": "boolean",
+            "description": "Q18-T6: a credential is stored; no part of it is returned."
           },
           "system_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the stored credential was set."
           }
         }
       },
@@ -125430,19 +125434,23 @@
       "SetCredentialResponse": {
         "type": "object",
         "required": [
-          "provider_id"
+          "provider_id",
+          "is_set",
+          "updated_at"
         ],
         "properties": {
+          "is_set": {
+            "type": "boolean",
+            "description": "Q18-T6: a key is stored. The key itself, or any part of it, is never\nreturned."
+          },
           "provider_id": {
             "type": "string",
             "format": "uuid"
           },
-          "secret_last4": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "`\"****1234\"`-style hint, or `null` for a key shorter than four\ncharacters (where the hint would be the key)."
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the stored key was set."
           }
         }
       },
@@ -133138,6 +133146,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -133190,6 +133199,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }
