@@ -1,0 +1,109 @@
+{
+  "author": "packs",
+  "checksum": "sha256:a8b70fc7d7e7b86f44dc99d0a4b94c76e80e4d8ec69978b9deae102b55a27e7a",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Write-offs (F4-T12): an invoice records what was written off, kept off its open total and refused to every writer but the billing engine.",
+  "format": "attome-changeset/v1",
+  "id": "01a14c4d-d614-7ebf-9a30-dbed61ceea6e",
+  "layer": "product",
+  "name": "billing-write-off",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Written Off",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "written_off_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "invoice",
+        "field": "written_off_total"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ المشطوب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "invoice.written_off_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "status",
+            "op": "ne",
+            "value": "draft"
+          },
+          "description": "An issued invoice's payment status, paid, open and written-off totals follow its payments, write-offs and due date; nobody marks an invoice paid by hand.",
+          "display_name": "Payment status is derived",
+          "display_order": 0,
+          "entity_logicalname": "invoice",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "invoice_payment_derived",
+          "policies": [
+            {
+              "field": "payment_status",
+              "type": "disabled"
+            },
+            {
+              "field": "paid_total",
+              "type": "disabled"
+            },
+            {
+              "field": "open_total",
+              "type": "disabled"
+            },
+            {
+              "field": "written_off_total",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "invoice",
+        "rule": "invoice_payment_derived"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 10,
+  "title": "Pack: written-off amounts"
+}

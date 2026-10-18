@@ -2,7 +2,7 @@
 //!
 //! - [`refresh_status`] recomputes one issued invoice's `paid_total` (its
 //!   live, unreversed `payment_allocation` rows), `open_total` (grand total
-//!   less paid) and `payment_status`: `paid` when nothing is open, `overdue`
+//!   less paid and less `written_off_total`, F4-T12) and `payment_status`: `paid` when nothing is open, `overdue`
 //!   past the due date, `partly_paid` when something is paid, else `open`.
 //!   A written-off invoice keeps `written_off`. Payments (F5) call it after
 //!   allocating; the sweep below catches the passage of time.
@@ -42,6 +42,7 @@ pub struct PaymentState {
 pub fn derive(
     grand: Decimal,
     paid: Decimal,
+    written_off: Decimal,
     due: Option<NaiveDate>,
     today: NaiveDate,
     current: Option<&str>,
@@ -49,7 +50,10 @@ pub fn derive(
     if current == Some("written_off") {
         return "written_off";
     }
-    let open = grand - paid;
+    let open = grand - paid - written_off;
+    if open <= Decimal::ZERO && written_off > Decimal::ZERO {
+        return "written_off";
+    }
     if open <= Decimal::ZERO {
         "paid"
     } else if due.is_some_and(|d| d < today) {
@@ -66,6 +70,7 @@ type InvoiceRow = (
     Option<String>,
     Option<NaiveDate>,
     Option<String>,
+    Option<String>,
 );
 
 fn decimal(text: Option<&str>) -> Decimal {
@@ -80,7 +85,8 @@ pub async fn refresh_status(
 ) -> Result<PaymentState, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: Option<InvoiceRow> = sqlx::query_as(
-        "SELECT status, grand_total::text, due_date::date, payment_status \
+        "SELECT status, grand_total::text, due_date::date, payment_status, \
+                written_off_total::text \
          FROM invoice WHERE id = $1 AND (is_active IS NULL OR is_active = true) \
          FOR UPDATE",
     )
@@ -88,7 +94,7 @@ pub async fn refresh_status(
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let Some((status, grand, due, current)) = row else {
+    let Some((status, grand, due, current, written_off)) = row else {
         return Err(AppError::NotFound);
     };
     if matches!(status.as_deref().unwrap_or("draft"), "draft" | "void") {
@@ -107,10 +113,12 @@ pub async fn refresh_status(
     .map_err(AppError::internal)?;
     let grand = decimal(grand.as_deref());
     let paid = decimal(paid.as_deref());
-    let open = grand - paid;
+    let written_off = decimal(written_off.as_deref());
+    let open = grand - paid - written_off;
     let derived = derive(
         grand,
         paid,
+        written_off,
         due,
         Utc::now().date_naive(),
         current.as_deref(),
@@ -179,27 +187,37 @@ mod tests {
     #[test]
     fn status_follows_payments_and_the_due_date() {
         let hundred = Decimal::from(100);
+        let zero = Decimal::ZERO;
         let today = d(18);
-        assert_eq!(derive(hundred, hundred, Some(d(1)), today, None), "paid");
         assert_eq!(
-            derive(hundred, Decimal::ZERO, Some(d(17)), today, None),
+            derive(hundred, hundred, zero, Some(d(1)), today, None),
+            "paid"
+        );
+        assert_eq!(
+            derive(hundred, zero, zero, Some(d(17)), today, None),
             "overdue"
         );
         assert_eq!(
-            derive(hundred, Decimal::from(40), Some(d(20)), today, None),
+            derive(hundred, Decimal::from(40), zero, Some(d(20)), today, None),
             "partly_paid"
         );
         assert_eq!(
-            derive(hundred, Decimal::ZERO, Some(d(18)), today, None),
+            derive(hundred, zero, zero, Some(d(18)), today, None),
             "open"
         );
         assert_eq!(
+            derive(hundred, zero, zero, Some(d(1)), today, Some("written_off")),
+            "written_off"
+        );
+        // Paid 60, the rest written off: written off, not paid.
+        assert_eq!(
             derive(
                 hundred,
-                Decimal::ZERO,
+                Decimal::from(60),
+                Decimal::from(40),
                 Some(d(1)),
                 today,
-                Some("written_off")
+                None
             ),
             "written_off"
         );

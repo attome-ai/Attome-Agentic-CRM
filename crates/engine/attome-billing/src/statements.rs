@@ -3,7 +3,8 @@
 //! What counts: issued documents (invoices, credit and debit notes,
 //! deposits; never drafts, void or pro forma invoices) at their grand
 //! total on their issue date, less live unreversed payment allocations on
-//! their allocation date. So a statement's closing balance equals the sum
+//! their allocation date, less write-offs (F4-T12) on the day they were
+//! posted. So a statement's closing balance equals the sum
 //! of the account's open totals once the payments are refreshed, and an
 //! ageing as of today matches the open totals too. Amounts never mix
 //! currencies: a statement has one section per currency, the ageing one
@@ -55,9 +56,11 @@ pub struct StatementQuery {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
 pub struct StatementEntry {
     pub date: NaiveDate,
-    /// `invoice`, `credit_note`, `debit_note`, `deposit` or `payment`.
+    /// `invoice`, `credit_note`, `debit_note`, `deposit`, `payment` or
+    /// `write_off`.
     pub kind: String,
-    /// The document number, or the payment's reference.
+    /// The document number, the payment's reference, or the write-off's
+    /// reason.
     pub reference: Option<String>,
     /// The invoice the line is about.
     pub invoice_id: Uuid,
@@ -160,6 +163,12 @@ pub async fn statement(
          LEFT JOIN customer_payment p ON p.id = pa.payment_ref \
          WHERE i.account_ref = $1 AND {COUNTED} AND {ALLOCATED} \
            AND pa.allocated_on::date <= $2 \
+         UNION ALL \
+         SELECT o.created_at::date, 'write_off', o.payload->>'reason', i.id, \
+                COALESCE(i.currency, ''), (-(o.payload->>'amount')::numeric)::text \
+         FROM billing_posting_outbox o JOIN invoice i ON i.id = o.invoice_ref \
+         WHERE i.account_ref = $1 AND {COUNTED} AND o.posting_kind = 'write_off' \
+           AND o.created_at::date <= $2 \
          ORDER BY 1, 4, 2"
     );
     let rows: Vec<EntryRow> = sqlx::query_as(&sql)
@@ -256,7 +265,10 @@ fn open_documents_sql(rls: &str) -> String {
                 COALESCE(i.grand_total, 0) - COALESCE(( \
                     SELECT SUM(pa.amount) FROM payment_allocation pa \
                     WHERE pa.invoice_ref = i.id AND {ALLOCATED} \
-                      AND pa.allocated_on::date <= $1), 0) AS open \
+                      AND pa.allocated_on::date <= $1), 0) - COALESCE(( \
+                    SELECT SUM((o.payload->>'amount')::numeric) FROM billing_posting_outbox o \
+                    WHERE o.invoice_ref = i.id AND o.posting_kind = 'write_off' \
+                      AND o.created_at::date <= $1), 0) AS open \
          FROM invoice i JOIN account a ON a.id = i.account_ref \
          WHERE {COUNTED} AND i.issued_date::date <= $1 \
            AND (a.is_active IS NULL OR a.is_active = true) {rls}"

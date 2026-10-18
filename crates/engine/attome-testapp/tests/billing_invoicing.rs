@@ -8,6 +8,7 @@
 //! F4-T9: invoice requests become drafts once; schedules run once a period.
 //! F4-T10: payment status follows payments and the due date, never a hand edit.
 //! F4-T11: statements and receivables ageing.
+//! F4-T12: write-offs, with an approval above the threshold.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -1031,5 +1032,122 @@ fn statement_closing_equals_open_totals() {
             )
             .await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+    });
+}
+
+async fn set_write_off_threshold(app: &TestApp, value: u32) {
+    let (status, body) = app
+        .request(
+            Method::PUT,
+            "/api/v1/admin/settings/billing.write_off_approval_threshold",
+            Some(json!({ "scope": "deployment", "value": value })),
+        )
+        .await;
+    assert!(status.is_success(), "{status}: {body}");
+}
+
+// feature: F4
+#[test]
+fn write_off_above_threshold_needs_approval() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in PACKS {
+            install(&app, pack).await;
+        }
+        let account = buyer(&app).await;
+        let invoice = issued_due(&app, account, "100", -40).await; // 115 open
+        let path = format!("/api/v1/billing/invoices/{invoice}/write-off");
+
+        // More than is open, or no reason: refused.
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &path,
+                Some(json!({ "amount": 200, "reason": "Bad debt" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &path,
+                Some(json!({ "amount": 10, "reason": "" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+        // Under the threshold: applied at once.
+        set_write_off_threshold(&app, 50).await;
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &path,
+                Some(json!({ "amount": 15, "reason": "Rounding" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "written_off");
+        assert_eq!(
+            body["open_total"].as_str().unwrap().parse::<f64>().unwrap(),
+            100.0
+        );
+
+        // Above it: an approval, and nothing changes until it is approved.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &path,
+                Some(json!({ "amount": 100, "reason": "Bad debt" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "pending_approval");
+        let approval: Uuid = body["approval_id"].as_str().unwrap().parse().unwrap();
+        let action: String =
+            sqlx::query_scalar("SELECT action_type FROM approval_request WHERE id = $1")
+                .bind(approval)
+                .fetch_one(app.db())
+                .await
+                .expect("approval");
+        assert_eq!(action, "billing.write_off");
+        let open = text(
+            &app,
+            "SELECT open_total::text FROM invoice WHERE id = $1",
+            invoice,
+        )
+        .await;
+        assert_eq!(open.parse::<f64>().unwrap(), 100.0);
+        set_write_off_threshold(&app, 0).await;
+
+        // The approved write-off clears the rest and survives a refresh.
+        let payload: attome_billing::writeoff::WriteOffPayload = serde_json::from_value(
+            sqlx::query_scalar::<_, serde_json::Value>(
+                "SELECT payload FROM approval_request WHERE id = $1",
+            )
+            .bind(approval)
+            .fetch_one(app.db())
+            .await
+            .expect("payload"),
+        )
+        .expect("payload reads");
+        attome_billing::writeoff::do_write_off_approved(&app.state, &payload, app.admin.id)
+            .await
+            .expect("approved write-off");
+        let state = attome_billing::status::refresh_status(&app.state, invoice)
+            .await
+            .expect("refresh");
+        assert_eq!(state.payment_status, "written_off");
+        assert_eq!(state.open_total.parse::<f64>().unwrap(), 0.0);
+        let postings: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM billing_posting_outbox \
+             WHERE invoice_ref = $1 AND posting_kind = 'write_off'",
+        )
+        .bind(invoice)
+        .fetch_one(app.db())
+        .await
+        .expect("postings");
+        assert_eq!(postings, 2);
     });
 }

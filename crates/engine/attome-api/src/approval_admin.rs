@@ -109,6 +109,7 @@ pub(crate) use attome_dashboard::lifecycle::ACTION_DASHBOARD_PUBLISH;
 pub const KNOWN_ACTION_TYPES: &[&str] = &[
     ACTION_SECURITY_REWRAP,
     attome_billing::issue::ACTION_ISSUE,
+    attome_billing::writeoff::ACTION_WRITE_OFF,
     attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
     attome_commission::close::ACTION_PERIOD_CLOSE,
     attome_sales::split_store::ACTION_SPLIT_CHANGE,
@@ -1106,6 +1107,16 @@ async fn dispatch_approved(
                 request.requested_by,
             )
             .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
+        attome_billing::writeoff::ACTION_WRITE_OFF => {
+            // F4-T12: a write-off above the threshold, applied once
+            // approved, with the approver as its actor.
+            let payload: attome_billing::writeoff::WriteOffPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response =
+                attome_billing::writeoff::do_write_off_approved(state, &payload, approver_id)
+                    .await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
         attome_commission::close::ACTION_PERIOD_CLOSE => {

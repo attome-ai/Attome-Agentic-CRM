@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/billing/invoices/{id}/write-off` (`billing.write_off`) writes off part or all of
+  an issued invoice's open amount with a reason, posting a `write_off` ledger row; above
+  `billing.write_off_approval_threshold` it waits for a `billing.write_off` approval. The amount is
+  kept in the new `invoice.written_off_total`, off the open total, statements and ageing.
 - `GET /api/v1/billing/accounts/{id}/statement?from=&to=` (opening balance, issued documents and
   payment allocations in the period, closing balance, per currency), `GET /api/v1/billing/ageing`
   (open amounts per account and currency in current, 1-30, 31-60, 61-90 and over-90-day buckets,

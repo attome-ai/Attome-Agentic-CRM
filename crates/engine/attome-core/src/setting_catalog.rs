@@ -38,15 +38,26 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
 
 /// B5-T3: record settings.
 fn records_settings() -> Vec<SettingDescriptor> {
-    vec![SettingDescriptor::new(
-        "records.bulk_edit_approval_count",
-        "A bulk edit changing more records than this waits on an approval before it runs; \
+    vec![
+        SettingDescriptor::new(
+            "records.bulk_edit_approval_count",
+            "A bulk edit changing more records than this waits on an approval before it runs; \
          0 never asks.",
-        || json!({"type": "integer", "minimum": 0}),
-        &[SettingScope::Deployment],
-        false,
-        || json!(0),
-    )]
+            || json!({"type": "integer", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
+            "billing.write_off_approval_threshold",
+            "Write-offs larger than this wait for an approval before they are applied; \
+         zero writes off without one.",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+    ]
 }
 
 /// F4: billing settings.

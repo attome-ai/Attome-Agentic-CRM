@@ -17,6 +17,7 @@ pub mod status;
 pub mod subscription;
 pub mod tax;
 pub mod usage;
+pub mod writeoff;
 
 pub use model::BillingModel;
 
@@ -35,5 +36,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<deposit::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<requests::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<statements::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<writeoff::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
