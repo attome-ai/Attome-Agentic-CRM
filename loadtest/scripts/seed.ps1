@@ -436,6 +436,8 @@ $summary = [ordered]@{
         loadtest_ddl  = $ddlIds.Count
     }
     users           = $profileUsers
+    # AA1-T3: production_mix.js logs in as these, in rotation.
+    user_emails     = @($profileEmails)
     roles           = $profileRoles
     bulk_query_id   = $bulkQuery.id
     elapsed_seconds = [Math]::Round(((Get-Date) - $seedStarted).TotalSeconds, 1)

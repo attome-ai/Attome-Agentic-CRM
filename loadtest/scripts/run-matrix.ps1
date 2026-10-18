@@ -28,7 +28,14 @@ param(
     # Distinguishes this run's result files from a prior run's (e.g.
     # "chainer", "pgbouncer") so re-runs under a different topology/chainer
     # setting don't silently overwrite the baseline matrix-summary.json.
-    [string]$RunTag = ""
+    [string]$RunTag = "",
+    # AA1-T3: the profile whose seed summary (results/seed-<profile>.json)
+    # names the users production_mix.js logs in as.
+    [string]$Profile = "solo",
+    # AA1-T3: before each scenario, restart the nodes and empty the cache, and
+    # run with no warm-up window. Default is warm: production_mix.js discards
+    # its first 30 s.
+    [switch]$Cold
 )
 . "$PSScriptRoot/common.ps1"
 Assert-LoadtestSafety
@@ -60,6 +67,17 @@ foreach ($n in $NodeCounts) {
         $resultPath = Join-Path $script:ResultsDir "$scenario-n$n$fileSuffix.json"
         if (Test-Path $resultPath) { Remove-Item $resultPath -Force }
 
+        if ($Cold) {
+            Stop-LoadtestNodes
+            Clear-LoadtestCache
+            $ports = Start-LoadtestNodes -Count $n -BootstrapAdminEmail $seed.admin_email `
+                -Topology $Topology -ChainerEnabled:$ChainerEnabled
+            $baseUrls = if ($script:IsWindowsHost) {
+                ($ports | ForEach-Object { "http://host.docker.internal:$_" }) -join ','
+            } else {
+                ($ports | ForEach-Object { "http://localhost:$_" }) -join ','
+            }
+        }
         $k6EnvVars = @{
             BASE_URLS      = $baseUrls
             TEST_EMAIL     = $seed.test_email
@@ -72,6 +90,11 @@ foreach ($n in $NodeCounts) {
             MUT_ENTITY     = $seed.mut_entity
             BULK_ROW_COUNT = $seed.bulk_row_count
             DURATION       = $Duration
+            WARMUP         = if ($Cold) { "0s" } else { "30s" }
+        }
+        $seedSummary = Join-Path $script:ResultsDir "seed-$Profile.json"
+        if (Test-Path $seedSummary) {
+            $k6EnvVars.SEED_FILE = if ($script:IsWindowsHost) { "/work/results/seed-$Profile.json" } else { $seedSummary }
         }
         if ($Vus) { $k6EnvVars.VUS = $Vus }
         if ($scenario -eq 'mutating_write') {

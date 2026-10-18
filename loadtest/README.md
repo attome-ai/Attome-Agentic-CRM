@@ -267,6 +267,26 @@ same pattern as `AUDIT-<date>.md`) is a manual step — the numbers need a
 human reading against §14.5's budgets and this environment's caveats, not
 just a table dump.
 
+## The production-shaped mix (AA1-T3)
+
+`k6/production_mix.js` runs six weighted scenarios at `RATE` requests a second (default 50): read 50%,
+list 20%, query 10%, write 12%, search 6%, bulk 2%. Every request is tagged `op`, so the summary has
+p50/p95/p99 per class (`http_req_duration{op:read,phase:measure}` and so on). It logs in as the
+profile's users named in `results/seed-<profile>.json` (`user_emails`, from `seed.ps1 -Profile`), up
+to `MAX_SESSIONS` (20), in rotation. Without a seed file it runs as the test user.
+
+`k6/mcp_tools.js` is agent traffic: an MCP session per VU, then `tools/call` for `record.get` and
+`search.records`, tagged `op: mcp`. It runs as `MCP_EMAIL`, or the admin by default.
+
+Runs are warm by default: the first `WARMUP` (30 s) is tagged `phase: warmup` and left out of the
+per-class numbers. `run-matrix.ps1 -Cold` restarts the nodes and empties the cache before each
+scenario and runs with no warm-up:
+
+```powershell
+./scripts/run-matrix.ps1 -Scenarios production_mix,mcp_tools -NodeCounts 1 -Profile solo
+./scripts/run-matrix.ps1 -Scenarios production_mix -NodeCounts 1 -Cold
+```
+
 ## The production-shape run (TODO-014) — runbook for a dedicated Linux host
 
 Both existing results docs were produced on a Windows dev machine via Docker

@@ -478,3 +478,22 @@ function Get-LoadtestNodePorts {
     if (-not (Test-Path $script:PidFile)) { return @() }
     return @(Get-Content $script:PidFile | ForEach-Object { ($_ -split "`t")[1] })
 }
+
+# AA1-T3: empties the load-test cache (dragonfly-loadtest on host port 6380)
+# for a cold run. Speaks RESP directly, so no redis-cli is needed.
+function Clear-LoadtestCache {
+    param([string]$HostName = "localhost", [int]$Port = 6380)
+    $client = New-Object System.Net.Sockets.TcpClient($HostName, $Port)
+    try {
+        $stream = $client.GetStream()
+        $bytes = [System.Text.Encoding]::ASCII.GetBytes("*1`r`n`$8`r`nFLUSHALL`r`n")
+        $stream.Write($bytes, 0, $bytes.Length)
+        $buffer = New-Object byte[] 64
+        $read = $stream.Read($buffer, 0, $buffer.Length)
+        $reply = [System.Text.Encoding]::ASCII.GetString($buffer, 0, $read)
+        if (-not $reply.StartsWith("+OK")) { throw "FLUSHALL on ${HostName}:$Port answered: $reply" }
+        Write-Host "  cache emptied (${HostName}:$Port)"
+    } finally {
+        $client.Dispose()
+    }
+}
