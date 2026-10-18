@@ -34,6 +34,7 @@ mod contract;
 pub mod intake;
 pub mod notes;
 pub mod parity;
+pub mod perf;
 pub mod release;
 pub mod repro;
 pub mod sbom;
@@ -67,6 +68,9 @@ pub struct Options {
     pub slo_evidence: bool,
     /// Also build the release binary twice and compare (AC7-T7).
     pub reproducible: bool,
+    /// Also compare the newest perf record with the previous release's on
+    /// the same machine (AA14-T5).
+    pub perf: bool,
     /// Named overrides of failing steps.
     pub overrides: Vec<Override>,
     /// The person taking responsibility for the overrides.
@@ -162,6 +166,10 @@ pub fn check_with(options: &Options) -> ExitCode {
     }
     if options.slo_evidence {
         steps.push(("slo_evidence", slo_evidence as Step));
+    }
+    // AA14-T5: after the evidence is recorded, against the previous release.
+    if options.perf {
+        steps.push(("perf_compare", perf::step as Step));
     }
     let ids: Vec<&str> = steps.iter().map(|(id, _)| *id).collect();
     if let Err(error) = validate_overrides(options, &ids) {
@@ -380,6 +388,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([report, matrix]) if report == "report" => Some(slo_report(Path::new(matrix))),
             _ => None,
         },
+        Some("perf") => perf_cmd(&args[1..]),
         Some("advisories") => Some(
             match workspace_root().and_then(|root| {
                 advisories::run(&root, &test_flaky::date_from_unix(unix_seconds()))
@@ -412,6 +421,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     "--web" => options.web = true,
                     "--slo-evidence" => options.slo_evidence = true,
                     "--reproducible" => options.reproducible = true,
+                    "--perf" => options.perf = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--override" => match parse_override(rest.next()?) {
                         Ok(item) => options.overrides.push(item),
@@ -424,6 +434,68 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                 }
             }
             Some(check_with(&options))
+        }
+        _ => None,
+    }
+}
+
+/// `attome perf record --release <v> [<matrix-summary.json>...]` and
+/// `attome perf compare [--base <v>] [--current <v>]` (AA14-T5); `None` for
+/// arguments it does not know.
+fn perf_cmd(args: &[String]) -> Option<ExitCode> {
+    let root = match workspace_root() {
+        Ok(root) => root,
+        Err(error) => {
+            eprintln!("attome perf: {error}");
+            return Some(ExitCode::from(2));
+        }
+    };
+    match args.first().map(String::as_str) {
+        Some("record") => {
+            let mut release = None;
+            let mut matrices = Vec::new();
+            let mut rest = args[1..].iter();
+            while let Some(arg) = rest.next() {
+                match arg.as_str() {
+                    "--release" => release = Some(rest.next()?.clone()),
+                    other if other.starts_with("--") => return None,
+                    path => matrices.push(PathBuf::from(path)),
+                }
+            }
+            let commit = command_output(&root, "git", &["rev-parse", "HEAD"]);
+            Some(
+                match perf::record(&root, &release?, &matrices, commit, unix_seconds()) {
+                    Ok(path) => {
+                        say(&format!("wrote {}", path.display()));
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("attome perf record: {error}");
+                        ExitCode::FAILURE
+                    }
+                },
+            )
+        }
+        Some("compare") => {
+            let (mut base, mut current) = (None, None);
+            let mut rest = args[1..].iter();
+            while let Some(arg) = rest.next() {
+                match arg.as_str() {
+                    "--base" => base = Some(rest.next()?.clone()),
+                    "--current" => current = Some(rest.next()?.clone()),
+                    _ => return None,
+                }
+            }
+            Some(
+                match perf::compare_cmd(&root, base.as_deref(), current.as_deref()) {
+                    Ok(true) => ExitCode::SUCCESS,
+                    Ok(false) => ExitCode::FAILURE,
+                    Err(error) => {
+                        eprintln!("attome perf compare: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+            )
         }
         _ => None,
     }
@@ -1135,6 +1207,7 @@ mod tests {
             web: false,
             slo_evidence: false,
             reproducible: false,
+            perf: false,
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {

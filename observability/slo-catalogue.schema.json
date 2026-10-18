@@ -232,6 +232,12 @@
               "type": "number"
             }
           }
+        },
+        "regression_threshold_pct": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "description": "AA14-T5: the p95 growth, in percent, past which `attome perf compare` fails this class (10 when unset)."
         }
       },
       "allOf": [

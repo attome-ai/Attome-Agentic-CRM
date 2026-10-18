@@ -1,0 +1,9 @@
+{
+  "format": "attome-perf/v1",
+  "release": "0.2.0",
+  "commit": "bbbbbbb",
+  "recorded_at": 1762000000,
+  "machine": { "cpu": "Fixture CPU", "cores": 8, "ram_bytes": 17179869184, "os": "linux", "arch": "x86_64" },
+  "classes": { "S1": [23.0, 22.0, 24.0], "S2": [60.0, 60.0, 60.0] },
+  "benchmarks": { "rules/eval_simple": 1100.0 }
+}

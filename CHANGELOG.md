@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Release: `attome perf record --release <v>` and `attome perf compare` (AA14-T5). A record
+  (`docs/perf-history/<v>.json`, `attome-perf/v1`) keeps the machine, each SLO class's p95 per
+  load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
+  past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
+  previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
 - Operations: monthly SLO reports (AA13-T9). The `SloMonthlyReport` job writes each finished month's
   error budgets per class to `ops_slo_report` (migration 0109), read at `/api/v1/admin/slo/reports`
   and `/api/v1/admin/slo/reports/{YYYY-MM}`; the `SloBurnCheck` job notifies administrators once per

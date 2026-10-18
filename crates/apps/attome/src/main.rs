@@ -47,7 +47,7 @@ Usage:
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
-  attome release --check [--web] [--slo-evidence] [--override <step>=<reason> --by <name>]
+  attome release --check [--web] [--slo-evidence] [--perf] [--override <step>=<reason> --by <name>]
                                 Run the release gate: format, clippy, tests, the
                                 API contract, SLO outputs, Prometheus rules (and
                                 the web app with --web)
@@ -65,6 +65,11 @@ Usage:
                                 (target/coverage-map/)
   attome slo report <matrix-summary.json>
                                 Write the SLO release report from a load-test run
+  attome perf record --release <v> [<matrix-summary.json>...]
+                                Record a release's p95 per SLO class and benchmark
+                                means (docs/perf-history/<v>.json)
+  attome perf compare [--base <v>] [--current <v>]
+                                Compare with the previous release on the same machine
   attome version           Print the version
   attome help              Print this help
 ";
@@ -88,7 +93,7 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             })
         }
-        ["slo" | "test", ..] => {
+        ["slo" | "test" | "perf", ..] => {
             let all: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
             attome_release::dispatch(&all).unwrap_or_else(|| {
                 eprintln!("attome slo/test: unknown arguments\n\n{USAGE}");
