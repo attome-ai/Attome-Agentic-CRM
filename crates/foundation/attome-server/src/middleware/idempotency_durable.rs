@@ -37,6 +37,9 @@
 //! storage of swept rows nobody reuses (a second, longer hard-delete window in
 //! the prune job) is still owed in `crates/server/src/jobs.rs`.
 
+use std::sync::OnceLock;
+
+use attome_config::KeyRing;
 use attome_db::{DbPool, Tx};
 use attome_types::AppError;
 use uuid::Uuid;
@@ -113,8 +116,71 @@ impl std::fmt::Debug for AcquireOutcome {
     }
 }
 
+/// S9-T3: `idempotency.response_encryption_key`, installed once per process
+/// from the configuration ([`install_response_key`], called by
+/// `AppState::new`). A read-only snapshot of configuration: every process
+/// reads the same file, so every node seals and opens alike.
+static RESPONSE_KEY: OnceLock<KeyRing> = OnceLock::new();
+
+const RESPONSE_KEY_FIELD: &str = "idempotency.response_encryption_key";
+
+/// Installs the response key ring; a no-op when it is unset or empty, or
+/// when one is already installed.
+pub fn install_response_key(ring: Option<&KeyRing>) {
+    if let Some(ring) = ring.filter(|ring| !ring.is_empty()) {
+        let _ = RESPONSE_KEY.set(ring.clone());
+    }
+}
+
+/// S9-T3: the bytes to store for `body` and the id of the key that sealed
+/// them; the plaintext and `None` when no ring is given. The record's id is
+/// the AES-GCM associated data, so a sealed body copied to another row does
+/// not open.
+pub fn seal_body(
+    ring: Option<&KeyRing>,
+    record_id: Uuid,
+    body: &[u8],
+) -> Result<(Vec<u8>, Option<String>), AppError> {
+    let Some(ring) = ring else {
+        return Ok((body.to_vec(), None));
+    };
+    let sealed = attome_auth::envelope::encrypt_bytes_with_aad(
+        RESPONSE_KEY_FIELD,
+        ring,
+        body,
+        record_id.as_bytes(),
+    )?;
+    Ok((sealed, Some(ring.active_key_id.clone())))
+}
+
+/// S9-T3: the inverse of [`seal_body`]. A row sealed (`key_id` set) on a
+/// process with no ring is an error, never the ciphertext as a body.
+pub fn open_body(
+    ring: Option<&KeyRing>,
+    record_id: Uuid,
+    key_id: Option<&str>,
+    stored: Vec<u8>,
+) -> Result<Vec<u8>, AppError> {
+    if key_id.is_none() {
+        return Ok(stored);
+    }
+    let ring = ring.ok_or_else(|| {
+        AppError::internal(format!(
+            "an idempotency record is sealed but {RESPONSE_KEY_FIELD} is not configured"
+        ))
+    })?;
+    attome_auth::envelope::decrypt_bytes_with_aad(
+        RESPONSE_KEY_FIELD,
+        ring,
+        &stored,
+        record_id.as_bytes(),
+    )
+}
+
 #[derive(sqlx::FromRow)]
 struct ExistingRow {
+    id: Uuid,
+    response_key_id: Option<String>,
     body_hash: String,
     state: String,
     response_status: Option<i16>,
@@ -278,7 +344,8 @@ async fn resolve_existing(
     body_hash: &str,
 ) -> Result<AcquireOutcome, AppError> {
     let existing: Option<ExistingRow> = sqlx::query_as(
-        "SELECT body_hash, state, response_status, response_headers, response_body
+        "SELECT id, response_key_id, body_hash, state, response_status, response_headers,
+                response_body
          FROM idempotency_record
          WHERE principal_ref = $1 AND http_method = $2 AND operation = $3 AND client_key = $4
            AND is_deleted = FALSE",
@@ -316,7 +383,12 @@ async fn resolve_existing(
         .response_headers
         .and_then(|value| serde_json::from_value(value).ok())
         .unwrap_or_default();
-    let body = existing.response_body.unwrap_or_default();
+    let body = open_body(
+        RESPONSE_KEY.get(),
+        existing.id,
+        existing.response_key_id.as_deref(),
+        existing.response_body.unwrap_or_default(),
+    )?;
 
     Ok(AcquireOutcome::Replay(CachedRecord {
         status,
@@ -354,18 +426,23 @@ pub async fn complete_in_tx(
     body: &[u8],
 ) -> Result<(), sqlx::Error> {
     let headers_json = serde_json::to_value(headers).unwrap_or_else(|_| serde_json::json!([]));
+    // S9-T3: sealed before it is written; a sealing failure rolls the
+    // mutation back with it.
+    let (stored, key_id) = seal_body(RESPONSE_KEY.get(), record_id, body)
+        .map_err(|_| sqlx::Error::Protocol(format!("{RESPONSE_KEY_FIELD}: sealing failed")))?;
     let completed = sqlx::query(
         "UPDATE idempotency_record
          SET state = 'completed', response_status = $2, response_headers = $3,
-             response_body = $4, mutation_ref = $5, updated_at = NOW(),
+             response_body = $4, mutation_ref = $5, response_key_id = $6, updated_at = NOW(),
              row_version = row_version + 1
          WHERE id = $1 AND state = 'pending'",
     )
     .bind(record_id)
     .bind(status as i16)
     .bind(headers_json)
-    .bind(body)
+    .bind(stored)
     .bind(mutation_ref)
+    .bind(key_id)
     .execute(&mut **tx)
     .await?;
     if completed.rows_affected() == 0 {
@@ -402,16 +479,27 @@ pub async fn complete_best_effort(
     body: &[u8],
 ) {
     let headers_json = serde_json::to_value(headers).unwrap_or_else(|_| serde_json::json!([]));
+    let (stored, key_id) = match seal_body(RESPONSE_KEY.get(), record_id, body) {
+        Ok(sealed) => sealed,
+        Err(error) => {
+            // Leave the row pending: a retry after the stale window runs
+            // again rather than replaying a body stored in the clear.
+            tracing::error!(%error, %record_id, "idempotency response sealing failed");
+            return;
+        }
+    };
     let result = sqlx::query(
         "UPDATE idempotency_record
          SET state = 'completed', response_status = $2, response_headers = $3,
-             response_body = $4, updated_at = NOW(), row_version = row_version + 1
+             response_body = $4, response_key_id = $5, updated_at = NOW(),
+             row_version = row_version + 1
          WHERE id = $1 AND state = 'pending'",
     )
     .bind(record_id)
     .bind(status as i16)
     .bind(headers_json)
-    .bind(body)
+    .bind(stored)
+    .bind(key_id)
     .execute(&state.db)
     .await;
     match result {
@@ -465,6 +553,50 @@ pub async fn release_on_failure(state: &AppState, record_id: Uuid) {
 // other `State<AppState>` middleware, e.g. `auth.rs`'s `test_state` helper
 // needing a real Postgres/Redis/object-store connection). See this file's
 // top doc comment for what's still owed against live infrastructure.
+#[cfg(test)]
+mod sealing_tests {
+    use std::collections::HashMap;
+
+    use super::{open_body, seal_body};
+    use attome_config::KeyRing;
+    use uuid::Uuid;
+
+    fn ring() -> KeyRing {
+        KeyRing {
+            active_key_id: "k1".to_owned(),
+            keys: HashMap::from([("k1".to_owned(), "11".repeat(32))]),
+        }
+    }
+
+    #[test]
+    fn stored_bytes_are_not_the_plaintext_and_replay_returns_the_body() {
+        let ring = ring();
+        let id = Uuid::now_v7();
+        let body = br#"{"email":"someone@example.com"}"#;
+        let (stored, key_id) = seal_body(Some(&ring), id, body).unwrap();
+        assert_eq!(key_id.as_deref(), Some("k1"));
+        assert!(!stored.windows(body.len()).any(|w| w == body));
+        assert!(!stored.windows(7).any(|w| w == b"someone"));
+        let opened = open_body(Some(&ring), id, key_id.as_deref(), stored).unwrap();
+        assert_eq!(opened, body);
+    }
+
+    #[test]
+    fn a_sealed_body_does_not_open_on_another_record() {
+        let ring = ring();
+        let (stored, key_id) = seal_body(Some(&ring), Uuid::now_v7(), b"x").unwrap();
+        assert!(open_body(Some(&ring), Uuid::now_v7(), key_id.as_deref(), stored).is_err());
+    }
+
+    #[test]
+    fn without_a_ring_bodies_pass_through_and_sealed_rows_refuse() {
+        let id = Uuid::now_v7();
+        let (stored, key_id) = seal_body(None, id, b"plain").unwrap();
+        assert_eq!((stored.as_slice(), key_id), (&b"plain"[..], None));
+        assert!(open_body(None, id, Some("k1"), b"sealed".to_vec()).is_err());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     /// `complete_in_tx`/`complete_best_effort` write `serde_json::to_value(headers)`

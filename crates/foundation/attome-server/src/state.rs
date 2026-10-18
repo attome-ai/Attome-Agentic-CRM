@@ -207,6 +207,11 @@ impl AppState {
     ) -> Self {
         let secrets = MetadataCache::new(SecretRings::from_config(&config));
         let shedder = Arc::new(crate::middleware::shed::Shedder::new(&config.shed));
+        // S9-T3: every process that completes or replays a durable
+        // idempotency record builds an AppState first.
+        crate::middleware::idempotency_durable::install_response_key(
+            config.idempotency.response_encryption_key.as_ref(),
+        );
         Self {
             config: Arc::new(config),
             db,

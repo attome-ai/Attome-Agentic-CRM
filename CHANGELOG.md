@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Stored idempotency responses can be sealed (S9-T3): with `idempotency.response_encryption_key`
+  (a key ring), a durable record's response body is encrypted with AES-256-GCM, bound to the
+  record's id, and its key id is kept in `idempotency_record.response_key_id` (migration 0119);
+  a replay decrypts it. Without the key, bodies are stored as before.
 - The audit chain is verified every week (Q16-T2): the `AuditChainVerify` job runs the same checks
   as `verify_audit_chain` for every organization, records each result in
   `audit_chain_verification` (migration 0117) and, on a failure, logs

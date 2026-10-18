@@ -169,6 +169,13 @@ pub struct IdempotencySection {
     /// coordination Redis. Must be at least 1.
     #[serde(default = "default_idempotency_replay_max_bytes")]
     pub replay_max_bytes: usize,
+    /// S9-T3: the key ring that seals a durable record's stored response
+    /// (AES-256-GCM, tagged with the key id, bound to the record's id). Unset
+    /// stores responses as they are; set it on any deployment whose
+    /// responses carry personal data. Keep a retired key in the ring until
+    /// the records it sealed are past `bulk_retention_hours`.
+    #[serde(default)]
+    pub response_encryption_key: Option<crate::KeyRing>,
 }
 
 /// S9-T2: seven days.
@@ -191,6 +198,7 @@ impl Default for IdempotencySection {
             durable_retention_hours: default_idempotency_durable_retention_hours(),
             bulk_retention_hours: default_idempotency_bulk_retention_hours(),
             replay_max_bytes: default_idempotency_replay_max_bytes(),
+            response_encryption_key: None,
         }
     }
 }
