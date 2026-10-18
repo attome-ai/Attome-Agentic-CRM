@@ -3163,3 +3163,175 @@ fn list_etag_deleted_record_returns_200() {
         );
     })
 }
+
+// ── AA7-T12: caching contract ────────────────────────────────────────────────
+//
+// `list_etag_deleted_record_returns_200` above is the "a deleted record breaks
+// the 304" case; the no-store routes are pinned in the app crate's
+// `route_cache_class.rs`, where the auth routes are mounted.
+
+/// A user with no direct grant, and their session cookie.
+async fn seed_plain_user(system: &TestSystem, tag: &str) -> (Uuid, String) {
+    let db = &system.state().base.db;
+    let user_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
+        .bind(user_id)
+        .bind(format!("query-etag-{tag}-{user_id}"))
+        .execute(db)
+        .await
+        .expect("insert user");
+    (user_id, session_cookie(user_id))
+}
+
+/// The privilege `key`, created when missing.
+async fn ensure_privilege(system: &TestSystem, key: &str) -> Uuid {
+    sqlx::query_scalar(
+        "INSERT INTO privilege (id, key, name, description, is_active, created_at, owner_layer) \
+         VALUES ($1, $2, $2, $2, true, NOW(), 'project') \
+         ON CONFLICT (key) DO UPDATE SET key = EXCLUDED.key \
+         RETURNING id",
+    )
+    .bind(Uuid::now_v7())
+    .bind(key)
+    .fetch_one(&system.state().base.db)
+    .await
+    .expect("ensure privilege")
+}
+
+/// A role holding `key` whose read on `entity_id` is `level` (0 = own
+/// records), given to `user_id`.
+async fn grant_scoped_role(
+    system: &TestSystem,
+    user_id: Uuid,
+    key: &str,
+    entity_id: Uuid,
+    level: i16,
+) {
+    let db = &system.state().base.db;
+    let role_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO role (id, name, owner_layer) VALUES ($1, $2, 'project')")
+        .bind(role_id)
+        .bind(format!("query-etag-role-{role_id}"))
+        .execute(db)
+        .await
+        .expect("insert role");
+    let privilege_id = ensure_privilege(system, key).await;
+    sqlx::query(
+        "INSERT INTO role_mm_privilege (id, role_ref, privilege_ref, owner_layer) VALUES ($1, $2, $3, 'project')",
+    )
+    .bind(Uuid::now_v7())
+    .bind(role_id)
+    .bind(privilege_id)
+    .execute(db)
+    .await
+    .expect("grant role privilege");
+    sqlx::query(
+        "INSERT INTO role_mm_entity_access \
+             (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, owner_layer) \
+         VALUES ($1, $2, $3, $4, $4, $4, 'project')",
+    )
+    .bind(Uuid::now_v7())
+    .bind(role_id)
+    .bind(entity_id)
+    .bind(level)
+    .execute(db)
+    .await
+    .expect("scope the role");
+    sqlx::query("INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)")
+        .bind(Uuid::now_v7())
+        .bind(user_id)
+        .bind(role_id)
+        .execute(db)
+        .await
+        .expect("assign role");
+    system.state().base.security.invalidate(user_id).await;
+}
+
+/// `key` granted to `user_id` directly (global read on its entity).
+async fn grant_direct(system: &TestSystem, user_id: Uuid, key: &str) {
+    let privilege_id = ensure_privilege(system, key).await;
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         VALUES ($1, $2, $3, true, NOW())",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user_id)
+    .bind(privilege_id)
+    .execute(&system.state().base.db)
+    .await
+    .expect("grant privilege");
+    system.state().base.security.invalidate(user_id).await;
+}
+
+/// Opens the fixture's query to holders of `{entity}.read`.
+async fn open_query(system: &TestSystem, qid: Uuid, logicalname: &str) {
+    sqlx::query("UPDATE sql_query SET required_privilege = $1 WHERE id = $2")
+        .bind(format!("{logicalname}.read"))
+        .bind(qid)
+        .execute(&system.state().base.db)
+        .await
+        .expect("open the query");
+}
+
+async fn entity_ref(system: &TestSystem, logicalname: &str) -> Uuid {
+    sqlx::query_scalar("SELECT id FROM entity_info WHERE logicalname = $1 AND is_active = true")
+        .bind(logicalname)
+        .fetch_one(&system.state().base.db)
+        .await
+        .expect("entity id")
+}
+
+/// A caller whose rows are filtered record by record gets no ETag, so a
+/// removed share (no change-feed event, no permission change) can never be
+/// hidden behind a 304: every request runs and answers what they see now.
+#[test]
+fn hidden_record_breaks_list_304() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, qid, _) = etag_fixture(&system, &app, &admin).await;
+        open_query(&system, qid, &logicalname).await;
+        let entity_id = entity_ref(&system, &logicalname).await;
+        let (user, cookie) = seed_plain_user(&system, "scoped").await;
+        grant_scoped_role(&system, user, &format!("{logicalname}.read"), entity_id, 0).await;
+
+        let (status, etag, _) = execute_conditional(&app, &cookie, qid, None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(etag, None, "record-scoped rows carry no ETag");
+        let (status, _, _) = execute_conditional(&app, &cookie, qid, Some("*")).await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "no ETag, so If-None-Match never matches"
+        );
+    })
+}
+
+#[test]
+fn different_roles_never_share_list_etag() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, qid, _) = etag_fixture(&system, &app, &admin).await;
+        open_query(&system, qid, &logicalname).await;
+        let (reader, reader_cookie) = seed_plain_user(&system, "reader").await;
+        grant_direct(&system, reader, &format!("{logicalname}.read")).await;
+
+        let (_, admin_tag, _) = execute_conditional(&app, &admin, qid, None).await;
+        let (status, reader_tag, _) = execute_conditional(&app, &reader_cookie, qid, None).await;
+        assert_eq!(status, StatusCode::OK);
+        let (admin_tag, reader_tag) = (
+            admin_tag.expect("admin tag"),
+            reader_tag.expect("reader tag"),
+        );
+        assert_ne!(admin_tag, reader_tag, "two permission sets, two ETags");
+        let (status, _, _) = execute_conditional(&app, &reader_cookie, qid, Some(&admin_tag)).await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "another caller's ETag is never a match"
+        );
+    })
+}

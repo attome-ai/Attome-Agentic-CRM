@@ -1368,9 +1368,12 @@ fn if_none_match_matches(headers: &axum::http::HeaderMap, tag: &str) -> bool {
 }
 
 /// AA7-T3: the ETag of `body`'s answer for `ctx`, or `None` when it has
-/// none: a total was asked for, the query is not over one entity, or the
+/// none: a total was asked for, the query is not over one entity, the
 /// caller would be refused (so a `304` never answers a request the query
-/// itself would refuse). It hashes the request, the caller and their
+/// itself would refuse), or the caller's rows are filtered record by record
+/// (AA7-T12: a removed share or a changed owner is neither a change-feed
+/// event nor a permission change, so only an admin or a caller with global
+/// read on the entity gets an ETag). It hashes the request, the caller and their
 /// permission set, the stored query's definition and the entity change
 /// feed's newest position. The position is the whole feed's, not only this
 /// entity's: an entity's stored SQL may join other tables.
@@ -1386,13 +1389,15 @@ pub async fn query_etag(
     }
     let db = state.base.readonly_query_pool(ctx.user_id).await;
     let qrow = lookup(db, body).await?;
-    let Some(entity) = qrow.entity_logical_name.and_then(|id| {
-        state
-            .entities
-            .load()
-            .get_by_id(id)
-            .map(|meta| meta.logicalname.clone())
-    }) else {
+    let Some(entity_id) = qrow.entity_logical_name else {
+        return Ok(None);
+    };
+    let Some(entity) = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.logicalname.clone())
+    else {
         return Ok(None);
     };
     let gated = match &qrow.required_privilege {
@@ -1401,6 +1406,19 @@ pub async fn query_etag(
     };
     if gated.is_err() || ctx.require(&entity, "read").is_err() {
         return Ok(None);
+    }
+    if !ctx.is_admin {
+        let level = attome_security::resolve_entity_access_level(
+            &state.base.db,
+            ctx.user_id,
+            entity_id,
+            &entity,
+            attome_security::RecordAction::Read,
+        )
+        .await?;
+        if level != AccessLevel::Global {
+            return Ok(None);
+        }
     }
     let position: Option<i64> = sqlx::query_scalar("SELECT max(seq) FROM entity_change_event")
         .fetch_one(&state.base.db)

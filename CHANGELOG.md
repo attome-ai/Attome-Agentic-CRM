@@ -88,7 +88,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   hash of the request, the caller and their permission set, the stored query's definition and the
   change feed's newest position. A request whose `If-None-Match` names it gets `304 Not Modified`
   without the query running, but only after the same privilege and entity-read checks the query
-  itself applies. Custom queries over several entities and `include_total` requests carry no ETag.
+  itself applies. Custom queries over several entities, `include_total` requests and callers whose
+  rows are filtered record by record (a share or ownership change is not in the hash) carry no ETag
+  (AA7-T12).
 - Priority load shedding (AB5-T7): reports, exports and AI calls each hold a number of slots
   (`shed.permits`); while more than `shed.interactive_high_water` interactive requests are in
   flight, each of those classes runs one request at a time, and a request that cannot get a slot

@@ -67,3 +67,24 @@ fn every_listed_override_names_a_documented_route() {
         );
     }
 }
+
+/// AA7-T12: the credential routes answer `Cache-Control: no-store`.
+#[test]
+fn no_store_routes_send_no_store() {
+    for (method, path) in [
+        (Method::POST, "/api/v1/auth/login"),
+        (Method::POST, "/api/v1/auth/api-keys"),
+        (Method::GET, "/api/v1/auth/api-keys"),
+        (Method::GET, "/api/v1/auth/challenge"),
+    ] {
+        assert!(
+            operations().iter().any(|(m, p)| *m == method && p == path),
+            "{method} {path} is a documented route"
+        );
+        assert_eq!(
+            class_for(&method, path),
+            CacheClass::NoStore,
+            "{method} {path}"
+        );
+    }
+}
