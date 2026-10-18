@@ -370,6 +370,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   live readable attributes, as `GET /api/v1/{entity}` does, instead of the seeded default view's
   `id`-only columns: filters, sorts and selects by real attributes (and by an attribute's old name
   during its alias period, Y12-T8) now work there.
+- API document: every operation carries `x-module` (S2-T9), the licence module whose gate it sits
+  behind (`core` for ungated and core-gated routes), so the document can be split and filtered by
+  licence. A test refuses an operation without one or with a name outside the module map.
 - Docs: three Arazzo 1.0.1 workflows in `docs/api/arazzo/` (S2-T13): create an account with its
   contacts in one composite request, read an entity page by page from a keyset cursor, and approve
   and run a gated action. A test checks every step names an operation the API document has.

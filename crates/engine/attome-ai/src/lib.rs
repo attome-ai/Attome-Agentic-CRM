@@ -185,10 +185,17 @@ pub use telemetry::{SuggestionOutcome, SuggestionRecord};
 /// `attome_dashboard::openapi()` uses.
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = engine::openapi();
-    doc.merge(decision::openapi_fragment());
+    // S2-T9: the decision and outcome models are licensed apart from AI.
+    doc.merge(attome_server::openapi::tag_module(
+        decision::openapi_fragment(),
+        "dashboard",
+    ));
     doc.merge(agent::openapi_fragment());
     doc.merge(session_admin::openapi_fragment());
-    doc.merge(outcome::openapi_fragment());
+    doc.merge(attome_server::openapi::tag_module(
+        outcome::openapi_fragment(),
+        "core",
+    ));
     // M101 slice 2 — `/api/v1/mcp`.
     doc.merge(mcp::openapi_fragment());
     // `/admin/ai/providers/{id}/credential` + `/models/fetch`.

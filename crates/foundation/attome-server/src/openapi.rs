@@ -109,6 +109,46 @@ struct RootDoc;
 
 /// This crate's contribution: the document's identity plus the unauthenticated
 /// health/version probes it mounts itself.
+/// S2-T9: sets `x-module` to `module` on every operation of `doc` that has
+/// none, so the document can be split by licence module. `module` is a key
+/// of `attome_modules::MODULE_MAP`: the module whose licence gates the
+/// fragment's routes (`core` when nothing but core gates them). A fragment
+/// tagged by a narrower caller first keeps its own tag.
+pub fn tag_module(mut doc: utoipa::openapi::OpenApi, module: &str) -> utoipa::openapi::OpenApi {
+    for item in doc.paths.paths.values_mut() {
+        for operation in [
+            &mut item.get,
+            &mut item.put,
+            &mut item.post,
+            &mut item.delete,
+            &mut item.options,
+            &mut item.head,
+            &mut item.patch,
+            &mut item.trace,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            let tagged = operation
+                .extensions
+                .as_ref()
+                .is_some_and(|ext| ext.contains_key("x-module"));
+            if tagged {
+                continue;
+            }
+            let tag: utoipa::openapi::extensions::Extensions =
+                [("x-module", serde_json::Value::from(module))]
+                    .into_iter()
+                    .collect();
+            match &mut operation.extensions {
+                Some(existing) => existing.merge(tag),
+                None => operation.extensions = Some(tag),
+            }
+        }
+    }
+    doc
+}
+
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = RootDoc::openapi();
     doc.merge(crate::health::openapi_fragment());

@@ -354,3 +354,39 @@ fn arazzo_steps_reference_existing_operations() {
         }
     }
 }
+
+/// S2-T9: every operation names the licence module whose gate it sits
+/// behind, as a key of `attome_modules::MODULE_MAP`, so the document can be
+/// split and filtered by licence.
+#[test]
+fn every_operation_has_x_module() {
+    let document = document();
+    let modules: BTreeSet<&str> = attome_modules::MODULE_MAP
+        .iter()
+        .map(|(name, _)| *name)
+        .collect();
+    let mut missing = Vec::new();
+    let mut unknown = Vec::new();
+    for (path, item) in document["paths"].as_object().expect("paths") {
+        for (method, operation) in item.as_object().expect("path item") {
+            if !operation.is_object() || operation.get("responses").is_none() {
+                continue;
+            }
+            match operation["x-module"].as_str() {
+                None => missing.push(format!("{} {path}", method.to_uppercase())),
+                Some(module) if !modules.contains(module) => {
+                    unknown.push(format!("{} {path}: {module}", method.to_uppercase()));
+                }
+                Some(_) => {}
+            }
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "operations without x-module (tag the fragment with attome_server::openapi::tag_module): {missing:?}"
+    );
+    assert!(
+        unknown.is_empty(),
+        "x-module is not a MODULE_MAP key: {unknown:?}"
+    );
+}

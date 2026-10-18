@@ -33,36 +33,102 @@ fn build() -> utoipa::openapi::OpenApi {
     let mut doc = attome_api::openapi_document();
     // Engines mounted through `ModelRegistry` from this crate — keep this list
     // in step with `boot`'s model registrations.
-    doc.merge(attome_workflow::openapi());
-    doc.merge(attome_ai::openapi());
-    doc.merge(attome_portal::openapi());
-    doc.merge(attome_sales::openapi());
-    doc.merge(attome_callintel::openapi());
-    doc.merge(attome_marketing::openapi());
-    doc.merge(attome_billing::openapi());
-    doc.merge(attome_einvoice::openapi());
-    doc.merge(attome_commission::openapi());
-    doc.merge(attome_partner::openapi());
-    doc.merge(attome_fulfilment::openapi());
-    doc.merge(attome_workforce::openapi());
-    doc.merge(attome_contract::openapi());
-    doc.merge(attome_offline::openapi());
-    doc.merge(attome_procurement::openapi());
-    doc.merge(attome_hr::openapi());
-    doc.merge(attome_search::engine::openapi());
-    doc.merge(attome_report::openapi());
-    doc.merge(attome_integration::openapi());
+    doc.merge(attome_server::openapi::tag_module(
+        attome_workflow::openapi(),
+        "workflow",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_ai::openapi(),
+        "ai",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_portal::openapi(),
+        "portal",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_sales::openapi(),
+        "sales",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_callintel::openapi(),
+        "callintel",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_marketing::openapi(),
+        "marketing",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_billing::openapi(),
+        "billing",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_einvoice::openapi(),
+        "billing",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_commission::openapi(),
+        "commission",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_partner::openapi(),
+        "partner",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_fulfilment::openapi(),
+        "fulfilment",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_workforce::openapi(),
+        "workforce",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_contract::openapi(),
+        "contract",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_offline::openapi(),
+        "offline",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_procurement::openapi(),
+        "procurement",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_hr::openapi(),
+        "core",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_search::engine::openapi(),
+        "search",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_report::openapi(),
+        "report",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        attome_integration::openapi(),
+        "integration",
+    ));
     // M41 Phase 1 (Process Intelligence, D-462) — same reasoning as the
     // engines above: `.register(attome_process::ProcessModel)` happens in
     // `boot.rs` (this crate), and `attome-process` has no dependency on
     // `attome-api` to merge this fragment from that layer instead.
-    doc.merge(attome_process::openapi());
+    doc.merge(attome_server::openapi::tag_module(
+        attome_process::openapi(),
+        "process",
+    ));
     // M57 Phase 1 (Document Generation, D-463) — same reasoning as
     // attome-process above.
-    doc.merge(attome_docgen::openapi());
+    doc.merge(attome_server::openapi::tag_module(
+        attome_docgen::openapi(),
+        "docgen",
+    ));
     // M36 Phase 0+1 (Predictive Intelligence, D-473) — same reasoning as
     // attome-process/attome-docgen above.
-    doc.merge(attome_predict::openapi());
+    doc.merge(attome_server::openapi::tag_module(
+        attome_predict::openapi(),
+        "predict",
+    ));
     // Trading Platform Phase 1 (document/TRADING-PLATFORM-PLAN.md) — same
     // reasoning as attome-process/attome-docgen/attome-predict above:
     // `.register(trd_engine::TrdModel)` happens in `boot.rs` (this crate),
@@ -70,13 +136,22 @@ fn build() -> utoipa::openapi::OpenApi {
     // no dependency on `attome-api` to merge this fragment from that layer
     // instead.
     // This crate's own auth surface.
-    doc.merge(crate::auth::openapi());
+    doc.merge(attome_server::openapi::tag_module(
+        crate::auth::openapi(),
+        "core",
+    ));
     // M53 Phase 1 (Omnichannel, web chat only, D-474) — the public web chat
     // widget endpoint, mounted directly in `main.rs` for the same reason
     // `crate::auth::openapi()` is merged from here rather than from
     // `attome-api`.
-    doc.merge(crate::omnichannel::openapi());
-    doc.merge(<SelfDoc as utoipa::OpenApi>::openapi());
+    doc.merge(attome_server::openapi::tag_module(
+        crate::omnichannel::openapi(),
+        "omnichannel",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
+        <SelfDoc as utoipa::OpenApi>::openapi(),
+        "core",
+    ));
     // M61 Phase 1 (API Management, D-438) — applied last, against the fully
     // merged document: attome_server::middleware::deprecation::DEPRECATED_PATHS
     // is the single source of truth for both halves of a deprecation notice

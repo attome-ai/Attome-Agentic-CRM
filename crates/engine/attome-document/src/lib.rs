@@ -57,9 +57,15 @@ pub use engine::DocumentModel;
 /// `files::routes()` in `core_routes()` — so it can reach the fragment from
 /// the engine layer and the list in `crates/server` stays shorter.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    let mut doc = files::openapi_fragment();
-    doc.merge(documents_tree::openapi_fragment());
-    doc.merge(share::openapi_fragment());
-    doc.merge(checkout::openapi_fragment());
+    // S2-T9: only the folder tree is the document model's (MODULE_DOCUMENT);
+    // files, share links and checkout are mounted under core.
+    let core = |fragment| attome_server::openapi::tag_module(fragment, "core");
+    let mut doc = core(files::openapi_fragment());
+    doc.merge(attome_server::openapi::tag_module(
+        documents_tree::openapi_fragment(),
+        "document",
+    ));
+    doc.merge(core(share::openapi_fragment()));
+    doc.merge(core(checkout::openapi_fragment()));
     doc
 }
