@@ -154,6 +154,17 @@ pub async fn warm_registered(budget: Duration) -> usize {
     total
 }
 
+/// Z3-T11: a store call bounded by `bound`; running past it is the same
+/// failure as a store error (guidelines §5: every Redis call is bounded).
+async fn bounded<T>(
+    bound: Duration,
+    call: impl Future<Output = Result<T, AppError>>,
+) -> Result<T, AppError> {
+    tokio::time::timeout(bound, call)
+        .await
+        .unwrap_or(Err(AppError::Overloaded("cache")))
+}
+
 /// An `AppError` again, for each caller that waited on one shared load.
 fn reissue(error: &AppError) -> AppError {
     match error {
@@ -361,7 +372,7 @@ where
             return loader.await;
         };
         let sealer = self.sealer_for(store);
-        match store.get(key).await {
+        match bounded(crate::timeouts::REQUEST_PATH, store.get(key)).await {
             Ok(Some(stored)) => {
                 let text = match sealer {
                     Some(sealer) => sealer.open(&stored).map_err(|error| {
@@ -397,7 +408,12 @@ where
             match stored {
                 Ok(stored) => {
                     let ttl = jittered(self.spec.ttl, self.spec.jitter_pct, seed(key));
-                    if let Err(error) = store.set(key, &stored, Some(ttl)).await {
+                    if let Err(error) = bounded(
+                        crate::timeouts::REQUEST_PATH,
+                        store.set(key, &stored, Some(ttl)),
+                    )
+                    .await
+                    {
                         self.warn_degraded(&error);
                     }
                 }
@@ -415,7 +431,7 @@ where
         let key = self.spec.key(id);
         self.l1.invalidate(&key).await;
         if let Some(store) = self.shared_store() {
-            store.del(&key).await?;
+            bounded(crate::timeouts::BACKGROUND, store.del(&key)).await?;
         }
         Ok(())
     }
@@ -430,7 +446,7 @@ where
         let key = self.reader_key(reader, id)?;
         self.l1.invalidate(&key).await;
         if let Some(store) = self.shared_store() {
-            store.del(&key).await?;
+            bounded(crate::timeouts::BACKGROUND, store.del(&key)).await?;
         }
         Ok(())
     }
