@@ -173,7 +173,7 @@ async fn transition(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-pub(super) async fn get_run(
+pub(super) async fn get_data_step_run(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -196,7 +196,7 @@ pub(super) async fn get_run(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
 )]
-pub(super) async fn pause_run(
+pub(super) async fn pause_data_step_run(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -232,7 +232,7 @@ pub(super) async fn pause_run(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
 )]
-pub(super) async fn resume_run(
+pub(super) async fn resume_data_step_run(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -268,7 +268,7 @@ pub(super) async fn resume_run(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
 )]
-pub(super) async fn cancel_run(
+pub(super) async fn cancel_data_step_run(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
@@ -297,14 +297,28 @@ pub(super) async fn cancel_run(
 
 pub(super) fn routes() -> Router<EngineState> {
     Router::new()
-        .route("/api/v1/admin/data-step-runs/{id}", get(get_run))
-        .route("/api/v1/admin/data-step-runs/{id}/pause", post(pause_run))
-        .route("/api/v1/admin/data-step-runs/{id}/resume", post(resume_run))
-        .route("/api/v1/admin/data-step-runs/{id}/cancel", post(cancel_run))
+        .route("/api/v1/admin/data-step-runs/{id}", get(get_data_step_run))
+        .route(
+            "/api/v1/admin/data-step-runs/{id}/pause",
+            post(pause_data_step_run),
+        )
+        .route(
+            "/api/v1/admin/data-step-runs/{id}/resume",
+            post(resume_data_step_run),
+        )
+        .route(
+            "/api/v1/admin/data-step-runs/{id}/cancel",
+            post(cancel_data_step_run),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_run, pause_run, resume_run, cancel_run))]
+#[openapi(paths(
+    get_data_step_run,
+    pause_data_step_run,
+    resume_data_step_run,
+    cancel_data_step_run
+))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
