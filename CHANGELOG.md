@@ -1128,6 +1128,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `GET /api/v1/billing/disputes/{id}/evidence` answers a `PaginatedResponse` (`items`, page 1 holds
+  every document) and `POST /api/v1/billing/accounts/{id}/apply-credit` answers
+  `{account_id, payments}` instead of bare arrays (the contract shape guard).
 - A request past a limit answers `limit_exceeded` naming the `limit`, its `value` and the `next` step
   (`split`, `run_as_job`, `export`, `retry_after` with `Retry-After`, `contact_admin`): a bulk request
   of more than 500 records and an upload past a storage quota are now `413 limit_exceeded` instead of

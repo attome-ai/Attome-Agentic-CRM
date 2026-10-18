@@ -165,7 +165,7 @@ fn payment_partial_marks_partly_paid() {
         assert_eq!(status, StatusCode::OK, "{applied}");
         assert_eq!(invoice_state(&app, later).await, ("paid".into(), 0.0));
         assert_eq!(
-            applied[0]["unallocated"]
+            applied["payments"][0]["unallocated"]
                 .as_str()
                 .unwrap()
                 .parse::<f64>()

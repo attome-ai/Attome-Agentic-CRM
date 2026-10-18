@@ -295,7 +295,7 @@ impl attome_server::authz::PrivilegeKey for DisputeRead {
     tag = "billing",
     params(("id" = Uuid, Path, description = "The dispute")),
     responses(
-        (status = 200, description = "The documents that can answer it", body = Vec<DocumentRef>),
+        (status = 200, description = "The documents that can answer it (page 1 holds them all)", body = attome_types::PaginatedResponse<DocumentRef>),
         (status = 401, description = "Missing or invalid credentials", body = attome_types::ErrorResponse),
         (status = 403, description = "Caller may not read disputes", body = attome_types::ErrorResponse),
         (status = 404, description = "No such dispute in the caller's scope", body = attome_types::ErrorResponse),
@@ -306,8 +306,15 @@ pub(crate) async fn get_evidence(
     axum::extract::State(state): axum::extract::State<EngineState>,
     ctx: attome_server::authz::Authorized<attome_server::authz::Privilege<DisputeRead>>,
     axum::extract::Path(dispute): axum::extract::Path<Uuid>,
-) -> Result<axum::Json<Vec<DocumentRef>>, AppError> {
-    Ok(axum::Json(dispute_evidence(&state, &ctx, dispute).await?))
+) -> Result<axum::Json<attome_types::PaginatedResponse<DocumentRef>>, AppError> {
+    let items = dispute_evidence(&state, &ctx, dispute).await?;
+    let total = items.len() as i64;
+    Ok(axum::Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        total.max(1),
+    )))
 }
 
 /// This module's routes, for the OpenAPI document.

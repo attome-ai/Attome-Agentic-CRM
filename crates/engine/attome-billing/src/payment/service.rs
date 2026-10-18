@@ -813,7 +813,7 @@ pub(crate) async fn post_reverse(
     tag = "billing",
     params(("id" = Uuid, Path, description = "The account")),
     responses(
-        (status = 200, description = "What each payment's credit paid", body = Vec<PaymentRecorded>),
+        (status = 200, description = "What each payment's credit paid", body = CreditApplied),
         (status = 401, description = "Missing or invalid credentials", body = attome_types::ErrorResponse),
         (status = 403, description = "Caller may not record payments", body = attome_types::ErrorResponse),
         (status = 409, description = "Another payment for the account is being recorded", body = attome_types::ErrorResponse),
@@ -825,8 +825,20 @@ pub(crate) async fn post_apply_credit(
     axum::extract::State(state): axum::extract::State<EngineState>,
     ctx: attome_server::authz::Authorized<attome_server::authz::Privilege<PaymentCreate>>,
     axum::extract::Path(account): axum::extract::Path<Uuid>,
-) -> Result<axum::Json<Vec<PaymentRecorded>>, AppError> {
-    Ok(axum::Json(apply_credit(&state, &ctx, account).await?))
+) -> Result<axum::Json<CreditApplied>, AppError> {
+    let payments = apply_credit(&state, &ctx, account).await?;
+    Ok(axum::Json(CreditApplied {
+        account_id: account,
+        payments,
+    }))
+}
+
+/// What applying an account's unapplied credit did: one entry per payment
+/// whose credit paid something.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct CreditApplied {
+    pub account_id: Uuid,
+    pub payments: Vec<PaymentRecorded>,
 }
 
 #[derive(utoipa::OpenApi)]
@@ -838,7 +850,8 @@ pub(crate) async fn post_apply_credit(
         AllocationLine,
         PaymentRecorded,
         ReverseRequest,
-        PaymentReversed
+        PaymentReversed,
+        CreditApplied
     ))
 )]
 pub(crate) struct ApiDocFragment;

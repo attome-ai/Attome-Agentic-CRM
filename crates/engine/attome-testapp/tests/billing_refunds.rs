@@ -377,7 +377,7 @@ fn dispute_opens_and_lists_evidence() {
             )
             .await;
         assert_eq!(status, StatusCode::OK, "{evidence}");
-        let names: Vec<&str> = evidence
+        let names: Vec<&str> = evidence["items"]
             .as_array()
             .unwrap()
             .iter()
