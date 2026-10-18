@@ -34,6 +34,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- ZATCA onboarding and API client (AG2-T3, library): the device's certificate signing request with
+  ZATCA's template name and directory-name fields (checked with OpenSSL), reading the CSID
+  certificate's issuer, serial number, public key and CA signature, and a typed client for the
+  compliance CSID, compliance checks, production CSID, clearance and reporting calls that tells
+  accepted, rejected, unauthorised and retry-later answers apart.
 - ZATCA stamping (AG2-T2): `attome-einvoice` signs the invoice hash with a device's ECDSA
   secp256k1 key (pure Rust `k256`), writes the XAdES `ext:UBLExtensions` block (certificate and
   signed-properties digests as ZATCA's validator computes them) and the QR code TLV (tags 1 to 8,

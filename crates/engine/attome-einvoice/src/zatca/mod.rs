@@ -4,8 +4,13 @@
 //! - [`c14n`]: the canonical form the hash is taken over (AG2-T1).
 //! - [`hash`]: the invoice hash and the per-device hash chain (AG2-T1).
 //! - [`sign`]: the device's signature, the XAdES block and the QR code (AG2-T2).
+//! - [`csr`], [`cert`], [`api`]: onboarding's request, the CSID certificate and
+//!   ZATCA's API (AG2-T3).
 
+pub mod api;
 pub mod c14n;
+pub mod cert;
+pub mod csr;
 pub mod hash;
 pub mod sign;
 pub mod xml;

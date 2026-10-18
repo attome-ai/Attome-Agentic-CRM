@@ -3,5 +3,6 @@
 //! library in the binary (V2-D471). Billing (attome-billing) calls it from
 //! the issue step.
 
+pub mod asn1;
 pub mod crypto;
 pub mod zatca;
