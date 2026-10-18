@@ -107,6 +107,8 @@ fleet-console = ["dep:attome-fleet"]
 
 [target.'cfg(windows)'.dependencies]
 windows-service.workspace = true
+# Y5-T3: the service's Job Object memory limit.
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [[test]]
 name = "keycloak_oidc"

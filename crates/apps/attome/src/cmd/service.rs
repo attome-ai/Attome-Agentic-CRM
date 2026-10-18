@@ -22,6 +22,15 @@
 //!   root, which the unit says.
 //!
 //! `--dry-run` prints what would be done and changes nothing.
+//!
+//! **Limits (Y5-T3).** `--profile solo|team|ha|scale` (default `solo`) caps
+//! the service so one deployment cannot starve the others on a dense host:
+//! the systemd unit sets `MemoryHigh`, `MemoryMax` and `CPUQuota`; the
+//! Windows service puts itself in a Job Object with a process memory limit
+//! (Windows has no CPU quota in the same form). `--profile none` sets no
+//! limit. The values are proposals sized from `loadtest/profiles.json`'s
+//! reference machines, leaving room for PostgreSQL on the same host, until
+//! the AA2 runs measure them (`docs/limits.md`).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -36,13 +45,48 @@ const USAGE: &str = "\
 attome service: run attome serve as an operating-system service
 
 Usage:
-  attome service install [--dir <dir>] [--dry-run]
+  attome service install [--dir <dir>] [--profile <profile>] [--dry-run]
   attome service uninstall [--dry-run]
 
   --dir      the directory holding config.json (from `attome init --out`);
              default %ProgramData%\\Attome on Windows, /var/lib/attome on Linux
+  --profile  solo (default), team, ha or scale caps the service's memory and
+             CPU for that size of machine; none sets no limit
   --dry-run  print the steps and change nothing
 ";
+
+/// Y5-T3: what the service may use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ServiceLimits {
+    /// The hard memory ceiling, in MiB.
+    pub memory_mb: u64,
+    /// CPU time, in percent of one core (300 = three cores).
+    pub cpu_percent: u32,
+}
+
+/// Y5-T3: the limits for a deployment profile; `Ok(None)` for `none`.
+pub fn limits_for(profile: &str) -> Result<Option<ServiceLimits>, String> {
+    let (memory_mb, cpu_percent) = match profile {
+        "none" => return Ok(None),
+        // 4 vCPU, 16 GB: three cores and 3 GiB, the rest for PostgreSQL.
+        "solo" => (3 * 1024, 300),
+        // 8 vCPU, 32 GB.
+        "team" => (8 * 1024, 600),
+        // 16 vCPU, 64 GB.
+        "ha" => (16 * 1024, 1200),
+        // 32 vCPU, 128 GB.
+        "scale" => (32 * 1024, 2400),
+        other => {
+            return Err(format!(
+                "unknown profile `{other}`: solo, team, ha, scale or none"
+            ));
+        }
+    };
+    Ok(Some(ServiceLimits {
+        memory_mb,
+        cpu_percent,
+    }))
+}
 
 /// The default data directory for this operating system.
 pub fn default_dir() -> PathBuf {
@@ -55,8 +99,18 @@ pub fn default_dir() -> PathBuf {
     }
 }
 
-/// The systemd unit for `exe` serving from `dir`.
-pub fn systemd_unit(exe: &Path, dir: &Path) -> String {
+/// The systemd unit for `exe` serving from `dir`, capped by `limits`.
+pub fn systemd_unit(exe: &Path, dir: &Path, limits: Option<ServiceLimits>) -> String {
+    let caps = match limits {
+        Some(limits) => format!(
+            "# Y5-T3: this deployment's share of the host (attome service install --profile).\n\
+             MemoryHigh={}M\nMemoryMax={}M\nCPUQuota={}%\n",
+            limits.memory_mb * 9 / 10,
+            limits.memory_mb,
+            limits.cpu_percent
+        ),
+        None => String::new(),
+    };
     let user = match dir.strip_prefix("/var/lib") {
         Ok(state) if !state.as_os_str().is_empty() => format!(
             "# systemd creates a user for the service and gives it {dir}.\n\
@@ -83,6 +137,7 @@ pub fn systemd_unit(exe: &Path, dir: &Path) -> String {
          ExecStart={exe} serve\n\
          Restart=on-failure\n\
          RestartSec=5\n\
+         {caps}\
          # SIGTERM starts the graceful drain; allow it to finish.\n\
          KillSignal=SIGTERM\n\
          TimeoutStopSec=90\n\
@@ -95,19 +150,24 @@ pub fn systemd_unit(exe: &Path, dir: &Path) -> String {
 }
 
 /// The arguments the Windows service control manager starts the binary with.
-pub fn windows_launch_arguments(dir: &Path) -> Vec<String> {
-    vec!["service-run".to_owned(), dir.display().to_string()]
+pub fn windows_launch_arguments(dir: &Path, limits: Option<ServiceLimits>) -> Vec<String> {
+    let mut args = vec!["service-run".to_owned(), dir.display().to_string()];
+    if let Some(limits) = limits {
+        args.push("--memory-mb".to_owned());
+        args.push(limits.memory_mb.to_string());
+    }
+    args
 }
 
 /// What `install` does, in order, for printing.
-pub fn install_steps(exe: &Path, dir: &Path) -> Vec<String> {
+pub fn install_steps(exe: &Path, dir: &Path, limits: Option<ServiceLimits>) -> Vec<String> {
     if cfg!(windows) {
         vec![
             format!(
                 "register the Windows service `{SERVICE_NAME}` ({DISPLAY_NAME}): automatic start, \
                  local system account, `{} {}`",
                 exe.display(),
-                windows_launch_arguments(dir).join(" ")
+                windows_launch_arguments(dir, limits).join(" ")
             ),
             format!("start `{SERVICE_NAME}`"),
         ]
@@ -137,7 +197,7 @@ fn run_command(program: &str, args: &[&str]) -> Result<(), String> {
     }
 }
 
-fn install(dir: &Path, dry_run: bool) -> Result<(), String> {
+fn install(dir: &Path, limits: Option<ServiceLimits>, dry_run: bool) -> Result<(), String> {
     let exe =
         std::env::current_exe().map_err(|error| format!("cannot find this binary: {error}"))?;
     if !dir.join("config.json").is_file() {
@@ -150,16 +210,16 @@ fn install(dir: &Path, dry_run: bool) -> Result<(), String> {
     let dir = std::fs::canonicalize(dir).map_err(|error| format!("{}: {error}", dir.display()))?;
     // `canonicalize` gives `\\?\C:\...` on Windows; the service needs the plain form.
     let dir = PathBuf::from(dir.display().to_string().replace(r"\\?\", ""));
-    for step in install_steps(&exe, &dir) {
+    for step in install_steps(&exe, &dir, limits) {
         say(&format!("{}{step}", if dry_run { "would " } else { "" }));
     }
     if dry_run {
         return Ok(());
     }
     if cfg!(windows) {
-        windows::install(&exe, &dir)
+        windows::install(&exe, &dir, limits)
     } else {
-        std::fs::write(UNIT_PATH, systemd_unit(&exe, &dir))
+        std::fs::write(UNIT_PATH, systemd_unit(&exe, &dir, limits))
             .map_err(|error| format!("{UNIT_PATH}: {error} (run as root)"))?;
         run_command("systemctl", &["daemon-reload"])?;
         run_command("systemctl", &["enable", "--now", SERVICE_NAME])
@@ -197,17 +257,19 @@ fn uninstall(dry_run: bool) -> Result<(), String> {
 pub fn run(args: &[String]) -> Result<(), String> {
     let mut dir = default_dir();
     let mut dry_run = false;
+    let mut limits = limits_for("solo")?;
     let (command, rest) = args.split_first().ok_or_else(|| USAGE.to_owned())?;
     let mut it = rest.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--dir" => dir = PathBuf::from(it.next().ok_or("--dir needs a value")?),
+            "--profile" => limits = limits_for(it.next().ok_or("--profile needs a value")?)?,
             "--dry-run" => dry_run = true,
             _ => return Err(format!("unknown option `{arg}`\n\n{USAGE}")),
         }
     }
     match command.as_str() {
-        "install" => install(&dir, dry_run),
+        "install" => install(&dir, limits, dry_run),
         "uninstall" => uninstall(dry_run),
         _ => Err(USAGE.to_owned()),
     }
@@ -216,11 +278,16 @@ pub fn run(args: &[String]) -> Result<(), String> {
 /// `attome service-run <dir>`: what the Windows service control manager
 /// starts. Elsewhere it refuses: systemd runs `attome serve` directly.
 pub fn service_run(args: &[String]) -> Result<(), String> {
-    let [dir] = args else {
-        return Err("usage: attome service-run <dir>".to_owned());
+    let usage = || "usage: attome service-run <dir> [--memory-mb <n>]".to_owned();
+    let (dir, memory_mb) = match args {
+        [dir] => (dir, None),
+        [dir, flag, value] if flag == "--memory-mb" => {
+            (dir, Some(value.parse::<u64>().map_err(|_| usage())?))
+        }
+        _ => return Err(usage()),
     };
     if cfg!(windows) {
-        windows::run_dispatcher(Path::new(dir))
+        windows::run_dispatcher(Path::new(dir), memory_mb)
     } else {
         Err(
             "attome service-run is for the Windows service control manager; \
@@ -254,10 +321,16 @@ mod windows {
 
     /// The data directory `service-run` was given, for the service thread.
     static DIR: OnceLock<PathBuf> = OnceLock::new();
+    /// Y5-T3: the memory ceiling `service-run` was given, in MiB.
+    static MEMORY_MB: OnceLock<u64> = OnceLock::new();
 
     windows_service::define_windows_service!(ffi_service_main, service_main);
 
-    pub fn install(exe: &Path, dir: &Path) -> Result<(), String> {
+    pub fn install(
+        exe: &Path,
+        dir: &Path,
+        limits: Option<super::ServiceLimits>,
+    ) -> Result<(), String> {
         let manager = ServiceManager::local_computer(
             None::<&str>,
             ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE,
@@ -270,7 +343,7 @@ mod windows {
             start_type: ServiceStartType::AutoStart,
             error_control: ServiceErrorControl::Normal,
             executable_path: exe.to_path_buf(),
-            launch_arguments: super::windows_launch_arguments(dir)
+            launch_arguments: super::windows_launch_arguments(dir, limits)
                 .into_iter()
                 .map(OsString::from)
                 .collect(),
@@ -313,8 +386,11 @@ mod windows {
             .map_err(|error| format!("cannot delete the service: {error}"))
     }
 
-    pub fn run_dispatcher(dir: &Path) -> Result<(), String> {
+    pub fn run_dispatcher(dir: &Path, memory_mb: Option<u64>) -> Result<(), String> {
         let _ = DIR.set(dir.to_path_buf());
+        if let Some(memory_mb) = memory_mb {
+            let _ = MEMORY_MB.set(memory_mb);
+        }
         windows_service::service_dispatcher::start(SERVICE_NAME, ffi_service_main)
             .map_err(|error| format!("not started by the service control manager: {error}"))
     }
@@ -358,6 +434,13 @@ mod windows {
             let _ = handle.set_service_status(status(ServiceState::Stopped, 1));
             return;
         }
+        // Y5-T3: the memory ceiling, before any work starts. A failure is
+        // logged and the service runs uncapped rather than not at all.
+        if let Some(memory_mb) = MEMORY_MB.get()
+            && let Err(error) = limit_memory(*memory_mb)
+        {
+            tracing::warn!(%error, memory_mb, "the service memory limit was not applied");
+        }
         let _ = handle.set_service_status(status(ServiceState::Running, 0));
         let exit = match crate::serve::run() {
             Ok(()) => 0,
@@ -368,13 +451,65 @@ mod windows {
         };
         let _ = handle.set_service_status(status(ServiceState::Stopped, exit));
     }
+
+    /// Y5-T3: puts this process in a new Job Object whose process memory
+    /// limit is `memory_mb` MiB, so an allocation past it fails instead of
+    /// starving the host. The job handle is kept open for the process's life
+    /// (closing it would release the limit).
+    fn limit_memory(memory_mb: u64) -> Result<(), String> {
+        use windows_sys::Win32::System::JobObjects::{
+            AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_PROCESS_MEMORY,
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
+            SetInformationJobObject,
+        };
+        use windows_sys::Win32::System::Threading::GetCurrentProcess;
+
+        let bytes = usize::try_from(memory_mb.saturating_mul(1024 * 1024))
+            .map_err(|_| "the memory limit does not fit this platform".to_owned())?;
+        // SAFETY: every call below is a documented Win32 function given valid
+        // arguments: `CreateJobObjectW` with null attributes and a null name
+        // creates an unnamed job and returns its handle (null on failure,
+        // checked); `info` is a fully initialised, correctly sized
+        // `JOBOBJECT_EXTENDED_LIMIT_INFORMATION` that outlives the
+        // `SetInformationJobObject` call reading it; `GetCurrentProcess`
+        // returns a pseudo-handle that needs no closing. Each BOOL result is
+        // checked. The job handle is deliberately never closed.
+        unsafe {
+            let job = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+            if job.is_null() {
+                return Err("CreateJobObjectW failed".to_owned());
+            }
+            let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_PROCESS_MEMORY;
+            info.ProcessMemoryLimit = bytes;
+            let size = u32::try_from(std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>())
+                .map_err(|_| "job information size".to_owned())?;
+            if SetInformationJobObject(
+                job,
+                JobObjectExtendedLimitInformation,
+                std::ptr::from_ref(&info).cast(),
+                size,
+            ) == 0
+            {
+                return Err("SetInformationJobObject failed".to_owned());
+            }
+            if AssignProcessToJobObject(job, GetCurrentProcess()) == 0 {
+                return Err("AssignProcessToJobObject failed".to_owned());
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(not(windows))]
 mod windows {
     use std::path::Path;
 
-    pub fn install(_exe: &Path, _dir: &Path) -> Result<(), String> {
+    pub fn install(
+        _exe: &Path,
+        _dir: &Path,
+        _limits: Option<super::ServiceLimits>,
+    ) -> Result<(), String> {
         Err("Windows only".to_owned())
     }
 
@@ -382,7 +517,7 @@ mod windows {
         Err("Windows only".to_owned())
     }
 
-    pub fn run_dispatcher(_dir: &Path) -> Result<(), String> {
+    pub fn run_dispatcher(_dir: &Path, _memory_mb: Option<u64>) -> Result<(), String> {
         Err("Windows only".to_owned())
     }
 }
@@ -396,6 +531,7 @@ mod tests {
         let unit = systemd_unit(
             Path::new("/usr/local/bin/attome"),
             Path::new("/var/lib/attome"),
+            None,
         );
         assert!(unit.contains("ExecStart=/usr/local/bin/attome serve\n"));
         assert!(unit.contains("WorkingDirectory=/var/lib/attome\n"));
@@ -406,7 +542,11 @@ mod tests {
 
     #[test]
     fn unit_elsewhere_runs_as_root_and_says_so() {
-        let unit = systemd_unit(Path::new("/opt/attome/attome"), Path::new("/opt/attome"));
+        let unit = systemd_unit(
+            Path::new("/opt/attome/attome"),
+            Path::new("/opt/attome"),
+            None,
+        );
         assert!(unit.contains("User=root\n"));
         assert!(!unit.contains("DynamicUser"));
     }
@@ -414,10 +554,30 @@ mod tests {
     #[test]
     fn the_windows_service_runs_service_run_with_the_directory() {
         assert_eq!(
-            windows_launch_arguments(Path::new(r"C:\ProgramData\Attome")),
+            windows_launch_arguments(Path::new(r"C:\ProgramData\Attome"), None),
             ["service-run", r"C:\ProgramData\Attome"]
         );
-        assert!(!install_steps(Path::new("attome"), Path::new("d")).is_empty());
+        assert!(!install_steps(Path::new("attome"), Path::new("d"), None).is_empty());
+    }
+
+    #[test]
+    fn a_profile_caps_the_service() {
+        let solo = limits_for("solo").unwrap();
+        let unit = systemd_unit(
+            Path::new("/usr/bin/attome"),
+            Path::new("/var/lib/attome"),
+            solo,
+        );
+        assert!(unit.contains("MemoryMax=3072M\n"), "{unit}");
+        assert!(unit.contains("MemoryHigh=2764M\n"), "{unit}");
+        assert!(unit.contains("CPUQuota=300%\n"), "{unit}");
+        assert_eq!(
+            windows_launch_arguments(Path::new("d"), limits_for("team").unwrap()),
+            ["service-run", "d", "--memory-mb", "8192"]
+        );
+        assert_eq!(limits_for("none").unwrap(), None);
+        assert!(limits_for("huge").is_err());
+        assert!(service_run(&["d".into(), "--memory-mb".into(), "lots".into()]).is_err());
     }
 
     #[test]

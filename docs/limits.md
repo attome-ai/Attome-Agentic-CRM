@@ -33,3 +33,23 @@ changes without a restart. Each refusal counts in `limit_hits_total` and in the 
 | `http.max_body_bytes` | the largest request body read | resource | boot config | 10 MiB |
 | `bulk.max_records_per_request` | records one bulk request may carry; more go through a staged import | resource | runtime setting | 500 records |
 | `auth.mfa_challenge_max_attempts` | wrong codes one second-factor challenge accepts before it is spent | abuse | boot config | 5 attempts |
+
+## Service limits per profile (Y5-T3)
+
+`attome service install --profile <profile>` caps the service so one deployment cannot starve the
+others on a shared host. On Linux the systemd unit sets `MemoryHigh` (90% of the ceiling, where the
+kernel starts reclaiming), `MemoryMax` and `CPUQuota`; on Windows the service puts itself in a Job
+Object with a process memory limit (Windows has no matching CPU quota). The default is `solo`;
+`--profile none` sets no limit.
+
+| Profile | Reference machine | Memory ceiling | CPU |
+|---|---|---|---|
+| `solo` | 4 vCPU, 16 GB | 3 GiB | 3 cores (300%) |
+| `team` | 8 vCPU, 32 GB | 8 GiB | 6 cores |
+| `ha` | 16 vCPU, 64 GB | 16 GiB | 12 cores |
+| `scale` | 32 vCPU, 128 GB | 32 GiB | 24 cores |
+
+The rest of each machine is left for PostgreSQL and the operating system. These are proposals sized
+from `loadtest/profiles.json` until the AA2 runs measure them. v2 ships no container deployment
+(V2-D470), so there are no container limits to generate; the database pool stays as `config.json`
+sets it.

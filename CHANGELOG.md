@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Service limits per deployment profile (Y5-T3): `attome service install --profile solo|team|ha|scale`
+  (default `solo`; `none` sets no limit) caps the service: `MemoryHigh`, `MemoryMax` and `CPUQuota`
+  in the systemd unit, a Job Object memory limit for the Windows service. The values per profile
+  are in `docs/limits.md`.
 - Error titles in the caller's language (Z14-T3): every error code has an English and an Arabic
   message (`attome_types::error_messages`). An error response's `title` is the code's message,
   in Arabic with `Content-Language: ar` when `Accept-Language` prefers Arabic, else in English;
