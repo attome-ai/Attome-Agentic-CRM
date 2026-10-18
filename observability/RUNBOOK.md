@@ -98,6 +98,20 @@ A gauge SLO class has been over its objective for most of the last five minutes,
 - **S11, change-feed lag** (`events_subscription_lag_max`): an active subscription is more than
   1000 feed rows behind. `EventDeliveryBacklogGrowing` usually fires with it; follow that entry.
 
+### Changing an SLO
+
+Edit `observability/slo-catalogue.json` (its schema is `slo-catalogue.schema.json`), then:
+
+```sh
+attome slo generate          # rewrite the attome-slo rule group, the k6 thresholds and docs/slo.md
+attome slo generate --check  # exit 2 when an output has drifted; the release gate runs this
+```
+
+Never edit the generated outputs. Every class keeps its honesty label: `target` until a dated
+load-test result in `docs/evidence/` moves it to `measured_reference`. A deployment changes its own
+latency targets at `/api/v1/admin/slo/targets/{class_id}`, not in the catalogue. Monthly reports
+and the fast-burn notification are described in `docs/slo.md`.
+
 ## Redis / Dragonfly
 
 ### RedisDown
