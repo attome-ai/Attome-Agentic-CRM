@@ -176,3 +176,103 @@ fn list_query_count_independent_of_page_size() {
         );
     });
 }
+
+/// AA4-T6: an entity with one lookup per target in `targets`, and 50 rows
+/// each pointing at a different record of every target. Returns its name.
+async fn spread_fixture(app: &TestApp, targets: usize) -> String {
+    let token = Uuid::now_v7().simple().to_string();
+    let child = format!("ln_child_{}", &token[..12]);
+    let mut target_names = Vec::new();
+    let mut target_ids = Vec::new();
+    for t in 0..targets {
+        let name = format!("ln_t{t}_{}", &token[..10]);
+        let id = create_entity(app, &name).await;
+        add_field(
+            app,
+            id,
+            json!({ "logicalname": "name", "name": "name", "field_type": "text" }),
+        )
+        .await;
+        target_names.push(name);
+        target_ids.push(id);
+    }
+    let child_id = create_entity(app, &child).await;
+    add_field(
+        app,
+        child_id,
+        json!({ "logicalname": "title", "name": "title", "field_type": "text" }),
+    )
+    .await;
+    for (t, target_id) in target_ids.iter().enumerate() {
+        add_field(
+            app,
+            child_id,
+            json!({ "logicalname": format!("ref_{t}"), "name": format!("ref_{t}"),
+                    "field_type": "lookup", "lookup_entity_ref": target_id }),
+        )
+        .await;
+    }
+    let registry = attome_core::build_registry(app.db()).await.unwrap();
+    app.state.entities.swap(registry);
+    for n in 0..50 {
+        let mut body = json!({ "title": format!("row {n}") });
+        for (t, target) in target_names.iter().enumerate() {
+            let id = create_record(app, target, json!({ "name": format!("{target} {n}") })).await;
+            body[format!("ref_{t}")] = json!(id);
+        }
+        create_record(app, &child, body).await;
+    }
+    child
+}
+
+/// The statements of one 50-row list that resolved lookup names. Only the
+/// first call is measured: a repeat within five seconds is served from the
+/// repeat-query cache (AA4-T9) and reads nothing.
+async fn lookup_name_statements(app: &TestApp, entity: &str) -> usize {
+    let ((status, body), statements) = attome_testkit::query_counter::record_queries(app.request(
+        Method::POST,
+        "/api/v1/query/execute",
+        Some(json!({ "entity": entity, "page_size": 50 })),
+    ))
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["data"]["records"].as_array().map(Vec::len), Some(50));
+    statements
+        .iter()
+        .filter(|s| s.contains("entity.lookup_names"))
+        .count()
+}
+
+// feature: AA4
+#[test]
+fn lookup_names_one_query_per_target() {
+    attome_testkit::query_counter::install();
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let child = spread_fixture(&app, 1).await;
+        assert_eq!(
+            lookup_name_statements(&app, &child).await,
+            1,
+            "50 rows pointing at 50 different records resolve their names in one statement"
+        );
+    });
+}
+
+// feature: AA4
+#[test]
+fn lookup_names_two_lookups_two_queries() {
+    attome_testkit::query_counter::install();
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let child = spread_fixture(&app, 2).await;
+        assert_eq!(
+            lookup_name_statements(&app, &child).await,
+            2,
+            "two lookup targets: one name statement each, never one per row"
+        );
+    });
+}

@@ -22,6 +22,21 @@ use tracing_subscriber::layer::{Context, SubscriberExt};
 
 tokio::task_local! {
     static SCOPE: Arc<AtomicUsize>;
+    /// AA4-T6: each statement's summary, when [`record_queries`] opened the
+    /// scope.
+    static RECORD: Arc<std::sync::Mutex<Vec<String>>>;
+}
+
+/// Reads sqlx's `summary` field: the statement's start, its Z2-T8 tag
+/// comment first when it has one.
+struct Summary(String);
+
+impl tracing::field::Visit for Summary {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        if field.name() == "summary" {
+            self.0 = format!("{value:?}");
+        }
+    }
 }
 
 /// Counts `sqlx::query` events into the current [`count_queries`] scope.
@@ -32,6 +47,14 @@ impl<S: tracing::Subscriber> Layer<S> for QueryCountLayer {
     fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         if event.metadata().target() == "sqlx::query" {
             let _ = SCOPE.try_with(|count| count.fetch_add(1, Ordering::Relaxed));
+            let _ = RECORD.try_with(|record| {
+                let mut summary = Summary(String::new());
+                event.record(&mut summary);
+                record
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .push(summary.0);
+            });
         }
     }
 }
@@ -60,6 +83,24 @@ pub async fn count_queries<F: Future>(work: F) -> (F::Output, usize) {
     (out, count.load(Ordering::Relaxed))
 }
 
+/// AA4-T6: runs `work` and returns its output with each SQL statement it ran
+/// in its own task, as sqlx summarises it (the tag comment first), so a test
+/// can count the statements of one kind.
+pub async fn record_queries<F: Future>(work: F) -> (F::Output, Vec<String>) {
+    assert!(
+        install(),
+        "record_queries needs its own global tracing subscriber; another one is installed"
+    );
+    let record = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let out = RECORD.scope(Arc::clone(&record), work).await;
+    let statements = std::mem::take(
+        &mut *record
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()),
+    );
+    (out, statements)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,6 +122,12 @@ mod tests {
             tracing::info!(target: "sqlx::query", "SELECT 3");
             let ((), none) = count_queries(async {}).await;
             assert_eq!(none, 0);
+            let ((), recorded) = record_queries(async {
+                tracing::info!(target: "sqlx::query", summary = "/* a.b */ SELECT 1", "x");
+            })
+            .await;
+            assert_eq!(recorded.len(), 1);
+            assert!(recorded[0].contains("/* a.b */"), "{recorded:?}");
         });
     }
 }
