@@ -218,6 +218,69 @@ where
     }
 }
 
+/// The conflict [`crate::classify`] gives a serialization failure (`40001`)
+/// or a deadlock (`40P01`).
+pub const RETRYABLE_CONFLICT: &str =
+    "the database detected a conflicting concurrent transaction; retry the request";
+
+/// Z2-T4: whether `error` came from a serialization failure or a deadlock:
+/// the conflict [`crate::classify`] returns for one, or an internal error
+/// whose driver text names one (a statement mapped with
+/// `AppError::internal`, which keeps only the text). PostgreSQL's English
+/// messages are matched; under another `lc_messages` such an internal error
+/// is not retried and fails as it did before.
+pub fn is_retryable_error(error: &AppError) -> bool {
+    match error {
+        AppError::Conflict(message) => *message == RETRYABLE_CONFLICT,
+        AppError::Internal(detail) => {
+            detail.contains("deadlock detected") || detail.contains("could not serialize access")
+        }
+        _ => false,
+    }
+}
+
+/// Z2-T4: [`with_retry`] for a body that speaks `AppError`: runs `attempt`
+/// again while it fails with a serialization failure or a deadlock
+/// ([`is_retryable_error`]), until `policy` runs out, then returns the last
+/// error. Any other error is returned at once.
+///
+/// **Each attempt must open and commit its own transaction, do no Redis,
+/// HTTP, S3, email or filesystem I/O before its commit, and nothing after
+/// its commit that can fail with one of these errors**: a failed attempt
+/// then left nothing behind, and running it again is safe. `class` names it
+/// in the `db_tx_retries_total` and `db_tx_retry_exhausted_total` counters.
+pub async fn retry_conflicts<T, F, Fut>(
+    class: &'static str,
+    policy: RetryPolicy,
+    mut attempt: F,
+) -> Result<T, AppError>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, AppError>>,
+{
+    let max_attempts = policy.max_attempts.max(1);
+    let mut tries: u8 = 0;
+    loop {
+        tries += 1;
+        match attempt().await {
+            Err(error) if is_retryable_error(&error) && tries < max_attempts => {
+                crate::error::note_tx_retry(class);
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |elapsed| elapsed.subsec_nanos());
+                tokio::time::sleep(policy.delay(tries, seed)).await;
+            }
+            Err(error) => {
+                if is_retryable_error(&error) {
+                    crate::error::note_tx_retry_exhausted(class);
+                }
+                return Err(error);
+            }
+            ok => return ok,
+        }
+    }
+}
+
 /// Commits a transaction, classifying a commit-time failure with
 /// [`crate::classify`].
 ///
@@ -234,6 +297,58 @@ pub async fn commit(tx: Tx<'_>) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::StatementClass;
+
+    /// Z2-T4: the errors an AppError-level retry runs again on.
+    #[test]
+    fn retryable_errors_are_the_conflict_and_the_driver_text() {
+        use attome_types::AppError;
+
+        use super::{RETRYABLE_CONFLICT, is_retryable_error};
+
+        assert!(is_retryable_error(&AppError::Conflict(RETRYABLE_CONFLICT)));
+        assert!(is_retryable_error(&AppError::Internal(
+            "error returned from database: deadlock detected".into()
+        )));
+        assert!(is_retryable_error(&AppError::Internal(
+            "error returned from database: could not serialize access due to concurrent update"
+                .into()
+        )));
+        assert!(!is_retryable_error(&AppError::Conflict("version_conflict")));
+        assert!(!is_retryable_error(&AppError::Internal("boom".into())));
+        assert!(!is_retryable_error(&AppError::NotFound));
+    }
+
+    /// Z2-T4: a deadlocked attempt runs again; a real conflict does not.
+    #[tokio::test]
+    async fn retry_conflicts_reruns_only_retryable_failures() {
+        use attome_types::AppError;
+
+        use super::{RETRYABLE_CONFLICT, RetryPolicy, retry_conflicts};
+
+        let mut calls = 0;
+        let out: Result<u8, AppError> = retry_conflicts("test", RetryPolicy::SHORT, || {
+            calls += 1;
+            let n = calls;
+            async move {
+                if n < 3 {
+                    Err(AppError::Conflict(RETRYABLE_CONFLICT))
+                } else {
+                    Ok(n)
+                }
+            }
+        })
+        .await;
+        assert_eq!(out.unwrap(), 3);
+
+        let mut calls = 0;
+        let out: Result<u8, AppError> = retry_conflicts("test", RetryPolicy::SHORT, || {
+            calls += 1;
+            async { Err(AppError::Conflict("version_conflict")) }
+        })
+        .await;
+        assert!(out.is_err());
+        assert_eq!(calls, 1);
+    }
 
     /// Z2-T3: retries pause 4x longer each time, with at most half again.
     #[test]

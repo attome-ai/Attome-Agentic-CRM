@@ -721,69 +721,88 @@ pub async fn create_record_for(
     )?;
 
     let actor = MutationActor::fetch(&state, acting_user_id).await;
-    let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let mut mutation = measure!("entity.create.db_write", {
-        crate::entity_mutation::create_one(
-            &mut tx,
-            &state,
-            ctx,
-            &entity_name,
-            &attrs,
-            obj,
-            acting_user_id,
-            actor.org_ref,
-            MutationMode::Strict,
+    let has_duplicates = !duplicates.is_empty() || hidden_duplicates > 0;
+    // Z2-T4: the whole transaction runs again on a deadlock or a
+    // serialization failure. Nothing in it leaves the database before the
+    // commit, and the ring's post-commit steps cannot fail, so a failed
+    // attempt left nothing behind.
+    let (row, warnings, committed) = {
+        let state = &state;
+        let attrs = &attrs;
+        let entity_name = entity_name.as_str();
+        let actor = &actor;
+        let duplicate_reason = duplicate_reason.as_deref();
+        attome_db::tx::retry_conflicts(
+            "entity.create",
+            attome_db::tx::RetryPolicy::SHORT,
+            move || async move {
+                let mut tx = attome_db::tx::begin(&state.base.db).await?;
+                let mut mutation = measure!("entity.create.db_write", {
+                    crate::entity_mutation::create_one(
+                        &mut tx,
+                        state,
+                        ctx,
+                        entity_name,
+                        attrs,
+                        obj,
+                        acting_user_id,
+                        actor.org_ref,
+                        MutationMode::Strict,
+                    )
+                    .await?
+                });
+                let row = mutation
+                    .new_row
+                    .clone()
+                    .ok_or_else(|| AppError::internal("create mutation returned no row"))?;
+                let warnings = std::mem::take(&mut mutation.warnings);
+
+                audit_duplicate_skip(
+                    &mut tx,
+                    state,
+                    acting_user_id,
+                    entity_name,
+                    mutation.record_id,
+                )
+                .await?;
+                let mut audit = MutationAudit::new();
+                audit.changed_fields =
+                    field_changes_from_obj(&mut tx, state, attrs, obj, None).await;
+                if has_duplicates {
+                    audit.event_comment = duplicate_reason
+                        .map(|reason| format!("saved as a likely duplicate: {reason}"));
+                }
+
+                // C-10: the D-133 (2) creator-share grant, the `attome_document`
+                // file mirror, the audit write, the commit, and the post-commit
+                // invalidation + rw-pin are the ring's job — see
+                // `MutationRing::commit_mutation`'s doc comment.
+                let committed = measure!("entity.create.commit", {
+                    MutationRing::new(state)
+                        .commit_mutation(
+                            tx,
+                            ctx,
+                            entity_id,
+                            entity_name,
+                            attrs,
+                            actor,
+                            AuditOperation::Create,
+                            MutationSideEffects {
+                                grant_creator_share: true,
+                                mirror_file_fields: true,
+                            },
+                            GrantInvalidation::ByRow(Some(&row)),
+                            audit,
+                            "create entity_input",
+                            mutation,
+                        )
+                        .await?
+                });
+                Ok::<_, AppError>((row, warnings, committed))
+            },
         )
         .await?
-    });
-    let row = mutation
-        .new_row
-        .clone()
-        .ok_or_else(|| AppError::internal("create mutation returned no row"))?;
-    let warnings = std::mem::take(&mut mutation.warnings);
-
-    audit_duplicate_skip(
-        &mut tx,
-        &state,
-        acting_user_id,
-        &entity_name,
-        mutation.record_id,
-    )
-    .await?;
-    let mut audit = MutationAudit::new();
-    audit.changed_fields = field_changes_from_obj(&mut tx, &state, &attrs, obj, None).await;
-    if !duplicates.is_empty() || hidden_duplicates > 0 {
-        audit.event_comment = duplicate_reason
-            .as_deref()
-            .map(|reason| format!("saved as a likely duplicate: {reason}"));
-    }
-
-    // C-10: the D-133 (2) creator-share grant, the `attome_document` file
-    // mirror, the audit write, the commit, and the post-commit invalidation +
-    // rw-pin are now the ring's job — see `MutationRing::commit_mutation`'s
-    // doc comment for why this used to be copy-pasted at every mutation call
-    // site instead.
-    let committed = measure!("entity.create.commit", {
-        MutationRing::new(&state)
-            .commit_mutation(
-                tx,
-                ctx,
-                entity_id,
-                &entity_name,
-                &attrs,
-                &actor,
-                AuditOperation::Create,
-                MutationSideEffects {
-                    grant_creator_share: true,
-                    mirror_file_fields: true,
-                },
-                GrantInvalidation::ByRow(Some(&row)),
-                audit,
-                "create entity_input",
-                mutation,
-            )
-            .await?
-    });
+    };
 
     crate::duplicate_check::write_match_keys(&state, &entity_name, committed.result.record_id, obj)
         .await;
@@ -953,82 +972,109 @@ pub async fn update_record_for_outcome(
     };
 
     let actor = MutationActor::fetch(&state, acting_user_id).await;
-    let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let mut mutation = crate::entity_mutation::update_one(
-        &mut tx,
-        &state,
-        ctx,
-        &entity_name,
-        entity_id,
-        record_id,
-        &attrs,
-        obj,
-        acting_user_id,
-        expected_row_version,
-        mode,
-    )
-    .await?;
-    let row = mutation
-        .new_row
-        .clone()
-        .ok_or_else(|| AppError::internal("update mutation returned no row"))?;
-    let approval = mutation.approval.clone();
-    let warnings = std::mem::take(&mut mutation.warnings);
-    audit_duplicate_skip(&mut tx, &state, acting_user_id, &entity_name, record_id).await?;
+    // Z2-T4: the whole transaction runs again on a deadlock or a
+    // serialization failure, as for a create. The row-version check is in
+    // `update_one`, so a retry checks the version again: a real version
+    // conflict is a 409 `version_conflict`, never retried.
+    let (row, approval, warnings) = {
+        let state = &state;
+        let attrs = &attrs;
+        let entity_name = entity_name.as_str();
+        let actor = &actor;
+        let event_comment = event_comment.as_deref();
+        attome_db::tx::retry_conflicts(
+            "entity.update",
+            attome_db::tx::RetryPolicy::SHORT,
+            move || async move {
+                let mut tx = attome_db::tx::begin(&state.base.db).await?;
+                let mut mutation = crate::entity_mutation::update_one(
+                    &mut tx,
+                    state,
+                    ctx,
+                    entity_name,
+                    entity_id,
+                    record_id,
+                    attrs,
+                    obj,
+                    acting_user_id,
+                    expected_row_version,
+                    mode,
+                )
+                .await?;
+                let row = mutation
+                    .new_row
+                    .clone()
+                    .ok_or_else(|| AppError::internal("update mutation returned no row"))?;
+                let approval = mutation.approval.clone();
+                let warnings = std::mem::take(&mut mutation.warnings);
+                audit_duplicate_skip(&mut tx, state, acting_user_id, entity_name, record_id)
+                    .await?;
 
-    let mut audit = MutationAudit::new();
-    // M07 Phase F: the entity event of a write parked pending approval names
-    // the request, so the timeline shows why the record is not in the state
-    // that was asked for.
-    audit.event_comment = match &approval {
-        Some(a) => Some(match event_comment {
-            Some(c) => format!(
-                "{c} (approval request {} submitted for '{}' -> '{}')",
-                a.request_id, a.from, a.requested
-            ),
-            None => format!(
-                "approval request {} submitted for '{}' -> '{}'",
-                a.request_id, a.from, a.requested
-            ),
-        }),
-        None => event_comment,
-    };
-    // The diff is computed from the row actually written (the pending state
-    // for a parked transition), not from the caller's body.
-    let written_obj;
-    let diff_obj = match (&approval, row.as_object()) {
-        (Some(_), Some(written)) => {
-            written_obj = obj
-                .keys()
-                .filter_map(|k| written.get(k).map(|v| (k.clone(), v.clone())))
-                .collect::<serde_json::Map<String, Value>>();
-            &written_obj
-        }
-        _ => obj,
-    };
-    audit.changed_fields =
-        field_changes_from_obj(&mut tx, &state, &attrs, diff_obj, mutation.old_row.as_ref()).await;
+                let mut audit = MutationAudit::new();
+                // M07 Phase F: the entity event of a write parked pending
+                // approval names the request, so the timeline shows why the
+                // record is not in the state that was asked for.
+                audit.event_comment = match &approval {
+                    Some(a) => Some(match event_comment {
+                        Some(c) => format!(
+                            "{c} (approval request {} submitted for '{}' -> '{}')",
+                            a.request_id, a.from, a.requested
+                        ),
+                        None => format!(
+                            "approval request {} submitted for '{}' -> '{}'",
+                            a.request_id, a.from, a.requested
+                        ),
+                    }),
+                    None => event_comment.map(str::to_owned),
+                };
+                // The diff is computed from the row actually written (the
+                // pending state for a parked transition), not from the
+                // caller's body.
+                let written_obj;
+                let diff_obj = match (&approval, row.as_object()) {
+                    (Some(_), Some(written)) => {
+                        written_obj = obj
+                            .keys()
+                            .filter_map(|k| written.get(k).map(|v| (k.clone(), v.clone())))
+                            .collect::<serde_json::Map<String, Value>>();
+                        &written_obj
+                    }
+                    _ => obj,
+                };
+                audit.changed_fields = field_changes_from_obj(
+                    &mut tx,
+                    state,
+                    attrs,
+                    diff_obj,
+                    mutation.old_row.as_ref(),
+                )
+                .await;
 
-    // C-10: see `create_record_for`'s comment at its own ring call.
-    MutationRing::new(&state)
-        .commit_mutation(
-            tx,
-            ctx,
-            entity_id,
-            &entity_name,
-            &attrs,
-            &actor,
-            AuditOperation::Update,
-            MutationSideEffects {
-                grant_creator_share: false,
-                mirror_file_fields: true,
+                // C-10: see `create_record_for`'s comment at its own ring call.
+                MutationRing::new(state)
+                    .commit_mutation(
+                        tx,
+                        ctx,
+                        entity_id,
+                        entity_name,
+                        attrs,
+                        actor,
+                        AuditOperation::Update,
+                        MutationSideEffects {
+                            grant_creator_share: false,
+                            mirror_file_fields: true,
+                        },
+                        GrantInvalidation::ByRow(Some(&row)),
+                        audit,
+                        "update entity_input",
+                        mutation,
+                    )
+                    .await?;
+                Ok::<_, AppError>((row, approval, warnings))
             },
-            GrantInvalidation::ByRow(Some(&row)),
-            audit,
-            "update entity_input",
-            mutation,
         )
-        .await?;
+        .await?
+    };
 
     crate::duplicate_check::write_match_keys(&state, &entity_name, record_id, obj).await;
     let lookups = resolve_lookup_meta(&state, ctx, &row, &attrs).await;

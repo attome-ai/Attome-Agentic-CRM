@@ -254,9 +254,7 @@ pub fn classify(error: sqlx::Error) -> AppError {
         Some("23503") => AppError::Validation(
             "the request references a record that does not exist or has been removed".to_string(),
         ),
-        Some("40001") | Some("40P01") => AppError::Conflict(
-            "the database detected a conflicting concurrent transaction; retry the request",
-        ),
+        Some("40001") | Some("40P01") => AppError::Conflict(crate::tx::RETRYABLE_CONFLICT),
         Some("55P03") => AppError::Conflict(LOCK_NOT_AVAILABLE),
         Some("57014") => {
             tracing::warn!(
