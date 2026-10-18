@@ -669,6 +669,120 @@ async fn record_version(
     Ok(next)
 }
 
+/// Z12-T5: the days a person is away, from whichever engine keeps leave
+/// (HR registers [`register_absence_source`] at boot). The calendar layer
+/// knows no leave table of its own.
+pub trait AbsenceSource: Send + Sync {
+    /// The dates in `[from, to]` the user is away.
+    fn absences<'a>(
+        &'a self,
+        db: &'a DbPool,
+        user_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Vec<NaiveDate>, AppError>> + Send + 'a>,
+    >;
+}
+
+static ABSENCES: std::sync::OnceLock<std::sync::Arc<dyn AbsenceSource>> =
+    std::sync::OnceLock::new();
+
+/// Z12-T5: sets the process's absence source, once; `false` when one was
+/// already set (the first stays).
+pub fn register_absence_source(source: std::sync::Arc<dyn AbsenceSource>) -> bool {
+    ABSENCES.set(source).is_ok()
+}
+
+/// Z12-T5: the calendar a person works to: their own assignment, else the
+/// assignment of their team with the lowest id among their teams that have
+/// one, else the deployment's default. Only active calendars count.
+pub async fn resolve_calendar_id_for_user(
+    db: &DbPool,
+    user_id: Uuid,
+) -> Result<Option<Uuid>, AppError> {
+    let own: Option<Uuid> = sqlx::query_scalar(
+        "SELECT a.calendar_id FROM calendar_assignment a \
+           JOIN calendar c ON c.id = a.calendar_id AND c.is_active = true \
+          WHERE a.subject_type = 'user' AND a.subject_id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    if own.is_some() {
+        return Ok(own);
+    }
+    let team: Option<Uuid> = sqlx::query_scalar(
+        "SELECT a.calendar_id FROM user_account_mm_team m \
+           JOIN calendar_assignment a ON a.subject_type = 'team' AND a.subject_id = m.team_ref \
+           JOIN calendar c ON c.id = a.calendar_id AND c.is_active = true \
+          WHERE m.user_ref = $1 AND m.is_deleted = false \
+          ORDER BY m.team_ref ASC LIMIT 1",
+    )
+    .bind(user_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    if team.is_some() {
+        return Ok(team);
+    }
+    default_calendar_id(db).await
+}
+
+/// Z12-T5: the person's calendar ([`resolve_calendar_id_for_user`]) with
+/// their absences from the registered [`AbsenceSource`] as closed days, for
+/// last year to two years ahead. With no source registered nothing is
+/// added. `NotFound` when no calendar applies at all.
+pub async fn load_calendar_for_user(
+    db: &DbPool,
+    user_id: Uuid,
+) -> Result<Result<LoadedCalendar, CalendarUnresolved>, AppError> {
+    let Some(calendar_id) = resolve_calendar_id_for_user(db, user_id).await? else {
+        return Ok(Err(CalendarUnresolved::NotFound));
+    };
+    let mut loaded = match load_calendar(db, calendar_id).await? {
+        Ok(loaded) => loaded,
+        Err(unresolved) => return Ok(Err(unresolved)),
+    };
+    let Some(source) = ABSENCES.get() else {
+        return Ok(Ok(loaded));
+    };
+    let year = chrono::Utc::now().year();
+    let (Some(from), Some(to)) = (
+        NaiveDate::from_ymd_opt(year - 1, 1, 1),
+        NaiveDate::from_ymd_opt(year + 2, 12, 31),
+    ) else {
+        return Ok(Ok(loaded));
+    };
+    let away = source.absences(db, user_id, from, to).await?;
+    if away.is_empty() {
+        return Ok(Ok(loaded));
+    }
+    loaded.calendar = with_closed_days(&loaded.calendar, &away)
+        .map_err(|e| AppError::internal(format!("calendar with absences: {e}")))?;
+    loaded.content_hash = content_hash(&loaded.calendar);
+    Ok(Ok(loaded))
+}
+
+/// `calendar` with `days` closed (an empty exception on each).
+pub fn with_closed_days(
+    calendar: &BusinessCalendar,
+    days: &[NaiveDate],
+) -> Result<BusinessCalendar, CalendarError> {
+    let mut exceptions = calendar.exceptions().clone();
+    for day in days {
+        exceptions.insert(*day, Vec::new());
+    }
+    BusinessCalendar::new(
+        calendar.tz(),
+        calendar.working_days().clone(),
+        calendar.hours().clone(),
+        calendar.holidays().clone(),
+        exceptions,
+    )
+}
+
 /// The deployment's single active default calendar, if one is configured.
 pub async fn default_calendar_id(db: &DbPool) -> Result<Option<Uuid>, AppError> {
     sqlx::query_scalar(
@@ -1070,6 +1184,25 @@ mod tests {
         )
         .unwrap();
         assert_eq!(cal.working_days().len(), 7);
+    }
+
+    #[test]
+    fn absences_close_their_days() {
+        use chrono::Weekday;
+        let hours = json!({ "sun": nine_to_five(), "mon": nine_to_five() });
+        let cal = build_calendar(
+            "UTC",
+            &days(&["sun", "mon"]),
+            &hours,
+            BTreeSet::new(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+        let away = d(2026, 10, 18);
+        assert_eq!(away.weekday(), Weekday::Sun);
+        let closed = with_closed_days(&cal, &[away]).unwrap();
+        assert_eq!(closed.exceptions()[&away], Vec::<TimeRange>::new());
+        assert_ne!(content_hash(&closed), content_hash(&cal));
     }
 
     #[test]

@@ -124,3 +124,117 @@ async fn changed_definition_bumps_version() {
             .unwrap();
     assert_eq!(rows, 2);
 }
+
+async fn insert_user(db: &DbPool) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, email, user_name, is_active) VALUES ($1, $2, $3, true)",
+    )
+    .bind(id)
+    .bind(format!("cal-{id}@test.local"))
+    .bind(format!("cal-{id}"))
+    .execute(db)
+    .await
+    .expect("insert user");
+    id
+}
+
+async fn assign(db: &DbPool, subject_type: &str, subject: Uuid, calendar: Uuid) {
+    sqlx::query(
+        "INSERT INTO calendar_assignment (subject_type, subject_id, calendar_id) VALUES ($1, $2, $3) \
+         ON CONFLICT (subject_type, subject_id) DO UPDATE SET calendar_id = EXCLUDED.calendar_id",
+    )
+    .bind(subject_type)
+    .bind(subject)
+    .bind(calendar)
+    .execute(db)
+    .await
+    .expect("assign calendar");
+}
+
+async fn join_team(db: &DbPool, user: Uuid, team: Uuid) {
+    sqlx::query("INSERT INTO user_account_mm_team (user_ref, team_ref) VALUES ($1, $2)")
+        .bind(user)
+        .bind(team)
+        .execute(db)
+        .await
+        .expect("join team");
+}
+
+#[tokio::test]
+async fn user_assignment_wins_over_team() {
+    let db = skip_if_no_db!(test_db().await);
+    let team_cal = insert_calendar(
+        &db,
+        &["sun"],
+        json!({ "sun": [{ "start_minute": 480, "end_minute": 960 }] }),
+        None,
+    )
+    .await;
+    let own_cal = insert_calendar(
+        &db,
+        &["mon"],
+        json!({ "mon": [{ "start_minute": 480, "end_minute": 960 }] }),
+        None,
+    )
+    .await;
+    let user = insert_user(&db).await;
+    let team = Uuid::now_v7();
+    join_team(&db, user, team).await;
+    assign(&db, "team", team, team_cal).await;
+    assign(&db, "user", user, own_cal).await;
+    let resolved = attome_core::calendar::resolve_calendar_id_for_user(&db, user)
+        .await
+        .unwrap();
+    assert_eq!(resolved, Some(own_cal));
+}
+
+#[tokio::test]
+async fn team_assignment_used_when_no_user_assignment() {
+    let db = skip_if_no_db!(test_db().await);
+    let first = insert_calendar(
+        &db,
+        &["sun"],
+        json!({ "sun": [{ "start_minute": 480, "end_minute": 960 }] }),
+        None,
+    )
+    .await;
+    let second = insert_calendar(
+        &db,
+        &["mon"],
+        json!({ "mon": [{ "start_minute": 480, "end_minute": 960 }] }),
+        None,
+    )
+    .await;
+    let user = insert_user(&db).await;
+    let (low, high) = {
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+        if a < b { (a, b) } else { (b, a) }
+    };
+    join_team(&db, user, high).await;
+    join_team(&db, user, low).await;
+    assign(&db, "team", high, second).await;
+    assign(&db, "team", low, first).await;
+    let resolved = attome_core::calendar::resolve_calendar_id_for_user(&db, user)
+        .await
+        .unwrap();
+    assert_eq!(
+        resolved,
+        Some(first),
+        "the lowest team id with an assignment"
+    );
+}
+
+#[tokio::test]
+async fn falls_back_to_default() {
+    let db = skip_if_no_db!(test_db().await);
+    let user = insert_user(&db).await;
+    let resolved = attome_core::calendar::resolve_calendar_id_for_user(&db, user)
+        .await
+        .unwrap();
+    let default = attome_core::calendar::default_calendar_id(&db)
+        .await
+        .unwrap();
+    assert_eq!(resolved, default);
+}

@@ -401,6 +401,25 @@ pub async fn availability(
     Ok(away.into_iter().collect())
 }
 
+/// Z12-T5: approved leave as the calendar layer's absence source, so a
+/// person's calendar closes the days they are away.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LeaveAbsences;
+
+impl attome_core::calendar::AbsenceSource for LeaveAbsences {
+    fn absences<'a>(
+        &'a self,
+        db: &'a attome_db::DbPool,
+        user_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Vec<NaiveDate>, AppError>> + Send + 'a>,
+    > {
+        Box::pin(availability(db, user_id, from, to))
+    }
+}
+
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct AvailabilityQuery {

@@ -1030,6 +1030,10 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         std::sync::Arc::new(attome_docgen::generate::SidecarRenderer),
         std::sync::Arc::new(zatca),
     );
+    // Z12-T5: a person's calendar closes the days HR has them on leave.
+    attome_core::calendar::register_absence_source(std::sync::Arc::new(
+        attome_hr::leave::LeaveAbsences,
+    ));
     let system = register_engines(EngineSystem::builder(state))
         .build()
         .await?;

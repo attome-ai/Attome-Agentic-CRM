@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendars: each person's calendar (Z12-T5). `resolve_calendar_id_for_user` takes the person's
+  own assignment, else their lowest-id team's, else the default; `load_calendar_for_user` closes
+  the days they are on approved leave (HR registers itself as the absence source at boot).
 - Agents: `table.health`, `table.index_proposals` and `table.change_plan` (Y2-T14, Y12-T12),
   read-only administrator tools over an entity's table: its health, the indexes slow statements
   suggest, and a preview of how structure changes would run. No agent tool applies an index or a
