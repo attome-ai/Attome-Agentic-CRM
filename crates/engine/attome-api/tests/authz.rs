@@ -260,6 +260,46 @@ async fn seed_non_admin(system: &TestSystem) -> (Uuid, String) {
 }
 
 /// Seeds a throwaway user holding `system.admin`. Returns (user_id, session cookie header value).
+/// Q5-T8: a cookie naming a real refresh family that holds a fresh password
+/// step-up, for routes behind `require_recent_auth` (the values a verified
+/// step-up writes; the step-up itself is `step_up_http.rs`'s subject).
+async fn stepped_up_cookie(system: &TestSystem, user_id: Uuid) -> String {
+    let state = &system.state().base;
+    let issued = attome_auth::refresh::issue(
+        &state.db,
+        user_id,
+        &attome_auth::auth_context::AuthContext::password(),
+        attome_auth::refresh::RefreshLifetimes {
+            idle_secs: state.config.refresh_token_expiry_secs(),
+            absolute_secs: state.config.refresh_absolute_lifetime_secs(),
+        },
+        &state.pepper_ring(),
+    )
+    .await
+    .expect("issue a refresh family");
+    sqlx::query(
+        "UPDATE refresh_token
+         SET auth_time = NOW(), amr = ARRAY['pwd'], elevated_until = NOW() + INTERVAL '15 minutes'
+         WHERE family_id = $1 AND used_at IS NULL AND revoked_at IS NULL",
+    )
+    .bind(issued.family_id)
+    .execute(&state.db)
+    .await
+    .expect("record a password step-up on the family");
+    let token = attome_auth::accounts::issue_access_token(
+        &state.db,
+        user_id,
+        issued.family_id,
+        &KeyRing::single(THROWAWAY_JWT_SECRET.to_string()),
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+        3600,
+    )
+    .await
+    .expect("issue a session token naming the family");
+    format!("{}={token}", attome_auth::cookie::session_cookie_name(true))
+}
+
 async fn seed_admin(system: &TestSystem) -> (Uuid, String) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
@@ -438,7 +478,8 @@ fn security_admin_routes_reachable_regardless_of_license_state() {
 fn admin_mfa_reset_writes_a_security_audit_event() {
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
-        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let (admin_id, _) = seed_admin(&system).await;
+        let admin_cookie = stepped_up_cookie(&system, admin_id).await;
         let db = system.state().base.db.clone();
         let target_id = Uuid::now_v7();
 
@@ -519,6 +560,143 @@ fn admin_mfa_reset_writes_a_security_audit_event() {
             )),
             "reset must write a typed security event identifying both target and admin"
         );
+    })
+}
+
+/// Seeds a user with an active MFA enrollment; with `admin`, the user also
+/// holds `system.admin`.
+async fn seed_enrolled(system: &TestSystem, admin: bool) -> Uuid {
+    let db = &system.state().base.db;
+    let user_id = if admin {
+        seed_admin(system).await.0
+    } else {
+        let id = Uuid::now_v7();
+        sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
+            .bind(id)
+            .bind(format!("mfa-target-{id}"))
+            .execute(db)
+            .await
+            .expect("insert MFA target");
+        id
+    };
+    sqlx::query(
+        "INSERT INTO user_mfa (id, user_ref, secret_encrypted, confirmed_at) VALUES ($1, $2, 'x', NOW())",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user_id)
+    .execute(db)
+    .await
+    .expect("insert active MFA enrollment");
+    user_id
+}
+
+async fn active_mfa(system: &TestSystem, user_id: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM user_mfa WHERE user_ref = $1 AND is_deleted = false")
+        .bind(user_id)
+        .fetch_one(&system.state().base.db)
+        .await
+        .expect("count active MFA enrollments")
+}
+
+fn reset_request(target: Uuid, cookie: &str) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/admin/security/users/{target}/mfa/reset"))
+        .header("cookie", cookie)
+        .header("origin", "http://localhost:4200")
+        .header("sec-fetch-site", "same-origin")
+        .body(Body::empty())
+        .unwrap()
+}
+
+/// Q5-T8: resetting someone's second factor needs a fresh step-up.
+#[test]
+fn admin_mfa_reset_needs_a_step_up() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, plain_cookie) = seed_admin(&system).await;
+        let target = seed_enrolled(&system, false).await;
+        let app = system.app.clone();
+        let response = app
+            .oneshot(reset_request(target, &plain_cookie))
+            .await
+            .expect("MFA reset request");
+        assert!(
+            matches!(
+                response.status(),
+                StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED
+            ),
+            "{}",
+            response.status()
+        );
+        assert_eq!(active_mfa(&system, target).await, 1, "nothing was reset");
+    })
+}
+
+/// Q5-T8: an administrator's reset waits for a second administrator, and
+/// the approval carries it out.
+#[test]
+fn admin_mfa_reset_of_an_admin_waits_for_a_second_admin() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (requester, _) = seed_admin(&system).await;
+        let cookie = stepped_up_cookie(&system, requester).await;
+        let target = seed_enrolled(&system, true).await;
+
+        let response = system
+            .app
+            .clone()
+            .oneshot(reset_request(target, &cookie))
+            .await
+            .expect("MFA reset request");
+        assert_eq!(response.status(), StatusCode::ACCEPTED);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body");
+        let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+        assert_eq!(body["approval_pending"], true, "{body}");
+        let request_id: Uuid = body["approval_request_id"]
+            .as_str()
+            .and_then(|s| s.parse().ok())
+            .expect("an approval request id");
+        assert_eq!(active_mfa(&system, target).await, 1, "not reset yet");
+
+        let action: String =
+            sqlx::query_scalar("SELECT action_type FROM approval_request WHERE id = $1")
+                .bind(request_id)
+                .fetch_one(&system.state().base.db)
+                .await
+                .expect("the approval request");
+        assert_eq!(action, attome_security::admin::ACTION_MFA_RESET_ADMIN);
+
+        // The approval's own action runs the reset, naming the approver.
+        let (approver, _) = seed_admin(&system).await;
+        attome_security::admin::do_reset_user_mfa(
+            system.state(),
+            target,
+            requester,
+            Some(approver),
+        )
+        .await
+        .expect("the approved reset");
+        assert_eq!(active_mfa(&system, target).await, 0);
+        let actor: Uuid = sqlx::query_scalar(
+            "SELECT user_id FROM audit_header WHERE record_id = $1 AND event_name = 'mfa_reset' \
+             ORDER BY id DESC LIMIT 1",
+        )
+        .bind(target)
+        .fetch_one(&system.state().base.db)
+        .await
+        .expect("the reset's audit event");
+        assert_eq!(actor, approver, "the approver is the event's actor");
+        let queued: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM email_delivery WHERE user_ref = $1 AND kind = 'generic'",
+        )
+        .bind(target)
+        .fetch_one(&system.state().base.db)
+        .await
+        .expect("count queued emails");
+        assert_eq!(queued, 1, "the person is told");
     })
 }
 

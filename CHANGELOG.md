@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Second administrator for an administrator's MFA reset (Q5-T8): `POST /api/v1/admin/security/users/{id}/mfa/reset`
+  now needs a fresh step-up (`admin_mfa_reset`); resetting an administrator's factor answers `202` with an
+  approval request (`security.mfa_reset_admin`) that a second administrator approves. The person is emailed
+  either way.
 - Limits you can see (AA9-T6): `GET /api/v1/admin/limits` lists every limit with its value in
   force, default, floor, ceiling and last week's hits and peak; `GET /api/v1/limits/me` tells any
   caller the limits that apply to them, with the requests left this minute per rate class. A

@@ -116,6 +116,7 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     attome_hr::leave::ACTION_LEAVE_DECIDE,
     attome_records::bulk_edit::ACTION_BULK_EDIT,
     attome_security::admin::ACTION_ROLE_GRANT,
+    attome_security::admin::ACTION_MFA_RESET_ADMIN,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
     attome_compliance::erasure_admin::ACTION_SECURITY_ERASURE,
@@ -570,6 +571,24 @@ async fn dispatch_approved(
             )
             .await?;
             serde_json::to_value(&item).map_err(AppError::internal)?
+        }
+        action if action == attome_security::admin::ACTION_MFA_RESET_ADMIN => {
+            // Q5-T8: a second administrator approved resetting an
+            // administrator's second factor.
+            #[derive(serde::Deserialize)]
+            struct MfaResetPayload {
+                user_id: Uuid,
+            }
+            let payload: MfaResetPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            attome_security::admin::do_reset_user_mfa(
+                state,
+                payload.user_id,
+                request.requested_by,
+                Some(approver_id),
+            )
+            .await?;
+            serde_json::json!({ "user_id": payload.user_id, "reset": true })
         }
         attome_compliance::retention_admin::ACTION_RETENTION_APPROVE => {
             #[derive(serde::Deserialize)]

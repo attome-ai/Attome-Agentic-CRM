@@ -213,6 +213,46 @@ fn session_cookie(user_id: Uuid) -> String {
     format!("{}={token}", attome_auth::cookie::session_cookie_name(true))
 }
 
+/// Q5-T8: a cookie naming a real refresh family that holds a fresh password
+/// step-up, for routes behind `require_recent_auth` (the values a verified
+/// step-up writes; the step-up itself is `step_up_http.rs`'s subject).
+async fn stepped_up_cookie(system: &TestSystem, user_id: Uuid) -> String {
+    let state = &system.state().base;
+    let issued = attome_auth::refresh::issue(
+        &state.db,
+        user_id,
+        &attome_auth::auth_context::AuthContext::password(),
+        attome_auth::refresh::RefreshLifetimes {
+            idle_secs: state.config.refresh_token_expiry_secs(),
+            absolute_secs: state.config.refresh_absolute_lifetime_secs(),
+        },
+        &state.pepper_ring(),
+    )
+    .await
+    .expect("issue a refresh family");
+    sqlx::query(
+        "UPDATE refresh_token
+         SET auth_time = NOW(), amr = ARRAY['pwd'], elevated_until = NOW() + INTERVAL '15 minutes'
+         WHERE family_id = $1 AND used_at IS NULL AND revoked_at IS NULL",
+    )
+    .bind(issued.family_id)
+    .execute(&state.db)
+    .await
+    .expect("record a password step-up on the family");
+    let token = attome_auth::accounts::issue_access_token(
+        &state.db,
+        user_id,
+        issued.family_id,
+        &KeyRing::single(THROWAWAY_JWT_SECRET.to_string()),
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+        3600,
+    )
+    .await
+    .expect("issue a session token naming the family");
+    format!("{}={token}", attome_auth::cookie::session_cookie_name(true))
+}
+
 async fn seed_admin(system: &TestSystem) -> (Uuid, String) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
@@ -546,7 +586,8 @@ fn role_removal_ends_sessions() {
 fn mfa_reset_ends_sessions() {
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
-        let (_, admin_cookie) = seed_admin(&system).await;
+        let (admin_id, _) = seed_admin(&system).await;
+        let admin_cookie = stepped_up_cookie(&system, admin_id).await;
         let (target_id, _) = seed_target_with_api_key(&system).await;
         let db = system.state().base.db.clone();
         sqlx::query(

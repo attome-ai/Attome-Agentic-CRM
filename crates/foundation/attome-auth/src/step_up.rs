@@ -61,6 +61,8 @@ pub enum Operation {
     RecoveryCodesRegenerate,
     IdentityLink,
     ApiKeyCreate,
+    /// Q5-T8: an administrator resetting someone's second factor.
+    AdminMfaReset,
 }
 
 /// Where an operation's freshness comes from.
@@ -74,11 +76,12 @@ pub enum Freshness {
 }
 
 impl Operation {
-    pub const ALL: [Operation; 4] = [
+    pub const ALL: [Operation; 5] = [
         Operation::MfaDisable,
         Operation::RecoveryCodesRegenerate,
         Operation::IdentityLink,
         Operation::ApiKeyCreate,
+        Operation::AdminMfaReset,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -87,6 +90,7 @@ impl Operation {
             Operation::RecoveryCodesRegenerate => "recovery_codes_regenerate",
             Operation::IdentityLink => "identity_link",
             Operation::ApiKeyCreate => "api_key_create",
+            Operation::AdminMfaReset => "admin_mfa_reset",
         }
     }
 
@@ -97,7 +101,8 @@ impl Operation {
             Operation::ApiKeyCreate => 15 * 60,
             Operation::MfaDisable
             | Operation::RecoveryCodesRegenerate
-            | Operation::IdentityLink => 5 * 60,
+            | Operation::IdentityLink
+            | Operation::AdminMfaReset => 5 * 60,
         }
     }
 
@@ -106,7 +111,9 @@ impl Operation {
             Operation::MfaDisable | Operation::RecoveryCodesRegenerate => {
                 Freshness::InRequestFactor
             }
-            Operation::IdentityLink | Operation::ApiKeyCreate => Freshness::Elevation,
+            Operation::IdentityLink | Operation::ApiKeyCreate | Operation::AdminMfaReset => {
+                Freshness::Elevation
+            }
         }
     }
 
