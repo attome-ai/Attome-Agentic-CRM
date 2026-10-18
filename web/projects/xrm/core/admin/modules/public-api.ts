@@ -18,3 +18,4 @@ export { EnvVariablesComponent } from './env-variables/env-variables.component';
 export { SloComponent } from './slo/slo.component';
 export { EventsMonitorComponent } from './events-monitor/events-monitor.component';
 export { RateLimitBansComponent } from './rate-limit-bans/rate-limit-bans.component';
+export { LimitsComponent } from './limits/limits.component';

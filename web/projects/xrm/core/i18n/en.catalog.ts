@@ -261,6 +261,16 @@ export const xrmEn = {
     reviewPending: 'This deal is closed and its win-loss review is waiting for you.',
     openReview: 'Open the review',
   },
+  limitsPage: {
+    title: 'Limits',
+    intro: 'Every limit the server enforces, its range and how close callers came to it in the last seven days. A warning means someone was refused or use reached the warning level.',
+    warning: 'Near its limit', value: '{value} {unit}', range: 'Allowed {floor} to {ceiling}',
+    peak: 'Seven-day peak: {percent}% of the limit',
+    raise: 'Raise', newValue: 'New value', save: 'Save', cancel: 'Cancel',
+    outOfRange: 'Enter a whole number from {floor} to {ceiling}.',
+    inConfig: 'Set in the configuration file; takes effect after a restart.',
+    none: 'No limits to show.',
+  },
   rateLimitBans: {
     title: 'Rate-limit bans',
     intro: 'Callers that tripped a limit five times in an hour are refused for fifteen minutes. Lift a ban when you know the caller.',

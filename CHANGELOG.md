@@ -355,6 +355,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Operations: a limits screen at `/xrm/admin/limits` (AA9-T8, English and Arabic): every limit with
+  its value, range, seven-day peak as a bar and a warning chip; a runtime limit is raised in place
+  within its floor and ceiling through the audited settings route, and a boot-config limit says it
+  is set in the configuration file.
 - Operations: limit warnings (AA9-T7). A limit warns when it refused someone in seven days or its
   peak use reached `limits.warn_at_percent` (new runtime setting, default 80) of its value; rate
   classes now record a signed-in caller's use past half the minute's budget. The daily
