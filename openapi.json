@@ -47607,6 +47607,46 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/auth/challenge": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "A proof-of-work challenge.",
+        "description": "Issued only when proof-of-work is the challenge in force\n(`portal.captcha.provider = \"pow\"`, or a sovereign deployment with no\nprovider); otherwise `404`. A challenge expires after two minutes and an\nanswer is accepted once.",
+        "operationId": "get_pow_challenge",
+        "responses": {
+          "200": {
+            "description": "A fresh challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowChallenge"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proof-of-work is not the challenge in force",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/auth/google": {
       "post": {
         "tags": [
@@ -117824,6 +117864,34 @@
           "user_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PowChallenge": {
+        "type": "object",
+        "description": "A proof-of-work challenge: find an `answer` such that SHA-256 of `nonce`\nfollowed by `answer` starts with `difficulty` zero bits, then send\n`{challenge}:{answer}` as the request's `captcha_token`.",
+        "required": [
+          "challenge",
+          "nonce",
+          "difficulty",
+          "expires_at"
+        ],
+        "properties": {
+          "challenge": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "expires_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix seconds."
+          },
+          "nonce": {
+            "type": "string"
           }
         }
       },

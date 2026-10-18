@@ -8225,6 +8225,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A proof-of-work challenge.
+         * @description Issued only when proof-of-work is the challenge in force
+         *     (`portal.captcha.provider = "pow"`, or a sovereign deployment with no
+         *     provider); otherwise `404`. A challenge expires after two minutes and an
+         *     answer is accepted once.
+         */
+        get: operations["get_pow_challenge"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/google": {
         parameters: {
             query?: never;
@@ -28470,6 +28493,22 @@ export interface components {
             user_email: string;
             /** Format: uuid */
             user_id: string;
+        };
+        /**
+         * @description A proof-of-work challenge: find an `answer` such that SHA-256 of `nonce`
+         *     followed by `answer` starts with `difficulty` zero bits, then send
+         *     `{challenge}:{answer}` as the request's `captcha_token`.
+         */
+        PowChallenge: {
+            challenge: string;
+            /** Format: int32 */
+            difficulty: number;
+            /**
+             * Format: int64
+             * @description Unix seconds.
+             */
+            expires_at: number;
+            nonce: string;
         };
         PredictionSummary: {
             explanation?: unknown;
@@ -63252,6 +63291,35 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_pow_challenge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A fresh challenge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PowChallenge"];
+                };
+            };
+            /** @description Proof-of-work is not the challenge in force */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
