@@ -81,6 +81,17 @@ fn limit_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(60_000),
         ),
+        // AA9-T7: not a limit itself, the share of one at which the daily
+        // check warns the administrators.
+        SettingDescriptor::new(
+            "limits.warn_at_percent",
+            "Percent of a limit at which administrators are warned that callers \
+             come close to it. 50 to 99.",
+            || json!({ "type": "integer", "minimum": 50, "maximum": 99 }),
+            DEPLOYMENT,
+            false,
+            || json!(80),
+        ),
     ]
 }
 

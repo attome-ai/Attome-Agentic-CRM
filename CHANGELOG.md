@@ -350,6 +350,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Operations: limit warnings (AA9-T7). A limit warns when it refused someone in seven days or its
+  peak use reached `limits.warn_at_percent` (new runtime setting, default 80) of its value; rate
+  classes now record a signed-in caller's use past half the minute's budget. The daily
+  `LimitWarningCheck` job notifies every administrator once per warning limit per day, and
+  `LimitView.warning` follows the same rule. A bulk request over the cap now names the limit
+  `bulk.max_records_per_request`, its registry key.
 - Operations: a daily latency regression check after an upgrade (AA14-T8). The built-in metrics
   store now keeps the request-duration buckets of the nine SLO routes; the `PerfRegressionCheck` job
   compares each class's p95 since the last upgrade with the week before and fires the built-in alert

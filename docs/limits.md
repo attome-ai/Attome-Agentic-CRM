@@ -10,6 +10,13 @@ range stops the server with a message naming the key, the value and the range. A
 changes without a restart. Each refusal counts in `limit_hits_total` and in the daily
 `limit_usage_daily` table.
 
+**Warnings (AA9-T7).** `limit_usage_daily` also keeps each limit's peak use: the size a refused
+request asked for, and for a rate class the requests a signed-in caller had made in the current
+minute once past half the budget. A limit warns when someone was refused by it in the last seven
+days or its peak reached the runtime setting `limits.warn_at_percent` (default 80, from 50 to 99)
+of its value. `GET /api/v1/admin/limits` shows the warning, and once a day every administrator
+gets one notification per warning limit.
+
 | Key | Purpose | Kind | Set in | Default |
 |---|---|---|---|---|
 | `rate_limit.authenticated` | requests one signed-in caller may make outside a named category | abuse | boot config | 600 requests per minute |

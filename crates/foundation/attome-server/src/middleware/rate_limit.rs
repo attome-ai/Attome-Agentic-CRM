@@ -456,6 +456,17 @@ pub async fn rate_limit(
     let (principal_kind, principal_id) = principal(&identity);
     match attome_cache::rate_limit::check(&state.redis_coordination, &key, limit as i32).await {
         Ok(outcome) if outcome.allowed => {
+            // AA9-T7: a signed-in caller past half its minute's budget is
+            // noted, so the daily check can warn before anyone is refused.
+            let used = outcome.limit.saturating_sub(outcome.remaining);
+            if is_authenticated && used.saturating_mul(2) >= outcome.limit {
+                crate::limit_usage::record_limit_use(
+                    &format!("rate_limit.{category}"),
+                    principal_kind,
+                    principal_id,
+                    i64::from(used),
+                );
+            }
             let mut resp = next.run(req).await;
             // AA9-T5: a limit the handler refused at, counted for this caller.
             if let Some(hit) = resp.extensions().get::<crate::limit_usage::LimitHit>() {
@@ -477,7 +488,7 @@ pub async fn rate_limit(
                 &format!("rate_limit.{category}"),
                 principal_kind,
                 principal_id,
-                0,
+                i64::from(outcome.limit),
             );
             note_trip(
                 &state.redis_coordination,

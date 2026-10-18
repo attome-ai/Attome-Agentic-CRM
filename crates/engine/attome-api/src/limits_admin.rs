@@ -9,6 +9,11 @@
 //! route here. `GET /api/v1/limits/me` tells any caller the limits that
 //! apply to them and, for each rate class, how much of the current minute's
 //! budget is left.
+//!
+//! AA9-T7: a limit warns when someone was refused by it in the last seven
+//! days, or its seven-day peak reached `limits.warn_at_percent` (default
+//! 80) of its value; the daily [`limit_warning_check`] tells every
+//! administrator about each warning limit, once per limit per day.
 
 use std::collections::HashMap;
 
@@ -35,8 +40,11 @@ pub struct LimitView {
     pub ceiling: i64,
     pub unit: String,
     pub hits_7d: i64,
+    /// The highest use seen in seven days, in `unit`: the size asked for,
+    /// or for a rate the requests counted in one window.
     pub peak_7d: i64,
-    /// Someone reached this limit in the last seven days.
+    /// Someone was refused by this limit in the last seven days, or its
+    /// peak reached `limits.warn_at_percent` of its value.
     pub warning: bool,
 }
 
@@ -79,6 +87,148 @@ fn value_of(state: &EngineState, spec: &LimitSpec) -> i64 {
     configured.unwrap_or(spec.default_solo)
 }
 
+/// `limits.warn_at_percent` when none is stored.
+pub const DEFAULT_WARN_AT_PERCENT: i64 = 80;
+
+/// The share of a limit, in percent, at which it warns.
+fn warn_at_percent(state: &EngineState) -> i64 {
+    state
+        .runtime_limit("warn_at_percent")
+        .unwrap_or(DEFAULT_WARN_AT_PERCENT)
+        .clamp(50, 99)
+}
+
+/// Whether a limit of `value` warns: refused at least once, or its peak at
+/// or above `percent` of the value.
+pub fn is_warning(value: i64, hits: i64, peak: i64, percent: i64) -> bool {
+    hits > 0 || (value > 0 && peak.saturating_mul(100) >= value.saturating_mul(percent))
+}
+
+/// Every limit with its use over the seven days up to `today`.
+async fn limit_views(
+    state: &EngineState,
+    today: chrono::NaiveDate,
+) -> Result<Vec<LimitView>, AppError> {
+    let usage: HashMap<String, (i64, i64)> = sqlx::query_as::<_, (String, i64, i64)>(
+        "SELECT limit_key, COALESCE(SUM(hits), 0)::bigint, COALESCE(MAX(peak), 0)::bigint
+           FROM limit_usage_daily
+          WHERE day >= $1::date - 7 AND day <= $1::date
+          GROUP BY limit_key",
+    )
+    .bind(today)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .map(|(key, hits, peak)| (key, (hits, peak)))
+    .collect();
+    let percent = warn_at_percent(state);
+    Ok(LIMITS
+        .iter()
+        .map(|spec| {
+            let (hits_7d, peak_7d) = usage.get(spec.key).copied().unwrap_or((0, 0));
+            let value = value_of(state, spec);
+            LimitView {
+                key: spec.key.to_owned(),
+                purpose: spec.purpose.to_owned(),
+                kind: format!("{:?}", spec.kind).to_ascii_lowercase(),
+                scope: match spec.scope {
+                    LimitScope::BootConfig => "boot_config",
+                    LimitScope::RuntimeSetting => "runtime_setting",
+                }
+                .to_owned(),
+                value,
+                default: spec.default_solo,
+                floor: spec.floor,
+                ceiling: spec.ceiling,
+                unit: spec.unit.to_owned(),
+                hits_7d,
+                peak_7d,
+                warning: is_warning(value, hits_7d, peak_7d, percent),
+            }
+        })
+        .collect())
+}
+
+/// How long a day's warning key is kept: two days, so the day it names is
+/// covered whichever node runs the check.
+const WARN_KEY_TTL: std::time::Duration = std::time::Duration::from_secs(2 * 86_400);
+
+/// The Redis key that lets a limit warn once per day.
+pub fn warn_key(limit_key: &str, day: chrono::NaiveDate) -> String {
+    format!("limits:warn:{limit_key}:{}", day.format("%Y%m%d"))
+}
+
+/// AA9-T7, the daily job's body: tells every administrator about each limit
+/// that warns over the seven days up to `now`, at most once per limit per
+/// day. Returns the limits notified. Without Redis nothing is sent: the
+/// limits list still shows the warning.
+pub async fn limit_warning_check(
+    state: &EngineState,
+    notification: &attome_config::NotificationSection,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<Vec<String>, AppError> {
+    let today = now.date_naive();
+    let percent = warn_at_percent(state);
+    let mut notified = Vec::new();
+    for view in limit_views(state, today).await? {
+        if !view.warning {
+            continue;
+        }
+        let first = match state
+            .base
+            .redis_coordination
+            .set_nx(warn_key(&view.key, today), "1", Some(WARN_KEY_TTL))
+            .await
+        {
+            Ok(first) => first,
+            Err(e) => {
+                tracing::warn!(limit = %view.key, error = %e, "limit warning: dedupe key unavailable, not notifying");
+                continue;
+            }
+        };
+        if !first {
+            continue;
+        }
+        let body = if view.hits_7d > 0 {
+            format!(
+                "{} ({}) refused {} requests in the last seven days. Its value is {} {}; \
+                 raise it within {} to {} if the use is expected.",
+                view.key,
+                view.purpose,
+                view.hits_7d,
+                view.value,
+                view.unit,
+                view.floor,
+                view.ceiling
+            )
+        } else {
+            format!(
+                "{} ({}) reached {} of its {} {} in the last seven days, at or above the \
+                 {percent}% warning level. Raise it within {} to {} if the use is expected.",
+                view.key,
+                view.purpose,
+                view.peak_7d,
+                view.value,
+                view.unit,
+                view.floor,
+                view.ceiling
+            )
+        };
+        tracing::warn!(limit = %view.key, peak = view.peak_7d, hits = view.hits_7d, value = view.value, "limit warning: a limit is close to binding");
+        attome_ai::quality_monitor::alert_admins(
+            &state.base.db,
+            notification,
+            format!("Limit {} is close to its value", view.key),
+            body,
+            "/xrm/admin/settings",
+        )
+        .await;
+        notified.push(view.key);
+    }
+    Ok(notified)
+}
+
 #[utoipa::path(
     get,
     path = "/api/v1/admin/limits",
@@ -100,42 +250,7 @@ async fn list_limits(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
 ) -> Result<Json<PaginatedResponse<LimitView>>, AppError> {
-    let usage: HashMap<String, (i64, i64)> = sqlx::query_as::<_, (String, i64, i64)>(
-        "SELECT limit_key, COALESCE(SUM(hits), 0)::bigint, COALESCE(MAX(peak), 0)::bigint
-           FROM limit_usage_daily
-          WHERE day >= current_date - 7
-          GROUP BY limit_key",
-    )
-    .fetch_all(&state.base.db)
-    .await
-    .map_err(AppError::internal)?
-    .into_iter()
-    .map(|(key, hits, peak)| (key, (hits, peak)))
-    .collect();
-    let items: Vec<LimitView> = LIMITS
-        .iter()
-        .map(|spec| {
-            let (hits_7d, peak_7d) = usage.get(spec.key).copied().unwrap_or((0, 0));
-            LimitView {
-                key: spec.key.to_owned(),
-                purpose: spec.purpose.to_owned(),
-                kind: format!("{:?}", spec.kind).to_ascii_lowercase(),
-                scope: match spec.scope {
-                    LimitScope::BootConfig => "boot_config",
-                    LimitScope::RuntimeSetting => "runtime_setting",
-                }
-                .to_owned(),
-                value: value_of(&state, spec),
-                default: spec.default_solo,
-                floor: spec.floor,
-                ceiling: spec.ceiling,
-                unit: spec.unit.to_owned(),
-                hits_7d,
-                peak_7d,
-                warning: hits_7d > 0,
-            }
-        })
-        .collect();
+    let items = limit_views(&state, chrono::Utc::now().date_naive()).await?;
     let total = items.len() as i64;
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
@@ -194,6 +309,30 @@ async fn my_limits(
         }
     }
     Ok(Json(MyLimits { limits }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_limit_warns_when_refused_or_near_its_value() {
+        assert!(is_warning(500, 0, 425, 80), "85% of the value");
+        assert!(is_warning(500, 0, 400, 80), "exactly 80%");
+        assert!(!is_warning(500, 0, 399, 80), "under 80%");
+        assert!(is_warning(500, 1, 0, 80), "refused once");
+        assert!(!is_warning(500, 0, 425, 90), "a higher warning level");
+        assert!(!is_warning(0, 0, 10, 80), "a zero value never warns on use");
+    }
+
+    #[test]
+    fn the_warning_key_names_the_limit_and_day() {
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 10, 18).unwrap();
+        assert_eq!(
+            warn_key("bulk.max_records_per_request", day),
+            "limits:warn:bulk.max_records_per_request:20261018"
+        );
+    }
 }
 
 pub(crate) fn routes() -> Router<EngineState> {

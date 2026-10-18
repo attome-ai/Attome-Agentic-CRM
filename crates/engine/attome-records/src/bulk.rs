@@ -434,7 +434,7 @@ fn validate_request_shape(body: &BulkRequestBody, max_records: usize) -> Result<
     if body.records.len() > max_records {
         // AA9-T4: named, with the way forward.
         return Err(AppError::LimitExceeded {
-            limit: "bulk.max_records",
+            limit: "bulk.max_records_per_request",
             value: max_records as i64,
             next: attome_types::error::NextStep::Split,
         });

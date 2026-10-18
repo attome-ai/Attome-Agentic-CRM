@@ -1051,6 +1051,18 @@ async fn dispatch_platform_job(
             }
         }
         // AA13-T9: fast burns of an SLO class's error budget.
+        // AA9-T7: limits near their value, once per limit per day.
+        EngineJob::LimitWarningCheck => {
+            let notified = attome_api::limits_admin::limit_warning_check(
+                &attome_state,
+                &config.notification,
+                chrono::Utc::now(),
+            )
+            .await?;
+            if !notified.is_empty() {
+                tracing::warn!(limits = ?notified, "limit warning: administrators told");
+            }
+        }
         // AA14-T8: latency regressions since the last upgrade.
         EngineJob::PerfRegressionCheck => {
             let findings = attome_server::slo::perf_regression_check(
@@ -2451,6 +2463,7 @@ const DEDUP_KEY_AUDIT_CHAIN_VERIFY: &str = "audit-chain-verify";
 const DEDUP_KEY_SLO_MONTHLY_REPORT: &str = "slo-monthly-report";
 const DEDUP_KEY_SLO_BURN_CHECK: &str = "slo-burn-check";
 const DEDUP_KEY_PERF_REGRESSION_CHECK: &str = "perf-regression-check";
+const DEDUP_KEY_LIMIT_WARNING_CHECK: &str = "limit-warning-check";
 const DEDUP_KEY_SALES_MENTION_SCAN: &str = "sales-mention-scan";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
@@ -2538,6 +2551,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SloMonthlyReport => DEDUP_KEY_SLO_MONTHLY_REPORT,
         EngineJob::SloBurnCheck => DEDUP_KEY_SLO_BURN_CHECK,
         EngineJob::PerfRegressionCheck => DEDUP_KEY_PERF_REGRESSION_CHECK,
+        EngineJob::LimitWarningCheck => DEDUP_KEY_LIMIT_WARNING_CHECK,
         EngineJob::SalesMentionScan => DEDUP_KEY_SALES_MENTION_SCAN,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
@@ -2929,6 +2943,17 @@ pub fn spawn_perf_regression_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::PerfRegressionCheck,
         DEDUP_KEY_PERF_REGRESSION_CHECK,
         "perf regression check",
+    );
+}
+
+/// AA9-T7: daily, the warning about limits near their value.
+pub fn spawn_limit_warning_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::LimitWarningCheck,
+        DEDUP_KEY_LIMIT_WARNING_CHECK,
+        "limit warning check",
     );
 }
 

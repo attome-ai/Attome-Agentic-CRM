@@ -65,7 +65,7 @@ fn add(key: Key, hits: i64, peak: i64) {
 
 /// Records one hit on `limit` by a `principal_kind` caller (`user`,
 /// `api_key`, `anonymous` or `unknown`), with the value that hit it (the
-/// size asked for, or 0 for a rate).
+/// size asked for, or for a rate the requests counted in its window).
 pub fn record_limit_hit(
     limit: &str,
     principal_kind: &'static str,
@@ -85,6 +85,26 @@ pub fn record_limit_hit(
             principal_id.unwrap_or(NO_PRINCIPAL),
         ),
         1,
+        value,
+    );
+}
+
+/// AA9-T7: records how close a caller came to `limit` without being
+/// refused (`value`, in the limit's unit), so the daily warning check sees a
+/// limit nearing its value before anyone is refused. Counts no hit.
+pub fn record_limit_use(
+    limit: &str,
+    principal_kind: &'static str,
+    principal_id: Option<Uuid>,
+    value: i64,
+) {
+    add(
+        (
+            limit.to_owned(),
+            principal_kind,
+            principal_id.unwrap_or(NO_PRINCIPAL),
+        ),
+        0,
         value,
     );
 }
