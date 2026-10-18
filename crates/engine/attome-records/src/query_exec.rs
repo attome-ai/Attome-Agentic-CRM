@@ -335,6 +335,33 @@ async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, 
     ))
 }
 
+/// S1-T2: the query `GET /api/v1/{entity}` lists: the system columns and
+/// every attribute the caller may read on the interactive surface (D-589),
+/// over live rows. `None` when the entity is not in the registry (the
+/// default view's own SQL is used then).
+fn entity_list_sql(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Option<Uuid>,
+) -> Option<String> {
+    let registry = state.entities.load();
+    let meta = registry.get_by_id(entity_id?)?;
+    let primary = meta.primary_name_attribute.as_deref();
+    let columns = attome_core::select_columns_where(&meta.attrs, |attr| {
+        attome_security::field_gate::readable(
+            ctx,
+            &meta.logicalname,
+            attr,
+            primary,
+            attome_security::field_gate::Surface::Interactive,
+        )
+    });
+    Some(format!(
+        "SELECT {columns} FROM {} WHERE is_active = true",
+        quote_ident(&meta.logicalname)
+    ))
+}
+
 /// D-521 — one immutable published version of a stored query.
 struct PinnedVersion {
     id: Uuid,
@@ -1981,10 +2008,22 @@ pub async fn execute_stored_query_with_definition(
         .await?;
     }
 
-    let base_sql: &str = pinned
-        .as_ref()
-        .map(|p| p.sql_query.as_str())
-        .unwrap_or(qrow.sql_query.as_str());
+    // S1-T2: the generic list reads the entity's live attributes, not its
+    // seeded default view (which selects only `id`, so every filter, sort
+    // and select on a real attribute would be "unknown").
+    let entity_list = body.force_cursor && body.entity.is_some();
+    let list_sql = if entity_list {
+        entity_list_sql(state, ctx, qrow.entity_logical_name)
+    } else {
+        None
+    };
+    let base_sql: &str = match &list_sql {
+        Some(sql) => sql.as_str(),
+        None => pinned
+            .as_ref()
+            .map(|p| p.sql_query.as_str())
+            .unwrap_or(qrow.sql_query.as_str()),
+    };
     if body.page < 1 {
         return Err(AppError::Validation("page must be at least 1".into()));
     }
@@ -2104,7 +2143,8 @@ pub async fn execute_stored_query_with_definition(
             .and_then(|id| registry.get_by_id(id))
         {
             // D-589: query/execute is a bulk surface. Hidden = every attribute
-            // the gate refuses, not only the sensitive ones.
+            // the gate refuses, not only the sensitive ones. The generic
+            // record list (S1-T2) is an interactive surface.
             Some(entity) => entity
                 .attrs
                 .iter()
@@ -2114,7 +2154,11 @@ pub async fn execute_stored_query_with_definition(
                         &entity.logicalname,
                         attr,
                         entity.primary_name_attribute.as_deref(),
-                        attome_security::field_gate::Surface::Bulk,
+                        if entity_list {
+                            attome_security::field_gate::Surface::Interactive
+                        } else {
+                            attome_security::field_gate::Surface::Bulk
+                        },
                     )
                 })
                 .map(|attr| attr.logicalname.clone())

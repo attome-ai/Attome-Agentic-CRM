@@ -124,9 +124,9 @@ fn old_name_accepted_after_rename() {
         let (_, shown) = app
             .request(Method::GET, &format!("/api/v1/{entity}/{id}"), None)
             .await;
-        assert_eq!(shown["headline"], "second", "{shown}");
+        assert_eq!(shown["data"]["headline"], "second", "{shown}");
         assert!(
-            shown.get("title").is_none(),
+            shown["data"].get("title").is_none(),
             "responses use the new name: {shown}"
         );
 
