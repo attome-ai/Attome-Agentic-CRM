@@ -43,6 +43,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: a fuzz target for the column-filter compiler (`crates/engine/attome-core/fuzz`) and
+  `scripts/fuzz-all.ps1`, which runs every fuzz target for a set time and fails on a crash
+  (Y13-T5; nightly and Linux or WSL).
 - Templates: region filters (Z13-T4): `{{ total | currency('SAR') }}`, `| number(2)`,
   `| date('long')`, `| hijri`, `| digits('western')`, formatted for the render's locale (Arabic
   digits and separators, Arabic currency symbols and month names in Arabic), and `{% dir %}` for a

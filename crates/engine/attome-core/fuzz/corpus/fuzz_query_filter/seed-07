@@ -1,0 +1,1 @@
+[{"field":"closed_on","op":"gte","value":"@last_n_days(30)"}]

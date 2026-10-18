@@ -104,3 +104,29 @@ Mark a test **blocking** and turn on the deployment setting
 `customer_tests.require_pass_before_publish` to make every changeset apply, model publish and
 blueprint apply run the blocking tests first; a failure refuses the publish with
 `422 customer_tests_failed`, naming the tests in `tests`.
+
+## Fuzzing
+
+The parsers that read text or JSON from outside are fuzzed with cargo-fuzz. Each fuzz crate sits
+in a `fuzz/` folder beside the crate it tests and is not a workspace member, so the normal build
+never compiles it and the Attome binary never depends on it:
+
+| Crate | Targets |
+|---|---|
+| `crates/foundation/attome-auth/fuzz` | `fuzz_validate_token`, `fuzz_cookie_extract` |
+| `crates/foundation/attome-rules/fuzz` | `fuzz_parse_v2`, `fuzz_eval_v2` (rule expressions) |
+| `crates/engine/attome-core/fuzz` | `fuzz_query_filter` (the column-filter compiler) |
+| `crates/engine/attome-s2s/fuzz` | `fuzz_verify_hmac` |
+
+cargo-fuzz needs nightly Rust and libFuzzer, which build on Linux and macOS; on Windows run it
+under WSL. `scripts/fuzz-all.ps1` runs every target for `-Seconds` each (default 300; under WSL
+on Windows) and exits 1 on a crash, naming the input it left under `fuzz/artifacts/`:
+
+```
+pwsh -File scripts/fuzz-all.ps1 -Seconds 30
+pwsh -File scripts/fuzz-all.ps1 -Target query_filter
+```
+
+A target treats a parse or validation error as a pass; only a panic, a stack overflow or a hang
+is a failure. The file importer gets its target when it lands (roadmap A23-T2).
+

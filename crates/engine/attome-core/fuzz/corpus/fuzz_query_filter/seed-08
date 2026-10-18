@@ -1,0 +1,1 @@
+[{"field":"due","op":"lt","value":"@today"}]

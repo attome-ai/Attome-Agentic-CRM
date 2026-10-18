@@ -1,0 +1,1 @@
+[{"field":"name","op":"contains","value":"acme"},{"field":"name","op":"starts_with","value":"A"}]

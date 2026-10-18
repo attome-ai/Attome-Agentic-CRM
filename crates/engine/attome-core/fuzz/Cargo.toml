@@ -1,0 +1,37 @@
+[package]
+name = "attome-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+# Y13-T5: fuzz target for the shared column-filter compiler
+# (attome_core::filter): a caller's filter list arrives as JSON, so the
+# target deserialises arbitrary bytes into filters, expands the dynamic
+# values (@me, @last_n_days(n), ...) and compiles each one against a fixed
+# whitelist. Parse and validation errors are fine; a panic is not.
+#
+# Not a workspace member, like attome-auth's and attome-rules' fuzz crates:
+# cargo-fuzz needs a nightly toolchain and libFuzzer (Linux or WSL). Run all
+# the repository's targets with scripts/fuzz-all.ps1, or this one with:
+#   cargo +nightly fuzz run fuzz_query_filter -- -max_total_time=60
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+chrono = "0.4"
+serde_json = "1"
+uuid = "1"
+
+[dependencies.attome-core]
+path = ".."
+
+[[bin]]
+name = "fuzz_query_filter"
+path = "fuzz_targets/fuzz_query_filter.rs"
+test = false
+doc = false
+bench = false

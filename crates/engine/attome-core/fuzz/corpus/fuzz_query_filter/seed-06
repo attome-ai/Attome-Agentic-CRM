@@ -1,0 +1,1 @@
+[{"field":"closed_on","op":"eq","value":"@this_month"}]
