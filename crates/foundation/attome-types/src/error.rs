@@ -38,6 +38,13 @@ pub enum AppError {
     #[error("attribute not writable: {0}")]
     AttributeNotWritable(String),
 
+    /// Z15-T14: a publish refused because blocking customer tests failed
+    /// while `customer_tests.require_pass_before_publish` is on. Carries the
+    /// failing tests' names (the body's `tests`); nothing was applied.
+    /// `422 customer_tests_failed`.
+    #[error("blocking customer tests failed: {}", .0.join(", "))]
+    CustomerTestsFailed(Vec<String>),
+
     #[error("conflict: {0}")]
     Conflict(&'static str),
 
@@ -347,6 +354,9 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "forbidden"),
             AppError::AttributeNotWritable(_) => (StatusCode::FORBIDDEN, "attribute_not_writable"),
+            AppError::CustomerTestsFailed(_) => {
+                (StatusCode::UNPROCESSABLE_ENTITY, "customer_tests_failed")
+            }
             AppError::LimitExceeded { next, .. } => (
                 if matches!(next, NextStep::RetryAfter { .. }) {
                     StatusCode::TOO_MANY_REQUESTS
@@ -434,6 +444,9 @@ impl IntoResponse for AppError {
         }
         if let AppError::AttributeNotWritable(field) = &self {
             body["field"] = json!(field);
+        }
+        if let AppError::CustomerTestsFailed(tests) = &self {
+            body["tests"] = json!(tests);
         }
         if let AppError::LimitExceeded { limit, value, next } = &self {
             body["limit"] = json!(limit);
@@ -1279,6 +1292,7 @@ mod tests {
             AppError::DuplicateDetected { .. } => 27,
             AppError::AttributeNotWritable(_) => 28,
             AppError::LimitExceeded { .. } => 29,
+            AppError::CustomerTestsFailed(_) => 30,
         }
     }
 
@@ -1377,6 +1391,7 @@ mod tests {
             },
             AppError::MethodNotAllowed,
             AppError::AttributeNotWritable("x".to_string()),
+            AppError::CustomerTestsFailed(vec!["x".to_string()]),
             AppError::LimitExceeded {
                 limit: "bulk.max_records",
                 value: 500,
@@ -1437,7 +1452,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=29).collect::<Vec<_>>(),
+            (0..=30).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

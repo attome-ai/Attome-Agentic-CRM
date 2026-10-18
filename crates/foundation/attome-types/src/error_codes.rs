@@ -66,6 +66,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
     ),
     code("validation_error", "The request failed validation.", false),
     code(
+        "customer_tests_failed",
+        "A publish was refused because blocking customer tests failed; `tests` names them.",
+        false,
+    ),
+    code(
         "rule_violation",
         "A business rule refused the write; `rule_id` names it.",
         false,

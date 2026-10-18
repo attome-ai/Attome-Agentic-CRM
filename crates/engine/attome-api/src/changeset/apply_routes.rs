@@ -326,7 +326,7 @@ async fn plan_changesets(
         (status = 403, description = "Caller lacks system.admin and metadata.rollout", body = ErrorResponse),
         (status = 404, description = "An apply id is not in the ledger", body = ErrorResponse),
         (status = 409, description = "A row is running or finished, or a contract row's expand phase has not succeeded", body = ErrorResponse),
-        (status = 422, description = "backup_ref_required on the production profile, a phase mismatch, or a blocked plan", body = ErrorResponse),
+        (status = 422, description = "backup_ref_required on the production profile, a phase mismatch, a blocked plan, or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -336,6 +336,8 @@ async fn apply_changesets(
     Json(body): Json<ApplyChangesetsBody>,
 ) -> Result<(StatusCode, Json<ApplyChangesetsAccepted>), AppError> {
     check_apply(&state, &body).await?;
+    // Z15-T14: with the guard on, blocking customer tests pass first.
+    attome_records::customer_tests::publish_guard(&state, &ctx).await?;
     let payload = serde_json::to_value(&body).map_err(AppError::internal)?;
     if let Some(request) =
         crate::approval_admin::gate(&state, super::ACTION_CHANGESET_APPLY, payload, ctx.user_id)

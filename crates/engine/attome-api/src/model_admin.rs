@@ -600,7 +600,7 @@ pub(crate) struct ModelPublishResponse {
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
         (status = 409, description = "Another save is in progress", body = ErrorResponse),
-        (status = 422, description = "The draft fails the publish checks, or an eval suite's newest run fails a safety case; the issues are listed", body = ErrorResponse),
+        (status = 422, description = "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
@@ -617,6 +617,8 @@ async fn publish(
     if !gate.blocked.is_empty() {
         return Err(AppError::Validation(gate.blocked.join("; ")));
     }
+    // Z15-T14: with the guard on, blocking customer tests pass first.
+    attome_records::customer_tests::publish_guard(&state, &ctx).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let published = attome_model::publish::publish(
         &mut tx,
@@ -980,7 +982,7 @@ async fn blueprint_plan(
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 409, description = "Another save of one of the objects is in progress", body = ErrorResponse),
-        (status = 422, description = "A file is invalid or an object fails the publish checks", body = ErrorResponse),
+        (status = 422, description = "A file is invalid or an object fails the publish checks, or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
@@ -991,6 +993,8 @@ async fn blueprint_apply(
     Json(request): Json<ModelFiles>,
 ) -> Result<Json<BlueprintApplied>, AppError> {
     let objects = read_blueprint(&request)?;
+    // Z15-T14: with the guard on, blocking customer tests pass first.
+    attome_records::customer_tests::publish_guard(&state, &ctx).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let mut items = Vec::new();
     for BlueprintObject { kind, object, .. } in &objects {

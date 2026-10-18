@@ -34,6 +34,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Settings: `customer_tests.require_pass_before_publish` (off by default, Z15-T14). When on, a
+  changeset apply, a model publish and a blueprint apply first run every active blocking customer
+  test and are refused with the new `422 customer_tests_failed` (failing names in `tests`).
 - Admin API: customer tests at `/api/v1/admin/customer-tests` (Z15-T13): list, create, show,
   PATCH with `If-Match`, delete, `/{id}/run`, `/{id}/runs`, `/run-all`, `/export` and `/import`
   (an `attome-customer-tests/v1` document of tests only; a name already here is replaced). Every

@@ -13,6 +13,7 @@ describe('mapErrorResponse', () => {
       ['version_conflict', 409],
       ['idempotency_conflict', 409],
       ['validation_error', 422],
+      ['customer_tests_failed', 422],
   // D-472 / BTY-3: the rule-violation code every contract surface must carry.
   ['rule_violation', 422],
       ['field_locked', 422],

@@ -220,3 +220,70 @@ fn stale_row_version_is_409() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     });
 }
+
+async fn set_guard(app: &TestApp, on: bool) {
+    let (status, body) = app
+        .request(
+            Method::PUT,
+            "/api/v1/admin/settings/customer_tests.require_pass_before_publish",
+            Some(json!({ "scope": "deployment", "value": on })),
+        )
+        .await;
+    assert!(status.is_success(), "{status} {body}");
+}
+
+// feature: Z15
+// negative: publish_model_object
+#[test]
+fn publish_blocked_when_blocking_test_fails() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let name = format!("ct-guard-{}", Uuid::now_v7().simple());
+        // Expects an error no step can meet: always fails.
+        let (status, created) = app
+            .request(
+                Method::POST,
+                BASE,
+                Some(json!({ "name": name, "blocking": true,
+                             "definition": { "expect": [{ "error": "conflict" }] } })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{created}");
+        // No draft under this id: past the guard, the publish answers 404.
+        let publish = format!(
+            "/api/v1/admin/model/environment_variable/{}/publish",
+            Uuid::now_v7()
+        );
+
+        let (status, _) = app.request(Method::POST, &publish, None).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "guard off: nothing changes");
+
+        set_guard(&app, true).await;
+        let (status, body) = app.request(Method::POST, &publish, None).await;
+        set_guard(&app, false).await;
+        // Retire the failing test before asserting, so a failure here leaves
+        // no blocking test behind for other tests.
+        let path = format!("{BASE}/{}", created["id"].as_str().unwrap());
+        let (status_off, _) = app
+            .request_with(
+                Method::PATCH,
+                &path,
+                &[("if-match", "\"1\"")],
+                Some(json!({ "is_active": false })),
+            )
+            .await;
+        assert_eq!(status_off, StatusCode::OK);
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert_eq!(body["error"], "customer_tests_failed", "{body}");
+        assert!(
+            body["tests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|t| t == name.as_str()),
+            "{body}"
+        );
+    });
+}

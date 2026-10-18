@@ -475,6 +475,45 @@ pub async fn run_and_record(
     Ok((run, outcome))
 }
 
+// ── The publish guard (roadmap Z15-T14) ────────────────────────────────────
+
+/// The deployment setting that turns the publish guard on (off by default).
+pub const REQUIRE_PASS_SETTING: &str = "customer_tests.require_pass_before_publish";
+
+/// Whether publishing must first pass the blocking tests.
+pub fn require_pass(state: &EngineState) -> bool {
+    let Some(descriptor) = attome_core::setting_registry().get(REQUIRE_PASS_SETTING) else {
+        return false;
+    };
+    let (value, _) = state.settings.load().resolve(descriptor, None, None);
+    value.as_bool().unwrap_or(false)
+}
+
+/// With the guard on, runs every active blocking test as `ctx` and refuses
+/// with `customer_tests_failed` (naming them) when any fails; a definition
+/// that no longer reads counts as a failure. With it off, does nothing.
+/// The runs are not recorded: the guard is a check, not a test run.
+pub async fn publish_guard(state: &EngineState, ctx: &SecurityContext) -> Result<(), AppError> {
+    if !require_pass(state) {
+        return Ok(());
+    }
+    let mut failed = Vec::new();
+    for (_, name, definition) in active_tests(&state.base.db, true).await? {
+        let passed = match definition {
+            Ok(definition) => run_test(state, ctx, &definition).await.passed,
+            Err(_) => false,
+        };
+        if !passed {
+            failed.push(name);
+        }
+    }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::CustomerTestsFailed(failed))
+    }
+}
+
 // ── Storage (roadmap Z15-T13): the admin routes' reads and writes ──────────
 
 /// A stored test.

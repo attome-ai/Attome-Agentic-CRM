@@ -49,6 +49,15 @@ fn records_settings() -> Vec<SettingDescriptor> {
             || json!(0),
         ),
         SettingDescriptor::new(
+            "customer_tests.require_pass_before_publish",
+            "Before a changeset apply or a model publish, run every active blocking customer test \
+         and refuse the publish when one fails.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
             "billing.seller_name",
             "The deployment's legal name, printed as the seller on every invoice.",
             || json!({"type": "string", "maxLength": 200}),

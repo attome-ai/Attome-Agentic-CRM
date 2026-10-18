@@ -18,6 +18,9 @@ export type ApiErrorKind =
   | 'duplicate_detected'
   | 'idempotency_conflict'
   | 'validation_error'
+  // Z15-T14: a publish refused because blocking customer tests failed; the
+  // body's `tests` names them.
+  | 'customer_tests_failed'
   // D-472 / BTY-3: a rule violation carries the offending rule's id in the
   // body's `rule_id`, so a caller can name the rule it broke.
   | 'rule_violation'
@@ -60,6 +63,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<ApiErrorKind>([
   'duplicate_detected',
   'idempotency_conflict',
   'validation_error',
+  'customer_tests_failed',
   'rule_violation',
   'field_locked',
   'field_locked_required',
