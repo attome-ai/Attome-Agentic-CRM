@@ -16,4 +16,9 @@ pub struct S2SClaims {
     /// rather than substituting a placeholder (B9).
     pub service_user_id: Uuid,
     pub correlation_id: Option<String>,
+    /// S1-T10: the user this request acts as (`x-attome-act-as`, for a client
+    /// granted `can_act_as_user`); downstream checks and audit rows run as
+    /// it, and the access log keeps both it and the client.
+    #[serde(default)]
+    pub acted_as_user_id: Option<Uuid>,
 }

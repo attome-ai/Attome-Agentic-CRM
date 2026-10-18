@@ -9,7 +9,12 @@
 //! method \n path_and_query \n body_sha256_hex \n timestamp_ms \n nonce
 //! ```
 //!
-//! **No request header is covered by name.** `x-s2s-timestamp` and
+//! S1-T10 adds one more, only when present: `x-attome-act-as`'s value is a
+//! sixth line ([`attome_s2s::crypto::canonical_message_with_act_as`]), so a
+//! client cannot be made to act as a user it did not sign for. It is not in
+//! the CORS allow-list below (a browser never sends it).
+//!
+//! **No other request header is covered by name.** `x-s2s-timestamp` and
 //! `x-s2s-nonce` are safe because their *values* are two of those fields, and
 //! `x-s2s-client-id`/`x-s2s-key-id` are safe because tampering with either
 //! selects a different secret, so verification fails. Every other header a

@@ -106,6 +106,34 @@ pub async fn load_client_and_key(
     }))
 }
 
+/// S1-T10: whether the client may name a user to act as.
+pub async fn client_can_act_as_user(db: &DbPool, client_db_id: Uuid) -> Result<bool, AppError> {
+    let granted: Option<bool> =
+        sqlx::query_scalar("SELECT can_act_as_user FROM s2s_client WHERE id = $1")
+            .bind(client_db_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(granted.unwrap_or(false))
+}
+
+/// S1-T10: an active, ordinary user an S2S client may act as (not a
+/// platform service principal), by id.
+pub async fn act_as_user_is_usable(db: &DbPool, user_id: Uuid) -> Result<bool, AppError> {
+    let row: Option<(bool, Option<String>)> =
+        sqlx::query_as("SELECT is_active, email FROM user_account WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(row.is_some_and(|(active, email)| {
+        active
+            && !email
+                .as_deref()
+                .is_some_and(attome_security::accounts::is_reserved_service_email)
+    }))
+}
+
 /// Returns `Err` on either write's failure (rather than swallowing it) so the
 /// P1.4 job handler that calls this can propagate the failure to apalis,
 /// which then retries the job instead of silently marking it done. Both

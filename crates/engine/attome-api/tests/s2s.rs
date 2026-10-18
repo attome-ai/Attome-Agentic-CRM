@@ -1134,3 +1134,161 @@ fn config_seeded_client_is_reconciled_on_every_boot() {
         assert!(!created, "no client is created without its service user");
     })
 }
+
+// ── S1-T10: acting as a user ─────────────────────────────────────────────────
+
+/// A signed GET carrying `x-attome-act-as: act_as`; `signed` puts the value
+/// in the signature (a client that does not is forging the header).
+fn s2s_act_as_get(
+    path: &str,
+    client: (&str, &str, &str),
+    act_as: &str,
+    signed: bool,
+) -> Request<Body> {
+    let (slug, key_public_id, secret_hex) = client;
+    let timestamp_str = now_ms().to_string();
+    let nonce = Uuid::now_v7().to_string();
+    let canonical = attome_s2s::crypto::canonical_message_with_act_as(
+        "GET",
+        path,
+        &sha256_hex(b""),
+        &timestamp_str,
+        &nonce,
+        signed.then_some(act_as),
+    );
+    Request::builder()
+        .method("GET")
+        .uri(path)
+        .header("x-s2s-client-id", slug)
+        .header("x-s2s-key-id", key_public_id)
+        .header("x-s2s-timestamp", timestamp_str)
+        .header("x-s2s-nonce", nonce)
+        .header("x-s2s-signature", sign_hmac_hex(secret_hex, &canonical))
+        .header("x-attome-act-as", act_as)
+        .body(Body::empty())
+        .unwrap()
+}
+
+#[test]
+fn act_as_without_grant_is_403() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let app = full_app(system);
+        let (_, slug, key, secret) =
+            provision_s2s_client(app.clone(), &admin_cookie, admin_id).await;
+        let admin = admin_id.to_string();
+        let res = app
+            .oneshot(s2s_act_as_get(
+                "/api/v1/admin/s2s/clients",
+                (&slug, &key, &secret),
+                &admin,
+                true,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    })
+}
+
+#[test]
+fn act_as_with_grant_runs_as_the_user() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let (plain_id, _, _) = seed_bulk_user(&system, "act-as").await;
+        let app = full_app(system);
+        let (client_db_id, slug, key, secret) =
+            provision_s2s_client(app.clone(), &admin_cookie, admin_id).await;
+        let detail_path = format!("/api/v1/admin/s2s/clients/{client_db_id}");
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(&detail_path)
+                    .header("cookie", &admin_cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let detail = body_json(res).await;
+        assert_eq!(detail["can_act_as_user"], false, "{detail}");
+        let row_version = detail["row_version"].as_i64().unwrap();
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(&detail_path)
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"can_act_as_user":true,"row_version":{row_version}}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK, "grant act-as");
+        let client = (slug.as_str(), key.as_str(), secret.as_str());
+        let path = "/api/v1/admin/s2s/clients";
+
+        // As the admin it may read the admin route; as a plain user it may not.
+        let res = app
+            .clone()
+            .oneshot(s2s_act_as_get(path, client, &admin_id.to_string(), true))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK, "acting as the admin");
+        let res = app
+            .clone()
+            .oneshot(s2s_act_as_get(path, client, &plain_id.to_string(), true))
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::FORBIDDEN,
+            "acting as a user without the admin privilege"
+        );
+        // An unknown user is refused; a value that is not an id is unauthenticated.
+        let res = app
+            .clone()
+            .oneshot(s2s_act_as_get(
+                path,
+                client,
+                &Uuid::now_v7().to_string(),
+                true,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        let res = app
+            .oneshot(s2s_act_as_get(path, client, "not-a-user", true))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    })
+}
+
+#[test]
+fn act_as_header_is_signed() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let app = full_app(system);
+        let (_, slug, key, secret) =
+            provision_s2s_client(app.clone(), &admin_cookie, admin_id).await;
+        // A header added to a signature made without it fails verification.
+        let res = app
+            .oneshot(s2s_act_as_get(
+                "/api/v1/admin/s2s/clients",
+                (&slug, &key, &secret),
+                &admin_id.to_string(),
+                false,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    })
+}

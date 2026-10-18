@@ -42,6 +42,27 @@ pub fn canonical_message(
     format!("{method}\n{path_and_query}\n{body_sha256_hex}\n{timestamp_ms}\n{nonce}").into_bytes()
 }
 
+/// S1-T10: [`canonical_message`] for a request that names a user to act as
+/// (`x-attome-act-as`): the user id is a sixth line, so a signature made
+/// without it cannot carry one, and a request without the header signs
+/// exactly what it always did (every deployed client keeps working).
+pub fn canonical_message_with_act_as(
+    method: &str,
+    path_and_query: &str,
+    body_sha256_hex: &str,
+    timestamp_ms: &str,
+    nonce: &str,
+    act_as: Option<&str>,
+) -> Vec<u8> {
+    let mut message =
+        canonical_message(method, path_and_query, body_sha256_hex, timestamp_ms, nonce);
+    if let Some(user) = act_as {
+        message.push(b'\n');
+        message.extend_from_slice(user.as_bytes());
+    }
+    message
+}
+
 /// The caller's side of [`verify_hmac`]: the hex HMAC-SHA256 of `message`
 /// keyed by the hex-decoded secret (D-779: S2S callers and tests that sign
 /// requests). `None` if `secret_hex` isn't hex.
@@ -104,6 +125,18 @@ mod tests {
             msg,
             b"POST\n/api/v1/widgets?x=1\ndeadbeef\n1720000000000\nabc-nonce".to_vec()
         );
+    }
+
+    #[test]
+    fn act_as_is_a_signed_sixth_line_only_when_present() {
+        let plain = canonical_message("GET", "/api/v1/x", "h", "1", "n");
+        assert_eq!(
+            canonical_message_with_act_as("GET", "/api/v1/x", "h", "1", "n", None),
+            plain
+        );
+        let acting = canonical_message_with_act_as("GET", "/api/v1/x", "h", "1", "n", Some("u-1"));
+        assert_eq!(acting, b"GET\n/api/v1/x\nh\n1\nn\nu-1".to_vec());
+        assert_ne!(acting, plain);
     }
 
     #[test]

@@ -22,6 +22,8 @@ const H_TIMESTAMP: &str = "x-s2s-timestamp";
 const H_NONCE: &str = "x-s2s-nonce";
 const H_SIGNATURE: &str = "x-s2s-signature";
 const H_CORR_ID: &str = "x-correlation-id";
+/// S1-T10: the user a granted client acts as; its value is signed.
+const H_ACT_AS: &str = "x-attome-act-as";
 
 fn required_header(req: &Request, name: &'static str) -> Result<String, Box<Response>> {
     req.headers()
@@ -92,6 +94,7 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
         Err(r) => return *r,
     };
     let correlation_id = optional_header(&req, H_CORR_ID);
+    let act_as = optional_header(&req, H_ACT_AS);
     let ip_addr = client_ip(&req, &state.config);
     let ip_address = ip_addr.map(|ip| ip.to_string());
 
@@ -298,12 +301,13 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
             }
         };
 
-    let canonical = crypto::canonical_message(
+    let canonical = crypto::canonical_message_with_act_as(
         &method,
         &path_and_query,
         &body_sha256,
         &timestamp_str,
         &nonce,
+        act_as.as_deref(),
     );
 
     if !crypto::verify_hmac(&raw_secret, &canonical, &signature) {
@@ -350,6 +354,62 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
         }
     }
 
+    // ── 7c. Act as a user (S1-T10) ────────────────────────────────────────────
+    // Only for a client granted can_act_as_user; the header's value was part
+    // of the signed message above. The user must be an active, ordinary
+    // account; under an entity ceiling it may not be an admin either (the
+    // same rule as the service user, D-766).
+    let acted_as_user_id = match act_as.as_deref() {
+        None => None,
+        Some(raw) => {
+            match db::client_can_act_as_user(&state.db, record.client_db_id).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    tracing::warn!(
+                        "s2s: client '{}' sent x-attome-act-as without can_act_as_user",
+                        record.client_id
+                    );
+                    concurrency_guard.release().await;
+                    return AppError::Forbidden.into_response();
+                }
+                Err(e) => {
+                    concurrency_guard.release().await;
+                    return e.into_response();
+                }
+            }
+            let Ok(user_id) = Uuid::parse_str(raw.trim()) else {
+                concurrency_guard.release().await;
+                return AppError::Unauthorized.into_response();
+            };
+            match db::act_as_user_is_usable(&state.db, user_id).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    concurrency_guard.release().await;
+                    return AppError::Forbidden.into_response();
+                }
+                Err(e) => {
+                    concurrency_guard.release().await;
+                    return e.into_response();
+                }
+            }
+            if ceiling.is_some() {
+                match state.security.resolve(user_id).await {
+                    Ok(ctx) if ctx.is_admin => {
+                        concurrency_guard.release().await;
+                        return AppError::Forbidden.into_response();
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        concurrency_guard.release().await;
+                        return e.into_response();
+                    }
+                }
+            }
+            Some(user_id)
+        }
+    };
+    let principal = acted_as_user_id.unwrap_or(service_user_id);
+
     // ── 8. Inject claims ──────────────────────────────────────────────────────
     let s2s_claims = S2SClaims {
         client_db_id: record.client_db_id,
@@ -359,6 +419,7 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
         key_slot: record.key_slot.clone(),
         service_user_id,
         correlation_id: correlation_id.clone(),
+        acted_as_user_id,
     };
 
     let mut req = Request::from_parts(parts, Body::from(body_bytes));
@@ -371,7 +432,7 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
     // the client's service user, checked non-NULL in step 4 above.
     let now = Utc::now().timestamp();
     req.extensions_mut().insert(SessionClaims {
-        sub: service_user_id,
+        sub: principal,
         iat: now,
         exp: now + 3600,
         jti: Uuid::now_v7(),
@@ -443,6 +504,7 @@ pub async fn s2s_authn(State(state): State<AppState>, req: Request, next: Next) 
             ip_address: ip_address.clone(),
             nonce: Some(nonce.clone()),
             error_code: None,
+            acted_as_user_id,
             created_at: Utc::now(),
         };
         // Internal memory-bound safety cap on the access-log stream, never

@@ -60,6 +60,9 @@ struct CreateClientBody {
     max_payload_bytes: i64,
     #[serde(default = "default_disable_days")]
     auto_disable_days: i32,
+    /// S1-T10: the client may name a user to act as (`x-attome-act-as`).
+    #[serde(default)]
+    can_act_as_user: bool,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -77,6 +80,8 @@ struct UpdateClientBody {
     allowed_cidrs: Option<Vec<String>>,
     max_payload_bytes: Option<i64>,
     auto_disable_days: Option<i32>,
+    /// S1-T10: grant or withdraw acting as a user.
+    can_act_as_user: Option<bool>,
     row_version: i64,
 }
 
@@ -171,6 +176,8 @@ struct ClientDetail {
     allowed_cidrs: Option<Vec<String>>,
     max_payload_bytes: i64,
     auto_disable_days: i32,
+    /// S1-T10: may name a user to act as.
+    can_act_as_user: bool,
     last_used_at: Option<DateTime<Utc>>,
     row_version: i64,
     created_at: DateTime<Utc>,
@@ -392,8 +399,8 @@ async fn create_client(
         INSERT INTO s2s_client
             (client_id, name, description, service_user_ref,
              rate_limit_rpm, max_concurrent, allowed_cidrs,
-             max_payload_bytes, auto_disable_days, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+             max_payload_bytes, auto_disable_days, created_at, updated_at, can_act_as_user)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, $11)
         RETURNING id
         "#,
     )
@@ -407,6 +414,7 @@ async fn create_client(
     .bind(body.max_payload_bytes)
     .bind(body.auto_disable_days)
     .bind(now)
+    .bind(body.can_act_as_user)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -434,6 +442,7 @@ async fn create_client(
             allowed_cidrs: body.allowed_cidrs.clone(),
             max_payload_bytes: body.max_payload_bytes,
             auto_disable_days: body.auto_disable_days,
+            can_act_as_user: body.can_act_as_user,
             last_used_at: None,
             row_version: 0,
             created_at: now,
@@ -480,13 +489,14 @@ async fn get_client(
             i64,
             DateTime<Utc>,
             DateTime<Utc>,
+            bool,
         ),
     >(
         r#"
         SELECT id, client_id, name, description, status, service_user_ref,
                rate_limit_rpm, max_concurrent, allowed_cidrs,
                max_payload_bytes, auto_disable_days,
-               last_used_at, row_version, created_at, updated_at
+               last_used_at, row_version, created_at, updated_at, can_act_as_user
         FROM s2s_client
         WHERE id = $1 AND is_deleted = FALSE
         "#,
@@ -512,6 +522,7 @@ async fn get_client(
         allowed_cidrs: row.8,
         max_payload_bytes: row.9,
         auto_disable_days: row.10,
+        can_act_as_user: row.15,
         last_used_at: row.11,
         row_version: row.12,
         created_at: row.13,
@@ -566,12 +577,13 @@ async fn update_client(
             i32,
             i64,
             Option<Uuid>,
+            bool,
         ),
     >(
         r#"
         SELECT name, description, status, rate_limit_rpm, max_concurrent,
                allowed_cidrs, max_payload_bytes, auto_disable_days, row_version,
-               service_user_ref
+               service_user_ref, can_act_as_user
         FROM s2s_client
         WHERE id = $1 AND is_deleted = FALSE
         "#,
@@ -597,6 +609,7 @@ async fn update_client(
     let new_payload = body.max_payload_bytes.unwrap_or(cur.6);
     let new_days = body.auto_disable_days.unwrap_or(cur.7);
     let new_service_user = body.service_user_ref.or(cur.9);
+    let new_act_as = body.can_act_as_user.unwrap_or(cur.10);
     // D-786 follow-up L1: a client left (or put back) `active` may not keep
     // acting as a platform service principal it was bound to before the
     // refusal existed; suspending or revoking it stays allowed.
@@ -630,6 +643,7 @@ async fn update_client(
             max_payload_bytes = $8,
             auto_disable_days = $9,
             service_user_ref  = $11,
+            can_act_as_user   = $12,
             updated_at        = NOW(),
             row_version       = row_version + 1
         WHERE id = $1 AND row_version = $10 AND is_deleted = FALSE
@@ -646,6 +660,7 @@ async fn update_client(
     .bind(new_days)
     .bind(body.row_version)
     .bind(new_service_user)
+    .bind(new_act_as)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?

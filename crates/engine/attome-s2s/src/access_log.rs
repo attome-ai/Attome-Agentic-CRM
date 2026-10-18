@@ -15,6 +15,8 @@ pub struct LogEntry {
     pub ip_address: Option<String>,
     pub nonce: Option<String>,
     pub error_code: Option<String>,
+    /// S1-T10: the user the client acted as, beside the client itself.
+    pub acted_as_user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -33,9 +35,9 @@ pub async fn write(db: &DbPool, e: LogEntry) -> Result<(), sqlx::Error> {
         INSERT INTO s2s_access_log
             (client_ref, client_name, method, path,
              status_code, response_time_ms, bytes_received, bytes_sent,
-             correlation_id, ip_address, nonce, error_code, created_at)
+             correlation_id, ip_address, nonce, error_code, created_at, acted_as_user_id)
         VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         "#,
     )
     .bind(e.client_ref)
@@ -51,6 +53,7 @@ pub async fn write(db: &DbPool, e: LogEntry) -> Result<(), sqlx::Error> {
     .bind(e.nonce)
     .bind(e.error_code)
     .bind(e.created_at)
+    .bind(e.acted_as_user_id)
     .execute(db)
     .await?;
 

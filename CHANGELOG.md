@@ -43,6 +43,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- S2S: act as a user (S1-T10). A client granted `can_act_as_user` (admin client create/update,
+  migration 0113) may send `x-attome-act-as: <user id>`; its value is a signed sixth line of the
+  canonical message (requests without it sign as before). The request then runs as that user (an
+  active, ordinary account; under an entity ceiling not an admin), and the access log records
+  `acted_as_user_id` beside the client. Without the grant it is a 403; an unknown user a 403; a
+  value that is not an id a 401.
 - Records: `GET /api/v1/{entity}` (S1-T2), a keyset-paged list through the query engine (the
   entity's default view, its record scoping and masking): `select=a,b`,
   `filter[<field>][<op>]=<value>` (the column-filter operators; `in` and `contains_any/all` take a

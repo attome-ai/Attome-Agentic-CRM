@@ -241,6 +241,9 @@ fn encode_log_entry(entry: &LogEntry) -> Vec<(String, String)> {
     if let Some(ref v) = entry.error_code {
         fields.push(("error_code".to_string(), v.clone()));
     }
+    if let Some(v) = entry.acted_as_user_id {
+        fields.push(("acted_as_user_id".to_string(), v.to_string()));
+    }
     fields
 }
 
@@ -277,6 +280,7 @@ fn decode_log_entry(fields: Vec<(String, String)>) -> Result<LogEntry, AppError>
         ip_address: map.remove("ip_address"),
         nonce: map.remove("nonce"),
         error_code: map.remove("error_code"),
+        acted_as_user_id: map.remove("acted_as_user_id").and_then(|v| v.parse().ok()),
         created_at,
     })
 }
@@ -316,15 +320,18 @@ async fn bulk_insert_access_log(db: &DbPool, entries: &[LogEntry]) -> Result<(),
     let nonce: Vec<Option<String>> = entries.iter().map(|e| e.nonce.clone()).collect();
     let error_code: Vec<Option<String>> = entries.iter().map(|e| e.error_code.clone()).collect();
     let created_at: Vec<DateTime<Utc>> = entries.iter().map(|e| e.created_at).collect();
+    let acted_as: Vec<Option<Uuid>> = entries.iter().map(|e| e.acted_as_user_id).collect();
 
     sqlx::query(
         r#"
         INSERT INTO s2s_access_log
             (client_ref, client_name, method, path, status_code, response_time_ms,
-             bytes_received, bytes_sent, correlation_id, ip_address, nonce, error_code, created_at)
+             bytes_received, bytes_sent, correlation_id, ip_address, nonce, error_code, created_at,
+             acted_as_user_id)
         SELECT * FROM UNNEST(
             $1::uuid[], $2::text[], $3::text[], $4::text[], $5::smallint[], $6::int[],
-            $7::int[], $8::int[], $9::text[], $10::text[], $11::text[], $12::text[], $13::timestamptz[]
+            $7::int[], $8::int[], $9::text[], $10::text[], $11::text[], $12::text[], $13::timestamptz[],
+            $14::uuid[]
         )
         "#,
     )
@@ -341,6 +348,7 @@ async fn bulk_insert_access_log(db: &DbPool, entries: &[LogEntry]) -> Result<(),
     .bind(nonce)
     .bind(error_code)
     .bind(created_at)
+    .bind(acted_as)
     .execute(db)
     .await?;
 
@@ -478,6 +486,7 @@ mod tests {
             ip_address: Some("127.0.0.1".to_string()),
             nonce: Some("nonce-1".to_string()),
             error_code: None,
+            acted_as_user_id: None,
             created_at: Utc::now(),
         }
     }
