@@ -43,6 +43,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rules: `attome_core::rules_sql::to_sql` (Z11-T10) turns the SQL-safe part of a rule expression
+  into a bound predicate: literals as parameters, columns quoted from the entity's metadata,
+  null-safe equality, `in`, `is_null`, `lower`/`upper`, `contains`/`startswith`/`endswith` (an
+  escaped `LIKE` for a literal) and `if` as `CASE`. `translatable` tells an editor which rules
+  can run in the database; lookups, paths, lists, lambdas, the clock, `trim`, Arabic and Hijri
+  functions stay in the evaluator.
 - Caching: `attome_cache::spec::CacheSpec` (Z3-T1), one declaration per cache of what guidelines
   section 5 asks (source of truth, key shape, TTL and jitter, L1 capacity, partition, sensitivity,
   failure mode, invalidation, cold start), validated and registered once per process.
