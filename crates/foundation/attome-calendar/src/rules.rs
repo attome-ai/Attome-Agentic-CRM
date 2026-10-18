@@ -182,7 +182,7 @@ pub fn expand_season(
     season: &Season,
     year: i32,
 ) -> Result<BTreeMap<NaiveDate, Vec<TimeRange>>, CalendarError> {
-    let mut hours = BTreeMap::new();
+    let mut hours = std::collections::HashMap::new();
     for (code, ranges) in &season.hours {
         let day = parse_weekday_code(code)
             .ok_or_else(|| invalid(format!("{code} is not a weekday (mon..sun)")))?;
