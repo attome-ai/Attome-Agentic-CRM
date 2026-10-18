@@ -23,8 +23,12 @@ use attome_rules::Value;
 pub enum Output {
     /// Values escaped for where they land in the HTML.
     Html,
-    /// Values as is, control characters stripped (a plain-text email, an SMS).
+    /// Values as is, control characters stripped (a plain-text email).
     Text,
+    /// Text for an SMS (Z13-T5): as `Text`; the set counts its segments.
+    Sms,
+    /// Text for a WhatsApp message (Z13-T5): as `Text`.
+    Whatsapp,
 }
 
 /// Where in HTML the next value lands.
@@ -196,7 +200,7 @@ fn without_controls(text: &str) -> String {
 pub(crate) fn write(value: &Value, output: Output, place: &HtmlPlace) -> String {
     let text = display(value);
     match output {
-        Output::Text => without_controls(&text),
+        Output::Text | Output::Sms | Output::Whatsapp => without_controls(&text),
         Output::Html => match place {
             HtmlPlace::Text => entities(&text, &[]),
             HtmlPlace::Attribute { url: false, .. } => entities(&text, &[]),

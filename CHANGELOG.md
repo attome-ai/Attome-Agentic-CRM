@@ -50,7 +50,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   it lands (Z13-T3): text, a quoted attribute, inside a tag, or a URL attribute, where only
   http, https, mailto, tel and relative URLs pass (`javascript:` becomes `#`); text output strips
   control characters. A render stops after 100 ms, 1 MiB of output or 10,000 loop iterations
-  (Z13-T6, `template.limit.*`).
+  (Z13-T6, `template.limit.*`). A `TemplateSet` (Z13-T5) holds variants by language and output
+  (HTML, text, SMS, WhatsApp), falling back to the default language and then to the HTML stripped
+  to text; `{% layout 'name' %}` with `{% body %}` and `{% include 'name' %}` nest at most five
+  deep; an SMS render counts its GSM-7 or UCS-2 segments (Arabic is UCS-2, 70 a segment).
 - Rules: Hijri, zone and working-day functions (Z11-T4, V2): `hijri_year`, `hijri_month`,
   `hijri_day`, `hijri_date`, `add_workdays`, `workdays_between`, `is_working` and `to_zone`; the
   working-day ones use the business calendar the caller supplies (`Context::with_calendar`) and

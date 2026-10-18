@@ -18,10 +18,14 @@
 mod escape;
 mod parse;
 mod render;
+mod set;
 
 pub use escape::Output;
 pub use parse::MAX_LOOP_LIMIT;
 pub use render::{RenderContext, RenderLimits};
+pub use set::{
+    MAX_EXPANSION_DEPTH, OutputKey, Rendered, SmsCount, SmsEncoding, TemplateSet, sms_segments,
+};
 
 /// Which render limit stopped a render (Z13-T6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
