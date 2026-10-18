@@ -18665,6 +18665,15 @@ export interface components {
             path: string;
             token: string;
         };
+        /**
+         * @description What applying an account's unapplied credit did: one entry per payment
+         *     whose credit paid something.
+         */
+        CreditApplied: {
+            /** Format: uuid */
+            account_id: string;
+            payments: components["schemas"]["PaymentRecorded"][];
+        };
         /** @description One original line to credit, and how much of it. */
         CreditLine: {
             /** Format: uuid */
@@ -24627,6 +24636,32 @@ export interface components {
                 name: string;
                 /** @description `new`, `compliance`, `active`, `failed` or `retired`. */
                 status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DocumentRef: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The `attome_document` row, for an attachment.
+                 */
+                document_id?: string | null;
+                /** @description The record it belongs to. */
+                entity: string;
+                /** @description The file field to download it from. */
+                field: string;
+                folder?: string | null;
+                /** @description `invoice_document` (the invoice's PDF) or `attachment` (a K1 file). */
+                kind: string;
+                name?: string | null;
+                /** Format: uuid */
+                record_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -63421,7 +63456,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaymentRecorded"][];
+                    "application/json": components["schemas"]["CreditApplied"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -63614,13 +63649,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The documents that can answer it */
+            /** @description The documents that can answer it (page 1 holds them all) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DocumentRef"][];
+                    "application/json": components["schemas"]["PaginatedResponse_DocumentRef"];
                 };
             };
             /** @description Missing or invalid credentials */

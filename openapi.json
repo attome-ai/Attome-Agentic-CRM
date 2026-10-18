@@ -45944,10 +45944,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PaymentRecorded"
-                  }
+                  "$ref": "#/components/schemas/CreditApplied"
                 }
               }
             }
@@ -46261,14 +46258,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The documents that can answer it",
+            "description": "The documents that can answer it (page 1 holds them all)",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentRef"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_DocumentRef"
                 }
               }
             }
@@ -86215,6 +86209,26 @@
           }
         }
       },
+      "CreditApplied": {
+        "type": "object",
+        "description": "What applying an account's unapplied credit did: one entry per payment\nwhose credit paid something.",
+        "required": [
+          "account_id",
+          "payments"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaymentRecorded"
+            }
+          }
+        }
+      },
       "CreditLine": {
         "type": "object",
         "description": "One original line to credit, and how much of it.",
@@ -101584,6 +101598,81 @@
                 "status": {
                   "type": "string",
                   "description": "`new`, `compliance`, `active`, `failed` or `retired`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_DocumentRef": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One document that can answer a dispute.",
+              "required": [
+                "kind",
+                "entity",
+                "record_id",
+                "field"
+              ],
+              "properties": {
+                "document_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The `attome_document` row, for an attachment."
+                },
+                "entity": {
+                  "type": "string",
+                  "description": "The record it belongs to."
+                },
+                "field": {
+                  "type": "string",
+                  "description": "The file field to download it from."
+                },
+                "folder": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`invoice_document` (the invoice's PDF) or `attachment` (a K1 file)."
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
