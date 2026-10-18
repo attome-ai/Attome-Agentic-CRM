@@ -153,5 +153,14 @@ async fn first_page_uses_limit_over_index() {
     let plan = explain(&db, &sql, &[], None).await;
     assert!(plan.trim_start().starts_with("Limit"), "{plan}");
     assert!(plan.contains("Index Scan"), "{plan}");
-    assert!(!plan.contains("Sort Method"), "no full sort: {plan}");
+    // An incremental sort over the index (ties on the sort column broken by
+    // id, a page's worth of rows) is fine; a full sort reads the table.
+    assert!(
+        !plan.lines().any(|line| line
+            .trim_start()
+            .trim_start_matches("->")
+            .trim_start()
+            .starts_with("Sort (")),
+        "no full sort: {plan}"
+    );
 }

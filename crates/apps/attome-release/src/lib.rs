@@ -149,6 +149,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("format", format as Step),
         ("clippy", clippy as Step),
         ("tests", tests as Step),
+        ("perf_plans", perf_plans as Step),
         ("contract", contract_step as Step),
         ("waivers", waivers as Step),
         ("cargo_deny", cargo_deny as Step),
@@ -1156,6 +1157,35 @@ fn tests(root: &Path) -> Result<(), String> {
     run(&mut command, root, "cargo test")
 }
 
+/// AA14-T2: the plan-guard test targets, as `(package, test target)`. Each
+/// seeds a throwaway table to a fixed size and fails when its query stops
+/// using the index it is meant to.
+const PLAN_GUARDS: [(&str, &str); 2] = [
+    ("attome-audit", "explain_evidence"),
+    ("attome-records", "query_plan_evidence"),
+];
+
+/// The `cargo test` arguments that run [`PLAN_GUARDS`].
+fn perf_plans_args() -> Vec<&'static str> {
+    let mut args = vec!["test", "--no-fail-fast"];
+    for (package, target) in PLAN_GUARDS {
+        args.extend(["-p", package, "--test", target]);
+    }
+    args.extend(["--", "--test-threads=1"]);
+    args
+}
+
+/// Runs the plan guards. A missing test database fails the step rather than
+/// skipping the guards: `ATTOME_TEST_REQUIRE_DB` turns every skip into a
+/// failure.
+fn perf_plans(root: &Path) -> Result<(), String> {
+    let mut command = Command::new("cargo");
+    command
+        .args(perf_plans_args())
+        .env("ATTOME_TEST_REQUIRE_DB", "1");
+    run(&mut command, root, "the plan guards")
+}
+
 fn run(command: &mut Command, root: &Path, what: &str) -> Result<(), String> {
     let status = command
         .current_dir(root)
@@ -1227,6 +1257,19 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn perf_plans_runs_every_plan_guard_one_thread_at_a_time() {
+        let args = perf_plans_args();
+        for (package, target) in PLAN_GUARDS {
+            assert!(
+                args.windows(4)
+                    .any(|w| w == ["-p", package, "--test", target]),
+                "{package} {target} missing from {args:?}"
+            );
+        }
+        assert_eq!(args.last(), Some(&"--test-threads=1"));
     }
 
     #[test]
