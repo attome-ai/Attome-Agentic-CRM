@@ -28,6 +28,7 @@ use std::net::SocketAddr;
 use uuid::Uuid;
 
 use super::failed_login;
+use super::login_guard;
 
 use super::dto::{
     Ack, AuthResponse, LoginRequest, MfaChallengeResponse, MfaEnrollResponse,
@@ -331,6 +332,21 @@ pub(super) async fn register(
         .into_response())
 }
 
+/// Q20-T2: a login-guard trigger (a delay starting for an account, a spray
+/// challenge for an address) as a security event. The caller is
+/// unauthenticated, so the actor is nil; the name carries the hashed
+/// address, never the raw one.
+fn login_guard_event(name: String) -> SecurityEvent {
+    SecurityEvent::new(
+        MandatoryCategory::Security,
+        AuditOperation::FailedLogin,
+        Uuid::nil(),
+        "user_account",
+        None,
+    )
+    .named(name)
+}
+
 /// P2.8 step 7 (D-069): a correct password no longer always mints a session —
 /// see `accounts::LoginOutcome`. The `MfaRequired`/`MfaEnrollmentRequired`
 /// branches respond 200 with a `pending_token` instead of `Set-Cookie`; the
@@ -390,6 +406,41 @@ pub(super) async fn login(
         });
     }
 
+    // Q20-T2: an address challenged for a password spray signs in only with
+    // a CAPTCHA the configured provider accepts; with no provider, not at all
+    // until the challenge ends.
+    if let Some(key) = &address_key
+        && let Some(left) = login_guard::challenge_active(&state.redis_coordination, key).await?
+    {
+        let captcha = &state.config.portal.captcha;
+        let remote_ip = client_ip.map(|ip| ip.to_string());
+        let solved = !matches!(captcha.provider, attome_config::CaptchaProvider::None)
+            && attome_auth::captcha::verify(
+                captcha,
+                body.captcha_token.as_deref(),
+                remote_ip.as_deref(),
+            )
+            .await;
+        if !solved {
+            return Err(AppError::TooManyRequests {
+                retry_after_secs: Some(left),
+            });
+        }
+    }
+
+    // Q20-T2: after three failures in a row the account's attempts wait,
+    // before the password is checked so a right and a wrong one take the
+    // same time.
+    let account_key = login_throttle_key(&body.email);
+    let streak = login_guard::streak(&state.redis_coordination, &account_key).await?;
+    let delay = login_guard::delay_for(
+        streak,
+        state.config.request_timeout().as_secs().saturating_sub(5),
+    );
+    if !delay.is_zero() {
+        tokio::time::sleep(delay).await;
+    }
+
     // D-786: a service principal has no password; answer like any bad
     // credential, and record it as a failed login like one (follow-up L3).
     let attempt = if attome_security::accounts::is_reserved_service_email(&body.email) {
@@ -420,6 +471,34 @@ pub(super) async fn login(
                 super::address_throttle::record_failure(&state.redis_coordination, key).await?;
             }
             let ip = client_ip.map_or_else(|| "unknown".to_owned(), |ip| ip.to_string());
+            // Q20-T2: the account's streak and the address's spray count.
+            let streak =
+                login_guard::record_account_failure(&state.redis_coordination, &account_key)
+                    .await?;
+            if streak == login_guard::DELAY_AFTER + 1 {
+                auditor
+                    .write(login_guard_event(format!(
+                        "login.backoff_started:{}",
+                        failed_login::ip_key(&ip)
+                    )))
+                    .await?;
+            }
+            if let Some(key) = &address_key
+                && login_guard::record_spray(
+                    &state.redis_coordination,
+                    key,
+                    &account_key,
+                    chrono::Utc::now().timestamp(),
+                )
+                .await?
+            {
+                auditor
+                    .write(login_guard_event(format!(
+                        "login.spray_detected:{}",
+                        failed_login::ip_key(&ip)
+                    )))
+                    .await?;
+            }
             let subject = failed_login_subject(&state, &body.email).await?;
             failed_login::record_failure(
                 &auditor,
@@ -433,6 +512,8 @@ pub(super) async fn login(
         }
         Err(other) => return Err(other),
     };
+    // Q20-T2: the password was right.
+    login_guard::clear_streak(&state.redis_coordination, &account_key).await;
 
     match outcome {
         accounts::LoginOutcome::Session(user_id) => {

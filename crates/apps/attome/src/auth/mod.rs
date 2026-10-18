@@ -28,6 +28,7 @@ mod dto;
 pub mod failed_login;
 mod google;
 mod local;
+mod login_guard;
 mod oidc;
 mod session;
 mod step_up;

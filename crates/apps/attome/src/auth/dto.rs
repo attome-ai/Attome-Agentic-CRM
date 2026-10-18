@@ -40,6 +40,10 @@ impl std::fmt::Debug for RegisterRequest {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    /// Q20-T2: a CAPTCHA token, needed only while the caller's address is
+    /// challenged for a password spray (a `429` says so).
+    #[serde(default)]
+    pub captcha_token: Option<String>,
 }
 
 impl std::fmt::Debug for LoginRequest {

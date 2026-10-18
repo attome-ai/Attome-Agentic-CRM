@@ -8,6 +8,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Sign-in slows down and resists password spraying (Q20-T2): after three failed sign-ins in a row
+  an account's attempts wait 1, 2, 4, 8, 16 and then 30 seconds (never past the request timeout
+  less five seconds) before the password is checked, and a success clears the streak. Ten
+  different accounts failing from one address in ten minutes challenge that address for ten
+  minutes: a sign-in from it needs `captcha_token` accepted by `portal.captcha`, or gets `429`
+  when no provider is configured. Both triggers write a `FailedLogin` security event
+  (`login.backoff_started`, `login.spray_detected`) naming only the hashed address.
 - Stored third-party secrets are bound to their row (Q18-T2): integration credentials, AI
   provider keys, S2S client-key secrets and event webhook secrets are now sealed with envelope
   version 2, whose AES-GCM associated data is `table|column|row_id`, so a ciphertext copied to
