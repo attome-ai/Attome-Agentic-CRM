@@ -12,6 +12,7 @@
 use std::sync::{Arc, Mutex};
 
 use attome_core::{AttrInfo, EngineState, EntityMetaRegistry, FieldType};
+use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, SelfService};
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
