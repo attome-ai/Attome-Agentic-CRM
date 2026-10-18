@@ -3,4 +3,5 @@
 
 pub mod allocate;
 pub mod link;
+pub mod recurring;
 pub mod service;

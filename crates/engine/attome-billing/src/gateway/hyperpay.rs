@@ -842,8 +842,16 @@ impl PaymentGateway for HyperPayGateway {
         let plain = decrypt_webhook(headers, body, webhook_secret)?;
         let notification: Value =
             serde_json::from_slice(&plain).map_err(|_| GatewayError::BadSignature)?;
+        if notification.get("type").and_then(Value::as_str) == Some("REGISTRATION")
+            && notification.get("action").and_then(Value::as_str) == Some("UPDATED")
+        {
+            // The card updater: a saved card's new number or expiry.
+            return Ok(registration_update(notification.get("payload"))
+                .into_iter()
+                .collect());
+        }
         if notification.get("type").and_then(Value::as_str) != Some("PAYMENT") {
-            // Registrations, schedules, risk checks and test pings.
+            // New registrations, schedules, risk checks and test pings.
             return Ok(Vec::new());
         }
         let Some(payload) = notification.get("payload").cloned() else {
@@ -863,8 +871,45 @@ impl PaymentGateway for HyperPayGateway {
                 .clone()
                 .unwrap_or_else(|| transaction.id.clone()),
             status: transaction_status(&transaction),
+            card_update: None,
         }])
     }
+
+    fn token_charge_reference(&self, idempotency_key: &str) -> String {
+        merchant_transaction_id(idempotency_key)
+    }
+}
+
+/// A REGISTRATION UPDATED payload as a card update event.
+fn registration_update(payload: Option<&Value>) -> Option<GatewayEvent> {
+    let payload = payload?;
+    let token = payload.get("id").and_then(Value::as_str)?.to_owned();
+    let card = payload.get("card");
+    let text = |v: Option<&Value>, key: &str| {
+        v.and_then(|c| c.get(key))
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    };
+    let last4 = text(card, "last4Digits");
+    let month = text(card, "expiryMonth").and_then(|m| m.parse().ok());
+    let year = text(card, "expiryYear").and_then(|y| y.parse().ok());
+    Some(GatewayEvent {
+        event_id: format!(
+            "{token}:updated:{}:{}{}",
+            last4.as_deref().unwrap_or(""),
+            month.map(|m: i32| m.to_string()).unwrap_or_default(),
+            year.map(|y: i32| y.to_string()).unwrap_or_default()
+        ),
+        gateway_reference: token.clone(),
+        status: GatewayStatus::Pending,
+        card_update: Some(super::CardUpdate {
+            token,
+            brand: text(Some(payload), "paymentBrand"),
+            last4,
+            expiry_month: month,
+            expiry_year: year,
+        }),
+    })
 }
 
 /// Decrypts and authenticates a webhook body with the hex key; any failure

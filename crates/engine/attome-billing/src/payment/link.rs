@@ -251,14 +251,51 @@ pub async fn create_link(
         )));
     }
     let (account, amount, currency) = target(state, ctx, req).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let created = insert_link_in_tx(
+        &mut tx,
+        state,
+        NewLink {
+            invoice_id: req.invoice_id,
+            order_id: req.order_id,
+            account_id: account,
+            amount,
+            currency,
+            hours,
+        },
+        ctx.user_id,
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(created)
+}
+
+/// A link's target, already checked.
+#[derive(Debug, Clone)]
+pub struct NewLink {
+    pub invoice_id: Option<Uuid>,
+    pub order_id: Option<Uuid>,
+    pub account_id: Uuid,
+    pub amount: Decimal,
+    pub currency: String,
+    pub hours: u32,
+}
+
+/// Writes a link in the caller's transaction (its change-feed and audit
+/// events with it); the caller has checked who may and what it is for.
+pub async fn insert_link_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    new: NewLink,
+    actor: Uuid,
+) -> Result<LinkCreated, AppError> {
     let public_id = Uuid::now_v7();
     // 244 random bits, never stored: only its peppered hash is.
     let secret = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
     let ring = state.base.pepper_ring();
     let secret_hash = attome_auth::apikey_hash::hash_peppered_secret(&ring, &secret);
-    let expires_at = Utc::now() + Duration::hours(i64::from(hours));
+    let expires_at = Utc::now() + Duration::hours(i64::from(new.hours));
     let link = Uuid::now_v7();
-    let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
         "INSERT INTO payment_link (id, invoice_ref, order_ref, account_ref, amount, currency, \
              public_id, secret_hash, expires_at, status, created_by, owner_ref, owner_type, \
@@ -266,20 +303,20 @@ pub async fn create_link(
          VALUES ($1, $2, $3, $4, $5::numeric, $6, $7, $8, $9, 'open', $10, $10, 0, true, 0)",
     )
     .bind(link)
-    .bind(req.invoice_id)
-    .bind(req.order_id)
-    .bind(account)
-    .bind(amount.to_string())
-    .bind(&currency)
+    .bind(new.invoice_id)
+    .bind(new.order_id)
+    .bind(new.account_id)
+    .bind(new.amount.to_string())
+    .bind(&new.currency)
     .bind(public_id.to_string())
     .bind(&secret_hash)
     .bind(expires_at)
-    .bind(ctx.user_id)
-    .execute(&mut *tx)
+    .bind(actor)
+    .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     emit_named(
-        &mut tx,
+        tx,
         "payment_link",
         link,
         ChangeOperation::Create,
@@ -287,18 +324,17 @@ pub async fn create_link(
     )
     .await?;
     attome_audit::write_business_event_in_tx(
-        &mut tx,
+        tx,
         &attome_audit::audit_service(state),
         attome_audit::BusinessEvent::new(
             "payment_link",
             link,
             attome_audit::AuditOperation::Create,
             "billing.payment_link_created",
-            ctx.user_id,
+            actor,
         ),
     )
     .await?;
-    attome_db::tx::commit(tx).await?;
     Ok(LinkCreated {
         link_id: link,
         url: format!(

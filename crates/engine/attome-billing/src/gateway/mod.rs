@@ -131,6 +131,20 @@ pub struct GatewayEvent {
     pub event_id: String,
     pub gateway_reference: String,
     pub status: GatewayStatus,
+    /// A saved card the gateway updated (a new expiry or number from the
+    /// card updater); `status` is then `Pending` and means nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_update: Option<CardUpdate>,
+}
+
+/// A saved card's new details, keyed by its token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CardUpdate {
+    pub token: String,
+    pub brand: Option<String>,
+    pub last4: Option<String>,
+    pub expiry_month: Option<i32>,
+    pub expiry_year: Option<i32>,
 }
 
 /// Why a gateway call failed.
@@ -201,6 +215,9 @@ pub trait PaymentGateway: Send + Sync {
     /// The card behind a saved token: its brand and last four digits, and
     /// nothing else from the gateway's answer.
     fn saved_card<'a>(&'a self, secret: &'a str, token: &'a str) -> GatewayFuture<'a, SavedCard>;
+    /// The gateway reference a token charge made with `idempotency_key`
+    /// will have, known before the call so the pending payment carries it.
+    fn token_charge_reference(&self, idempotency_key: &str) -> String;
     /// Verifies a webhook and reads its events; `webhook_secret` is the
     /// signing secret the gateway was configured with.
     fn verify_webhook(

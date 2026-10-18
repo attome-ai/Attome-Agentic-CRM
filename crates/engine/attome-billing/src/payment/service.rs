@@ -516,6 +516,15 @@ pub async fn apply_credit(
     Ok(applied)
 }
 
+/// A gateway payment's amount, currency, status, link and charged invoice.
+type GatewayPaymentRow = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+);
+
 /// F5-T7: applies a gateway's report on a payment, in the caller's
 /// transaction (the webhook event's). The payment is the one with this
 /// gateway system and reference; a report that changes nothing (already
@@ -561,14 +570,9 @@ pub async fn apply_gateway_status_in_tx(
     if let Some(account) = account {
         lock_account(tx, account).await?;
     }
-    let (amount, currency, current, link): (
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<Uuid>,
-    ) = sqlx::query_as(
-        "SELECT amount::text, currency, status, payment_link_ref FROM customer_payment \
-         WHERE id = $1 FOR UPDATE",
+    let (amount, currency, current, link, charged): GatewayPaymentRow = sqlx::query_as(
+        "SELECT amount::text, currency, status, payment_link_ref, charged_invoice_ref \
+         FROM customer_payment WHERE id = $1 FOR UPDATE",
     )
     .bind(payment)
     .fetch_one(&mut **tx)
@@ -591,10 +595,12 @@ pub async fn apply_gateway_status_in_tx(
                 )));
             }
             let received = Utc::now().date_naive();
-            // A payment through a link for an invoice pays that invoice
-            // first; any other is allocated oldest due first.
-            let link_invoice: Option<Uuid> = match link {
-                Some(link) => sqlx::query_scalar::<_, Option<Uuid>>(
+            // A saved-method charge for an invoice, or a payment through a
+            // link for one, pays that invoice first; any other is allocated
+            // oldest due first.
+            let link_invoice: Option<Uuid> = match (charged, link) {
+                (Some(invoice), _) => Some(invoice),
+                (None, Some(link)) => sqlx::query_scalar::<_, Option<Uuid>>(
                     "SELECT invoice_ref FROM payment_link WHERE id = $1",
                 )
                 .bind(link)
@@ -602,7 +608,7 @@ pub async fn apply_gateway_status_in_tx(
                 .await
                 .map_err(AppError::internal)?
                 .flatten(),
-                None => None,
+                (None, None) => None,
             };
             let credit = match account {
                 Some(account) => {

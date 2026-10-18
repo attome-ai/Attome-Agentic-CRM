@@ -137,6 +137,23 @@ fn billing_settings() -> Vec<SettingDescriptor> {
             || json!("SA"),
         ),
         SettingDescriptor::new(
+            "billing.saved_methods.enabled",
+            "Charge due invoices to the customer's default saved card each day, with retries.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "billing.retry.days",
+            "Days to wait after each failed saved-card charge before the next try; after the \
+             last, the invoice goes to collections.",
+            || json!({"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 90}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([1, 3, 7]),
+        ),
+        SettingDescriptor::new(
             "billing.gateway.rules",
             "Which payment gateway takes a payment: rules in order, the first whose currency, \
              country and amount range match wins.",

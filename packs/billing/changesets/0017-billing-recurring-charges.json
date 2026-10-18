@@ -1,0 +1,140 @@
+{
+  "author": "packs",
+  "checksum": "sha256:e31d2d7f97765024234563bf01509fb7c423e5d48f03a36342efc90104f7704e",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Recurring charges (F5-T9): a saved-method charge records its attempt number, its invoice and when it is retried.",
+  "format": "attome-changeset/v1",
+  "id": "01a14d4f-4ff6-7b16-81b0-e1a6f4879142",
+  "layer": "product",
+  "name": "billing-recurring-charges",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Charge Attempt",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "charge_attempt",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "charge_attempt"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "display_name": "محاولة التحصيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "customer_payment.charge_attempt",
+        "object_kind": "attribute"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Next Retry",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "next_retry_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "next_retry_on"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "display_name": "إعادة المحاولة التالية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "customer_payment.next_retry_on",
+        "object_kind": "attribute"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Charged Invoice",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "charged_invoice_ref",
+          "lookup_entity": "invoice",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "field": "charged_invoice_ref"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "display_name": "الفاتورة المحصّلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "customer_payment.charged_invoice_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 6
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 17,
+  "title": "Pack: recurring charge attempts"
+}

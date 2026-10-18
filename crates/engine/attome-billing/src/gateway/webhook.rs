@@ -214,16 +214,26 @@ pub async fn apply_events(state: &EngineState) -> Result<usize, AppError> {
                 let mut inner = sqlx::Acquire::begin(&mut *tx)
                     .await
                     .map_err(AppError::internal)?;
-                match crate::payment::service::apply_gateway_status_in_tx(
-                    &mut inner,
-                    state,
-                    system_id,
-                    &event.gateway_reference,
-                    &event.status,
-                    actor,
-                )
-                .await
-                {
+                let outcome = match &event.card_update {
+                    Some(update) => {
+                        crate::payment::recurring::apply_card_update_in_tx(
+                            &mut inner, system_id, update,
+                        )
+                        .await
+                    }
+                    None => {
+                        crate::payment::service::apply_gateway_status_in_tx(
+                            &mut inner,
+                            state,
+                            system_id,
+                            &event.gateway_reference,
+                            &event.status,
+                            actor,
+                        )
+                        .await
+                    }
+                };
+                match outcome {
                     Ok(did) => {
                         attome_db::tx::commit(inner).await?;
                         Ok(did)

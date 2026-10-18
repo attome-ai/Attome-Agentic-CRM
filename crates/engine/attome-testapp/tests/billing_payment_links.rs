@@ -121,6 +121,10 @@ impl PaymentGateway for FakeGateway {
     ) -> Result<Vec<GatewayEvent>, GatewayError> {
         Ok(Vec::new())
     }
+
+    fn token_charge_reference(&self, idempotency_key: &str) -> String {
+        format!("fake-{idempotency_key}")
+    }
 }
 
 /// A payment_gateway integration system (its adapter is never reached
@@ -374,6 +378,7 @@ fn link_used_once() {
                     amount: "115.00".parse().unwrap(),
                     fee: None,
                 },
+                card_update: None,
             }],
         )
         .await

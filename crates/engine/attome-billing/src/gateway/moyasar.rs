@@ -469,7 +469,12 @@ impl PaymentGateway for MoyasarGateway {
                 .clone()
                 .unwrap_or_else(|| payment.id.clone()),
             status: payment_status(&payment),
+            card_update: None,
         }])
+    }
+
+    fn token_charge_reference(&self, idempotency_key: &str) -> String {
+        given_id(idempotency_key).to_string()
     }
 }
 

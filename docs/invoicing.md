@@ -121,6 +121,13 @@ Attome never sees a card number.
   reads `GET /api/v1/pay/{token}` and starts payment with `POST /api/v1/pay/{token}/checkout`; both
   are public, rate limited, and answer the same 404 for a wrong, expired, used or cancelled link.
   A link is used when its payment succeeds, which pays its invoice first.
+- Saved cards (off until `billing.saved_methods.enabled` is on): each day, a due invoice with an open
+  amount is charged to its account's default saved payment method. A charge whose answer was lost is
+  asked again with the same key, so the gateway charges it once. A failed charge is retried after the
+  days in `billing.retry.days` (1, 3 and 7 by default), and the invoice's contact is emailed a fresh
+  payment link each time; after the last try the invoice is handed to collections
+  (`billing.invoice.collections_handoff` on the change feed). HyperPay's card updater keeps a saved
+  card's number and expiry current.
 - The gateway's webhook URL is `https://<deployment>/api/v1/billing/gateways/<system id>/webhook`.
   A call whose secret (Moyasar) or encryption (HyperPay) does not verify gets `401`. Each verified
   event is stored once and applied by a background job, so a redelivered event never changes a

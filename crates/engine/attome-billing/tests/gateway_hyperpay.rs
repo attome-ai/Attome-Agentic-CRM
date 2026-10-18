@@ -509,6 +509,26 @@ async fn hyperpay_webhook_decrypts() {
         );
     }
 
+    // The card updater: a registration's new expiry and number.
+    let (body, tag) = seal(
+        &json!({ "type": "REGISTRATION", "action": "UPDATED", "payload": {
+            "id": "8a82944a53e6a0150153eaf693584262", "paymentBrand": "VISA",
+            "card": { "bin": "420000", "last4Digits": "0042", "holder": "Jane Jones",
+                      "expiryMonth": "09", "expiryYear": "2031" } } }),
+        iv,
+    );
+    let events = gateway
+        .verify_webhook(&headers(&hex::encode(iv), &tag), body.as_bytes(), KEY_HEX)
+        .unwrap();
+    let update = events[0].card_update.clone().unwrap();
+    assert_eq!(update.token, "8a82944a53e6a0150153eaf693584262");
+    assert_eq!(update.last4.as_deref(), Some("0042"));
+    assert_eq!(
+        (update.expiry_month, update.expiry_year),
+        (Some(9), Some(2031))
+    );
+    assert_eq!(update.brand.as_deref(), Some("VISA"));
+
     // Registrations and test pings carry no payment event.
     let (body, tag) = seal(
         &json!({ "type": "REGISTRATION", "action": "CREATED", "payload": {} }),

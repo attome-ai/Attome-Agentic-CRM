@@ -34,6 +34,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: recurring charges to saved methods (F5-T9). The daily `BillingChargeDue` job (only when
+  `billing.saved_methods.enabled`) charges due invoices to the account's default saved method with
+  the key `invoice:{id}:attempt:{n}`, re-asks a pending attempt with the same key, retries failures
+  after `billing.retry.days` (default 1, 3, 7) with an emailed payment link each time, and hands the
+  invoice to collections after the last. Card-updater events (HyperPay registration updates) update
+  saved methods. `PaymentGateway` gains `token_charge_reference`; `GatewayEvent` gains
+  `card_update`. Pack changeset 0017 adds `customer_payment.charge_attempt`, `next_retry_on` and
+  `charged_invoice_ref`.
 - Billing: payment links (F5-T8). `POST /api/v1/billing/payment-links` (`payment_link.create`) makes
   a single-use, expiring link for an invoice, an order or an amount; the public `GET
   /api/v1/pay/{token}` and `POST /api/v1/pay/{token}/checkout` (exact bypass matches, rate limited,
