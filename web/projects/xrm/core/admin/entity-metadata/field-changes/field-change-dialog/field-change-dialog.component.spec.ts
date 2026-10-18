@@ -65,6 +65,9 @@ describe('FieldChangeDialogComponent', () => {
       addChoice: vi.fn().mockReturnValue(of({ kind: 'result', status: 200, result: result({ op: 'add_choice_value', dry_run: false, applied: true }) })),
       removeChoice: vi.fn().mockReturnValue(of({ kind: 'result', status: 200, result: result({ op: 'remove_choice_value', records_with_value: 3 }) })),
       abandonRun: vi.fn(),
+      // The run panel polls a run's status; none is readable here.
+      runStatus: vi.fn().mockReturnValue(throwError(() => ({ status: 404 }))),
+      controlRun: vi.fn(),
     };
   });
 
