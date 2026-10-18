@@ -39,6 +39,9 @@
 
 pub mod archive;
 pub mod archive_admin;
+/// Z1-T7 — node starts and their configuration fingerprints.
+pub mod config_admin;
+pub mod config_starts;
 pub mod consent;
 pub mod consent_admin;
 pub mod consent_seed;

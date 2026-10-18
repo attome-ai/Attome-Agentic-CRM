@@ -41,6 +41,8 @@
 
 mod config;
 mod env;
+/// Z1-T7 — a configuration's fingerprint, without its secrets.
+pub mod fingerprint;
 mod keyring;
 /// AA9-T1 — every limit the platform enforces, with its range.
 pub mod limits;

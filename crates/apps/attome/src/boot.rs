@@ -57,6 +57,39 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 // check — see `attome_db::verify_migration_checksums`'s doc comment.
 static MIGRATION_CHECKSUM_BASELINE: &str = include_str!("../migrations/checksums.sha256");
 
+/// Z1-T7: writes this start's `config_start` row on a short-lived pool.
+async fn record_config_start(config: &AppConfig) {
+    let node = std::env::var("HOSTNAME")
+        .or_else(|_| std::env::var("COMPUTERNAME"))
+        .unwrap_or_else(|_| "unknown".to_owned());
+    let recorded = async {
+        let db = attome_db::create_pool(config)
+            .await
+            .map_err(attome_types::AppError::internal)?;
+        let result = attome_compliance::config_starts::record_start(
+            &db,
+            &node,
+            env!("CARGO_PKG_VERSION"),
+            &config.fingerprint(),
+            config.fingerprint_view(),
+        )
+        .await;
+        db.close().await;
+        result
+    }
+    .await;
+    match recorded {
+        Ok(_) => {
+            tracing::info!(fingerprint = %config.fingerprint(), "configuration fingerprint recorded")
+        }
+        Err(error) => tracing::warn!(
+            event = "config.fingerprint.record_failed",
+            %error,
+            "could not record this start's configuration fingerprint; continuing"
+        ),
+    }
+}
+
 /// The migration sequence shared by every entry point that applies schema:
 /// [`init`] (when `database.migrate_on_boot`), `server --bootstrap-admin`
 /// and the one-shot `migrate` binary (CLEANUP-REVIEW 1.5 — it used to be
@@ -470,6 +503,10 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         );
     }
     attome_profiler::record("boot.migrations", t_migrations.elapsed());
+
+    // Z1-T7: this start and its configuration fingerprint. A failure is
+    // logged and boot goes on: the record is for operators, not a gate.
+    record_config_start(config).await;
 
     // P-db-privilege-separation follow-up (supersedes D-117's "additive, not
     // fail-closed" stance — see DECISIONS.md, same posture change D-038

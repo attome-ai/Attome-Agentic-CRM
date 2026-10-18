@@ -247,4 +247,10 @@ pub struct AppConfig {
     /// literal secret. Not part of the on-disk schema.
     #[serde(skip)]
     pub(crate) literal_paths: Vec<String>,
+
+    /// Z1-T7 — the loaded document's fingerprint view (secrets masked, see
+    /// `crate::fingerprint`), set by `from_file`; `Null` for a configuration
+    /// built any other way.
+    #[serde(skip)]
+    pub(crate) fingerprint_view: serde_json::Value,
 }

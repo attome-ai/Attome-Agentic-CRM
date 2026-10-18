@@ -469,6 +469,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // Z1-T7: node starts and their configuration fingerprints.
+                attome_compliance::config_admin::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M24 (D-428) — /api/v1/consents/withdraw. Ordinary reads and
                 // an authenticated create of a `granted` row already work
                 // through the generic /api/v1/audit_consent entity route

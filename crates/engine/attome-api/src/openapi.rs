@@ -91,6 +91,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         attome_compliance::legal_hold_admin::openapi_fragment(),
         attome_compliance::governance_admin::openapi_fragment(),
         attome_compliance::rewrap_admin::openapi_fragment(),
+        attome_compliance::config_admin::openapi_fragment(),
         attome_compliance::consent_admin::openapi_fragment(),
         attome_compliance::archive_admin::openapi_fragment(),
         attome_compliance::legal_matter_admin::openapi_fragment(),

@@ -56,6 +56,17 @@ impl AppConfig {
 
     /// BCF-10 — the unknown keys `from_file` recorded, as dotted JSON paths.
     /// Boot warns on each one; `preflight` fails on any.
+    /// Z1-T7: what this node was configured with, secrets masked; `Null`
+    /// unless loaded by `from_file`.
+    pub fn fingerprint_view(&self) -> &serde_json::Value {
+        &self.fingerprint_view
+    }
+
+    /// Z1-T7: the SHA-256 hex of [`Self::fingerprint_view`].
+    pub fn fingerprint(&self) -> String {
+        crate::fingerprint::fingerprint_of(&self.fingerprint_view)
+    }
+
     pub fn ignored_keys(&self) -> &[String] {
         &self.ignored_keys
     }
@@ -189,6 +200,7 @@ impl AppConfig {
         config.unresolved_placeholders = unresolved;
         config.ignored_keys = ignored_keys;
         config.literal_paths = literals;
+        config.fingerprint_view = crate::fingerprint::view_of(&document);
         // BCF-5 (D-615) — the profile decides, not APP_ENV: a production node
         // must never boot on a literal "${VAR}", whatever APP_ENV says. The
         // gate above already covers the non-debug case; this closes the

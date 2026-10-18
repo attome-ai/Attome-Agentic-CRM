@@ -55,6 +55,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Configuration fingerprints (Z1-T7): every node start records a SHA-256 fingerprint of its loaded
+  configuration with secrets masked (`config_start`, migration 0118);
+  `GET /api/v1/admin/config/starts` lists starts and `/starts/diff?a=&b=` names the keys that
+  changed between two. Secret values are never stored: a secret-looking key shows only whether it
+  is set, and a password inside a URL is replaced.
 - Calendar calculations (Z12-T10): `POST /api/v1/calendars/{id}/calculate` answers `add`,
   `between`, `next` and `is_working` for any signed-in caller (or on a person's own calendar with
   `user_id`, theirs or an administrator's to ask), with the calendar version and content hash it

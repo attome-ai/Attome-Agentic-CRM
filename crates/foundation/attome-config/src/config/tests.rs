@@ -4462,3 +4462,41 @@ fn boot_rejects_limit_below_floor() {
         "a rate of 0 switches the limit off"
     );
 }
+
+/// Z1-T7: the fingerprint view keeps no secret value, a change of setting
+/// changes the fingerprint and a change of secret does not.
+#[test]
+fn fingerprint_view_has_no_secret_values() {
+    use crate::fingerprint::{fingerprint_of, view_of};
+    let document = |port: u16, password: &str| {
+        serde_json::json!({
+            "app": { "port": port },
+            "database": {
+                "password": password,
+                "direct_url": format!("postgres://boot:{password}@db:5432/attome")
+            },
+            "auth": { "jwt_secret": { "keys": { "k1": password }, "active_key_id": "k1" } },
+            "email": { "smtp_password": password, "providers": { "sendgrid": { "api_key": password } } },
+            "integration": { "credential_encryption_key": password }
+        })
+    };
+    let sentinel = "SENTINEL-not-in-the-view-4f1c";
+    let view = view_of(&document(8080, sentinel));
+    assert!(!view.to_string().contains(sentinel), "{view}");
+    assert_eq!(
+        view["database"]["password"],
+        serde_json::json!({ "set": true })
+    );
+    assert_eq!(view["app"]["port"], 8080);
+    let base = fingerprint_of(&view);
+    assert_eq!(
+        base,
+        fingerprint_of(&view_of(&document(8080, "another-secret-value"))),
+        "a secret's value does not change the fingerprint"
+    );
+    assert_ne!(
+        base,
+        fingerprint_of(&view_of(&document(8081, sentinel))),
+        "a setting does"
+    );
+}
