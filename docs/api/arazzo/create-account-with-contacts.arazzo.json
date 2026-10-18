@@ -1,0 +1,106 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Create an account with its contacts",
+    "version": "2026-10",
+    "summary": "One composite request creates an account and two contacts linked to it; each contact names the account through a ${ref.id} reference."
+  },
+  "sourceDescriptions": [
+    {
+      "name": "attome",
+      "url": "../../../openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "createAccountWithContacts",
+      "summary": "Create an account and two contacts in one request.",
+      "inputs": {
+        "type": "object",
+        "required": [
+          "account_name",
+          "contacts"
+        ],
+        "properties": {
+          "account_name": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "required": [
+                "full_name"
+              ],
+              "properties": {
+                "full_name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "createAll",
+          "description": "Each operation runs in order; a later one refers to the account by `${acc.id}`. Every result carries the status the operation would have had alone. Check each result's `status`: a failed operation answers its own error while the others stand.",
+          "operationId": "composite",
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "operations": [
+                {
+                  "ref": "acc",
+                  "method": "create",
+                  "entity": "account",
+                  "body": {
+                    "name": "$inputs.account_name"
+                  }
+                },
+                {
+                  "ref": "c1",
+                  "method": "create",
+                  "entity": "contact",
+                  "body": {
+                    "full_name": "$inputs.contacts[0].full_name",
+                    "email": "$inputs.contacts[0].email",
+                    "account_ref": "${acc.id}"
+                  }
+                },
+                {
+                  "ref": "c2",
+                  "method": "create",
+                  "entity": "contact",
+                  "body": {
+                    "full_name": "$inputs.contacts[1].full_name",
+                    "email": "$inputs.contacts[1].email",
+                    "account_ref": "${acc.id}"
+                  }
+                }
+              ]
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "account_id": "$response.body#/results/0/body/id",
+            "contact_ids": "$response.body#/results"
+          }
+        }
+      ],
+      "outputs": {
+        "account_id": "$steps.createAll.outputs.account_id"
+      }
+    }
+  ]
+}

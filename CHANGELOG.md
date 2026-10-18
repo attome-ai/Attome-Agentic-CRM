@@ -355,6 +355,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Docs: three Arazzo 1.0.1 workflows in `docs/api/arazzo/` (S2-T13): create an account with its
+  contacts in one composite request, read an entity page by page from a keyset cursor, and approve
+  and run a gated action. A test checks every step names an operation the API document has.
 - Docs: [API versions](docs/api-versions.md) (S8-T6) — the `Attome-Version` header, pinning per API
   key and S2S client, adapters, the 24-month support window and the `Deprecation`/`Sunset` notices.
 - Search while the index is down (AB5-T5): when the `search_index` capability is confirmed

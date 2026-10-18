@@ -10,6 +10,6 @@
 - [Rule language functions](rule-language.md): language versions and the functions V2 adds.
 - [Data layer](data-layer.md): pools, statement classes, retry, locks, query tags, read-your-writes and the censuses.
 - [Slow statements](slow-queries.md): turning on pg_stat_statements and auto_explain, reading query tags and plans.
-- [Backup](backup.md), [Versions and support](versions-and-support.md), [API versions](api-versions.md), [Model servers](model-servers.md)
+- [Backup](backup.md), [Versions and support](versions-and-support.md), [API versions](api-versions.md), [API workflows (Arazzo)](api/arazzo/), [Model servers](model-servers.md)
 - [Release](release.md), [SLOs](slo.md), [Testing](testing.md), [Build machine](build-machine.md)
 - `evidence/`: dated measurements (latency, memory, AI quality) that releases are checked against.

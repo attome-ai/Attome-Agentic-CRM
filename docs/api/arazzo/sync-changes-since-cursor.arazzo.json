@@ -1,0 +1,103 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Read an entity's records page by page",
+    "version": "2026-10",
+    "summary": "Walks GET /api/v1/{entity} with its keyset cursor until next_cursor is null; the last cursor is where the next sync resumes."
+  },
+  "sourceDescriptions": [
+    {
+      "name": "attome",
+      "url": "../../../openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "syncSinceCursor",
+      "summary": "Read every record after a cursor, one keyset page at a time.",
+      "inputs": {
+        "type": "object",
+        "required": [
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "page_size": {
+            "type": "integer",
+            "default": 200
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "readPage",
+          "description": "One page after the cursor (none: the first page). Repeats while the page names a next cursor.",
+          "operationId": "list_records",
+          "parameters": [
+            {
+              "name": "entity",
+              "in": "path",
+              "value": "$inputs.entity"
+            },
+            {
+              "name": "cursor",
+              "in": "query",
+              "value": "$inputs.cursor"
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "value": "$inputs.page_size"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "items": "$response.body#/items",
+            "next_cursor": "$response.body#/next_cursor"
+          },
+          "onSuccess": [
+            {
+              "name": "morePages",
+              "type": "goto",
+              "stepId": "readPage",
+              "criteria": [
+                {
+                  "context": "$response.body",
+                  "condition": "$.next_cursor != null",
+                  "type": "jsonpath"
+                }
+              ]
+            },
+            {
+              "name": "done",
+              "type": "end",
+              "criteria": [
+                {
+                  "context": "$response.body",
+                  "condition": "$.next_cursor == null",
+                  "type": "jsonpath"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "resume_cursor": "$steps.readPage.outputs.next_cursor"
+      }
+    }
+  ]
+}

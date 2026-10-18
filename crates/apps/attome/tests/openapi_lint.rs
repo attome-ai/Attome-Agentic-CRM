@@ -304,3 +304,53 @@ fn webhooks_section_references_existing_schema() {
     let description = post["description"].as_str().unwrap_or_default();
     assert!(description.contains("retried") && description.contains("max_attempts"));
 }
+
+/// S2-T13: every step of the published Arazzo workflows
+/// (`docs/api/arazzo/*.arazzo.json`) names an operation the API document has,
+/// and every workflow has a step.
+#[test]
+fn arazzo_steps_reference_existing_operations() {
+    let document = document();
+    let operations: BTreeSet<String> = document["paths"]
+        .as_object()
+        .into_iter()
+        .flat_map(|paths| paths.values())
+        .filter_map(Value::as_object)
+        .flat_map(|ops| ops.values())
+        .filter_map(|op| op["operationId"].as_str().map(str::to_owned))
+        .collect();
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../docs/api/arazzo");
+    let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.to_string_lossy().ends_with(".arazzo.json"))
+        .collect();
+    files.sort();
+    assert_eq!(files.len(), 3, "three published workflows: {files:?}");
+    for file in files {
+        let doc: Value = serde_json::from_str(&std::fs::read_to_string(&file).unwrap())
+            .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        let workflows = doc["workflows"].as_array().expect("workflows");
+        assert!(!workflows.is_empty(), "{}", file.display());
+        for workflow in workflows {
+            let steps = workflow["steps"].as_array().expect("steps");
+            assert!(
+                !steps.is_empty(),
+                "{} has an empty workflow",
+                file.display()
+            );
+            for step in steps {
+                let id = step["operationId"]
+                    .as_str()
+                    .unwrap_or_else(|| panic!("{}: a step names no operationId", file.display()));
+                assert!(
+                    operations.contains(id),
+                    "{}: step {} names {id}, which the API document does not have",
+                    file.display(),
+                    step["stepId"]
+                );
+            }
+        }
+    }
+}

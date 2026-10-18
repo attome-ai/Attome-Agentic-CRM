@@ -1,0 +1,144 @@
+{
+  "arazzo": "1.0.1",
+  "info": {
+    "title": "Approve and run a gated action",
+    "version": "2026-10",
+    "summary": "Invokes an action; when its policy needs approval, an administrator reads the request and approves it, and the approval runs the action."
+  },
+  "sourceDescriptions": [
+    {
+      "name": "attome",
+      "url": "../../../openapi.json",
+      "type": "openapi"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "approveAndRunAction",
+      "summary": "Invoke an action and, when it waits for approval, approve it.",
+      "inputs": {
+        "type": "object",
+        "required": [
+          "action_id"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "steps": [
+        {
+          "stepId": "invoke",
+          "description": "Runs the action, or answers `approval_required` with the approval's id; nothing has run in that case.",
+          "operationId": "invoke_action",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$inputs.action_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "args": "$inputs.args"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "approval_id": "$response.body#/approval_id"
+          },
+          "onSuccess": [
+            {
+              "name": "ranAlready",
+              "type": "end",
+              "criteria": [
+                {
+                  "context": "$response.body",
+                  "condition": "$.status == 'completed'",
+                  "type": "jsonpath"
+                }
+              ]
+            },
+            {
+              "name": "needsApproval",
+              "type": "goto",
+              "stepId": "readApproval",
+              "criteria": [
+                {
+                  "context": "$response.body",
+                  "condition": "$.status == 'approval_required'",
+                  "type": "jsonpath"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "stepId": "readApproval",
+          "description": "The request's current row_version, which the decision must name.",
+          "operationId": "get_approval",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.invoke.outputs.approval_id"
+            }
+          ],
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "row_version": "$response.body#/row_version"
+          }
+        },
+        {
+          "stepId": "approve",
+          "description": "Approves; when this closes the request, the action runs in the same call and `executed` carries its outcome.",
+          "operationId": "decide_approval",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "value": "$steps.invoke.outputs.approval_id"
+            }
+          ],
+          "requestBody": {
+            "contentType": "application/json",
+            "payload": {
+              "decision": "approve",
+              "row_version": "$steps.readApproval.outputs.row_version",
+              "comment": "$inputs.comment"
+            }
+          },
+          "successCriteria": [
+            {
+              "condition": "$statusCode == 200"
+            }
+          ],
+          "outputs": {
+            "status": "$response.body#/status",
+            "executed": "$response.body#/executed"
+          }
+        }
+      ],
+      "outputs": {
+        "status": "$steps.approve.outputs.status"
+      }
+    }
+  ]
+}
