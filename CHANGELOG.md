@@ -34,6 +34,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tests: customer tests (Z15-T12). `attome_records::customer_tests` runs a given/when/expect
+  definition through the record mutation primitives inside one transaction that is always rolled
+  back (`as_role` runs the steps with a role's privileges and field grants), and `run_and_record`
+  keeps each run's outcome. Migration 0108 adds `customer_test` and `customer_test_run`.
+- Migration 0107 grants `billing_gateway_event` to `attome_runtime` and `attome_readonly`
+  explicitly, like the other billing tables.
 - Tests: generated permission tests (Z15-T8, `attome-testapp` test `generated_permissions`): a user
   holding only one seeded role reads every entity's list (200 with `{entity}.read`, 403 without), is
   refused creating without `{entity}.create`, and never sees a sensitive attribute without a field
