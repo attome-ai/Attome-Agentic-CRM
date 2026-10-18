@@ -171,6 +171,9 @@ const BASELINE: &[&str] = &[
     "seed_support",
     "service_public",
     "settings_admin",
+    // AA9-T6: the limits registry spans every engine (rate classes, bulk,
+    // query time), so its read surface sits where they are composed.
+    "limits_admin",
     "sidebar",
     "sidebar_seed",
     "signoff",

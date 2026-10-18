@@ -163,6 +163,8 @@ impl EngineSystem {
             .merge(crate::app_admin::routes())
             // AA13-T8: SLO budgets and the deployment's own targets.
             .merge(crate::slo_admin::routes())
+            // AA9-T6: every limit and its use; a caller's own limits.
+            .merge(crate::limits_admin::routes())
             // C4-T1: mentions in text about a record.
             .merge(crate::mentions::routes())
             // Q20-T5: rate-limit bans (admin-gated in the handlers).

@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Limits you can see (AA9-T6): `GET /api/v1/admin/limits` lists every limit with its value in
+  force, default, floor, ceiling and last week's hits and peak; `GET /api/v1/limits/me` tells any
+  caller the limits that apply to them, with the requests left this minute per rate class. A
+  runtime limit is changed through `PUT /api/v1/admin/settings/limits.{key}`.
 - Audit inclusion proofs and evidence packs (Q16-T3): `GET /api/v1/admin/audit/events/{id}/proof`
   returns an event's Merkle path to its sealed batch's signed root, with the signature, the
   signing key's public half and the anchor key. `POST /api/v1/admin/audit/evidence-packs` (audited

@@ -40,6 +40,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::calendar_admin::openapi_fragment(),
         crate::app_admin::openapi_fragment(),
         crate::slo_admin::openapi_fragment(),
+        crate::limits_admin::openapi_fragment(),
         crate::mentions::openapi_fragment(),
         crate::ratelimit_admin::openapi_fragment(),
         crate::sbom_admin::openapi_fragment(),

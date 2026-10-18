@@ -214,6 +214,38 @@ pub async fn check(store: &Store, key: &str, limit_rpm: i32) -> Result<RateLimit
     ))
 }
 
+/// AA9-T6: how many requests `key` has counted in the current window,
+/// without recording one.
+pub async fn peek(store: &Store, key: &str) -> Result<i64, AppError> {
+    let key = &*namespaced(key);
+    let window_start_ms = Utc::now().timestamp_millis() - WINDOW_MS;
+    match store {
+        Store::Memory(memory) => memory.transaction(|ks| {
+            if !ks.exists(key) {
+                return Ok(0);
+            }
+            let zset = ks
+                .zset(key)
+                .map_err(|_| AppError::internal("rate-limit key holds a non-window value"))?;
+            Ok(zset
+                .members()
+                .filter(|(score, _)| *score > window_start_ms as f64)
+                .count() as i64)
+        }),
+        Store::Redis(pool) => tokio::time::timeout(
+            REQUEST_PATH,
+            pool.eval::<i64, _, _, _>(
+                "return redis.call('ZCOUNT', KEYS[1], '(' .. ARGV[1], '+inf')",
+                vec![key.to_owned()],
+                vec![window_start_ms.to_string()],
+            ),
+        )
+        .await
+        .map_err(|_| AppError::internal("redis rate-limit peek timed out"))?
+        .map_err(|e| AppError::internal(format!("redis rate-limit peek failed: {e}"))),
+    }
+}
+
 /// The in-process form of [`RATE_LIMIT_SCRIPT`]: evict, count, record when
 /// under the limit, all while the store is locked. Returns
 /// `(admitted, count, oldest_score_ms)`.
