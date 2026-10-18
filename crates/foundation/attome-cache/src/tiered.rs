@@ -11,6 +11,15 @@
 //! store failure does: `FallBackToSource` runs the loader (a `warn`
 //! `cache.redis_degraded` at most once a minute per cache), `FailClosed`
 //! refuses with `AppError::Overloaded("cache")`.
+//!
+//! A partitioned cache (Z3-T4) is read with
+//! [`get_or_load_for`](TieredCache::get_or_load_for), naming whose value it
+//! is: `PerUser` takes the user id, `PerSession` the session id, and
+//! `PerPermissionSet` the reader's `SecurityContext::permission_fingerprint`.
+//! Only a cache declared `PerPermissionSet` may hold permission-filtered
+//! rows, and only rows filtered by privileges and field security: a row set
+//! filtered by record ownership depends on the user, so it is `PerUser`.
+//! A `Shared` cache is read with [`get_or_load`](TieredCache::get_or_load).
 
 use std::collections::hash_map::RandomState;
 use std::future::Future;
@@ -23,7 +32,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use crate::Store;
-use crate::spec::{CacheSensitivity, CacheSpec, FailureMode};
+use crate::spec::{CacheSensitivity, CacheSpec, FailureMode, Partition};
 
 /// `ttl` plus or minus up to `jitter_pct` percent, from `seed`.
 pub fn jittered(ttl: Duration, jitter_pct: u8, seed: u64) -> Duration {
@@ -136,12 +145,53 @@ where
         }
     }
 
-    /// The value for `id`: L1, then the shared store, then `loader`.
+    /// The value for `id`: L1, then the shared store, then `loader`. Only
+    /// for a `Shared` cache; a partitioned one is read with
+    /// [`get_or_load_for`](Self::get_or_load_for).
     pub async fn get_or_load<F>(&self, id: &str, loader: F) -> Result<V, AppError>
     where
         F: Future<Output = Result<V, AppError>>,
     {
-        let key = self.spec.key(id);
+        if self.spec.partition != Partition::Shared {
+            return Err(AppError::internal(format!(
+                "cache {} is partitioned {:?}; read it with get_or_load_for",
+                self.spec.name, self.spec.partition
+            )));
+        }
+        self.fetch(self.spec.key(id), loader).await
+    }
+
+    /// Z3-T4: the value for `id` as one reader sees it. `reader` is the
+    /// partition's owner: the user id (`PerUser`), the session id
+    /// (`PerSession`) or the reader's permission fingerprint
+    /// (`PerPermissionSet`). An empty `reader` is refused, so a caller cannot
+    /// fall into one shared entry by mistake.
+    pub async fn get_or_load_for<F>(&self, reader: &str, id: &str, loader: F) -> Result<V, AppError>
+    where
+        F: Future<Output = Result<V, AppError>>,
+    {
+        let key = self.reader_key(reader, id)?;
+        self.fetch(key, loader).await
+    }
+
+    fn reader_key(&self, reader: &str, id: &str) -> Result<String, AppError> {
+        if self.spec.partition == Partition::Shared {
+            return Ok(self.spec.key(id));
+        }
+        let reader = reader.trim();
+        if reader.is_empty() {
+            return Err(AppError::internal(format!(
+                "cache {} is partitioned {:?}; a reader is required",
+                self.spec.name, self.spec.partition
+            )));
+        }
+        Ok(self.spec.key(&format!("{reader}:{id}")))
+    }
+
+    async fn fetch<F>(&self, key: String, loader: F) -> Result<V, AppError>
+    where
+        F: Future<Output = Result<V, AppError>>,
+    {
         self.l1
             .try_get_with(key.clone(), self.load(&key, loader))
             .await
@@ -196,6 +246,16 @@ where
     pub async fn invalidate_local(&self, id: &str) {
         self.l1.invalidate(&self.spec.key(id)).await;
     }
+
+    /// Z3-T4: drops one reader's `id` from this node and the shared store.
+    pub async fn invalidate_for(&self, reader: &str, id: &str) -> Result<(), AppError> {
+        let key = self.reader_key(reader, id)?;
+        self.l1.invalidate(&key).await;
+        if let Some(store) = self.shared_store() {
+            store.del(&key).await?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -204,7 +264,6 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
-    use crate::spec::Partition;
 
     const fn spec(name: &'static str, purpose: &'static str, failure: FailureMode) -> CacheSpec {
         CacheSpec {
@@ -275,6 +334,57 @@ mod tests {
         assert_eq!(jittered(ttl, 0, 12345), ttl);
         // Jitter over 50% is held to 50%.
         assert!(jittered(ttl, 90, 0) >= Duration::from_secs(50));
+    }
+
+    static PER_PERMISSIONS: CacheSpec = CacheSpec {
+        partition: Partition::PerPermissionSet,
+        ..spec(
+            "cache:tiered_per_permissions",
+            "tiered_per_permissions",
+            FailureMode::FallBackToSource,
+        )
+    };
+
+    #[tokio::test]
+    async fn a_partitioned_cache_needs_a_reader() {
+        let cache = TieredCache::<u32>::new(&PER_PERMISSIONS, None).unwrap();
+        assert!(cache.get_or_load("k", async { Ok(1) }).await.is_err());
+        assert!(
+            cache
+                .get_or_load_for(" ", "k", async { Ok(1) })
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            cache
+                .get_or_load_for("fp-a", "k", async { Ok(1) })
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            cache
+                .get_or_load_for("fp-b", "k", async { Ok(2) })
+                .await
+                .unwrap(),
+            2,
+            "another permission set has its own entry"
+        );
+        assert_eq!(
+            cache
+                .get_or_load_for("fp-a", "k", async { Ok(9) })
+                .await
+                .unwrap(),
+            1
+        );
+        cache.invalidate_for("fp-a", "k").await.unwrap();
+        assert_eq!(
+            cache
+                .get_or_load_for("fp-a", "k", async { Ok(3) })
+                .await
+                .unwrap(),
+            3
+        );
     }
 
     #[tokio::test]

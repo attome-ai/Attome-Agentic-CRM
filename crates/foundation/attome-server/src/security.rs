@@ -282,6 +282,89 @@ pub struct SecurityContext {
 }
 
 impl SecurityContext {
+    /// Z3-T4: one string for everything this context is allowed, the same
+    /// for two readers with the same effective permissions in any order:
+    /// SHA-256 hex over the admin flag, privileges, field read and write
+    /// grants, bulk fields, record conditions, reachable organisations,
+    /// teams, the position hierarchy and its subordinates, roles and the
+    /// service-principal flag. A cache partitioned `PerPermissionSet` keys
+    /// on it.
+    ///
+    /// The user id and the authorisation epoch are left out. The epoch is a
+    /// per-user counter, so including it would make every fingerprint
+    /// personal; a permission change it marks changes the fields above. The
+    /// user id is what a record-level owner check reads, so rows filtered by
+    /// ownership must live in a `PerUser` cache, never a `PerPermissionSet`
+    /// one.
+    pub fn permission_fingerprint(&self) -> String {
+        use sha2::{Digest, Sha256};
+
+        fn sorted<T: ToString>(items: impl IntoIterator<Item = T>) -> Vec<String> {
+            let mut out: Vec<String> = items.into_iter().map(|i| i.to_string()).collect();
+            out.sort();
+            out.dedup();
+            out
+        }
+
+        let mut lines = vec![format!("admin:{}", self.is_admin)];
+        lines.extend(
+            sorted(&self.privileges)
+                .into_iter()
+                .map(|p| format!("privilege:{p}")),
+        );
+        lines.extend(
+            sorted(&self.field_grants)
+                .into_iter()
+                .map(|f| format!("read:{f}")),
+        );
+        lines.extend(
+            sorted(&self.field_write_grants)
+                .into_iter()
+                .map(|f| format!("write:{f}")),
+        );
+        match &self.bulk_fields {
+            BulkFields::Legacy => lines.push("bulk:legacy".into()),
+            BulkFields::Listed(fields) => {
+                lines.push("bulk:listed".into());
+                lines.extend(sorted(fields).into_iter().map(|f| format!("bulk:{f}")));
+            }
+        }
+        for key in sorted(self.condition_grants.keys()) {
+            let sets = sorted(
+                self.condition_grants[&key]
+                    .iter()
+                    .map(|set| serde_json::to_string(set).unwrap_or_default()),
+            );
+            lines.push(format!("condition:{key}={}", sets.join("|")));
+        }
+        lines.extend(
+            sorted(&self.accessible_org_ids)
+                .into_iter()
+                .map(|o| format!("org:{o}")),
+        );
+        lines.extend(
+            sorted(&self.team_ids)
+                .into_iter()
+                .map(|t| format!("team:{t}")),
+        );
+        lines.push(format!("hierarchy:{}", self.position_hierarchy_enabled));
+        lines.extend(
+            sorted(&self.subordinate_user_ids)
+                .into_iter()
+                .map(|u| format!("subordinate:{u}")),
+        );
+        match &self.role_ids {
+            Some(roles) => lines.extend(sorted(roles).into_iter().map(|r| format!("role:{r}"))),
+            None => lines.push("role:system".into()),
+        }
+        lines.push(format!("service:{}", self.service_principal));
+
+        Sha256::digest(lines.join("\n").as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    }
+
     /// A copy of this context marked as a service principal (D-791 rule 3).
     /// Deep-copies, as [`EntityCeiling::apply`] does; only API-key and S2S
     /// requests pay it.
@@ -533,6 +616,68 @@ impl SecurityResolverHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn reader(privileges: &[&str], field_grants: &[&str]) -> SecurityContext {
+        SecurityContext {
+            user_id: Uuid::new_v4(),
+            is_admin: false,
+            privileges: privileges.iter().map(|p| p.to_string()).collect(),
+            field_grants: field_grants.iter().map(|f| f.to_string()).collect(),
+            field_write_grants: HashSet::new(),
+            bulk_fields: BulkFields::Legacy,
+            epoch: 0,
+            accessible_org_ids: Vec::new(),
+            team_ids: Vec::new(),
+            position_hierarchy_enabled: false,
+            subordinate_user_ids: Vec::new(),
+            condition_grants: HashMap::new(),
+            role_ids: Some(Vec::new()),
+            service_principal: false,
+        }
+    }
+
+    #[test]
+    fn fingerprint_stable_under_set_order() {
+        let mut a = reader(
+            &["deal.read", "deal.update", "account.read"],
+            &["deal.margin"],
+        );
+        let mut b = reader(
+            &["account.read", "deal.update", "deal.read"],
+            &["deal.margin"],
+        );
+        b.epoch = 41;
+        let team_a = Uuid::new_v4();
+        let team_b = Uuid::new_v4();
+        a.team_ids = vec![team_a, team_b];
+        b.team_ids = vec![team_b, team_a];
+        assert_eq!(
+            a.permission_fingerprint(),
+            b.permission_fingerprint(),
+            "same permissions, different users, order and epoch"
+        );
+        assert_eq!(a.permission_fingerprint().len(), 64);
+    }
+
+    #[test]
+    fn fingerprint_changes_with_field_grant() {
+        let a = reader(&["deal.read"], &[]);
+        let b = reader(&["deal.read"], &["deal.margin"]);
+        assert_ne!(a.permission_fingerprint(), b.permission_fingerprint());
+        let mut c = reader(&["deal.read"], &[]);
+        c.field_write_grants.insert("deal.margin".into());
+        assert_ne!(a.permission_fingerprint(), c.permission_fingerprint());
+        let mut d = reader(&["deal.read"], &[]);
+        d.team_ids.push(Uuid::new_v4());
+        assert_ne!(
+            a.permission_fingerprint(),
+            d.permission_fingerprint(),
+            "record-level reach counts"
+        );
+        let mut e = reader(&["deal.read"], &[]);
+        e.role_ids = None;
+        assert_ne!(a.permission_fingerprint(), e.permission_fingerprint());
+    }
 
     struct AllowAllResolver;
 
