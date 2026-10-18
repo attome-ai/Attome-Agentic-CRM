@@ -31365,6 +31365,12 @@ export interface components {
              */
             impression_id?: string | null;
             items: components["schemas"]["SearchHit"][];
+            /**
+             * @description AB5-T5: the index was down, so this is a short prefix match on each
+             *     readable entity's title from the database (route `fallback`), not a
+             *     ranked search. Sent only when true.
+             */
+            limited?: boolean;
             /** Format: int64 */
             page: number;
             /** Format: int64 */
