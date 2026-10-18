@@ -1605,6 +1605,8 @@ pub fn register_engines(
         .register(attome_marketing::MarketingModel)
         // F4-T1: gated on the `billing` module.
         .register(attome_billing::BillingModel)
+        // AG2-T3: e-invoicing devices, gated on the `billing` module.
+        .register(attome_einvoice::EinvoiceModel)
         // F10-T1: gated on the `commission` module.
         .register(attome_commission::CommissionModel)
         // F9-T1: gated on the `partner` module.

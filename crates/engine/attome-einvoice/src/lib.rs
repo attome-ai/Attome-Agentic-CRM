@@ -5,4 +5,15 @@
 
 pub mod asn1;
 pub mod crypto;
+pub mod device;
+pub mod model;
+pub(crate) mod routes;
 pub mod zatca;
+
+pub use model::EinvoiceModel;
+
+/// This crate's slice of the workspace OpenAPI document, merged in by
+/// `attome::openapi::document()`.
+pub fn openapi() -> utoipa::openapi::OpenApi {
+    <routes::ApiDocFragment as utoipa::OpenApi>::openapi()
+}

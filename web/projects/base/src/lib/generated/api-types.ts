@@ -9449,6 +9449,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/einvoice/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_devices"];
+        put?: never;
+        post: operations["post_device"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/einvoice/devices/{id}/onboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_onboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/features": {
         parameters: {
             query?: never;
@@ -18945,6 +18977,26 @@ export interface components {
              */
             suggested_dir: string;
         };
+        /** @description A device as administrators see it (no secrets). */
+        DeviceSummary: {
+            egs_serial: string;
+            /** @description `sandbox`, `simulation` or `production`. */
+            environment: string;
+            has_production_csid: boolean;
+            /** Format: uuid */
+            id: string;
+            invoice_types: string;
+            /** @description Why the last onboarding step failed. */
+            last_error?: string | null;
+            /**
+             * Format: int64
+             * @description Documents stamped so far.
+             */
+            last_icv: number;
+            name: string;
+            /** @description `new`, `compliance`, `active`, `failed` or `retired`. */
+            status: string;
+        };
         /**
          * @description `GET /api/v1/process/case-defs/{id}/dfg` — the latest computed
          *     directly-follows-graph snapshot.
@@ -22318,6 +22370,23 @@ export interface components {
             name_ar?: string | null;
             visibility?: string | null;
         };
+        /** @description A device to create. */
+        NewDevice: {
+            /** @description `sandbox` (the developer portal), `simulation` or `production`. */
+            environment: string;
+            industry: string;
+            /**
+             * @description `1100` (standard and simplified, the default), `1000` standard only,
+             *     `0100` simplified only.
+             */
+            invoice_types?: string | null;
+            /** @description Where it is (a short address or national address code). */
+            location: string;
+            /** @description Unique; the certificate's common name. */
+            name: string;
+            /** @description The branch or unit the device invoices for. */
+            organization_unit: string;
+        };
         NewMcpServer: {
             allow_external?: boolean;
             /** @description A bearer token; stored encrypted, never returned. */
@@ -22554,6 +22623,10 @@ export interface components {
          * @enum {string}
          */
         OnTimeout: "escalate" | "auto_approve" | "auto_reject";
+        OnboardRequest: {
+            /** @description The one-time password the Fatoora portal shows. */
+            otp: string;
+        };
         /** @description `POST /api/v1/admin/changesets`. */
         OpenChangesetBody: {
             description?: string | null;
@@ -23970,6 +24043,34 @@ export interface components {
                 started_at: string;
                 started_by?: string | null;
                 version: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DeviceSummary: {
+            items: {
+                egs_serial: string;
+                /** @description `sandbox`, `simulation` or `production`. */
+                environment: string;
+                has_production_csid: boolean;
+                /** Format: uuid */
+                id: string;
+                invoice_types: string;
+                /** @description Why the last onboarding step failed. */
+                last_error?: string | null;
+                /**
+                 * Format: int64
+                 * @description Documents stamped so far.
+                 */
+                last_icv: number;
+                name: string;
+                /** @description `new`, `compliance`, `active`, `failed` or `retired`. */
+                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -64579,6 +64680,176 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every e-invoicing device (a handful), newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeviceSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not manage e-invoicing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewDevice"];
+            };
+        };
+        responses: {
+            /** @description The new device, with its key and certificate request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not manage e-invoicing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A device with this name exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description E-invoicing is off, the seller settings are incomplete, or a field is wrong */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_onboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The device */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardRequest"];
+            };
+        };
+        responses: {
+            /** @description Onboarded: the device holds its production CSID */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not manage e-invoicing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such device */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The device is onboarded already, or changed meanwhile */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad OTP, or ZATCA refused a step (the reason is kept on the device) */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

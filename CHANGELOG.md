@@ -34,6 +34,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- E-invoicing devices (AG2-T3): `GET/POST /api/v1/einvoice/devices` and
+  `POST /api/v1/einvoice/devices/{id}/onboard` (`einvoice.manage`, granted to Finance Manager by the
+  billing pack) create a device with its key and CSR from the new seller settings
+  (`billing.seller_crn` and the seller's national address) and onboard it with the portal's OTP:
+  compliance CSID, a compliance check per document kind, production CSID. Keys and secrets are
+  stored encrypted (migration `0105`), each credential write is audited, and a refused step leaves
+  the device `failed` with ZATCA's reason. Accounts gain national-address fields for B2B e-invoices.
 - ZATCA onboarding and API client (AG2-T3, library): the device's certificate signing request with
   ZATCA's template name and directory-name fields (checked with OpenSSL), reading the CSID
   certificate's issuer, serial number, public key and CA signature, and a typed client for the

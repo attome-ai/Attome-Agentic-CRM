@@ -66,6 +66,14 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/einvoice/devices",
+        "needs e-invoicing on and the billing pack's seller settings, which this harness does not set; attome-testapp's einvoice_devices test drives it and its Credential event",
+    ),
+    (
+        "POST /api/v1/einvoice/devices/{id}/onboard",
+        "calls ZATCA; attome-testapp's einvoice_devices test drives onboarding through recorded answers and checks its Credential events",
+    ),
+    (
         "POST /api/v1/contract/counterparty-match/run",
         "needs the contract pack's contract entity, which this harness does not install (the route answers 404);          attome-testapp's contract_counterparty test drives the run and its Configuration event",
     ),

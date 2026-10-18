@@ -344,6 +344,14 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "billing.seller_vat_number" => {
             "رقم تسجيل المنشأة في ضريبة القيمة المضافة، يُطبع على كل فاتورة."
         }
+        "billing.seller_crn" => {
+            "رقم السجل التجاري للمنشأة، يُطبع معرّفًا للبائع في الفواتير الإلكترونية."
+        }
+        "billing.seller_street" => "شارع البائع (العنوان الوطني) في الفواتير الإلكترونية.",
+        "billing.seller_building_number" => "رقم مبنى البائع من أربعة أرقام (العنوان الوطني).",
+        "billing.seller_district" => "حيّ البائع (العنوان الوطني).",
+        "billing.seller_city" => "مدينة البائع (العنوان الوطني).",
+        "billing.seller_postal_zone" => "الرمز البريدي للبائع من خمسة أرقام (العنوان الوطني).",
         "billing.write_off_approval_threshold" => {
             "الشطب الذي يتجاوز هذا المبلغ ينتظر موافقة قبل تنفيذه؛ صفر يعني الشطب بلا موافقة."
         }

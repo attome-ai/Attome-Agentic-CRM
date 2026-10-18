@@ -1,0 +1,284 @@
+{
+  "author": "packs",
+  "checksum": "sha256:3e70b1650f10314bee5215390446a795fd7c005d66d773b12246dedaa01a2d8e",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "E-invoicing (AG2-T3): accounts carry the national address a standard (B2B) e-invoice names, and finance managers onboard devices.",
+  "format": "attome-changeset/v1",
+  "id": "01a14cac-9337-7f8e-a122-d9055f813706",
+  "layer": "product",
+  "name": "billing-einvoice",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Billing Street",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_street",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "account",
+        "field": "billing_street"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "display_name": "الشارع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "account.billing_street",
+        "object_kind": "attribute"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Building Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_building_number",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "account",
+        "field": "billing_building_number"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "display_name": "رقم المبنى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "account.billing_building_number",
+        "object_kind": "attribute"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "District",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_district",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "account",
+        "field": "billing_district"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "display_name": "الحي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "account.billing_district",
+        "object_kind": "attribute"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "City",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_city",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "account",
+        "field": "billing_city"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "display_name": "المدينة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "account.billing_city",
+        "object_kind": "attribute"
+      },
+      "seq": 8
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Postal Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_postal_zone",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "account",
+        "field": "billing_postal_zone"
+      },
+      "seq": 9
+    },
+    {
+      "args": {
+        "display_name": "الرمز البريدي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "account.billing_postal_zone",
+        "object_kind": "attribute"
+      },
+      "seq": 10
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billing_country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "account",
+        "field": "billing_country_code"
+      },
+      "seq": 11
+    },
+    {
+      "args": {
+        "display_name": "رمز الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "account.billing_country_code",
+        "object_kind": "attribute"
+      },
+      "seq": 12
+    },
+    {
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "einvoice.manage"
+      },
+      "args": {
+        "definition": {
+          "description": "Onboard and manage e-invoicing devices",
+          "key": "einvoice.manage",
+          "name": "einvoice.manage"
+        }
+      },
+      "seq": 13
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "target": {
+        "privilege": "einvoice.manage",
+        "role": "Finance Manager"
+      },
+      "seq": 14
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 13,
+  "title": "Pack: e-invoicing addresses and devices"
+}

@@ -45,6 +45,7 @@ attome-sales.workspace          = true
 attome-callintel.workspace = true
 attome-marketing.workspace = true
 attome-billing.workspace = true
+attome-einvoice.workspace = true
 attome-commission.workspace = true
 attome-partner.workspace = true
 attome-fulfilment.workspace = true

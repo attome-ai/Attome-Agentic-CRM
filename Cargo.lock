@@ -281,6 +281,7 @@ dependencies = [
  "attome-db",
  "attome-docgen",
  "attome-document",
+ "attome-einvoice",
  "attome-email",
  "attome-events",
  "attome-fleet",
@@ -930,9 +931,15 @@ dependencies = [
 name = "attome-einvoice"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-auth",
  "attome-config",
+ "attome-core",
+ "attome-db",
+ "attome-modules",
+ "attome-server",
  "attome-types",
+ "axum",
  "base64 0.23.1",
  "chrono",
  "k256",
@@ -943,7 +950,11 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "sqlx",
  "thiserror",
+ "tracing",
+ "utoipa",
+ "uuid",
  "zeroize",
 ]
 
@@ -1878,6 +1889,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-docgen",
+ "attome-einvoice",
  "attome-modules",
  "attome-records",
  "attome-sales",
@@ -1887,6 +1899,7 @@ dependencies = [
  "attome-testkit",
  "attome-types",
  "axum",
+ "base64 0.23.1",
  "chrono",
  "serde_json",
  "sqlx",

@@ -1,4 +1,4 @@
-//! Device keys at rest: envelope-encrypted under
+//! Device keys and CSID secrets at rest: envelope-encrypted under
 //! `einvoice.key_encryption_key`, its own trust domain (D-069): never the
 //! integration, S2S or webhook keys. The same versioned wire format every
 //! other secret column uses (`attome_auth::envelope`).
@@ -24,6 +24,16 @@ pub fn decrypt_key(ring: &KeyRing, stored: &str) -> Result<zeroize::Zeroizing<Ve
     Ok(zeroize::Zeroizing::new(
         attome_auth::envelope::decrypt_bytes(FIELD_NAME, ring, &sealed)?,
     ))
+}
+
+/// A CSID secret, encrypted for storage.
+pub fn encrypt_secret(ring: &KeyRing, secret: &str) -> Result<String, AppError> {
+    attome_auth::envelope::encrypt(FIELD_NAME, ring, secret)
+}
+
+/// A stored CSID secret.
+pub fn decrypt_secret(ring: &KeyRing, stored: &str) -> Result<String, AppError> {
+    attome_auth::envelope::decrypt(FIELD_NAME, ring, stored)
 }
 
 #[cfg(test)]

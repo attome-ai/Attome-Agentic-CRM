@@ -90,17 +90,20 @@ pub fn test_config() -> AppConfig {
             "llm_api": {{}},
             "external_api": {{}},
             "s2s": {{ "enabled": false }},
+            "einvoice": {{ "enabled": true, "key_encryption_key": "{einvoice_key}" }},
             "security": {{ "bootstrap_admin_email": null }}
         }}"#,
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         // The object store CI runs (and `attome_testkit::s3_or_skip` checks
         // for); `TEST_S3_ENDPOINT` moves it off the dev store's port.
-        s3_endpoint = std::env::var("TEST_S3_ENDPOINT")
-            .unwrap_or_else(|_| "http://localhost:9000".into()),
+        s3_endpoint =
+            std::env::var("TEST_S3_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".into()),
         s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
         s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
         jwt_secret = THROWAWAY_JWT_SECRET,
+        // A throwaway key: the test database is dropped after the run.
+        einvoice_key = "5e".repeat(32),
         issuer = ISSUER,
     );
     attome_testkit::with_test_database(
@@ -221,6 +224,7 @@ async fn build() -> Option<TestApp> {
     let system = EngineSystem::builder(EngineState::new(base))
         .register(attome_security::model::SecurityModel)
         .register(attome_billing::BillingModel)
+        .register(attome_einvoice::EinvoiceModel)
         .build()
         .await
         .expect("build the engine system");

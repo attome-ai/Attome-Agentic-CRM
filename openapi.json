@@ -48891,6 +48891,248 @@
         ]
       }
     },
+    "/api/v1/einvoice/devices": {
+      "get": {
+        "tags": [
+          "einvoice"
+        ],
+        "operationId": "get_devices",
+        "responses": {
+          "200": {
+            "description": "Every e-invoicing device (a handful), newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeviceSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not manage e-invoicing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "einvoice"
+        ],
+        "operationId": "post_device",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewDevice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new device, with its key and certificate request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not manage e-invoicing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A device with this name exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E-invoicing is off, the seller settings are incomplete, or a field is wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/einvoice/devices/{id}/onboard": {
+      "post": {
+        "tags": [
+          "einvoice"
+        ],
+        "operationId": "post_onboard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The device",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Onboarded: the device holds its production CSID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not manage e-invoicing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The device is onboarded already, or changed meanwhile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad OTP, or ZATCA refused a step (the reason is kept on the device)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/features": {
       "get": {
         "tags": [
@@ -85742,6 +85984,58 @@
           }
         }
       },
+      "DeviceSummary": {
+        "type": "object",
+        "description": "A device as administrators see it (no secrets).",
+        "required": [
+          "id",
+          "name",
+          "environment",
+          "status",
+          "egs_serial",
+          "invoice_types",
+          "last_icv",
+          "has_production_csid"
+        ],
+        "properties": {
+          "egs_serial": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string",
+            "description": "`sandbox`, `simulation` or `production`."
+          },
+          "has_production_csid": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_types": {
+            "type": "string"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the last onboarding step failed."
+          },
+          "last_icv": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Documents stamped so far."
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`new`, `compliance`, `active`, `failed` or `retired`."
+          }
+        }
+      },
       "DfgSnapshotResponse": {
         "type": "object",
         "description": "`GET /api/v1/process/case-defs/{id}/dfg` — the latest computed\ndirectly-follows-graph snapshot.",
@@ -93988,6 +94282,45 @@
           }
         }
       },
+      "NewDevice": {
+        "type": "object",
+        "description": "A device to create.",
+        "required": [
+          "name",
+          "environment",
+          "organization_unit",
+          "location",
+          "industry"
+        ],
+        "properties": {
+          "environment": {
+            "type": "string",
+            "description": "`sandbox` (the developer portal), `simulation` or `production`."
+          },
+          "industry": {
+            "type": "string"
+          },
+          "invoice_types": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`1100` (standard and simplified, the default), `1000` standard only,\n`0100` simplified only."
+          },
+          "location": {
+            "type": "string",
+            "description": "Where it is (a short address or national address code)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique; the certificate's common name."
+          },
+          "organization_unit": {
+            "type": "string",
+            "description": "The branch or unit the device invoices for."
+          }
+        }
+      },
       "NewMcpServer": {
         "type": "object",
         "required": [
@@ -94635,6 +94968,18 @@
           "auto_approve",
           "auto_reject"
         ]
+      },
+      "OnboardRequest": {
+        "type": "object",
+        "required": [
+          "otp"
+        ],
+        "properties": {
+          "otp": {
+            "type": "string",
+            "description": "The one-time password the Fatoora portal shows."
+          }
+        }
       },
       "OpenChangesetBody": {
         "type": "object",
@@ -98652,6 +98997,85 @@
                 },
                 "version": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_DeviceSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A device as administrators see it (no secrets).",
+              "required": [
+                "id",
+                "name",
+                "environment",
+                "status",
+                "egs_serial",
+                "invoice_types",
+                "last_icv",
+                "has_production_csid"
+              ],
+              "properties": {
+                "egs_serial": {
+                  "type": "string"
+                },
+                "environment": {
+                  "type": "string",
+                  "description": "`sandbox`, `simulation` or `production`."
+                },
+                "has_production_csid": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "invoice_types": {
+                  "type": "string"
+                },
+                "last_error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Why the last onboarding step failed."
+                },
+                "last_icv": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Documents stamped so far."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`new`, `compliance`, `active`, `failed` or `retired`."
                 }
               }
             }

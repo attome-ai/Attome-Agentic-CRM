@@ -40,6 +40,7 @@ fn build() -> utoipa::openapi::OpenApi {
     doc.merge(attome_callintel::openapi());
     doc.merge(attome_marketing::openapi());
     doc.merge(attome_billing::openapi());
+    doc.merge(attome_einvoice::openapi());
     doc.merge(attome_commission::openapi());
     doc.merge(attome_partner::openapi());
     doc.merge(attome_fulfilment::openapi());
