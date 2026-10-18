@@ -21720,6 +21720,61 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/limits": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Every limit and its use.",
+        "description": "The value in force, the default, floor and ceiling, and the last seven\ndays' hits and peak for every limit in the registry. Change a runtime\nlimit with `PUT /api/v1/admin/settings/limits.{key}`.",
+        "operationId": "admin_limits",
+        "responses": {
+          "200": {
+            "description": "Every limit with its value, range and recent use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LimitView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/mcp-servers": {
       "get": {
         "tags": [
@@ -37069,12 +37124,14 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Force-disables a user's TOTP enrollment (lost-device support case) —\nsoft-deletes the active `user_mfa` row and wipes recovery codes, same\neffect as the user's own `mfa::disable` but without needing proof of\npossession (that's the whole point: the user has lost the device/codes).\n`system.admin`-gated like every other admin-surface mutation (D-011); does\nNOT revoke existing sessions — this only clears the second factor so the\nuser can re-enroll on next login, not an incident-response kill switch\n(use `/sessions/revoke` for that).",
+        "summary": "Force-disables a user's TOTP enrollment (lost-device support case) —\nsoft-deletes the active `user_mfa` row and wipes recovery codes, same\neffect as the user's own `mfa::disable` but without needing proof of\npossession (that's the whole point: the user has lost the device/codes).\n`system.admin`-gated like every other admin-surface mutation (D-011).",
+        "description": "Q5-T8: the caller needs a fresh step-up (`admin_mfa_reset`); resetting an\nadministrator's factor waits for a second administrator (`202` with the\napproval request), anyone else's happens now (`204`). Either way the\nperson is emailed and their sessions end.",
         "operationId": "reset_user_mfa",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The user whose second factor is reset",
             "required": true,
             "schema": {
               "type": "string",
@@ -37083,6 +37140,16 @@
           }
         ],
         "responses": {
+          "202": {
+            "description": "An administrator's reset waits for a second administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaResetPending"
+                }
+              }
+            }
+          },
           "204": {
             "description": "Success"
           },
@@ -37097,7 +37164,7 @@
             }
           },
           "403": {
-            "description": "Caller lacks the required privilege",
+            "description": "Caller lacks the required privilege, or a fresh step-up",
             "content": {
               "application/json": {
                 "schema": {
@@ -56415,6 +56482,51 @@
         "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/limits/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The limits that apply to the caller.",
+        "description": "Each rate class with the requests left in the current minute, the bulk\nsize and the query time limits.",
+        "operationId": "my_limits",
+        "responses": {
+          "200": {
+            "description": "The limits that apply to the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyLimits"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/live": {
@@ -101423,6 +101535,71 @@
           }
         }
       },
+      "LimitView": {
+        "type": "object",
+        "description": "One limit, as an administrator sees it.",
+        "required": [
+          "key",
+          "purpose",
+          "kind",
+          "scope",
+          "value",
+          "default",
+          "floor",
+          "ceiling",
+          "unit",
+          "hits_7d",
+          "peak_7d",
+          "warning"
+        ],
+        "properties": {
+          "ceiling": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "default": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "floor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "hits_7d": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`resource` or `abuse`."
+          },
+          "peak_7d": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "description": "`boot_config` or `runtime_setting`."
+          },
+          "unit": {
+            "type": "string"
+          },
+          "value": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warning": {
+            "type": "boolean",
+            "description": "Someone reached this limit in the last seven days."
+          }
+        }
+      },
       "LineageRelation": {
         "type": "string",
         "enum": [
@@ -102810,6 +102987,23 @@
           "required"
         ]
       },
+      "MfaResetPending": {
+        "type": "object",
+        "description": "Q5-T8: the reset is waiting for a second administrator.",
+        "required": [
+          "approval_pending",
+          "approval_request_id"
+        ],
+        "properties": {
+          "approval_pending": {
+            "type": "boolean"
+          },
+          "approval_request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "MfaVerifyBody": {
         "type": "object",
         "required": [
@@ -103431,6 +103625,50 @@
           },
           "start_mrr": {
             "type": "string"
+          }
+        }
+      },
+      "MyLimit": {
+        "type": "object",
+        "description": "One limit that applies to the caller.",
+        "required": [
+          "key",
+          "value",
+          "unit"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "remaining": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "For a rate class: requests left in the current minute."
+          },
+          "unit": {
+            "type": "string"
+          },
+          "value": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "MyLimits": {
+        "type": "object",
+        "description": "The limits that apply to the caller.",
+        "required": [
+          "limits"
+        ],
+        "properties": {
+          "limits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyLimit"
+            }
           }
         }
       },
@@ -110778,6 +111016,98 @@
                     "null"
                   ],
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_LimitView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One limit, as an administrator sees it.",
+              "required": [
+                "key",
+                "purpose",
+                "kind",
+                "scope",
+                "value",
+                "default",
+                "floor",
+                "ceiling",
+                "unit",
+                "hits_7d",
+                "peak_7d",
+                "warning"
+              ],
+              "properties": {
+                "ceiling": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "default": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "floor": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "hits_7d": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`resource` or `abuse`."
+                },
+                "peak_7d": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string",
+                  "description": "`boot_config` or `runtime_setting`."
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "warning": {
+                  "type": "boolean",
+                  "description": "Someone reached this limit in the last seven days."
                 }
               }
             }

@@ -3736,6 +3736,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every limit and its use.
+         * @description The value in force, the default, floor and ceiling, and the last seven
+         *     days' hits and peak for every limit in the registry. Change a runtime
+         *     limit with `PUT /api/v1/admin/settings/limits.{key}`.
+         */
+        get: operations["admin_limits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/mcp-servers": {
         parameters: {
             query?: never;
@@ -6554,10 +6576,11 @@ export interface paths {
          *     soft-deletes the active `user_mfa` row and wipes recovery codes, same
          *     effect as the user's own `mfa::disable` but without needing proof of
          *     possession (that's the whole point: the user has lost the device/codes).
-         *     `system.admin`-gated like every other admin-surface mutation (D-011); does
-         *     NOT revoke existing sessions — this only clears the second factor so the
-         *     user can re-enroll on next login, not an incident-response kill switch
-         *     (use `/sessions/revoke` for that).
+         *     `system.admin`-gated like every other admin-surface mutation (D-011).
+         * @description Q5-T8: the caller needs a fresh step-up (`admin_mfa_reset`); resetting an
+         *     administrator's factor waits for a second administrator (`202` with the
+         *     approval request), anyone else's happens now (`204`). Either way the
+         *     person is emailed and their sessions end.
          */
         post: operations["reset_user_mfa"];
         delete?: never;
@@ -10256,6 +10279,27 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["handle_webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/limits/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The limits that apply to the caller.
+         * @description Each rate class with the requests left in the current minute, the bulk
+         *     size and the query time limits.
+         */
+        get: operations["my_limits"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -22580,6 +22624,30 @@ export interface components {
             /** Format: date-time */
             released_at?: string | null;
         };
+        /** @description One limit, as an administrator sees it. */
+        LimitView: {
+            /** Format: int64 */
+            ceiling: number;
+            /** Format: int64 */
+            default: number;
+            /** Format: int64 */
+            floor: number;
+            /** Format: int64 */
+            hits_7d: number;
+            key: string;
+            /** @description `resource` or `abuse`. */
+            kind: string;
+            /** Format: int64 */
+            peak_7d: number;
+            purpose: string;
+            /** @description `boot_config` or `runtime_setting`. */
+            scope: string;
+            unit: string;
+            /** Format: int64 */
+            value: number;
+            /** @description Someone reached this limit in the last seven days. */
+            warning: boolean;
+        };
         /** @enum {string} */
         LineageRelation: "root" | "child" | "formula_input";
         LinkBody: {
@@ -23099,6 +23167,12 @@ export interface components {
          * @enum {string}
          */
         MfaPolicy: "optional" | "required";
+        /** @description Q5-T8: the reset is waiting for a second administrator. */
+        MfaResetPending: {
+            approval_pending: boolean;
+            /** Format: uuid */
+            approval_request_id: string;
+        };
         MfaVerifyBody: {
             code: string;
             pending_token: string;
@@ -23314,6 +23388,22 @@ export interface components {
             net_retention?: string | null;
             new: string;
             start_mrr: string;
+        };
+        /** @description One limit that applies to the caller. */
+        MyLimit: {
+            key: string;
+            /**
+             * Format: int64
+             * @description For a rate class: requests left in the current minute.
+             */
+            remaining?: number | null;
+            unit: string;
+            /** Format: int64 */
+            value: number;
+        };
+        /** @description The limits that apply to the caller. */
+        MyLimits: {
+            limits: components["schemas"]["MyLimit"][];
         };
         /**
          * @description One authoritative action a caller may take on a [`MyWorkItem`] — never
@@ -25982,6 +26072,38 @@ export interface components {
                 record_id?: string | null;
                 /** Format: date-time */
                 released_at?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_LimitView: {
+            items: {
+                /** Format: int64 */
+                ceiling: number;
+                /** Format: int64 */
+                default: number;
+                /** Format: int64 */
+                floor: number;
+                /** Format: int64 */
+                hits_7d: number;
+                key: string;
+                /** @description `resource` or `abuse`. */
+                kind: string;
+                /** Format: int64 */
+                peak_7d: number;
+                purpose: string;
+                /** @description `boot_config` or `runtime_setting`. */
+                scope: string;
+                unit: string;
+                /** Format: int64 */
+                value: number;
+                /** @description Someone reached this limit in the last seven days. */
+                warning: boolean;
             }[];
             /** Format: int64 */
             page: number;
@@ -47364,6 +47486,44 @@ export interface operations {
             };
         };
     };
+    admin_limits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every limit with its value, range and recent use */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_LimitView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_servers: {
         parameters: {
             query?: never;
@@ -56931,12 +57091,22 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The user whose second factor is reset */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
+            /** @description An administrator's reset waits for a second administrator */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaResetPending"];
+                };
+            };
             /** @description Success */
             204: {
                 headers: {
@@ -56953,7 +57123,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller lacks the required privilege */
+            /** @description Caller lacks the required privilege, or a fresh step-up */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -68901,6 +69071,35 @@ export interface operations {
             };
             /** @description The replay-protection store is unavailable; retry later */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_limits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The limits that apply to the caller */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyLimits"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
