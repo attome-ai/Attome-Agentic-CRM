@@ -20123,6 +20123,7 @@ export interface components {
          *     `duplicate_detected`: The save matches existing records under a blocking duplicate rule.
          *     `idempotency_conflict`: The idempotency key was used for a different request.
          *     `validation_error`: The request failed validation.
+         *     `customer_tests_failed`: A publish was refused because blocking customer tests failed; `tests` names them.
          *     `rule_violation`: A business rule refused the write; `rule_id` names it.
          *     `field_locked`: A business rule locks a field the write changed.
          *     `field_locked_required`: A locked field is required and was left empty.
@@ -20144,7 +20145,7 @@ export interface components {
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
@@ -20185,7 +20186,7 @@ export interface components {
              * @description Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
              *     `attribute_not_writable`, `limit_exceeded`,
              *     `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
-             *     `validation_error`, `feature_unavailable`, `feature_hidden`,
+             *     `validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
@@ -46438,7 +46439,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description backup_ref_required on the production profile, a phase mismatch, or a blocked plan */
+            /** @description backup_ref_required on the production profile, a phase mismatch, a blocked plan, or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -48321,7 +48322,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description A file is invalid or an object fails the publish checks */
+            /** @description A file is invalid or an object fails the publish checks, or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -49044,7 +49045,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The draft fails the publish checks, or an eval suite's newest run fails a safety case; the issues are listed */
+            /** @description The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on) */
             422: {
                 headers: {
                     [name: string]: unknown;
