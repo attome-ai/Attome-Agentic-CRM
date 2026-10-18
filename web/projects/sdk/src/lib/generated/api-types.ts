@@ -2819,6 +2819,38 @@ export interface paths {
         patch: operations["update_label"];
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/orphans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_orphans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entities/{entity_id}/orphans/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["queue_orphan_scan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/scaffold-ui": {
         parameters: {
             query?: never;
@@ -23184,6 +23216,34 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        /** @description One lookup field's orphans. */
+        OrphanCount: {
+            attribute: string;
+            /**
+             * Format: int64
+             * @description Rows whose value names no record of the target.
+             */
+            orphans: number;
+            /**
+             * Format: uuid
+             * @description The scan run it came from; `None` for a scan on the request.
+             */
+            run_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When the count was taken.
+             */
+            scanned_at: string;
+            /** @description The entity the lookup points at. */
+            target_entity: string;
+        };
+        /** @description A queued (or already running) scan. */
+        OrphanScanQueued: {
+            /** @description `false` when a scan of this entity was already queued or running. */
+            created: boolean;
+            /** Format: uuid */
+            run_id: string;
+        };
         OutOfOfficeBody: {
             /**
              * Format: uuid
@@ -25733,6 +25793,35 @@ export interface components {
                 user_email?: string | null;
                 /** Format: uuid */
                 user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_OrphanCount: {
+            items: {
+                attribute: string;
+                /**
+                 * Format: int64
+                 * @description Rows whose value names no record of the target.
+                 */
+                orphans: number;
+                /**
+                 * Format: uuid
+                 * @description The scan run it came from; `None` for a scan on the request.
+                 */
+                run_id?: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the count was taken.
+                 */
+                scanned_at: string;
+                /** @description The entity the lookup points at. */
+                target_entity: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -43674,6 +43763,124 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_orphans: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Orphan counts per lookup field, in field order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OrphanCount"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description orphan_scan_required: the table is over the inline limit and no scan has finished; POST .../orphans/scan */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    queue_orphan_scan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scan is queued (or was already queued or running) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrphanScanQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
