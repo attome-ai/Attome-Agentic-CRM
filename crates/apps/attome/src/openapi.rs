@@ -91,6 +91,12 @@ fn build() -> utoipa::openapi::OpenApi {
     declare_rate_class(&mut doc);
     // S2-T7: and its privilege, risk, idempotency and cache policy.
     crate::openapi_policy::apply(&mut doc);
+    // S2-T12: the webhook a subscription receives, as OpenAPI 3.1's
+    // top-level `webhooks`. utoipa has no field for it; `extensions` is
+    // flattened into the document's top level when it is serialised.
+    doc.extensions
+        .get_or_insert_with(Default::default)
+        .insert("webhooks".to_owned(), webhooks());
     // S2-T8: the document names the release it describes.
     doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
     // Z14-T2: every error code, as one enum the SDK can generate.
@@ -202,6 +208,63 @@ fn declare_rate_class(doc: &mut utoipa::openapi::OpenApi) {
             }
         }
     }
+}
+
+/// S2-T12: `webhooks.entityChanged` — the delivery a subscription's target
+/// receives (`attome_events::delivery`): the `WebhookPayload` body, the
+/// signature header and the retry rules.
+fn webhooks() -> serde_json::Value {
+    let signature = format!(
+        "`t=<unix ms>,v1=<hex>`: HMAC-SHA256, keyed with the subscription's secret \
+         (hex-decoded), over `<t>.<raw body>`. Recompute it over the exact bytes received, \
+         compare in constant time, and reject a `t` far from your clock. Header: `{}`.",
+        attome_events::crypto::SIGNATURE_HEADER
+    );
+    serde_json::json!({
+        "entityChanged": {
+            "post": {
+                "operationId": "webhook_entity_changed",
+                "summary": "A record a subscription watches changed",
+                "description": "Sent to a subscription's `target_url` for each matching change. \
+                    Any 2xx answer ends the delivery. Any other status, a connection failure, or no \
+                    answer within 15 seconds is retried: the wait starts at 10 seconds and doubles \
+                    up to 15 minutes, until the subscription's `max_attempts` (8 for the `standard` \
+                    retry class, 20 for `extended`, at most 25), after which the delivery is \
+                    dead-lettered and can be replayed by an administrator. A target the SSRF guard \
+                    rejects at send time is dead-lettered at once. Retries carry the same \
+                    `Idempotency-Key`, so drop a key you have already handled.",
+                "tags": ["webhooks"],
+                "parameters": [
+                    {
+                        "name": attome_events::crypto::SIGNATURE_HEADER,
+                        "in": "header",
+                        "required": true,
+                        "description": signature,
+                        "schema": { "type": "string", "pattern": "^t=[0-9]+,v1=[0-9a-f]{64}$" }
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "description": "The event id, the same on every retry of one event.",
+                        "schema": { "type": "string", "format": "uuid" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/WebhookPayload" }
+                        }
+                    }
+                },
+                "responses": {
+                    "2XX": { "description": "Received; the delivery is done." },
+                    "default": { "description": "Anything else is retried, as described above." }
+                }
+            }
+        }
+    })
 }
 
 pub fn document() -> Arc<utoipa::openapi::OpenApi> {

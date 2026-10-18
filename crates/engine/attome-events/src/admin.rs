@@ -846,15 +846,18 @@ pub fn routes() -> Router<EngineState> {
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document; merged upward via `attome_api::openapi::openapi_document`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(
-    list_subscriptions,
-    create_subscription,
-    get_subscription,
-    update_subscription,
-    rotate_secret,
-    delete_subscription,
-    list_deliveries
-))]
+#[openapi(
+    paths(
+        list_subscriptions,
+        create_subscription,
+        get_subscription,
+        update_subscription,
+        rotate_secret,
+        delete_subscription,
+        list_deliveries
+    ),
+    components(schemas(crate::delivery::WebhookPayload))
+)]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {

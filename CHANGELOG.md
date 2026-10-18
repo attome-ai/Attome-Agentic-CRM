@@ -81,6 +81,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The OpenAPI document describes outbound webhooks (S2-T12): a top-level `webhooks.entityChanged` with the
+  `WebhookPayload` body, the `X-Attome-Signature` header (HMAC-SHA256 over `<t>.<body>`), the
+  `Idempotency-Key` header and the retry schedule.
 - Decrypted secrets cannot be printed (Q18-T5): `attome_auth::envelope::decrypt` and `decrypt_bound` return
   `attome_types::secret::SecretString`, whose `Debug` prints `[redacted]` and which has no `Display` or
   `Serialize`; the buffer is zeroed on drop. Reading it is `expose_secret()` or `into_exposed()`.

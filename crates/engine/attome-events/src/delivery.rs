@@ -286,6 +286,34 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
     }
 }
 
+/// S2-T12: the body of every outbound webhook delivery, published as the
+/// `WebhookPayload` schema under the document's `webhooks.entityChanged`.
+/// An audit-stream subscription sends the same shape with `entity`
+/// `audit_header` and the audit event as `data`.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct WebhookPayload {
+    /// The event's id; also the `Idempotency-Key` header, the same on every
+    /// retry of one event.
+    pub event_id: Uuid,
+    /// The changed record's entity logical name.
+    pub entity: String,
+    pub record_id: Uuid,
+    /// `create`, `update`, `delete`, and the other entity change operations.
+    pub operation: String,
+    /// When the change was matched to the subscription.
+    pub occurred_at: chrono::DateTime<Utc>,
+    /// The record as the subscription's owner may read it now, or `null`
+    /// when they cannot read it or it is gone.
+    #[schema(value_type = Option<Object>)]
+    pub data: Option<Value>,
+}
+
+impl WebhookPayload {
+    fn into_value(self) -> Result<Value, AppError> {
+        serde_json::to_value(self).map_err(AppError::internal)
+    }
+}
+
 async fn build_body(
     db: &DbPool,
     owner_ctx: &SecurityContext,
@@ -298,18 +326,19 @@ async fn build_body(
         delivery.event_record_id,
     )
     .await?;
-    Ok(json!({
-        "event_id": delivery.event_id,
-        "entity": delivery.event_entity_logicalname,
-        "record_id": delivery.event_record_id,
-        "operation": delivery.event_operation,
+    WebhookPayload {
+        event_id: delivery.event_id,
+        entity: delivery.event_entity_logicalname.clone(),
+        record_id: delivery.event_record_id,
+        operation: delivery.event_operation.clone(),
         // The source outbox row (entity_change_event) may already
         // be pruned by the time this fires — the delivery row's own
         // created_at (when the dispatcher recorded the match) is the closest
         // durable timestamp available.
-        "occurred_at": delivery.created_at,
-        "data": data,
-    }))
+        occurred_at: delivery.created_at,
+        data,
+    }
+    .into_value()
 }
 
 async fn load_delivery(db: &DbPool, delivery_id: Uuid) -> Result<Option<DeliveryRow>, AppError> {
@@ -404,14 +433,15 @@ async fn build_audit_body(db: &DbPool, delivery: &DeliveryRow) -> Result<Value, 
         })
     });
 
-    Ok(json!({
-        "event_id": delivery.event_id,
-        "entity": "audit_header",
-        "record_id": delivery.event_record_id,
-        "operation": delivery.event_operation,
-        "occurred_at": delivery.created_at,
-        "data": data,
-    }))
+    WebhookPayload {
+        event_id: delivery.event_id,
+        entity: "audit_header".to_owned(),
+        record_id: delivery.event_record_id,
+        operation: delivery.event_operation.clone(),
+        occurred_at: delivery.created_at,
+        data,
+    }
+    .into_value()
 }
 
 async fn mark_attempt(db: &DbPool, delivery_id: Uuid) -> Result<i32, AppError> {

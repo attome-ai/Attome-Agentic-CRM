@@ -273,3 +273,34 @@ fn write_baseline() {
     let text = serde_json::to_string_pretty(&all).expect("serialises") + "\n";
     std::fs::write(baseline_path(), text).expect("write the baseline");
 }
+
+/// S2-T12: the document's top-level `webhooks` describes the delivery a
+/// subscription receives: a body schema that exists, the signature header
+/// and the retry rules.
+#[test]
+fn webhooks_section_references_existing_schema() {
+    let document = document();
+    let post = &document["webhooks"]["entityChanged"]["post"];
+    assert!(post.is_object(), "webhooks.entityChanged.post is missing");
+    let reference = post["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+        .as_str()
+        .expect("the body references a schema");
+    let name = reference
+        .strip_prefix("#/components/schemas/")
+        .expect("a components schema reference");
+    assert!(
+        document["components"]["schemas"][name].is_object(),
+        "{reference} is not in components.schemas"
+    );
+    let parameters = post["parameters"].as_array().expect("header parameters");
+    assert!(
+        parameters.iter().any(|p| p["in"] == "header"
+            && p["name"] == attome_events::crypto::SIGNATURE_HEADER
+            && p["description"]
+                .as_str()
+                .is_some_and(|d| d.contains("HMAC-SHA256"))),
+        "the signature header and its algorithm are described"
+    );
+    let description = post["description"].as_str().unwrap_or_default();
+    assert!(description.contains("retried") && description.contains("max_attempts"));
+}
