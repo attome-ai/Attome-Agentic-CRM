@@ -21,6 +21,8 @@ edition = "2024"
 #   cargo install cargo-fuzz
 #   cargo +nightly fuzz run fuzz_validate_token -- -max_total_time=60
 #   cargo +nightly fuzz run fuzz_cookie_extract -- -max_total_time=60
+#   cargo +nightly fuzz run fuzz_jwks_eddsa_token -- -max_total_time=60
+#   cargo +nightly fuzz run fuzz_otp_verify_normalise -- -max_total_time=60
 
 [package.metadata]
 cargo-fuzz = true
@@ -53,6 +55,21 @@ bench = false
 [[bin]]
 name = "fuzz_cookie_extract"
 path = "fuzz_targets/fuzz_cookie_extract.rs"
+test = false
+doc = false
+bench = false
+
+# Z4-T11.
+[[bin]]
+name = "fuzz_jwks_eddsa_token"
+path = "fuzz_targets/fuzz_jwks_eddsa_token.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_otp_verify_normalise"
+path = "fuzz_targets/fuzz_otp_verify_normalise.rs"
 test = false
 doc = false
 bench = false

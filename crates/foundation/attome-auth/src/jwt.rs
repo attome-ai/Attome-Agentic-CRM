@@ -305,7 +305,19 @@ pub fn validate_session_token(
     issuer: &str,
     audience: &str,
 ) -> Result<(SessionClaims, SessionId), AppError> {
-    let token_claims: SessionTokenClaims = decode_claims(token, ring)?;
+    validate_session_token_with(token, ring, signing_keys().as_deref(), issuer, audience)
+}
+
+/// [`validate_session_token`] with the Ed25519 ring passed explicitly
+/// (Z4-T11: tests and the fuzz target never share the installed one).
+pub fn validate_session_token_with(
+    token: &str,
+    ring: &KeyRing,
+    eddsa: Option<&KeyRing>,
+    issuer: &str,
+    audience: &str,
+) -> Result<(SessionClaims, SessionId), AppError> {
+    let token_claims: SessionTokenClaims = decode_claims_with(token, ring, eddsa)?;
     let sid = SessionId(token_claims.sid);
     let claims = token_claims.claims;
     if claims.typ != TokenType::Session {
@@ -392,6 +404,70 @@ mod eddsa_tests {
         )
         .unwrap();
         assert!(decode_claims_with::<Claims>(&token, &hs256(), None).is_err());
+    }
+
+    /// Z4-T11: a session token signed with the Ed25519 ring, expiring at
+    /// `exp` and naming `audience`.
+    fn eddsa_session(ring: &KeyRing, exp: i64, audience: &str) -> String {
+        let now = chrono::Utc::now().timestamp();
+        encode_claims_with(
+            &SessionTokenClaims {
+                claims: SessionClaims {
+                    sub: uuid::Uuid::now_v7(),
+                    iat: now - 10,
+                    exp,
+                    jti: uuid::Uuid::now_v7(),
+                    epoch: 0,
+                    iss: "attome-test".into(),
+                    aud: audience.into(),
+                    typ: TokenType::Session,
+                },
+                sid: uuid::Uuid::now_v7(),
+            },
+            &hs256(),
+            Some(ring),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn expired_eddsa_token_is_refused() {
+        let ring = eddsa("ed1", 9);
+        let now = chrono::Utc::now().timestamp();
+        let live = eddsa_session(&ring, now + 600, "attome-test");
+        assert!(
+            validate_session_token_with(&live, &hs256(), Some(&ring), "attome-test", "attome-test")
+                .is_ok(),
+            "control: a live token verifies"
+        );
+        // Past jsonwebtoken's 60 s leeway.
+        let expired = eddsa_session(&ring, now - 120, "attome-test");
+        assert!(
+            validate_session_token_with(
+                &expired,
+                &hs256(),
+                Some(&ring),
+                "attome-test",
+                "attome-test"
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn wrong_audience_eddsa_token_is_refused() {
+        let ring = eddsa("ed1", 9);
+        let token = eddsa_session(&ring, chrono::Utc::now().timestamp() + 600, "elsewhere");
+        assert!(
+            validate_session_token_with(
+                &token,
+                &hs256(),
+                Some(&ring),
+                "attome-test",
+                "attome-test"
+            )
+            .is_err()
+        );
     }
 
     #[test]
