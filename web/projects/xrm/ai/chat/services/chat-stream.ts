@@ -44,6 +44,24 @@ export interface StreamEvent {
   content?: string;
 }
 
+/**
+ * The `reconnect` frame's `data` (AB7-T5): the node serving the stream is
+ * draining; reopen after `retry_ms` from the last durable ordinal.
+ */
+export interface StreamReconnect {
+  retry_ms: number;
+}
+
+/** The longest a client waits on a `reconnect` frame, whatever it says. */
+const MAX_RECONNECT_MS = 10_000;
+
+/** `url` with `after` set to `ordinal`, the stream's resume cursor. */
+export function resumeUrl(url: string, ordinal: number | null): string {
+  if (ordinal === null) return url;
+  const base = url.replace(/([?&])after=[^&]*&?/, '$1').replace(/[?&]$/, '');
+  return `${base}${base.includes('?') ? '&' : '?'}after=${ordinal}`;
+}
+
 /** One `message.delta` frame's `data` (the server's `MessageDeltaView`). */
 export interface StreamDelta {
   turn_id: string;
@@ -84,9 +102,14 @@ export const CHAT_EVENT_SOURCE = new InjectionToken<EventSourceFactory>('CHAT_EV
 /**
  * An open conversation stream. The browser's `EventSource` reconnects on its
  * own and resumes from the last durable `id`; {@link close} ends it for good.
+ * A `reconnect` frame (the server is draining, AB7-T5) closes this source and
+ * opens a new one after the delay it names, from the last durable ordinal.
  */
 export class ChatStream {
   private source: EventSourceLike | null = null;
+  /** The ordinal of the last durable event received. */
+  private lastOrdinal: number | null = null;
+  private reopenTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly url: string,
@@ -95,14 +118,27 @@ export class ChatStream {
   ) {}
 
   open(): void {
-    if (this.source) return;
-    const source = this.factory(this.url);
+    if (this.source || this.reopenTimer !== null) return;
+    const source = this.factory(resumeUrl(this.url, this.lastOrdinal));
     for (const type of DURABLE_EVENTS) {
       source.addEventListener(type, (e) => {
         const parsed = parse<StreamEvent>(e.data);
-        if (parsed) this.handlers.event(parsed);
+        if (!parsed) return;
+        if (typeof parsed.ordinal === 'number') this.lastOrdinal = parsed.ordinal;
+        this.handlers.event(parsed);
       });
     }
+    source.addEventListener('reconnect', (e) => {
+      if (this.source !== source) return;
+      const asked = parse<StreamReconnect>(e.data)?.retry_ms;
+      const wait = Math.min(MAX_RECONNECT_MS, Math.max(0, typeof asked === 'number' ? asked : 1000));
+      this.source = null;
+      source.close();
+      this.reopenTimer = setTimeout(() => {
+        this.reopenTimer = null;
+        this.open();
+      }, wait);
+    });
     source.addEventListener('message.delta', (e) => {
       const parsed = parse<StreamDelta>(e.data);
       if (parsed && typeof parsed.text === 'string') this.handlers.delta(parsed);
@@ -119,6 +155,8 @@ export class ChatStream {
   }
 
   close(): void {
+    if (this.reopenTimer !== null) clearTimeout(this.reopenTimer);
+    this.reopenTimer = null;
     this.source?.close();
     this.source = null;
   }

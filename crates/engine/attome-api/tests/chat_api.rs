@@ -2390,6 +2390,122 @@ async fn a_reconnect_from_the_last_ordinal_misses_no_semantic_event() {
     );
 }
 
+/// Reads a stream to its end (or `wait`) and returns every frame as
+/// `(event, id, data)`, keep-alives left out.
+async fn raw_frames(
+    app: &Router,
+    cookie: &str,
+    uri: &str,
+    last_event_id: Option<i64>,
+    wait: std::time::Duration,
+) -> Vec<(Option<String>, Option<String>, Value, Option<String>)> {
+    use futures_util::StreamExt;
+    let mut req = Request::builder()
+        .method("GET")
+        .uri(uri)
+        .header("origin", ORIGIN)
+        .header("sec-fetch-site", "same-origin")
+        .header("cookie", cookie);
+    if let Some(id) = last_event_id {
+        req = req.header("last-event-id", id.to_string());
+    }
+    let resp = app
+        .clone()
+        .oneshot(req.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let mut body = resp.into_body().into_data_stream();
+    let deadline = tokio::time::Instant::now() + wait;
+    let mut buffer = String::new();
+    let mut frames = Vec::new();
+    loop {
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        let Ok(Some(chunk)) = tokio::time::timeout(remaining, body.next()).await else {
+            break;
+        };
+        buffer.push_str(&String::from_utf8_lossy(&chunk.expect("stream chunk")));
+        while let Some(end) = buffer.find(
+            "
+
+",
+        ) {
+            let raw: String = buffer.drain(..end + 2).collect();
+            let (mut id, mut event, mut data, mut retry) = (None, None, None, None);
+            for line in raw.lines() {
+                if let Some(v) = line.strip_prefix("id:") {
+                    id = Some(v.trim().to_owned());
+                } else if let Some(v) = line.strip_prefix("event:") {
+                    event = Some(v.trim().to_owned());
+                } else if let Some(v) = line.strip_prefix("data:") {
+                    data = Some(v.trim().to_owned());
+                } else if let Some(v) = line.strip_prefix("retry:") {
+                    retry = Some(v.trim().to_owned());
+                }
+            }
+            if let Some(data) = data {
+                frames.push((
+                    event,
+                    id,
+                    serde_json::from_str(&data).expect("frame data is JSON"),
+                    retry,
+                ));
+            }
+        }
+    }
+    frames
+}
+
+/// AB7-T5: a draining node ends the stream with one `reconnect` frame
+/// (`retry_ms` 500 to 3000, no `id`) and closes it; the client's reconnect
+/// from its `Last-Event-ID` replays exactly the events after it.
+#[tokio::test]
+async fn sse_resumes_after_last_event_id() {
+    let fx = skip_if_no_db!(fixture().await);
+    let (conversation, _) = fx.start("reversible").await;
+    let (entity, record) = writable_record(&fx).await;
+    turn_awaiting_confirmation(&fx, conversation, "d1", &entity, record).await;
+    let total = event_count(&fx, conversation).await;
+    assert!(total >= 2, "{total}");
+
+    fx.state.base.drain_signal.send_replace(true);
+    let frames = raw_frames(
+        &fx.app,
+        &fx.owner_cookie,
+        &stream_uri(conversation, None),
+        Some(1),
+        STREAM_WAIT,
+    )
+    .await;
+    let (event, id, data, retry) = frames.last().expect("a frame before the close").clone();
+    assert_eq!(event.as_deref(), Some("reconnect"), "{frames:?}");
+    assert_eq!(id, None, "the reconnect frame does not move the cursor");
+    let retry_ms = data["retry_ms"].as_i64().expect("retry_ms");
+    assert!((500..=3000).contains(&retry_ms), "{retry_ms}");
+    assert_eq!(
+        retry,
+        Some(retry_ms.to_string()),
+        "EventSource's own retry agrees"
+    );
+
+    // The client comes back after the restart with its last durable id.
+    fx.state.base.drain_signal.send_replace(false);
+    let (_, _, rest) = stream_frames(
+        &fx.app,
+        Some(&fx.owner_cookie),
+        &stream_uri(conversation, None),
+        Some(1),
+        (total - 1) as usize,
+        STREAM_WAIT,
+    )
+    .await;
+    assert_eq!(
+        ordinals(&rest),
+        (2..=total).collect::<Vec<_>>(),
+        "every event after the last one seen, none before it"
+    );
+}
+
 /// **E3 — replay hands over to live without a gap or a duplicate.** A stream
 /// opened at the current end receives the next turn's events as they commit,
 /// contiguous from `last + 1`.

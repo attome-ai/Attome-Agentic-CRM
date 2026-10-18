@@ -31,6 +31,7 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
+use futures_util::FutureExt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
@@ -1293,6 +1294,12 @@ pub struct StreamEventView {
 /// events only (I-14, A-78). A delta for a turn whose `message.completed`
 /// this stream has already sent is dropped: the answer supersedes it (A-79).
 /// When Redis is unavailable there are no deltas and nothing else changes.
+///
+/// **Drain (AB7-T5).** When this node starts draining, the stream sends one
+/// `reconnect` frame — `{retry_ms}`, 500 to 3000 ms, with no `id` — and
+/// closes, so a restart is never held open by a chat. The client waits that
+/// long and reopens from its last durable ordinal (`Last-Event-ID` or
+/// `after`), landing on a node that is not draining.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/conversations/{id}/stream",
@@ -1338,11 +1345,22 @@ async fn stream_conversation(
             deltas,
             completed_turns: std::collections::HashSet::new(),
             next_poll: tokio::time::Instant::now(),
+            drain: Box::pin(state.base.shutdown_signal()),
+            drained: false,
         },
         |mut s| async move {
             loop {
                 if let Some(event) = s.pending.pop_front() {
                     return Some((Ok(event), s));
+                }
+                if s.drained {
+                    return None;
+                }
+                // AB7-T5: the node is draining; say so and close.
+                if (&mut s.drain).now_or_never().is_some() {
+                    s.drained = true;
+                    s.pending.push_back(reconnect_frame(reconnect_delay_ms()));
+                    continue;
                 }
                 let now = tokio::time::Instant::now();
                 if now >= s.deadline {
@@ -1384,9 +1402,13 @@ async fn stream_conversation(
                     Some(deltas) => tokio::select! {
                         delta = deltas.recv() => Some(delta),
                         _ = tokio::time::sleep_until(wake) => None,
+                        () = &mut s.drain => None,
                     },
                     None => {
-                        tokio::time::sleep_until(wake).await;
+                        tokio::select! {
+                            _ = tokio::time::sleep_until(wake) => {}
+                            () = &mut s.drain => {}
+                        }
                         None
                     }
                 };
@@ -1421,6 +1443,28 @@ struct StreamCursor {
     /// superseded and dropped.
     completed_turns: std::collections::HashSet<Uuid>,
     next_poll: tokio::time::Instant,
+    /// Resolves when this node starts draining (AB7-T5).
+    drain: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>,
+    /// The drain was seen and the `reconnect` frame queued.
+    drained: bool,
+}
+
+/// How long a client waits before reconnecting after a drain: 500 to 3000
+/// ms, spread by the clock so a node's streams do not all return at once.
+fn reconnect_delay_ms() -> u64 {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.subsec_nanos());
+    500 + u64::from(nanos) % 2501
+}
+
+/// The `reconnect` frame: no `id`, so the client's cursor stays on its last
+/// durable event; `retry` tells a plain `EventSource` the same delay.
+fn reconnect_frame(retry_ms: u64) -> axum::response::sse::Event {
+    axum::response::sse::Event::default()
+        .event("reconnect")
+        .retry(std::time::Duration::from_millis(retry_ms))
+        .data(serde_json::json!({ "retry_ms": retry_ms }).to_string())
 }
 
 impl StreamCursor {
@@ -1612,6 +1656,14 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod mode_tests {
     use super::*;
+
+    #[test]
+    fn a_reconnect_frame_waits_half_a_second_to_three() {
+        for _ in 0..50 {
+            let delay = reconnect_delay_ms();
+            assert!((500..=3000).contains(&delay), "{delay}");
+        }
+    }
 
     fn actions() -> impl Iterator<Item = (String, bool)> {
         [

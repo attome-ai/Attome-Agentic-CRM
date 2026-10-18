@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ChatStream, DURABLE_EVENTS, DeltaBuffer } from './chat-stream';
+import { ChatStream, DURABLE_EVENTS, DeltaBuffer, resumeUrl } from './chat-stream';
 import type { EventSourceLike } from './chat-stream';
 
 class FakeSource implements EventSourceLike {
@@ -25,7 +25,7 @@ describe('ChatStream', () => {
     const stream = new ChatStream('/stream', { event, delta }, () => source);
     stream.open();
 
-    expect([...source.listeners.keys()].sort()).toEqual([...DURABLE_EVENTS, 'message.delta', 'error'].sort());
+    expect([...source.listeners.keys()].sort()).toEqual([...DURABLE_EVENTS, 'message.delta', 'reconnect', 'error'].sort());
     source.emit('turn.started', { ordinal: 1, turn_id: 't1', type: 'turn.started', payload: {} });
     source.emit('message.delta', { turn_id: 't1', text: 'Hel' });
     expect(event).toHaveBeenCalledWith(expect.objectContaining({ type: 'turn.started', ordinal: 1 }));
@@ -49,6 +49,45 @@ describe('ChatStream', () => {
     expect(closed).toHaveBeenCalledTimes(1);
     stream.open();
     expect(sources).toHaveLength(2);
+  });
+
+  it('reopens stream with last event id on reconnect', () => {
+    vi.useFakeTimers();
+    try {
+      const urls: string[] = [];
+      const sources: FakeSource[] = [];
+      const closed = vi.fn();
+      const stream = new ChatStream('/api/v1/ai/conversations/c1/stream', { event: vi.fn(), delta: vi.fn(), closed }, (url) => {
+        urls.push(url);
+        sources.push(new FakeSource());
+        return sources[sources.length - 1];
+      });
+      stream.open();
+      sources[0].emit('turn.started', { ordinal: 6, turn_id: 't1', type: 'turn.started', payload: {} });
+      sources[0].emit('message.completed', { ordinal: 7, turn_id: 't1', type: 'message.completed', payload: {} });
+      // The server is draining: it says when to come back, then closes.
+      sources[0].emit('reconnect', { retry_ms: 1500 });
+      expect(sources[0].closed).toBe(true);
+      expect(closed).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1499);
+      expect(sources).toHaveLength(1);
+      vi.advanceTimersByTime(1);
+      expect(urls).toEqual(['/api/v1/ai/conversations/c1/stream', '/api/v1/ai/conversations/c1/stream?after=7']);
+      // Closing while a reopen is pending cancels it.
+      sources[1].emit('reconnect', { retry_ms: 500 });
+      stream.close();
+      vi.advanceTimersByTime(5000);
+      expect(sources).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('builds the resume url from the last ordinal', () => {
+    expect(resumeUrl('/s', null)).toBe('/s');
+    expect(resumeUrl('/s', 3)).toBe('/s?after=3');
+    expect(resumeUrl('/s?after=1', 9)).toBe('/s?after=9');
+    expect(resumeUrl('/s?x=1', 2)).toBe('/s?x=1&after=2');
   });
 
   it('skips a frame it cannot parse instead of throwing', () => {

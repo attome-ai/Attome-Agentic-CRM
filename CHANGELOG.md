@@ -355,6 +355,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   load-test run and each criterion benchmark's mean; compare fails when a class's median p95 grew
   past its `regression_threshold_pct` (new optional catalogue field, 10% when unset) against the
   previous release on the same machine. `attome release --check --perf` runs it as `perf_compare`.
+- Chat streams survive a restart (AB7-T5): when a node starts draining, `GET
+  /api/v1/ai/conversations/{id}/stream` sends one `reconnect` frame (`{retry_ms}`, 500 to 3000 ms,
+  no `id`, with the SSE `retry` field) and closes instead of holding the shutdown open; the chat
+  panel waits that long and reopens from its last durable ordinal, so no event is lost or repeated.
 - Operations: reports and exports read through their own small pool (AB6-T6), `attome-long`: the
   `attome_readonly` role on the primary, sized by `database.pools.long` (at most 4 by default, 5% of
   the connection budget when sized from it), so a minutes-long export or a report never holds a
