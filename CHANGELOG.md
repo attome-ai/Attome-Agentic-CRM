@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: customer payments (F5) summarised: `/api/v1/billing/payments*` (record, reverse, refund),
+  `/api/v1/billing/payment-links`, the public `/api/v1/pay/{token}` page API, and
+  `/api/v1/billing/gateways/{system}/webhook`; gateways, links, saved-card charges and
+  reconciliation are off until configured; see docs/invoicing.md.
 - Billing: payment screens (F5-T15). The public hosted payment page at `/pay/:token` (Arabic and
   English, right to left in Arabic, three-decimal currencies) starts the checkout and sends the
   payer to the gateway or embeds its form; Billing > Payments in the sidebar; views "Payments this

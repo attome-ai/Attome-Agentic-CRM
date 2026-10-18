@@ -105,6 +105,12 @@ and JOD) and the screens read right to left in Arabic.
 Card and wallet payments run through the customer's own merchant account at Moyasar or HyperPay;
 Attome never sees a card number.
 
+Card data stays with the gateway: the payer types it on the gateway's page or in its form, so the
+deployment follows the SAQ A pattern. This describes scope; it is not a PCI certification. Off until
+set up: every gateway (until `billing.gateway.rules` names one), payment links and the payment page,
+saved-card charges (`billing.saved_methods.enabled`), and reconciliation. Not built yet: credit limits
+and paying from the customer portal.
+
 - A gateway is an integration system of kind `payment_gateway`: its `base_url` (Moyasar
   `https://api.moyasar.com/v1`; HyperPay `https://eu-prod.oppwa.com`, test `https://eu-test.oppwa.com`),
   `config` `{"gateway": "moyasar"}` or `{"gateway": "hyperpay"}`, and its credential:
