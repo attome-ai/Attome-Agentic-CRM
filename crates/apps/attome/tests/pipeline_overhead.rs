@@ -421,7 +421,7 @@ async fn build_app() -> Option<(axum::Router, AppState, AppConfig)> {
             .with_state(base_state.clone()),
         ))
         .add_bundle(bundle(
-            attome::openapi::routes().with_state(base_state.clone()),
+            attome::openapi::routes().with_state(attome_state.clone()),
         ))
         .add_bundle(bundle(
             attome::omnichannel::routes().with_state(attome_state.clone()),

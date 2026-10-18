@@ -32,6 +32,8 @@ pub mod observability;
 /// comment.
 pub mod omnichannel;
 pub mod openapi;
+/// S2-T14: the document each caller is served.
+pub mod openapi_filter;
 /// S2-T7 — policy extensions on every operation.
 pub mod openapi_policy;
 pub mod platform_seed_lock;

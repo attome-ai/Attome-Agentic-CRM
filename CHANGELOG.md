@@ -1376,6 +1376,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- `GET /api/v1/openapi.json` is filtered per caller (S2-T14): only the operations of the modules
+  switched on (`x-module`), none under `/api/v1/admin` for a caller who is not an administrator,
+  and only the component schemas still referred to. It carries an `ETag` (the release, the module
+  set and the admin flag) and answers `If-None-Match` with 304. The full document is still what
+  `attome serve --print-openapi` and the committed `openapi.json` hold.
 - Idempotency keys on consequential operations (custom actions, bulk jobs, billing and payment
   changes, messages sent) always use the durable Postgres tier, and on a deployment without Redis
   every key does (S9-T2); a bulk job's record is kept for `idempotency.bulk_retention_hours`

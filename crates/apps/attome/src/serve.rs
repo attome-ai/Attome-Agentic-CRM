@@ -242,7 +242,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // `auth_protected_bundle` — it is not bypass-listed, so it rides the
     // normal AuthnLayer like every other protected route.
     let openapi_bundle =
-        attome_server::RouteBundle::new(attome::openapi::routes().with_state(base_state.clone()));
+        attome_server::RouteBundle::new(attome::openapi::routes().with_state(attome_state.clone()));
     // M53 Phase 1 (Omnichannel, web chat only, D-474): the public web chat
     // widget endpoint. Bypass-listed (own manual license check), same shape
     // as `content_public.rs`/`service_public.rs` — but mounted here rather

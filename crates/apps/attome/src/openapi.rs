@@ -16,10 +16,14 @@
 //!     `generate:api` codegen and CI's drift check use, so neither needs a
 //!     live authenticated server just to read the contract.
 
-use attome_auth::session::SessionClaims;
-use attome_server::AppState;
-use attome_types::ErrorResponse;
-use axum::{Extension, Json, Router, routing::get};
+use attome_core::EngineState;
+use attome_server::authz::{Authorized, SelfService};
+use attome_types::{AppError, ErrorResponse};
+use axum::extract::State;
+use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::response::{IntoResponse, Response};
+use axum::{Json, Router, routing::get};
+use std::collections::BTreeSet;
 use std::sync::{Arc, LazyLock};
 
 /// Built once per process: assembling the document walks every generated
@@ -366,22 +370,43 @@ struct SelfDoc;
     get,
     path = "/api/v1/openapi.json",
     tag = "operations",
-    summary = "This API's own OpenAPI 3.1 document",
+    summary = "This API's own OpenAPI 3.1 document, as this caller may use it",
+    description = "Only the operations of the modules switched on here, and none under \
+        `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the \
+        `ETag` back in `If-None-Match` to get a 304 while nothing has changed.",
+    params(("If-None-Match" = Option<String>, Header, description = "The ETag of a document the client holds")),
     responses(
-        (status = 200, description = "The generated OpenAPI 3.1 document"),
+        (status = 200, description = "The generated OpenAPI 3.1 document, filtered for the caller"),
+        (status = 304, description = "Unchanged since the ETag in If-None-Match"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn openapi_json(
-    // Not read — its presence is what makes the route unreachable without a
-    // valid session/API key, matching every other non-bypass-listed route.
-    Extension(_claims): Extension<SessionClaims>,
-) -> Json<Arc<utoipa::openapi::OpenApi>> {
-    Json(document())
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    let modules = state.modules.load();
+    let enabled: BTreeSet<String> = modules.names().map(str::to_owned).collect();
+    let is_admin = ctx.is_admin;
+    let etag = crate::openapi_filter::etag(env!("CARGO_PKG_VERSION"), &enabled, is_admin);
+    let etag_header = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
+    let unchanged = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.split(',').any(|tag| tag.trim() == etag));
+    if unchanged {
+        return Ok((StatusCode::NOT_MODIFIED, [(header::ETAG, etag_header)]).into_response());
+    }
+    let full = serde_json::to_value(&*document()).map_err(AppError::internal)?;
+    let filtered = crate::openapi_filter::cached(&etag, || {
+        crate::openapi_filter::filter_document(&full, &enabled, is_admin)
+    });
+    Ok(([(header::ETAG, etag_header)], Json(filtered)).into_response())
 }
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<EngineState> {
     Router::new().route("/api/v1/openapi.json", get(openapi_json))
 }
 

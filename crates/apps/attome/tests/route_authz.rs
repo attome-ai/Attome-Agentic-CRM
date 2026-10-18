@@ -203,11 +203,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "GET",
-        "/api/v1/openapi.json",
-        "Static, generated API description with no customer data in it. Still behind authn - it is not on the bypass list.",
-    ),
-    (
-        "GET",
         "/health/ready",
         "Readiness probe: reports whether this node can serve safely (database, cache, registry pre-warm). Public by design so a load balancer can poll it; it returns no data.",
     ),
