@@ -40,3 +40,17 @@ nmake /F Makefile.win install
 Then add those steps to `.github/workflows/release.yml`'s Windows job, ship `vector.dll` and the
 extension's control and SQL files in the archive, and let `install.ps1` install PostgreSQL 18 and
 copy them in when no `-DatabaseUrl` is given.
+
+## Run the auth fuzz targets
+
+`crates/foundation/attome-auth/fuzz` is its own workspace (nightly toolchain, libFuzzer), so no
+gate runs it. Z4-T11 added two targets; run each for a minute on Linux or WSL and keep the corpus:
+
+```sh
+cd crates/foundation/attome-auth/fuzz
+cargo +nightly fuzz run fuzz_jwks_eddsa_token -- -max_total_time=60
+cargo +nightly fuzz run fuzz_otp_verify_normalise -- -max_total_time=60
+```
+
+The fuzz crate's own `Cargo.lock` predates `ed25519-dalek` in attome-auth; the first run updates it.
+Commit the updated lock with the corpus.
