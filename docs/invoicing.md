@@ -121,6 +121,13 @@ Attome never sees a card number.
   reads `GET /api/v1/pay/{token}` and starts payment with `POST /api/v1/pay/{token}/checkout`; both
   are public, rate limited, and answer the same 404 for a wrong, expired, used or cancelled link.
   A link is used when its payment succeeds, which pays its invoice first.
+- The payer opens the link at `/pay/<token>`: a public page, in Arabic or English (from the payer's
+  browser, with a toggle, right to left in Arabic), showing the amount, the invoice number and the
+  seller. Pay sends them to the gateway's own page (Moyasar), or shows the gateway's form on the page
+  (HyperPay). Card details are only ever typed on the gateway's page or form. HyperPay's form needs
+  its host allowed in the Content-Security-Policy (`script-src`, `frame-src`), which ships without it.
+- Billing > Payments in the sidebar lists payments, with views of this month's payments, unallocated
+  credit, open disputes and payouts with differences.
 - Saved cards (off until `billing.saved_methods.enabled` is on): each day, a due invoice with an open
   amount is charged to its account's default saved payment method. A charge whose answer was lost is
   asked again with the same key, so the gateway charges it once. A failed charge is retried after the

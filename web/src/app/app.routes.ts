@@ -88,6 +88,12 @@ export const routes: Routes = [
     redirectTo: '/xrm/admin/release-reports/:id',
   },
   {
+    // F5-T15: the hosted payment page a payment link opens. Public, no
+    // session; ahead of the Content Management catch-all below.
+    path: 'pay/:token',
+    loadComponent: () => import('./pages/pay/pay-page.component').then(m => m.PayPageComponent),
+  },
+  {
     // Work Intake self-service portal (M70, D-423) — public offering
     // browsing + request-status-by-token lookup, no session/authGuard. Must
     // sit ahead of the Content Management catch-all below, or a real deep

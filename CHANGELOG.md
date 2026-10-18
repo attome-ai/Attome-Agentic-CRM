@@ -34,6 +34,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing: payment screens (F5-T15). The public hosted payment page at `/pay/:token` (Arabic and
+  English, right to left in Arabic, three-decimal currencies) starts the checkout and sends the
+  payer to the gateway or embeds its form; Billing > Payments in the sidebar; views "Payments this
+  month", "Unallocated credit", "Open disputes" and "Payouts with differences". Pack changeset 0021.
 - Billing: payment roles and field security (F5-T14, roles and fields). The Payments Viewer role;
   saved-method reads for receivables and finance; `customer_payment.gateway_reference` and `fee` and
   every `gateway_payout` field are sensitive and readable only through the Finance Manager's

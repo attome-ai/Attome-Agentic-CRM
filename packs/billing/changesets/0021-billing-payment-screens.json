@@ -1,0 +1,214 @@
+{
+  "author": "packs",
+  "checksum": "sha256:6dc5ef678337da0856ac2b20162b23dd29eb7834ae0461c48698b7e437000e85",
+  "closed_at": "2026-10-18T00:00:00Z",
+  "description": "Payment screens (F5-T15): views of this month's payments, unallocated credit, open disputes and payouts with differences, and Billing > Payments in the sidebar for those who read payments.",
+  "format": "attome-changeset/v1",
+  "id": "01a14d91-f2bd-7e72-8e66-bc530545ac53",
+  "layer": "product",
+  "name": "billing-payment-screens",
+  "opened_at": "2026-10-18T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "customer_payment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Payments this month",
+          "required_privilege": "customer_payment.read",
+          "sql": "SELECT id, name, payer_account_ref, amount, currency, method, status, received_on, reference, unallocated FROM \"customer_payment\" WHERE is_active IS NOT FALSE AND received_on >= date_trunc('month', now()) ORDER BY received_on DESC, name",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "query": "Payments this month"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "customer_payment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Unallocated credit",
+          "required_privilege": "customer_payment.read",
+          "sql": "SELECT id, name, payer_account_ref, amount, currency, method, status, received_on, reference, unallocated FROM \"customer_payment\" WHERE is_active IS NOT FALSE AND unallocated > 0 AND status IN ('succeeded', 'partially_refunded') ORDER BY received_on, name",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "query": "Unallocated credit"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "payment_dispute",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Open disputes",
+          "required_privilege": "payment_dispute.read",
+          "sql": "SELECT id, payment_ref, amount, reason_code, evidence_due, status FROM \"payment_dispute\" WHERE is_active IS NOT FALSE AND status IN ('open', 'evidence_submitted') ORDER BY evidence_due, id",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "target": {
+        "entity": "payment_dispute",
+        "query": "Open disputes"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "customer_payment",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Payments this month",
+          "query": {
+            "entity": "customer_payment",
+            "name": "Payments this month"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "view": "Payments this month"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "customer_payment",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Unallocated credit",
+          "query": {
+            "entity": "customer_payment",
+            "name": "Unallocated credit"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "target": {
+        "entity": "customer_payment",
+        "view": "Unallocated credit"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "payment_dispute",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Open disputes",
+          "query": {
+            "entity": "payment_dispute",
+            "name": "Open disputes"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "target": {
+        "entity": "payment_dispute",
+        "view": "Open disputes"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "gateway_payout",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Payouts with differences",
+          "query": {
+            "entity": "gateway_payout",
+            "name": "Billing: Payouts with differences"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "target": {
+        "entity": "gateway_payout",
+        "view": "Payouts with differences"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-clipboard-check",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "billing",
+          "path": [
+            "Billing",
+            "Payments"
+          ],
+          "privileges": [
+            "customer_payment.read"
+          ],
+          "route": "/xrm/entity/customer_payment/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Billing/Payments"
+      },
+      "seq": 8
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 21,
+  "title": "Pack: payment views and sidebar"
+}

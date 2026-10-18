@@ -44,6 +44,20 @@ export const hostEn = {
       dismiss: 'I have copied it',
     },
   },
+  // The hosted payment page (F5-T15, src/app/pages/pay).
+  pay: {
+    title: 'Pay securely',
+    otherLanguage: 'العربية',
+    loading: 'Loading the payment…',
+    notFound: 'This payment link is not valid. It may have expired or been used. Ask the sender for a new link.',
+    seller: 'Paying',
+    invoice: 'Invoice',
+    amount: 'Amount',
+    pay: 'Pay',
+    starting: 'Opening the payment page…',
+    failed: 'The payment could not be started. Please try again.',
+    secure: 'You enter your card details on the payment provider\'s secure page, not here.',
+  },
   // Also recovered from the unimported en.json.
   register: {
     emailTaken: 'Email already registered.',
