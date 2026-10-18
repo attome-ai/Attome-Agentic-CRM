@@ -57,11 +57,27 @@ pub trait EmailProvider {
     ) -> impl Future<Output = Result<ProviderMessageId, SendError>> + Send;
 }
 
+impl std::fmt::Debug for OutgoingEmail<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OutgoingEmail").finish_non_exhaustive()
+    }
+}
+
 /// The provider a message from `from_address` takes.
 pub enum Provider<'a> {
     Smtp(smtp::Smtp<'a>),
     Ses(ses::Ses<'a>),
     SendGrid(sendgrid::SendGrid<'a>),
+}
+
+impl std::fmt::Debug for Provider<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Smtp(_) => "Provider::Smtp",
+            Self::Ses(_) => "Provider::Ses",
+            Self::SendGrid(_) => "Provider::SendGrid",
+        })
+    }
 }
 
 impl Provider<'_> {

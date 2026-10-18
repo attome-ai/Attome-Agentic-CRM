@@ -21,6 +21,12 @@ pub struct Ses<'a> {
     pub settings: &'a SesSettings,
 }
 
+impl std::fmt::Debug for Ses<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ses").finish_non_exhaustive()
+    }
+}
+
 impl Ses<'_> {
     fn endpoint(&self) -> String {
         self.settings

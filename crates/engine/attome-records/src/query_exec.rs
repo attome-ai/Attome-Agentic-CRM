@@ -1331,10 +1331,12 @@ async fn execute(
         .get(axum::http::header::CACHE_CONTROL)
         .and_then(|v| v.to_str().ok())
         .is_some_and(|v| v.contains("no-cache"));
+    let user_key = ctx.user_id.to_string();
+    let ctx = &ctx;
     let run = |body: ExecuteQueryRequest| {
         let state = state.clone();
         async move {
-            let response = execute_stored_query(&state, &ctx, body).await?;
+            let response = execute_stored_query(&state, ctx, body).await?;
             serde_json::to_value(response).map_err(AppError::internal)
         }
     };
@@ -1350,7 +1352,7 @@ async fn execute(
         Err(_) => return run(body).await.map(Json),
     };
     cache
-        .get_or_load_for(&ctx.user_id.to_string(), &key, run(body))
+        .get_or_load_for(&user_key, &key, run(body))
         .await
         .map(Json)
 }
