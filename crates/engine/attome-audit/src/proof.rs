@@ -55,7 +55,7 @@ pub fn merkle_path(leaves: &[[u8; 32]], index: usize) -> Vec<ProofStep> {
     let mut level = leaves.to_vec();
     let mut i = index;
     while level.len() > 1 {
-        let (sibling, side) = if i % 2 == 0 {
+        let (sibling, side) = if i.is_multiple_of(2) {
             (*level.get(i + 1).unwrap_or(&level[i]), ProofSide::Right)
         } else {
             (level[i - 1], ProofSide::Left)
@@ -112,6 +112,10 @@ pub struct InclusionProof {
     pub anchor_key: String,
 }
 
+/// `audit_chain_batch`'s organization, previous hash, root, key id and
+/// signature.
+type BatchRow = (Uuid, String, String, Option<String>, Option<String>);
+
 /// A sealed batch, with its leaves in order.
 struct Batch {
     organization: Uuid,
@@ -125,7 +129,7 @@ struct Batch {
 }
 
 async fn load_batch(db: &DbPool, batch_id: Uuid) -> Result<Batch, AppError> {
-    let row: Option<(Uuid, String, String, Option<String>, Option<String>)> = sqlx::query_as(
+    let row: Option<BatchRow> = sqlx::query_as(
         "SELECT organization_ref, prev_batch_hash, merkle_root, signing_key_id, signature
            FROM audit_chain_batch WHERE id = $1",
     )

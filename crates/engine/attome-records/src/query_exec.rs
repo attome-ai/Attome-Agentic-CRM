@@ -2489,7 +2489,7 @@ pub async fn execute_stored_query_with_definition(
             base_sql,
             &sort_col,
             &sort_by,
-            &dir,
+            dir,
             &conds,
             params.len() + 1,
             body.after_id.is_some(),
