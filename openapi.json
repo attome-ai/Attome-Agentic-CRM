@@ -10372,6 +10372,412 @@
         ]
       }
     },
+    "/api/v1/admin/data-step-runs/orphan-scans": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "queue_orphan_scan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrphanScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The scan is queued (or was already queued or running)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrphanScanQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "queues a read-only scan of the entity's lookup values; the run row is operational bookkeeping and no record, metadata or security state changes",
+          "reason": "read_only",
+          "via": null
+        }
+      }
+    },
+    "/api/v1/admin/data-step-runs/{id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "get_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run's progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataStepRunStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/data-step-runs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "cancel_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stopped: an orphan scan is abandoned, a field run is failed for its abandon route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataStepRunStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`run_finished`: the run already ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/admin/data-step-runs/{id}/pause": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "pause_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paused; a running batch finishes first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataStepRunStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`run_not_active`: the run is not queued or running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/admin/data-step-runs/{id}/resume": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "resume_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queued again; it continues from its cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataStepRunStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`run_not_paused`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/admin/data/duplicates": {
       "get": {
         "tags": [
@@ -14377,6 +14783,100 @@
         }
       }
     },
+    "/api/v1/admin/entities/{entity_id}/change-plan": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "plan_changes",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each change's class and estimate, in request order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePlan"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No changes, too many, or a malformed one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "classifies proposed structure changes and estimates them; writes nothing",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
     "/api/v1/admin/entities/{entity_id}/ddl-log": {
       "get": {
         "tags": [
@@ -15240,7 +15740,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Solution 7 Phase 2 (D-788 rule 3): renames the field **in place** — the\ncolumn (`ALTER TABLE … RENAME COLUMN`, no data moved), its index and\nCHECK names, the attribute row, and every reference through the hook\nregistry (views, stored queries, forms, labels, rules, state models,\nworkflows, field security, lineage; customer objects adjusted and\nreported), in one transaction. No alias: API integrations using the old\nname break (reported as a breaking change). A reference of ours that\ncannot be rewritten safely blocks it (409 `rename_blocked_by_reference`,\nlisted). Recorded as `rename_field`.",
+        "summary": "Solution 7 Phase 2 (D-788 rule 3): renames the field **in place** — the\ncolumn (`ALTER TABLE … RENAME COLUMN`, no data moved), its index and\nCHECK names, the attribute row, and every reference through the hook\nregistry (views, stored queries, forms, labels, rules, state models,\nworkflows, field security, lineage; customer objects adjusted and\nreported), in one transaction. Y12-T8: the old name keeps working in the\nrecord API for `RENAME_ALIAS_DAYS` (with a `Deprecation` header), and the\nrelease report lists it as a breaking change for after that. A reference of ours that\ncannot be rewritten safely blocks it (409 `rename_blocked_by_reference`,\nlisted). Recorded as `rename_field`.",
         "operationId": "rename_attribute",
         "parameters": [
           {
@@ -16034,7 +16534,7 @@
             }
           },
           "409": {
-            "description": "orphan_scan_required: the table is over the inline limit and no scan has finished; POST .../orphans/scan",
+            "description": "orphan_scan_required: the table is over the inline limit and no scan has finished; POST /api/v1/admin/data-step-runs/orphan-scans",
             "content": {
               "application/json": {
                 "schema": {
@@ -16052,80 +16552,6 @@
             "api_key": []
           }
         ]
-      }
-    },
-    "/api/v1/admin/entities/{entity_id}/orphans/scan": {
-      "post": {
-        "tags": [
-          "admin"
-        ],
-        "operationId": "queue_orphan_scan",
-        "parameters": [
-          {
-            "name": "entity_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "The scan is queued (or was already queued or running)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrphanScanQueued"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Caller lacks system.admin",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such entity",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "session_cookie": []
-          },
-          {
-            "api_key": []
-          }
-        ],
-        "x-audit-exempt": {
-          "note": "queues a read-only scan of the entity's lookup values; the run row is operational bookkeeping and no record, metadata or security state changes",
-          "reason": "read_only",
-          "via": null
-        }
       }
     },
     "/api/v1/admin/entities/{entity_id}/scaffold-ui": {
@@ -81991,6 +82417,67 @@
           "settings"
         ]
       },
+      "ChangePlan": {
+        "type": "object",
+        "description": "The plan.",
+        "required": [
+          "changes",
+          "total_estimate_secs"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChangePlanEntry"
+            }
+          },
+          "total_estimate_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The sum of the estimates.",
+            "minimum": 0
+          }
+        }
+      },
+      "ChangePlanEntry": {
+        "type": "object",
+        "description": "One change's class and estimate.",
+        "required": [
+          "change",
+          "class",
+          "estimate_secs"
+        ],
+        "properties": {
+          "change": {
+            "type": "string"
+          },
+          "class": {
+            "type": "string",
+            "description": "`instant`, `online` or `background`."
+          },
+          "estimate_secs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "ChangePlanRequest": {
+        "type": "object",
+        "description": "The proposed changes.",
+        "required": [
+          "changes"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Each `{ \"kind\": ..., \"field\": ... }`: `add_field`, `add_choice_value`,\n`rename_field` (with `to`), `set_required`, `add_index`,\n`set_max_length` (with `max_length`), `change_type` (with `to`),\n`backfill`, `delete_field`."
+          }
+        }
+      },
       "ChangeRequestDecisionResponse": {
         "type": "object",
         "required": [
@@ -87417,6 +87904,84 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "DataStepRunStatus": {
+        "type": "object",
+        "description": "A run's progress.",
+        "required": [
+          "id",
+          "kind",
+          "entity",
+          "status",
+          "rows_scanned",
+          "rows_written",
+          "rows_nulled"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "eta_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Seconds left at the run's rate so far; `None` before it has a rate or\nonce it is not running.",
+            "minimum": 0
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "rows_nulled": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows_scanned": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows_total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The planner's row estimate when the run was queued."
+          },
+          "rows_written": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `claimed`, `running`, `paused`, `succeeded`, `failed` or\n`abandoned`."
           }
         }
       },
@@ -97679,6 +98244,19 @@
             "description": "`false` when a scan of this entity was already queued or running."
           },
           "run_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "OrphanScanRequest": {
+        "type": "object",
+        "description": "The entity to scan.",
+        "required": [
+          "entity_id"
+        ],
+        "properties": {
+          "entity_id": {
             "type": "string",
             "format": "uuid"
           }

@@ -1809,6 +1809,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/data-step-runs/orphan-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["queue_orphan_scan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-step-runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-step-runs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancel_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-step-runs/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pause_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-step-runs/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resume_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/data/duplicates": {
         parameters: {
             query?: never;
@@ -2501,6 +2581,22 @@ export interface paths {
         patch: operations["update_entity"];
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/change-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["plan_changes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/ddl-log": {
         parameters: {
             query?: never;
@@ -2702,8 +2798,9 @@ export interface paths {
          *     CHECK names, the attribute row, and every reference through the hook
          *     registry (views, stored queries, forms, labels, rules, state models,
          *     workflows, field security, lineage; customer objects adjusted and
-         *     reported), in one transaction. No alias: API integrations using the old
-         *     name break (reported as a breaking change). A reference of ours that
+         *     reported), in one transaction. Y12-T8: the old name keeps working in the
+         *     record API for `RENAME_ALIAS_DAYS` (with a `Deprecation` header), and the
+         *     release report lists it as a breaking change for after that. A reference of ours that
          *     cannot be rewritten safely blocks it (409 `rename_blocked_by_reference`,
          *     listed). Recorded as `rename_field`.
          */
@@ -2829,22 +2926,6 @@ export interface paths {
         get: operations["list_orphans"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/entities/{entity_id}/orphans/scan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["queue_orphan_scan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16979,6 +17060,33 @@ export interface components {
          * @enum {string}
          */
         ChangeKind: "metadata" | "bundle" | "query" | "workflow" | "dashboard" | "content" | "license" | "security" | "ai" | "settings";
+        /** @description The plan. */
+        ChangePlan: {
+            changes: components["schemas"]["ChangePlanEntry"][];
+            /**
+             * Format: int64
+             * @description The sum of the estimates.
+             */
+            total_estimate_secs: number;
+        };
+        /** @description One change's class and estimate. */
+        ChangePlanEntry: {
+            change: string;
+            /** @description `instant`, `online` or `background`. */
+            class: string;
+            /** Format: int64 */
+            estimate_secs: number;
+        };
+        /** @description The proposed changes. */
+        ChangePlanRequest: {
+            /**
+             * @description Each `{ "kind": ..., "field": ... }`: `add_field`, `add_choice_value`,
+             *     `rename_field` (with `to`), `set_required`, `add_index`,
+             *     `set_max_length` (with `max_length`), `change_type` (with `to`),
+             *     `backfill`, `delete_field`.
+             */
+            changes: Record<string, never>[];
+        };
         ChangeRequestDecisionResponse: {
             /**
              * @description `true` when this call only submitted a pending four-eyes approval
@@ -19091,6 +19199,40 @@ export interface components {
             id: string;
             /** Format: int64 */
             row_count?: number | null;
+            status: string;
+        };
+        /** @description A run's progress. */
+        DataStepRunStatus: {
+            entity: string;
+            error_message?: string | null;
+            /**
+             * Format: int64
+             * @description Seconds left at the run's rate so far; `None` before it has a rate or
+             *     once it is not running.
+             */
+            eta_secs?: number | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: int64 */
+            rows_nulled: number;
+            /** Format: int64 */
+            rows_scanned: number;
+            /**
+             * Format: int64
+             * @description The planner's row estimate when the run was queued.
+             */
+            rows_total?: number | null;
+            /** Format: int64 */
+            rows_written: number;
+            /** Format: date-time */
+            started_at?: string | null;
+            /**
+             * @description `queued`, `claimed`, `running`, `paused`, `succeeded`, `failed` or
+             *     `abandoned`.
+             */
             status: string;
         };
         /** @enum {string} */
@@ -23243,6 +23385,11 @@ export interface components {
             created: boolean;
             /** Format: uuid */
             run_id: string;
+        };
+        /** @description The entity to scan. */
+        OrphanScanRequest: {
+            /** Format: uuid */
+            entity_id: string;
         };
         OutOfOfficeBody: {
             /**
@@ -40233,6 +40380,280 @@ export interface operations {
             };
         };
     };
+    queue_orphan_scan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrphanScanRequest"];
+            };
+        };
+        responses: {
+            /** @description The scan is queued (or was already queued or running) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrphanScanQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run's progress */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataStepRunStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stopped: an orphan scan is abandoned, a field run is failed for its abandon route */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataStepRunStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `run_finished`: the run already ended */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pause_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paused; a running batch finishes first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataStepRunStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `run_not_active`: the run is not queued or running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued again; it continues from its cursor */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataStepRunStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `run_not_paused` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_candidates: {
         parameters: {
             query?: never;
@@ -42771,6 +43192,68 @@ export interface operations {
             };
         };
     };
+    plan_changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Each change's class and estimate, in request order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePlan"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No changes, too many, or a malformed one */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_ddl_log: {
         parameters: {
             query?: {
@@ -43830,57 +44313,8 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description orphan_scan_required: the table is over the inline limit and no scan has finished; POST .../orphans/scan */
+            /** @description orphan_scan_required: the table is over the inline limit and no scan has finished; POST /api/v1/admin/data-step-runs/orphan-scans */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    queue_orphan_scan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The scan is queued (or was already queued or running) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrphanScanQueued"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks system.admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such entity */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
