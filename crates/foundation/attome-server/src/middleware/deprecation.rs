@@ -187,9 +187,104 @@ fn apply_headers(entry: &DeprecatedPath, headers: &mut axum::http::HeaderMap) {
     }
 }
 
+/// S8-T3: an API version being retired (`attome_types::api_version`). A
+/// request answered at it carries `Deprecation` and `Sunset`, like a
+/// deprecated path; after `sunset_at` it is refused with 410
+/// `api_version_sunset`.
+pub struct DeprecatedVersion {
+    pub version: &'static str,
+    /// Seconds since the Unix epoch.
+    pub deprecated_at: i64,
+    /// The RFC 8594 IMF-fixdate for the `Sunset` header.
+    pub sunset: &'static str,
+    /// The same moment as `sunset`, in seconds since the Unix epoch.
+    pub sunset_at: i64,
+}
+
+impl std::fmt::Debug for DeprecatedVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DeprecatedVersion")
+            .field("version", &self.version)
+            .finish_non_exhaustive()
+    }
+}
+
+/// S8-T3: the versions being retired. Empty while one version exists.
+pub const DEPRECATED_VERSIONS: &[DeprecatedVersion] = &[];
+
+/// S8-T3: what the registry says about one version at `now`.
+#[derive(Debug)]
+pub enum VersionNotice<'a> {
+    Current,
+    Deprecated(&'a DeprecatedVersion),
+    Sunset(&'a DeprecatedVersion),
+}
+
+/// S8-T3: [`VersionNotice`] for `version` in `registry`.
+pub fn version_notice_in<'a>(
+    registry: &'a [DeprecatedVersion],
+    version: &str,
+    now: i64,
+) -> VersionNotice<'a> {
+    match registry.iter().find(|entry| entry.version == version) {
+        Some(entry) if now >= entry.sunset_at => VersionNotice::Sunset(entry),
+        Some(entry) => VersionNotice::Deprecated(entry),
+        None => VersionNotice::Current,
+    }
+}
+
+/// S8-T3: [`VersionNotice`] for `version` in [`DEPRECATED_VERSIONS`].
+pub fn version_notice(version: &str, now: i64) -> VersionNotice<'static> {
+    version_notice_in(DEPRECATED_VERSIONS, version, now)
+}
+
+/// S8-T3: the `Deprecation` and `Sunset` headers of a deprecated version.
+pub fn apply_version_headers(entry: &DeprecatedVersion, headers: &mut axum::http::HeaderMap) {
+    if let Ok(value) = HeaderValue::from_str(&format!("@{}", entry.deprecated_at)) {
+        headers.insert("deprecation", value);
+    }
+    if let Ok(value) = HeaderValue::from_str(entry.sunset) {
+        headers.insert("sunset", value);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const OLD_VERSION: DeprecatedVersion = DeprecatedVersion {
+        version: "2025-01",
+        deprecated_at: 1_750_000_000,
+        sunset: "Sat, 29 Aug 2026 00:00:00 GMT",
+        sunset_at: 1_788_048_000,
+    };
+
+    #[test]
+    fn a_deprecated_version_carries_its_headers() {
+        let registry = [OLD_VERSION];
+        let notice = version_notice_in(&registry, "2025-01", 1_760_000_000);
+        let VersionNotice::Deprecated(entry) = notice else {
+            panic!("expected deprecated, got {notice:?}");
+        };
+        let mut headers = axum::http::HeaderMap::new();
+        apply_version_headers(entry, &mut headers);
+        assert_eq!(headers["deprecation"], "@1750000000");
+        assert_eq!(headers["sunset"], "Sat, 29 Aug 2026 00:00:00 GMT");
+        assert!(matches!(
+            version_notice_in(&registry, "2026-10", 1_760_000_000),
+            VersionNotice::Current
+        ));
+    }
+
+    #[test]
+    fn a_version_past_its_sunset_is_refused() {
+        let registry = [OLD_VERSION];
+        assert!(matches!(
+            version_notice_in(&registry, "2025-01", 1_788_048_000),
+            VersionNotice::Sunset(_)
+        ));
+        assert!(DEPRECATED_VERSIONS.is_empty());
+    }
 
     /// A synthetic entry for exercising `find_in`/`apply_registry_to_openapi`
     /// against a fixed, known shape rather than asserting on real production

@@ -161,6 +161,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "api_version_sunset",
+        "The API version this request is answered at was retired; `supported` lists the current ones.",
+        false,
+    ),
+    code(
         "unsupported_api_version",
         "The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.",
         false,

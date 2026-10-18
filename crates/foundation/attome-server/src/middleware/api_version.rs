@@ -18,6 +18,7 @@ use axum::response::{IntoResponse, Response};
 use uuid::Uuid;
 
 use crate::middleware::auth::{ApiKeyIdentity, CookieSession};
+use crate::middleware::deprecation;
 use crate::state::AppState;
 
 /// S8-T1: set by the S2S layer, naming the client whose pin applies.
@@ -91,10 +92,28 @@ pub async fn api_version(State(state): State<AppState>, mut req: Request, next: 
         Ok(version) => version,
         Err(refused) => return unsupported(&refused.requested),
     };
+    // S8-T3: a version past its sunset is refused; a deprecated one says so.
+    let notice = deprecation::version_notice(version, chrono::Utc::now().timestamp());
+    if let deprecation::VersionNotice::Sunset(entry) = notice {
+        let mut response = (
+            StatusCode::GONE,
+            Json(serde_json::json!({
+                "error": "api_version_sunset",
+                "message": format!("API version {} was retired on {}", entry.version, entry.sunset),
+                "supported": api_version::SUPPORTED,
+            })),
+        )
+            .into_response();
+        deprecation::apply_version_headers(entry, response.headers_mut());
+        return response;
+    }
     req.extensions_mut().insert(ApiVersion(version));
     let mut response = next.run(req).await;
     response
         .headers_mut()
         .insert(api_version::HEADER, HeaderValue::from_static(version));
+    if let deprecation::VersionNotice::Deprecated(entry) = notice {
+        deprecation::apply_version_headers(entry, response.headers_mut());
+    }
     response
 }
