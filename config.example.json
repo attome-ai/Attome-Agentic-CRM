@@ -160,6 +160,8 @@
     "otlp_endpoint": null,
     "_profiler_enabled_comment": "attome-profiler — Angular 'Profiler' admin dashboard (live call count/avg/min/max per measure!() probe, Redis-aggregated cluster-wide). false (default) is byte-identical to before this feature: no middleware layer applied, no Redis writes. Costs exactly one EVAL per request when on (one Lua script admits the probe names, bumps every stat hash, slides each TTL and pushes the capped trace ring); keys are attome-profiler:* with a 7 d stats / 24 h trace sliding TTL and at most 2,000 distinct probe names cluster-wide. Read at GET /api/v1/admin/profiler/{stats,trace}, reset with the audited DELETE /api/v1/admin/profiler/stats (system.admin).",
     "profiler_enabled": false,
+    "_comment_server_timing": "AA1-T5: who gets the Server-Timing header (mw, auth, perm, db, app, ext in ms): dev (every response, with APP_ENV=debug only), admins (administrators) or off. While it can be sent, sqlx statement events are read for the db phase, a small cost per query.",
+    "server_timing": "dev",
     "_alert_comment": "AB10-T2: who hears about a built-in alert (observability/builtin-alerts.json) firing or resolving: email addresses (sent through the email section's relay) and incoming-webhook URLs that take {\"text\": ...} (Slack, Teams).",
     "alert_emails": [],
     "alert_webhooks": [],

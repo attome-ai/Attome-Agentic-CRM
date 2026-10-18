@@ -155,6 +155,8 @@
     "_otlp_endpoint_comment": "P-observability-completion — required only when enable_distributed_tracing is true; a per-deployment OTLP collector (Tempo/Jaeger/OTel Collector), never a hosted/shared endpoint.",
     "otlp_endpoint": null,
     "profiler_enabled": false,
+    "_comment_server_timing": "AA1-T5: who gets the Server-Timing header (mw, auth, perm, db, app, ext in ms): dev (every response, with APP_ENV=debug only), admins (administrators) or off. While it can be sent, sqlx statement events are read for the db phase, a small cost per query.",
+    "server_timing": "off",
     "_alert_comment": "AB10-T2: who hears about a built-in alert (observability/builtin-alerts.json) firing or resolving: email addresses (sent through the email section's relay) and incoming-webhook URLs that take {\"text\": ...} (Slack, Teams).",
     "alert_emails": [],
     "alert_webhooks": [],

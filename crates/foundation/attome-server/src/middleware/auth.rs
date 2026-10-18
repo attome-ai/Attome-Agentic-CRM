@@ -413,6 +413,8 @@ pub async fn authz(State(state): State<AppState>, mut req: Request, next: Next) 
             // D-766: a delegated caller's entity ceiling narrows the context
             // before any handler or policy can read it.
             let ctx = AuthorizedContext::for_request(req.extensions(), ctx);
+            // AA1-T5: `observability.server_timing = "admins"` reads this.
+            attome_types::server_timing::note_admin(ctx.get().is_admin);
             req.extensions_mut().insert(ctx);
             next.run(req).await
         }

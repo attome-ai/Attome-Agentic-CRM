@@ -27,6 +27,7 @@ pub mod rate_limit;
 pub mod request_id_body;
 pub mod request_meta;
 pub mod security_headers;
+pub mod server_timing;
 /// AB5-T7 — priority load shedding.
 pub mod shed;
 pub mod trace_context;

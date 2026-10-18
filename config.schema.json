@@ -2053,6 +2053,11 @@
           "description": "attome-profiler: live per-probe call count/avg/min/max dashboard (the\nAngular \"Profiler\" admin page). Default false — byte-identical\nbehavior (no profiler middleware layer, no Redis writes) until a\ndeployment opts in, same \"dark unless configured\" posture as\n`metrics_port == 0`.",
           "type": "boolean"
         },
+        "server_timing": {
+          "default": "dev",
+          "description": "AA1-T5: who gets a `Server-Timing` header splitting each response's\ntime into middleware, authentication, permissions, database, handler\nand outside calls. `dev` (the default): every response, in a debug\nenvironment (`APP_ENV=debug`) only. `admins`: responses to signed-in\nadministrators. `off`: nobody. Measuring the database phase reads\nsqlx's per-statement events, which costs a little on every query\nwhile the header can be sent.",
+          "type": "string"
+        },
         "trace_sampling_rate": {
           "description": "P-observability-completion — `TraceIdRatioBased` sampler ratio once\n`enable_distributed_tracing = true`. Meaningless (and unread) while\nthat flag is false, same \"declared but inert until its gate flips\"\nshape as most other flag-gated fields in this file.",
           "format": "double",

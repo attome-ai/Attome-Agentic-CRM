@@ -175,7 +175,12 @@ where
             return Err(OutboundError::Timeout);
         }
         svc.budget.record_call();
-        let outcome = tokio::time::timeout(timeout, attempt()).await;
+        // AA1-T5: the attempt's time is the request's `ext` phase.
+        let outcome = attome_types::server_timing::timed(
+            attome_types::server_timing::Phase::Ext,
+            tokio::time::timeout(timeout, attempt()),
+        )
+        .await;
         drop(permit);
         let (error, hint) = match outcome {
             Ok(Ok(value)) => {

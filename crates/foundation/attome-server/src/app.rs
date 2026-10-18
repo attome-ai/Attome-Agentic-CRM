@@ -352,6 +352,11 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
                 trace_context::trace_context(trace_context_config.clone(), req, next)
             }))
             .layer(PropagateRequestIdLayer::x_request_id())
+            // AA1-T5: times everything inside it; see `server_timing`.
+            .layer(middleware::from_fn({
+                let mode = crate::middleware::server_timing::Mode::from_config(config);
+                move |req, next| crate::middleware::server_timing::server_timing(mode, req, next)
+            }))
             .layer(mark(config, "cors"))
             .layer(cors_layer(config))
             // Z5-T4: before body limits, rate limits and authentication;
@@ -516,7 +521,10 @@ async fn timeout_response(err: BoxError) -> Response {
 /// before `apply_s2s_layer`/`apply_outer_layers`.
 pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
     use crate::middleware::pipeline_trace::mark;
+    use crate::middleware::server_timing::{Mark, Mode, Phase, phase};
     let config = state.config.clone();
+    // AA1-T5: phase markers for `Server-Timing`; nothing when it is off.
+    let timing = Mode::from_config(&config);
     router.layer(
         ServiceBuilder::new()
             // AA7-T1: outermost of this stack, so a rejection by any layer
@@ -526,14 +534,18 @@ pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
                 crate::middleware::cache_policy::cache_policy,
             ))
             .layer(mark(&config, "authn"))
+            .layer(phase(timing, Phase::Auth, Mark::Start))
             .layer(middleware::from_fn_with_state(state.clone(), auth::authn))
+            .layer(phase(timing, Phase::Auth, Mark::End))
             .layer(mark(&config, "csrf"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 csrf::csrf_protect,
             ))
             .layer(mark(&config, "authz"))
+            .layer(phase(timing, Phase::Perm, Mark::Start))
             .layer(middleware::from_fn_with_state(state.clone(), auth::authz))
+            .layer(phase(timing, Phase::Perm, Mark::End))
             .layer(mark(&config, "rate_limit"))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -563,7 +575,8 @@ pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
             .layer(middleware::from_fn_with_state(
                 state,
                 crate::middleware::api_version::api_version,
-            )),
+            ))
+            .layer(phase(timing, Phase::App, Mark::Around)),
     )
 }
 

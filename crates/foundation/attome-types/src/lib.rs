@@ -37,6 +37,8 @@ pub mod error_messages;
 pub mod request_scope;
 /// Q18-T5 — a secret that cannot be printed or serialised.
 pub mod secret;
+/// AA1-T5 — where one request's time went (`Server-Timing`).
+pub mod server_timing;
 pub mod text;
 pub mod types;
 pub mod w3c_trace;

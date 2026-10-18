@@ -37,7 +37,9 @@
 use attome_config::ObservabilitySection;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_otlp::WithExportConfig;
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::filter::{Filtered, Targets};
+use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Held by `main.rs` for the process's lifetime; `shutdown()` flushes and
 /// tears down the exporter during graceful shutdown ("flush spans during
@@ -102,14 +104,16 @@ fn resource(service_version: &str) -> opentelemetry_sdk::Resource {
     reason = "each expect() here guards an invariant its message states"
 )]
 pub fn init_tracing(observability: &ObservabilitySection, service_version: &str) -> TracingGuard {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,tower_http=debug"));
+    // AA1-T5: each output layer has its own filter, so the `Server-Timing`
+    // layer can see sqlx's debug statement events without the log printing
+    // them.
+    let env_filter = log_filter();
     let fmt_layer = tracing_subscriber::fmt::layer().json();
 
     if !observability.enable_distributed_tracing {
         tracing_subscriber::registry()
-            .with(env_filter)
-            .with(fmt_layer)
+            .with(fmt_layer.with_filter(env_filter))
+            .with(db_timing(observability))
             .init();
         return TracingGuard {
             tracer_provider: None,
@@ -142,8 +146,8 @@ pub fn init_tracing(observability: &ObservabilitySection, service_version: &str)
             // it has nothing to do with — logged at `error` so it's not
             // silently swallowed either.
             tracing_subscriber::registry()
-                .with(env_filter)
-                .with(fmt_layer)
+                .with(fmt_layer.with_filter(env_filter))
+                .with(db_timing(observability))
                 .init();
             tracing::error!(
                 error = %err,
@@ -183,9 +187,9 @@ pub fn init_tracing(observability: &ObservabilitySection, service_version: &str)
     let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
     tracing_subscriber::registry()
-        .with(env_filter)
-        .with(fmt_layer)
-        .with(otel_layer)
+        .with(fmt_layer.with_filter(env_filter))
+        .with(otel_layer.with_filter(log_filter()))
+        .with(db_timing(observability))
         .init();
 
     tracing::info!(
@@ -197,4 +201,27 @@ pub fn init_tracing(observability: &ObservabilitySection, service_version: &str)
     TracingGuard {
         tracer_provider: Some(tracer_provider),
     }
+}
+
+/// `RUST_LOG`, or `info,tower_http=debug` when unset.
+fn log_filter() -> EnvFilter {
+    EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,tower_http=debug"))
+}
+
+/// AA1-T5: the layer that adds each SQL statement's time to the request's
+/// `Server-Timing`, when this node can send the header. It enables sqlx's
+/// `sqlx::query` debug events for itself only.
+fn db_timing<S>(
+    observability: &ObservabilitySection,
+) -> Option<Filtered<attome_server::middleware::server_timing::DbTimingLayer, Targets, S>>
+where
+    S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+{
+    use attome_server::middleware::server_timing::{DbTimingLayer, Mode};
+    let mode = Mode::from_setting(&observability.server_timing, attome_config::is_debug_env());
+    (mode != Mode::Off).then(|| {
+        DbTimingLayer.with_filter(
+            Targets::new().with_target("sqlx::query", tracing::level_filters::LevelFilter::DEBUG),
+        )
+    })
 }

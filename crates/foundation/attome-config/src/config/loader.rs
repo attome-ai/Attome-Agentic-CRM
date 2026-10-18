@@ -1216,6 +1216,18 @@ impl AppConfig {
         // names a collector to send spans to, a plain public-config hostname
         // URL), so this is a plain empty-check, not `check_secret` (which
         // enforces a 32-byte-minimum meant for keys/tokens).
+        // AA1-T5 — a typo would silently turn the header off.
+        if !crate::config::sections::observability::SERVER_TIMING_MODES
+            .contains(&self.observability.server_timing.as_str())
+        {
+            return Err(ConfigError::Invalid {
+                field: "observability.server_timing".into(),
+                reason: format!(
+                    "must be one of off, dev, admins; got {:?}",
+                    self.observability.server_timing
+                ),
+            });
+        }
         if self.observability.enable_distributed_tracing
             && self
                 .observability

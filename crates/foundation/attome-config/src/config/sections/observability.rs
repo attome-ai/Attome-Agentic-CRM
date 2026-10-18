@@ -53,6 +53,15 @@ pub struct ObservabilitySection {
     /// `metrics_port == 0`.
     #[serde(default)]
     pub profiler_enabled: bool,
+    /// AA1-T5: who gets a `Server-Timing` header splitting each response's
+    /// time into middleware, authentication, permissions, database, handler
+    /// and outside calls. `dev` (the default): every response, in a debug
+    /// environment (`APP_ENV=debug`) only. `admins`: responses to signed-in
+    /// administrators. `off`: nobody. Measuring the database phase reads
+    /// sqlx's per-statement events, which costs a little on every query
+    /// while the header can be sent.
+    #[serde(default = "default_server_timing")]
+    pub server_timing: String,
     /// U4-T1: sample this process's metrics into `ops_metric_sample` every
     /// minute, kept 30 days. Unset: on for Solo (`cache.backend = "memory"`),
     /// off otherwise (several servers use Prometheus).
@@ -262,3 +271,11 @@ impl std::fmt::Debug for GoogleAiSection {
             .finish()
     }
 }
+
+/// AA1-T5: `observability.server_timing` when unset.
+fn default_server_timing() -> String {
+    "dev".to_owned()
+}
+
+/// AA1-T5: the values `observability.server_timing` accepts.
+pub const SERVER_TIMING_MODES: &[&str] = &["off", "dev", "admins"];
