@@ -13562,6 +13562,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/change-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Changes a record's type.
+         * @description With `preview=true` nothing changes: the answer lists the attributes
+         *     holding a value the new type's form does not show and the stage a record
+         *     of the new type starts in. Otherwise the type changes through the
+         *     ordinary update (row version required), clearing the attributes named in
+         *     `clear`.
+         */
+        post: operations["change_type"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/children": {
         parameters: {
             query?: never;
@@ -29596,6 +29620,43 @@ export interface components {
             principal_type: string;
             /** Format: uuid */
             record_id: string;
+        };
+        /** @description What a type change does, or did. */
+        RecordTypeChange: {
+            /** @description False for a preview. */
+            applied: boolean;
+            cleared: string[];
+            /** @description The record's type now (`null`: the entity's default type). */
+            from?: string | null;
+            /** @description Attributes holding a value that the new type's form does not show. */
+            invalid_attributes: string[];
+            /**
+             * Format: int64
+             * @description The record's row version after the change.
+             */
+            row_version?: number | null;
+            target_stage?: null | components["schemas"]["RecordTypeStage"];
+            to: string;
+        };
+        /** @description A record type change. */
+        RecordTypeChangeBody: {
+            /** @description Attributes to clear; each must be one the preview lists. */
+            clear?: string[];
+            /** @description The new type's code. */
+            record_type: string;
+            /**
+             * Format: int64
+             * @description The record's row version; required to apply the change.
+             */
+            row_version?: number | null;
+        };
+        /** @description The stage a record of the new type starts in. */
+        RecordTypeStage: {
+            initial_state: string;
+            /** @description The attribute that holds the record's state. */
+            state_field: string;
+            /** Format: uuid */
+            state_model: string;
         };
         /**
          * @description A single deployment-wide snapshot, not a list — same "aggregate summary,
@@ -80299,6 +80360,82 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_type: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record's id */
+                id: string;
+                /** @description True: change nothing and answer what the change would do. */
+                preview: boolean;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordTypeChangeBody"];
+            };
+        };
+        responses: {
+            /** @description What the change does, or did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordTypeChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller's roles may not use the new type */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record changed since row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown type, no row_version, or a cleared attribute the preview does not list */
             422: {
                 headers: {
                     [name: string]: unknown;

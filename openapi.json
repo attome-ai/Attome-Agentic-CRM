@@ -74808,6 +74808,140 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/{entity}/{id}/change-type": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Changes a record's type.",
+        "description": "With `preview=true` nothing changes: the answer lists the attributes\nholding a value the new type's form does not show and the stage a record\nof the new type starts in. Otherwise the type changes through the\nordinary update (row version required), clearing the attributes named in\n`clear`.",
+        "operationId": "change_type",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "preview",
+            "in": "path",
+            "description": "True: change nothing and answer what the change would do.",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordTypeChangeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the change does, or did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordTypeChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller's roles may not use the new type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown type, no row_version, or a cleared attribute the preview does not list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/{entity}/{id}/children": {
       "get": {
         "tags": [
@@ -120495,6 +120629,113 @@
             "type": "string"
           },
           "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RecordTypeChange": {
+        "type": "object",
+        "description": "What a type change does, or did.",
+        "required": [
+          "to",
+          "invalid_attributes",
+          "applied",
+          "cleared"
+        ],
+        "properties": {
+          "applied": {
+            "type": "boolean",
+            "description": "False for a preview."
+          },
+          "cleared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's type now (`null`: the entity's default type)."
+          },
+          "invalid_attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Attributes holding a value that the new type's form does not show."
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The record's row version after the change."
+          },
+          "target_stage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecordTypeStage"
+              }
+            ]
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "RecordTypeChangeBody": {
+        "type": "object",
+        "description": "A record type change.",
+        "required": [
+          "record_type"
+        ],
+        "properties": {
+          "clear": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Attributes to clear; each must be one the preview lists."
+          },
+          "record_type": {
+            "type": "string",
+            "description": "The new type's code."
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The record's row version; required to apply the change."
+          }
+        }
+      },
+      "RecordTypeStage": {
+        "type": "object",
+        "description": "The stage a record of the new type starts in.",
+        "required": [
+          "state_model",
+          "state_field",
+          "initial_state"
+        ],
+        "properties": {
+          "initial_state": {
+            "type": "string"
+          },
+          "state_field": {
+            "type": "string",
+            "description": "The attribute that holds the record's state."
+          },
+          "state_model": {
             "type": "string",
             "format": "uuid"
           }
