@@ -21,7 +21,15 @@ mod render;
 
 pub use escape::Output;
 pub use parse::MAX_LOOP_LIMIT;
-pub use render::RenderContext;
+pub use render::{RenderContext, RenderLimits};
+
+/// Which render limit stopped a render (Z13-T6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderLimit {
+    Time,
+    Output,
+    Iterations,
+}
 
 use attome_rules::{RulesError, Schema};
 
@@ -70,6 +78,9 @@ pub enum TemplateError {
         limit: usize,
         len: usize,
     },
+    /// The render ran past one of its [`RenderLimits`] (Z13-T6).
+    #[error("template render stopped near {at}: over its {limit:?} limit")]
+    RenderLimit { at: Position, limit: RenderLimit },
 }
 
 impl TemplateError {
@@ -79,6 +90,18 @@ impl TemplateError {
             Self::Syntax { .. } => "template.syntax",
             Self::Expression { error, .. } => error.code(),
             Self::LimitExceeded { .. } => "template.loop.limit_exceeded",
+            Self::RenderLimit {
+                limit: RenderLimit::Time,
+                ..
+            } => "template.limit.time",
+            Self::RenderLimit {
+                limit: RenderLimit::Output,
+                ..
+            } => "template.limit.output",
+            Self::RenderLimit {
+                limit: RenderLimit::Iterations,
+                ..
+            } => "template.limit.iterations",
         }
     }
 
@@ -87,7 +110,8 @@ impl TemplateError {
         match self {
             Self::Syntax { at, .. }
             | Self::Expression { at, .. }
-            | Self::LimitExceeded { at, .. } => *at,
+            | Self::LimitExceeded { at, .. }
+            | Self::RenderLimit { at, .. } => *at,
         }
     }
 }

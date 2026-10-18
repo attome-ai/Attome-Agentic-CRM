@@ -1,10 +1,32 @@
-//! Rendering a compiled template (Z13-T2).
+//! Rendering a compiled template (Z13-T2), escaping each value for where it
+//! lands (Z13-T3) and within bounded time, output and loop work (Z13-T6).
+
+use std::time::{Duration, Instant};
 
 use attome_rules::{Context, Value};
 
-use super::TemplateError;
-use super::escape::{self, Output};
+use super::escape::{self, HtmlPlace, Output};
 use super::parse::Node;
+use super::{Position, RenderLimit, TemplateError};
+
+/// How much one render may do (Z13-T6); checked between nodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RenderLimits {
+    pub max_time: Duration,
+    pub max_output_bytes: usize,
+    /// Loop bodies run, over every loop of the render.
+    pub max_iterations: usize,
+}
+
+impl Default for RenderLimits {
+    fn default() -> Self {
+        Self {
+            max_time: Duration::from_millis(100),
+            max_output_bytes: 1024 * 1024,
+            max_iterations: 10_000,
+        }
+    }
+}
 
 /// What a render sees.
 #[derive(Debug, Clone)]
@@ -15,6 +37,7 @@ pub struct RenderContext {
     /// reads it.
     pub locale: String,
     pub output: Output,
+    pub limits: RenderLimits,
 }
 
 impl RenderContext {
@@ -23,89 +46,144 @@ impl RenderContext {
             values,
             locale: locale.into(),
             output,
+            limits: RenderLimits::default(),
         }
+    }
+
+    #[must_use]
+    pub fn with_limits(mut self, limits: RenderLimits) -> Self {
+        self.limits = limits;
+        self
     }
 }
 
 pub(crate) fn render(nodes: &[Node], ctx: &RenderContext) -> Result<String, TemplateError> {
-    let mut out = String::new();
-    render_into(nodes, &ctx.values, ctx.output, &mut out)?;
-    Ok(out)
+    let mut renderer = Renderer {
+        output: ctx.output,
+        limits: ctx.limits,
+        started: Instant::now(),
+        iterations: 0,
+        place: HtmlPlace::default(),
+        out: String::new(),
+        at: Position { line: 1, column: 1 },
+    };
+    renderer.nodes(nodes, &ctx.values)?;
+    Ok(renderer.out)
 }
 
-fn render_into(
-    nodes: &[Node],
-    values: &Context,
+struct Renderer {
     output: Output,
-    out: &mut String,
-) -> Result<(), TemplateError> {
-    for node in nodes {
-        match node {
-            Node::Text(text) => out.push_str(text),
-            Node::Output { at, expr } => {
-                let value = expr
-                    .eval(values)
-                    .map_err(|error| TemplateError::Expression { at: *at, error })?;
-                out.push_str(&escape::write(&value, output));
-            }
-            Node::If {
-                at,
-                cond,
-                then,
-                otherwise,
-            } => {
-                let holds = cond
-                    .eval(values)
-                    .map_err(|error| TemplateError::Expression { at: *at, error })?;
-                let branch = if holds == Value::Bool(true) {
-                    then
-                } else {
-                    otherwise
-                };
-                render_into(branch, values, output, out)?;
-            }
-            Node::For {
-                at,
-                var,
-                list,
-                limit,
-                body,
-            } => {
-                let items = match list
-                    .eval(values)
-                    .map_err(|error| TemplateError::Expression { at: *at, error })?
-                {
-                    Value::List(items) => items,
-                    Value::Null => Vec::new(),
-                    other => {
-                        return Err(TemplateError::Expression {
+    limits: RenderLimits,
+    started: Instant,
+    iterations: usize,
+    place: HtmlPlace,
+    out: String,
+    /// The last node with a position, for a limit's error.
+    at: Position,
+}
+
+impl Renderer {
+    fn stop(&self, limit: RenderLimit) -> TemplateError {
+        TemplateError::RenderLimit { at: self.at, limit }
+    }
+
+    /// The time and output limits, between nodes.
+    fn check(&self) -> Result<(), TemplateError> {
+        if self.started.elapsed() >= self.limits.max_time {
+            return Err(self.stop(RenderLimit::Time));
+        }
+        if self.out.len() > self.limits.max_output_bytes {
+            return Err(self.stop(RenderLimit::Output));
+        }
+        Ok(())
+    }
+
+    fn nodes(&mut self, nodes: &[Node], values: &Context) -> Result<(), TemplateError> {
+        for node in nodes {
+            self.check()?;
+            match node {
+                Node::Text(text) => {
+                    self.out.push_str(text);
+                    if self.output == Output::Html {
+                        self.place.advance(text);
+                    }
+                }
+                Node::Output { at, expr } => {
+                    self.at = *at;
+                    let value = expr
+                        .eval(values)
+                        .map_err(|error| TemplateError::Expression { at: *at, error })?;
+                    let written = escape::write(&value, self.output, &self.place);
+                    self.out.push_str(&written);
+                }
+                Node::If {
+                    at,
+                    cond,
+                    then,
+                    otherwise,
+                } => {
+                    self.at = *at;
+                    let holds = cond
+                        .eval(values)
+                        .map_err(|error| TemplateError::Expression { at: *at, error })?;
+                    let branch = if holds == Value::Bool(true) {
+                        then
+                    } else {
+                        otherwise
+                    };
+                    self.nodes(branch, values)?;
+                }
+                Node::For {
+                    at,
+                    var,
+                    list,
+                    limit,
+                    body,
+                } => {
+                    self.at = *at;
+                    let items = match list
+                        .eval(values)
+                        .map_err(|error| TemplateError::Expression { at: *at, error })?
+                    {
+                        Value::List(items) => items,
+                        Value::Null => Vec::new(),
+                        other => {
+                            return Err(TemplateError::Expression {
+                                at: *at,
+                                error: attome_rules::RulesError::Eval(format!(
+                                    "a loop runs over a list, not {}",
+                                    other.ty()
+                                )),
+                            });
+                        }
+                    };
+                    if items.len() > *limit {
+                        return Err(TemplateError::LimitExceeded {
                             at: *at,
-                            error: attome_rules::RulesError::Eval(format!(
-                                "a loop runs over a list, not {}",
-                                other.ty()
-                            )),
+                            limit: *limit,
+                            len: items.len(),
                         });
                     }
-                };
-                if items.len() > *limit {
-                    return Err(TemplateError::LimitExceeded {
-                        at: *at,
-                        limit: *limit,
-                        len: items.len(),
-                    });
-                }
-                for item in items {
+                    // One copy of the values per loop: each item replaces the
+                    // last one's binding.
                     let mut inner = values.clone();
-                    if let Value::Record(fields) = &item {
-                        inner = inner.with_related(var.clone(), fields.iter().cloned().collect());
+                    for item in items {
+                        self.iterations += 1;
+                        if self.iterations > self.limits.max_iterations {
+                            return Err(self.stop(RenderLimit::Iterations));
+                        }
+                        if let Value::Record(fields) = &item {
+                            inner =
+                                inner.with_related(var.clone(), fields.iter().cloned().collect());
+                        }
+                        inner = inner.with_field(var.clone(), item);
+                        self.nodes(body, &inner)?;
                     }
-                    let inner = inner.with_field(var.clone(), item);
-                    render_into(body, &inner, output, out)?;
                 }
             }
         }
+        self.check()
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -115,6 +193,7 @@ mod tests {
 
     use super::super::{Output, Template, TemplateError};
     use super::*;
+    use std::time::Duration;
 
     fn schema() -> Schema {
         Schema::new()
@@ -218,5 +297,72 @@ mod tests {
         assert_eq!(open.code(), "template.syntax");
         let stray = Template::compile("{% end %}", &schema()).unwrap_err();
         assert_eq!(stray.code(), "template.syntax");
+    }
+
+    #[test]
+    fn values_escape_for_where_they_land() {
+        let src = "<a href=\"{{ name }}\" title=\"{{ name }}\">{{ name }}</a>";
+        let out = render(src, Output::Html, 0).unwrap_or_default();
+        assert_eq!(
+            out,
+            "<a href=\"Salma%20%3CCo%3E\" title=\"Salma &lt;Co&gt;\">Salma &lt;Co&gt;</a>"
+        );
+    }
+
+    fn big_values(lines: usize, sku_len: usize) -> Context {
+        let rows = (0..lines)
+            .map(|_| {
+                vec![
+                    ("sku".to_owned(), Value::Text("x".repeat(sku_len))),
+                    ("qty".to_owned(), Value::Number(1.0)),
+                ]
+            })
+            .collect();
+        values(0).with_related_list("lines", rows)
+    }
+
+    #[test]
+    fn limits_stop_a_huge_output() {
+        let template = Template::compile(
+            "{% for line in lines limit 1000 %}{{ line.sku }}{% end %}",
+            &schema(),
+        )
+        .unwrap();
+        // Time is not what this test measures.
+        let ctx = RenderContext::new(big_values(1000, 2000), "en", Output::Text).with_limits(
+            RenderLimits {
+                max_time: Duration::from_secs(60),
+                ..RenderLimits::default()
+            },
+        );
+        let err = template.render(&ctx).unwrap_err();
+        assert_eq!(err.code(), "template.limit.output");
+    }
+
+    #[test]
+    fn limits_stop_too_many_iterations() {
+        let template = Template::compile(
+            "{% for a in lines limit 1000 %}{% for b in lines limit 1000 %}.{% end %}{% end %}",
+            &schema(),
+        )
+        .unwrap();
+        let ctx =
+            RenderContext::new(big_values(200, 1), "en", Output::Text).with_limits(RenderLimits {
+                max_time: Duration::from_secs(60),
+                ..RenderLimits::default()
+            });
+        let err = template.render(&ctx).unwrap_err();
+        assert_eq!(err.code(), "template.limit.iterations");
+    }
+
+    #[test]
+    fn limits_stop_a_slow_render() {
+        let template = Template::compile("{{ name }}", &schema()).unwrap();
+        let ctx = RenderContext::new(values(0), "en", Output::Text).with_limits(RenderLimits {
+            max_time: Duration::ZERO,
+            ..RenderLimits::default()
+        });
+        let err = template.render(&ctx).unwrap_err();
+        assert_eq!(err.code(), "template.limit.time");
     }
 }

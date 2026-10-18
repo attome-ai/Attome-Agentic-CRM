@@ -46,7 +46,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Templates: `attome_html::tmpl` (Z13-T2), the one template language: text with `{{ expression }}`,
   `{% if %}...{% else %}...{% end %}` and `{% for item in list limit N %}...{% end %}` (N at most
   1,000; a longer list is an error), every expression a V2 rule compiled once against the
-  template's schema; errors carry their line and column; HTML output escapes every value.
+  template's schema; errors carry their line and column. HTML output escapes each value for where
+  it lands (Z13-T3): text, a quoted attribute, inside a tag, or a URL attribute, where only
+  http, https, mailto, tel and relative URLs pass (`javascript:` becomes `#`); text output strips
+  control characters. A render stops after 100 ms, 1 MiB of output or 10,000 loop iterations
+  (Z13-T6, `template.limit.*`).
 - Rules: Hijri, zone and working-day functions (Z11-T4, V2): `hijri_year`, `hijri_month`,
   `hijri_day`, `hijri_date`, `add_workdays`, `workdays_between`, `is_working` and `to_zone`; the
   working-day ones use the business calendar the caller supplies (`Context::with_calendar`) and
