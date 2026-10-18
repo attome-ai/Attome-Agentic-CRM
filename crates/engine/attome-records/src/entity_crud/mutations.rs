@@ -483,6 +483,8 @@ pub(super) async fn create_record(
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // Y12-T8: an old attribute name still in its alias period.
+    let (body, renamed) = super::aliases::apply(&state, &entity_input, body);
     // S1-T3: a bad `select` refuses the request before anything is written.
     let select =
         super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
@@ -516,10 +518,14 @@ pub(super) async fn create_record(
     )
     .await?;
     // S1-T5: `Prefer: return=minimal` answers with the id and row version.
-    Ok(super::response::write_response(
-        StatusCode::CREATED,
-        super::response::return_pref(&headers),
-        response.selected(select.as_deref()),
+    Ok(super::aliases::mark(
+        super::response::write_response(
+            StatusCode::CREATED,
+            super::response::return_pref(&headers),
+            response.selected(select.as_deref()),
+        ),
+        &entity_input,
+        &renamed,
     ))
 }
 
@@ -1195,6 +1201,8 @@ pub(super) async fn update_record(
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // Y12-T8: an old attribute name still in its alias period.
+    let (body, renamed) = super::aliases::apply(&state, &entity_input, body);
     // S1-T3: a bad `select` refuses the request before anything is written.
     let select =
         super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
@@ -1251,10 +1259,14 @@ pub(super) async fn update_record(
         }
         other => other?,
     };
-    Ok(super::response::write_response(
-        StatusCode::OK,
-        super::response::return_pref(&headers),
-        response.selected(select.as_deref()),
+    Ok(super::aliases::mark(
+        super::response::write_response(
+            StatusCode::OK,
+            super::response::return_pref(&headers),
+            response.selected(select.as_deref()),
+        ),
+        &entity_input,
+        &renamed,
     ))
 }
 

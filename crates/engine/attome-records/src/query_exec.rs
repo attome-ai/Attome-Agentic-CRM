@@ -1439,6 +1439,17 @@ pub async fn execute_stored_query_with_definition(
             .and_then(|id| registry.get_by_id(id))
             .map(|entity| entity.logicalname.clone())
     };
+    // Y12-T8: a filter may name a renamed attribute by its old name.
+    let mut body = body;
+    if let Some(entity) = linked_entity_logical_name.as_deref() {
+        for f in &mut body.filters {
+            if let Some(current) =
+                crate::entity_crud::aliases::resolve_field(state, entity, &f.field)
+            {
+                f.field = current;
+            }
+        }
+    }
 
     // Per-query gating: a query opting in via required_privilege is reachable
     // by any caller holding that exact key (admin always short-circuits);

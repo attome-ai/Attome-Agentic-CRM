@@ -670,6 +670,14 @@ async fn dispatch_platform_job(
             if purged > 0 {
                 tracing::info!(purged, "recovery archive purge: run complete");
             }
+            // Y12-T8: renamed attributes' old names past their alias period.
+            let aliases = attome_metadata::provision::field_change::prune_expired_aliases(
+                &attome_state.base.db,
+            )
+            .await?;
+            if aliases > 0 {
+                tracing::info!(aliases, "attribute aliases: expired ones removed");
+            }
             // Design §8.4: a release-report item whose archived values are
             // all gone can no longer be restored.
             let expired =

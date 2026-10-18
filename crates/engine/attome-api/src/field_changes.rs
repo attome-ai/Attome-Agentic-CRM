@@ -464,7 +464,9 @@ pub async fn rename_field(
         &row.entity,
         &row.field,
         json!({ "change": "renamed", "to": new_name,
-                "note": "API integrations that use the old name must change" }),
+                "alias_days": fc::RENAME_ALIAS_DAYS,
+                "note": "the record API accepts the old name, with a Deprecation header, for the \
+                         alias period; integrations must move to the new name before it ends" }),
     ));
     if !result.blockers.is_empty() {
         return Ok(result.blocked("rename_blocked_by_reference"));

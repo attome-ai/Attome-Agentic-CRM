@@ -2113,8 +2113,9 @@ async fn audit_structure_change(
 /// CHECK names, the attribute row, and every reference through the hook
 /// registry (views, stored queries, forms, labels, rules, state models,
 /// workflows, field security, lineage; customer objects adjusted and
-/// reported), in one transaction. No alias: API integrations using the old
-/// name break (reported as a breaking change). A reference of ours that
+/// reported), in one transaction. Y12-T8: the old name keeps working in the
+/// record API for `RENAME_ALIAS_DAYS` (with a `Deprecation` header), and the
+/// release report lists it as a breaking change for after that. A reference of ours that
 /// cannot be rewritten safely blocks it (409 `rename_blocked_by_reference`,
 /// listed). Recorded as `rename_field`.
 #[utoipa::path(

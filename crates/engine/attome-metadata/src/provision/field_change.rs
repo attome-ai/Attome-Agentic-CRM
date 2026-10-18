@@ -409,6 +409,18 @@ pub async fn check_rename_target(
     Ok(())
 }
 
+/// Y12-T8: how long a renamed attribute's old name keeps working.
+pub const RENAME_ALIAS_DAYS: i32 = 90;
+
+/// Y12-T8: deletes the aliases whose period has ended; the count deleted.
+pub async fn prune_expired_aliases(db: &DbPool) -> Result<u64, AppError> {
+    let done = sqlx::query("DELETE FROM attribute_alias WHERE expires_at <= now()")
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(done.rows_affected())
+}
+
 /// Renames the column in place, the objects whose names embed the field
 /// (the sortable/filterable index, the length CHECK), the attribute row and
 /// the entity's `primary_name_attribute`. Catalog-only DDL; the caller holds
@@ -418,6 +430,27 @@ pub async fn rename_column_in_tx(
     row: &FieldRow,
     new_name: &str,
 ) -> Result<(), AppError> {
+    // Y12-T8: the old name keeps working in the record API for the alias
+    // period; a name taken back by this rename is no longer an alias.
+    sqlx::query(
+        "INSERT INTO attribute_alias (entity, old_name, attribute_id, expires_at) \
+         VALUES ($1, $2, $3, now() + make_interval(days => $4)) \
+         ON CONFLICT (entity, old_name) DO UPDATE \
+            SET attribute_id = EXCLUDED.attribute_id, expires_at = EXCLUDED.expires_at",
+    )
+    .bind(&row.entity)
+    .bind(&row.field)
+    .bind(row.attribute_id)
+    .bind(RENAME_ALIAS_DAYS)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::query("DELETE FROM attribute_alias WHERE entity = $1 AND old_name = $2")
+        .bind(&row.entity)
+        .bind(new_name)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
     let table = row.table();
     sqlx::query(&format!(
         "ALTER TABLE {table} RENAME COLUMN {} TO {}",

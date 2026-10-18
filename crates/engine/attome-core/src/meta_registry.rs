@@ -230,6 +230,11 @@ pub struct EntityMetaRegistry {
     /// versa (the wire shape is unchanged).
     #[serde(skip)]
     by_id: HashMap<Uuid, String>,
+    /// Y12-T8: per entity, the old names of renamed attributes still in their
+    /// alias period, each mapped to the attribute's current name. Loaded from
+    /// `attribute_alias` by [`build_registry`] and [`apply_change_log`].
+    #[serde(default)]
+    aliases: HashMap<String, HashMap<String, String>>,
 }
 
 /// Wire shape of the Redis snapshot — `by_logicalname` only. `EntityMetaRegistry`
@@ -238,11 +243,13 @@ pub struct EntityMetaRegistry {
 #[derive(Deserialize)]
 struct EntityMetaRegistryWire {
     by_logicalname: HashMap<String, EntityMeta>,
+    #[serde(default)]
+    aliases: HashMap<String, HashMap<String, String>>,
 }
 
 impl From<EntityMetaRegistryWire> for EntityMetaRegistry {
     fn from(wire: EntityMetaRegistryWire) -> Self {
-        Self::from_map(wire.by_logicalname)
+        Self::from_map(wire.by_logicalname).with_aliases(wire.aliases)
     }
 }
 
@@ -277,7 +284,33 @@ impl EntityMetaRegistry {
         Self {
             by_logicalname,
             by_id,
+            aliases: HashMap::new(),
         }
+    }
+
+    /// Y12-T8: this registry with `aliases` (entity, then old name to
+    /// current name).
+    #[must_use]
+    pub fn with_aliases(mut self, aliases: HashMap<String, HashMap<String, String>>) -> Self {
+        self.aliases = aliases;
+        self
+    }
+
+    /// Y12-T8: the current name of `entity`'s attribute once called
+    /// `old_name`, while its alias period lasts.
+    pub fn alias(&self, entity: &str, old_name: &str) -> Option<&str> {
+        self.aliases
+            .get(entity)
+            .and_then(|names| names.get(old_name))
+            .map(String::as_str)
+    }
+
+    /// Y12-T8: whether `entity` has any live alias (so a caller skips the
+    /// per-key lookups when it has none).
+    pub fn has_aliases(&self, entity: &str) -> bool {
+        self.aliases
+            .get(entity)
+            .is_some_and(|names| !names.is_empty())
     }
 
     pub fn get(&self, logicalname: &str) -> Option<&EntityMeta> {
@@ -475,7 +508,29 @@ pub async fn build_registry(db: &DbPool) -> Result<EntityMetaRegistry, AppError>
         );
     }
 
-    Ok(EntityMetaRegistry::from_map(by_logicalname))
+    Ok(EntityMetaRegistry::from_map(by_logicalname).with_aliases(load_aliases(db).await?))
+}
+
+/// Y12-T8: every live attribute alias, by entity: an old name to the
+/// attribute's current name (a second rename moves the alias with it).
+pub async fn load_aliases(
+    db: &DbPool,
+) -> Result<HashMap<String, HashMap<String, String>>, AppError> {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT a.entity, a.old_name, ai.logicalname \
+           FROM attribute_alias a \
+           JOIN attribute_info ai ON ai.id = a.attribute_id \
+          WHERE a.expires_at > now() AND (ai.is_active IS NULL OR ai.is_active = true) \
+            AND ai.logicalname IS NOT NULL AND ai.logicalname <> a.old_name",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut out: HashMap<String, HashMap<String, String>> = HashMap::new();
+    for (entity, old_name, current) in rows {
+        out.entry(entity).or_default().insert(old_name, current);
+    }
+    Ok(out)
 }
 
 /// Re-fetches one entity's row + active attributes — the single-entity
@@ -638,7 +693,13 @@ pub async fn apply_change_log(
         }
     }
 
-    Ok(EntityMetaRegistry::from_map(by_logicalname))
+    // Y12-T8: a rename changes an entity's aliases; deletes alone keep them.
+    let aliases = if upsert_ids.is_empty() {
+        base.aliases.clone()
+    } else {
+        load_aliases(db).await?
+    };
+    Ok(EntityMetaRegistry::from_map(by_logicalname).with_aliases(aliases))
 }
 
 const SNAPSHOT_REDIS_KEY: &str = "attome-core:metadata:registry_snapshot";

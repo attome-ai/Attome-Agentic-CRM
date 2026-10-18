@@ -5,6 +5,8 @@ use attome_core::EngineState;
 use axum::{Router, routing::get};
 
 mod access;
+/// Y12-T8: a renamed attribute's old name during its alias period.
+pub(crate) mod aliases;
 pub mod clone;
 mod expand;
 pub mod favourites;

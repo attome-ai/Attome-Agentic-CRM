@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: renamed attributes keep their old name for 90 days (Y12-T8). A create or update body and
+  a `query/execute` filter may use the old name; the response carries `Deprecation: true` and a
+  `Link` to the current attribute, and always uses the new name. Migration 0112 adds
+  `attribute_alias`; expired aliases are removed with the hourly recovery-archive purge.
 - Data: data step run controls (Y12-T5). `GET /api/v1/admin/data-step-runs/{id}` shows a run's
   status, counts and ETA; `POST .../pause` stops it after its current batch, `.../resume` queues it
   to continue from its cursor, and `.../cancel` stops it (an orphan scan ends `abandoned`; a field
