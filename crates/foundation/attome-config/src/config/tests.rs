@@ -4425,3 +4425,22 @@ fn the_expander_lists_literal_strings_by_path() {
     literals.sort();
     assert_eq!(literals, ["auth.jwt_secret", "list[0].secret"]);
 }
+
+/// Z2-T6: a read replica is a read-only role on its own endpoint; the same
+/// endpoint as the primary is no replica, so no read-your-writes pin.
+#[test]
+fn read_replica_needs_its_own_endpoint() {
+    let mut config = minimal_valid_config();
+    config.database.readonly = None;
+    assert!(!config.database.has_read_replica());
+    config.database.readonly =
+        Some(serde_json::from_value(serde_json::json!({ "user": "ro", "password": "x" })).unwrap());
+    assert!(!config.database.has_read_replica());
+    config.database.readonly = Some(
+        serde_json::from_value(
+            serde_json::json!({ "user": "ro", "password": "x", "host": "replica.internal" }),
+        )
+        .unwrap(),
+    );
+    assert!(config.database.has_read_replica());
+}

@@ -305,6 +305,10 @@ impl AppState {
     /// so this stays byte-identical to always using `db` for any deployment
     /// that hasn't opted in.
     pub async fn read_pool(&self, user_id: Uuid) -> &DbPool {
+        // Z2-T6: no replica, no pin to read: the primary, with no store call.
+        if !self.config.database.has_read_replica() {
+            return &self.db;
+        }
         match attome_cache::sticky_primary::check_pin(&self.redis, user_id).await {
             PinCheck::RedisError => {
                 crate::metrics::record_read_routing_decision("redis_error_primary");

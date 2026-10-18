@@ -336,6 +336,18 @@ impl std::fmt::Debug for DatabaseSection {
     }
 }
 
+impl DatabaseSection {
+    /// Z2-T6: whether reads may go to a replica: the read-only role points at
+    /// its own endpoint (`database.readonly.host` or `.port`, D-155). Without
+    /// one the read-only pool is the primary, so read-your-writes pinning has
+    /// nothing to protect and is skipped (one server pays nothing for it).
+    pub fn has_read_replica(&self) -> bool {
+        self.readonly
+            .as_ref()
+            .is_some_and(|r| r.host.is_some() || r.port.is_some())
+    }
+}
+
 /// attome-db hardening Phase 2.3 — `database.pools`: optional per-pool sizes.
 /// A pool with no entry is sized from `DatabaseSection::connection_number`.
 #[derive(Clone, Debug, Default, Deserialize)]

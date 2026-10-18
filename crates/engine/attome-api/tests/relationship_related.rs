@@ -79,7 +79,8 @@ fn test_config() -> AppConfig {
             "database": {{
                 "host": "localhost", "port": 5555, "dbname": "unused_overridden_by_env",
                 "user": "unused", "password": "unused", "schema": "attome_dev",
-                "connection_number": 5, "timeout": 5.0
+                "connection_number": 5, "timeout": 5.0,
+                "readonly": {{ "user": "unused", "password": "unused", "port": 5555 }}
             }},
             "cache": {{
                 "host": "{redis_host}", "port": {redis_port}, "password": "",

@@ -30,6 +30,10 @@ use uuid::Uuid;
 /// allowed to fail an otherwise-successful write over a caching concern
 /// (guidelines §0.1: correctness of the write outranks this nicety).
 pub async fn pin_write_with_current_lsn(state: &EngineState, user_id: Uuid, action: &str) {
+    // Z2-T6: with no replica every read is on the primary already.
+    if !state.base.config.database.has_read_replica() {
+        return;
+    }
     let lsn: Result<String, sqlx::Error> =
         sqlx::query_scalar("SELECT pg_current_wal_insert_lsn()::text")
             .fetch_one(&state.base.db)

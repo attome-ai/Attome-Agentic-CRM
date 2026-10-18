@@ -93,6 +93,7 @@ fn test_config(sticky_primary_ttl_secs: u64, replica_max_lag_secs: u64) -> AppCo
                 "host": "localhost", "port": 5555, "dbname": "unused_overridden_by_env",
                 "user": "unused", "password": "unused", "schema": "attome_dev",
                 "connection_number": 5, "timeout": 5.0,
+                "readonly": {{ "user": "unused", "password": "unused", "port": 5555 }},
                 "sticky_primary_ttl_secs": {sticky_primary_ttl_secs},
                 "replica_max_lag_secs": {replica_max_lag_secs}
             }},

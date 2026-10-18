@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Performance: with no read replica (`database.readonly` without its own `host` or `port`),
+  writes no longer capture an LSN and pin the writer, and reads no longer look the pin up: every
+  read is on the primary already (Z2-T6). With a replica, the pin works without Redis on one
+  server through the in-process store.
 - Data: index proposals (Y2-T10). `GET /api/v1/admin/entities/{entity_id}/index-proposals` reads
   `pg_stat_statements` for statements on the entity averaging over 100 ms, finds the columns they
   filter on, and proposes a single-column index for each attribute no index leads on; applying
