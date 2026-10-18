@@ -118,6 +118,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
   const customerService = lazy(() => import('@attome/xrm/verticals/customer-service'), m => m.registerCustomerServiceEntityForms);
   const enterpriseArchitecture = lazy(() => import('@attome/xrm/verticals/enterprise-architecture'), m => m.registerEnterpriseArchitectureEntityForms);
   const finance = lazy(() => import('@attome/xrm/verticals/finance'), m => m.registerFinanceEntityForms);
+  const billing = lazy(() => import('@attome/xrm/verticals/billing'), m => m.registerBillingEntityForms);
   const humanResources = lazy(() => import('@attome/xrm/verticals/human-resources'), m => m.registerHumanResourcesEntityForms);
   const sales = lazy(() => import('@attome/xrm/verticals/sales'), m => m.registerSalesEntityForms);
   const vendorSupplier = lazy(() => import('@attome/xrm/verticals/vendor-supplier'), m => m.registerVendorSupplierEntityForms);
@@ -207,6 +208,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     [customerService, ['customer']],
     [enterpriseArchitecture, ['ea_application', 'ea_capability', 'ea_system', 'ea_technology']],
     [finance, ['budget', 'cost_center', 'expense', 'invoice', 'payment']],
+    [billing, ['invoice_line', 'invoice_schedule', 'region_tax_rate']],
     [humanResources, ['attendance', 'employee', 'leave_request', 'performance_review']],
     [sales, [
       'order', 'price_list', 'price_list_item', 'product', 'quote', 'quote_line', 'territory',

@@ -7,11 +7,86 @@
       </div>
       <div class="xf-section-body">
         <div class="xf-grid-2">
-          @for (field of fieldsIn(['amount', 'cost_center_ref', 'due_date', 'external_system_id', 'invoice_number', 'issued_date', 'project_ref', 'source', 'status']); track field.id) {
+          @for (field of fieldsIn(['invoice_number', 'kind', 'status', 'payment_status', 'issued_date', 'due_date', 'supply_date', 'currency', 'fx_rate', 'payment_terms_days', 'series_key', 'language', 'amount']); track field.id) {
             <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
           }
         </div>
       </div>
     </section>
+    @if (fieldsIn(['account_ref', 'contact_ref', 'billing_address', 'buyer_vat_number']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-building"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.buyer' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['account_ref', 'contact_ref', 'billing_address', 'buyer_vat_number']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (fieldsIn(['net_total', 'discount_total', 'vat_total', 'grand_total', 'paid_total', 'open_total', 'written_off_total']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-chart-bar"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.amounts' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['net_total', 'discount_total', 'vat_total', 'grand_total', 'paid_total', 'open_total', 'written_off_total']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (fieldsIn(['original_invoice_ref', 'reason']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-undo"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.corrections' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['original_invoice_ref', 'reason']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (fieldsIn(['document', 'einvoice_status', 'idempotency_key']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-file-pdf"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.document' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['document', 'einvoice_status', 'idempotency_key']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (fieldsIn(['cost_center_ref', 'project_ref', 'source', 'external_system_id']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-link"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.links' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['cost_center_ref', 'project_ref', 'source', 'external_system_id']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
   </ng-template>
 </xrm-base-form>

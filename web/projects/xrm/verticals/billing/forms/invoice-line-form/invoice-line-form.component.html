@@ -1,0 +1,62 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="invoice_line">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'xrmForm.tabs.details' | translate }}</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['invoice_ref', 'product_ref', 'description', 'unit', 'quantity', 'unit_price', 'discount']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+    @if (fieldsIn(['vat_category', 'vat_rate', 'vat_amount', 'line_total']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-tags"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.tax' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['vat_category', 'vat_rate', 'vat_amount', 'line_total']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (fieldsIn(['period_from', 'period_to']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-calendar"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.period' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['period_from', 'period_to']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (fieldsIn(['source_kind', 'source_ref', 'is_locked']).length) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-link"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'invoiceForm.source' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['source_kind', 'source_ref', 'is_locked']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+  </ng-template>
+</xrm-base-form>

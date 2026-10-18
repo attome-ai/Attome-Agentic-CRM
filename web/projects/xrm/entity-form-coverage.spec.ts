@@ -27,6 +27,7 @@ import { registerSearchEntityForms } from '@attome/xrm/search';
 import { registerServiceEntityForms } from '@attome/xrm/service';
 import { registerPortalEntityForms } from '@attome/xrm/portal';
 import { registerAssetManagementEntityForms } from '@attome/xrm/verticals/asset-management';
+import { registerBillingEntityForms } from '@attome/xrm/verticals/billing';
 import { registerContractManagementEntityForms } from '@attome/xrm/verticals/contract-management';
 import { registerCrmEntityForms } from '@attome/xrm/verticals/crm';
 import { registerCustomerServiceEntityForms } from '@attome/xrm/verticals/customer-service';
@@ -63,7 +64,7 @@ const REGISTRATIONS: ((r: EntityRouteRegistry) => void)[] = [
   registerSearchEntityForms, registerServiceEntityForms, registerPortalEntityForms,
   registerAssetManagementEntityForms, registerContractManagementEntityForms, registerCrmEntityForms,
   registerCustomerServiceEntityForms, registerEnterpriseArchitectureEntityForms, registerFinanceEntityForms,
-  registerHumanResourcesEntityForms, registerSalesEntityForms,
+  registerHumanResourcesEntityForms, registerSalesEntityForms, registerBillingEntityForms,
   registerVendorSupplierEntityForms,
 ];
 

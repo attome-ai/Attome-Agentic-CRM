@@ -34,6 +34,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing forms: the invoice form shows the billing pack's buyer, amounts, corrections and document
+  sections when the pack is installed, and `invoice_line`, `invoice_schedule` and `region_tax_rate`
+  have their own forms, labelled in Arabic and English.
 - Billing screens: the receivables ageing (`/xrm/billing/ageing`: five buckets per account and
   currency with per-currency totals) and an account's statement
   (`/xrm/billing/accounts/{id}/statement`: a period picker that also shows the Hijri dates for

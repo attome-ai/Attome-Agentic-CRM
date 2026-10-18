@@ -211,6 +211,10 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  invoiceForm: {
+    buyer: 'Buyer', amounts: 'Amounts', corrections: 'Corrections', document: 'Document and e-invoicing',
+    links: 'Links', tax: 'Tax', period: 'Service period', source: 'Source', rate: 'Rate',
+  },
   billingStatement: {
     title: 'Account statement',
     from: 'From', to: 'To', show: 'Show', print: 'Print',

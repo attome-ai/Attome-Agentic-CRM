@@ -191,6 +191,10 @@ export const xrmAr = {
       email: 'البريد', models: 'نماذج الذكاء الاصطناعي', other: 'أخرى',
     },
   },
+  invoiceForm: {
+    buyer: 'المشتري', amounts: 'المبالغ', corrections: 'التصحيحات', document: 'المستند والفوترة الإلكترونية',
+    links: 'الارتباطات', tax: 'الضريبة', period: 'فترة الخدمة', source: 'المصدر', rate: 'النسبة',
+  },
   billingStatement: {
     title: 'كشف حساب العميل',
     from: 'من', to: 'إلى', show: 'عرض', print: 'طباعة',

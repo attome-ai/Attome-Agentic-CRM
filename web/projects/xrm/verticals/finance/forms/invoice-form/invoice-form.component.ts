@@ -8,6 +8,10 @@ import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { FieldSchema } from '@attome/xrm';
 
 /**
+ * F4-T15: the billing pack extends `invoice` (kind, buyer, amounts, notes,
+ * document); its sections show only when those fields exist, so the finance
+ * pack alone keeps its short form.
+ *
  * Hand-coded form for `invoice`, scaffolded from verticals/finance/bundle.json's
  * "synthesized (no authored layout)" layout by scripts/bundle-to-form-component.mjs. Same
  * field-rendering approach as the generic dispatcher (<attome-field-input> per
