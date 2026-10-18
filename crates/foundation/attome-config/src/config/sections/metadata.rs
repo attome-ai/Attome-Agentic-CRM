@@ -36,6 +36,13 @@ pub struct MetadataSection {
     /// heap-only updates, 100 for an append-only one). Off by default.
     #[serde(default)]
     pub storage_tuning_enabled: bool,
+    /// Y12-T6: the local hours (`"01-05"`, end not included) when a
+    /// backfill may grow its batches. Unset is 01:00 to 05:00.
+    #[serde(default)]
+    pub quiet_hours: Option<String>,
+    /// Y12-T6: the largest batch a backfill grows to. Unset is 50,000.
+    #[serde(default)]
+    pub backfill_batch_max: Option<i64>,
 }
 
 /// Most role names `metadata.release_report.notify_roles` accepts.

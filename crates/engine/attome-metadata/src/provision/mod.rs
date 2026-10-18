@@ -37,6 +37,8 @@ mod grants;
 mod identifiers;
 /// Y2-T4 — the orphan scan: lookup values that point at no record.
 pub mod lookup_fk;
+/// Y12-T6 — backfill batch sizes that follow the load.
+pub mod pacing;
 mod reconcile;
 /// M01 Core P3 gap (D-455) — physical join-table provisioning for the
 /// generic many-to-many relationship metadata object.

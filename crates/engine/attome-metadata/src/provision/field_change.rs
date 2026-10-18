@@ -1331,6 +1331,32 @@ pub async fn retype_batch_in_tx(
     suffix: &str,
     cursor: Option<Uuid>,
 ) -> Result<(u64, u64, Option<Uuid>), AppError> {
+    retype_batch_sized_in_tx(
+        tx,
+        ring,
+        event,
+        row,
+        conv,
+        suffix,
+        cursor,
+        FIELD_CHANGE_BATCH,
+    )
+    .await
+}
+
+/// Y12-T6: [`retype_batch_in_tx`] over `limit` rows (the pacer's size).
+#[allow(clippy::too_many_arguments)]
+pub async fn retype_batch_sized_in_tx(
+    tx: &mut Tx<'_>,
+    ring: Option<&KeyRing>,
+    event: &ArchiveEvent<'_>,
+    row: &FieldRow,
+    conv: &Conversion,
+    suffix: &str,
+    cursor: Option<Uuid>,
+    limit: i64,
+) -> Result<(u64, u64, Option<Uuid>), AppError> {
+    let limit = limit.max(1);
     let (shadow, _) = shadow_names(suffix);
     let table = row.table();
     let col = row.column();
@@ -1343,7 +1369,7 @@ pub async fn retype_batch_in_tx(
         shadow = quote_ident(&shadow)
     ))
     .bind(cursor)
-    .bind(FIELD_CHANGE_BATCH)
+    .bind(limit)
     .fetch_all(&mut **tx)
     .await
     .map_err(AppError::internal)?;

@@ -43,6 +43,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Data: backfills follow the load (Y12-T6). A retype or archive run sizes each batch from what the
+  last one saw: it halves and pauses under pressure (a batch over two seconds, a replica over ten
+  seconds behind, most connections busy) and doubles in quiet hours (`metadata.quiet_hours`,
+  default `01-05` local) up to `metadata.backfill_batch_max` (default 50,000).
 - Records: a record read with `Accept-Language: ar` or `en` carries `labels`, each choice field's
   value as its label in that language (the stored value where none is written), and answers with
   `Content-Language` (S1-T13). `data` keeps the stored values.

@@ -1193,6 +1193,53 @@ pub async fn remove_choice(
 
 // ── Batched runs (large tables) ─────────────────────────────────────────────
 
+/// Y12-T6: the pacer this deployment's settings ask for.
+fn pacer(state: &EngineState) -> provision::pacing::Pacer {
+    let metadata = &state.base.config.metadata;
+    provision::pacing::Pacer::from_settings(
+        metadata.backfill_batch_max,
+        metadata.quiet_hours.as_deref(),
+    )
+}
+
+/// Y12-T6: what the next batch can see of the load: the share of busy
+/// connections (the ones this role can see), the replica's lag when there
+/// is one, and the last batch's time.
+async fn load_signals(state: &EngineState, last_batch_ms: u64) -> provision::pacing::LoadSignals {
+    let ratio: f64 = sqlx::query_scalar(
+        "SELECT (SELECT count(*) FROM pg_stat_activity WHERE state = 'active')::float8 \
+                / GREATEST(current_setting('max_connections')::float8, 1)",
+    )
+    .fetch_one(&state.base.db)
+    .await
+    .unwrap_or(0.0);
+    let replica_lag_secs = state
+        .base
+        .config
+        .database
+        .has_read_replica()
+        .then(|| {
+            state
+                .base
+                .replica_watermark
+                .load()
+                .as_ref()
+                .map(|w| w.lag_seconds)
+        })
+        .flatten();
+    provision::pacing::LoadSignals {
+        db_active_ratio: ratio,
+        replica_lag_secs,
+        last_batch_ms,
+    }
+}
+
+/// The deployment's local hour, for the pacer's quiet hours.
+fn local_hour(state: &EngineState) -> u32 {
+    use chrono::Timelike;
+    attome_core::calendar::deployment_now(state.base.config.app.time_zone.as_deref()).hour()
+}
+
 /// `EngineJob::RunDataStep { run_id }` — continues a large delete's
 /// archive copy (then drops the column) or a large type change's backfill
 /// (then swaps), from the run's cursor. Resumable; a run another worker
@@ -1260,28 +1307,30 @@ async fn continue_delete(state: &EngineState, run: &fc::RunRow) -> Result<(), Ap
     let mut cursor = run.cursor;
     // Batches, each its own transaction with the cursor.
     if let Some(ring) = ring {
+        let mut pacer = pacer(state);
+        let mut last_batch_ms = 0;
         loop {
             if fc::run_stopped(db, run.id).await? {
                 tracing::info!(run_id = %run.id, "field run: paused or cancelled; stopped between batches");
                 return Ok(());
             }
+            let (size, pause) =
+                pacer.next_batch(&load_signals(state, last_batch_ms).await, local_hour(state));
+            if !pause.is_zero() {
+                tokio::time::sleep(pause).await;
+            }
+            let started = std::time::Instant::now();
             let mut tx = attome_db::tx::begin(db).await?;
             let row = fc::lock_field_in_tx(&mut tx, entity_id, attr_id).await?;
             let event =
                 fc::archive_event(ArchiveReason::FieldDeleted, &row, run_op(run), Some(run.id));
-            let (n, last) = fc::archive_values(
-                &mut tx,
-                ring,
-                &event,
-                &row,
-                cursor,
-                Some(fc::FIELD_CHANGE_BATCH),
-            )
-            .await?;
+            let (n, last) =
+                fc::archive_values(&mut tx, ring, &event, &row, cursor, Some(size)).await?;
             fc::advance_run(&mut tx, run.id, last, n, n, 0).await?;
             attome_db::tx::commit(tx).await?;
+            last_batch_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
             cursor = last;
-            if i64::try_from(n).unwrap_or(0) < fc::FIELD_CHANGE_BATCH {
+            if i64::try_from(n).unwrap_or(0) < size {
                 break;
             }
         }
@@ -1355,11 +1404,19 @@ async fn continue_retype(state: &EngineState, run: &fc::RunRow) -> Result<(), Ap
         .ok_or_else(|| AppError::internal("retype run without a conversion"))?;
     let ring = recovery_archive::ring(state.base.config.as_ref());
     let mut cursor = run.cursor;
+    let mut pacer = pacer(state);
+    let mut last_batch_ms = 0;
     loop {
         if fc::run_stopped(db, run.id).await? {
             tracing::info!(run_id = %run.id, "field run: paused or cancelled; stopped between batches");
             return Ok(());
         }
+        let (size, pause) =
+            pacer.next_batch(&load_signals(state, last_batch_ms).await, local_hour(state));
+        if !pause.is_zero() {
+            tokio::time::sleep(pause).await;
+        }
+        let started = std::time::Instant::now();
         let mut tx = attome_db::tx::begin(db).await?;
         let row = fc::lock_field_in_tx(&mut tx, entity_id, attr_id).await?;
         let event = fc::archive_event(
@@ -1369,9 +1426,11 @@ async fn continue_retype(state: &EngineState, run: &fc::RunRow) -> Result<(), Ap
             Some(run.id),
         );
         let (rows, nulled, last) =
-            fc::retype_batch_in_tx(&mut tx, ring, &event, &row, &conv, &suffix, cursor).await?;
+            fc::retype_batch_sized_in_tx(&mut tx, ring, &event, &row, &conv, &suffix, cursor, size)
+                .await?;
         fc::advance_run(&mut tx, run.id, last, rows, rows, nulled).await?;
         attome_db::tx::commit(tx).await?;
+        last_batch_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
         cursor = last;
         if rows == 0 {
             break;
