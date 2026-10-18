@@ -2469,7 +2469,6 @@ pub async fn execute_stored_query_with_definition(
             "id"
         };
         let sort_col = quote_ident(sort_col);
-        let cursor_op = if dir == "DESC" { "<" } else { ">" };
         // B21-T3: the keyset bound compares in the same collation it sorts by.
         let sort_by = sort_expr(&format!("t.{sort_col}"), collate);
 
@@ -2486,36 +2485,15 @@ pub async fn execute_stored_query_with_definition(
         // `after_id` absent (cursor_default's fresh-start case): the same
         // shape with no anchor predicate at all — just the first
         // page in sort order.
-        let main_sql = if let Some(cursor_param) = body.after_id.is_some().then(|| params.len() + 1)
-        {
-            // AA4-T1: the cursor's sort value is one scalar subquery, not a
-            // CTE cross-joined to every candidate row, so the planner can
-            // walk the sort index from the cursor and stop after the page. A
-            // cursor row that no longer matches makes the bound NULL and the
-            // page empty, as before.
-            let mut cursor_conds = conds.clone();
-            cursor_conds.push(format!(
-                "({sort_by}, t.id) {cursor_op} (                    (SELECT c.{sort_col} FROM ({base_sql}) AS c WHERE c.id = ${cursor_param}),                    ${cursor_param}::uuid)"
-            ));
-            let cursor_where = format!("WHERE {}", cursor_conds.join(" AND "));
-            let limit_param = cursor_param + 1;
-            format!(
-                "SELECT row_to_json(t.*) AS __row
-                     FROM ({base_sql}) AS t
-                     {cursor_where}
-                     ORDER BY {sort_by} {dir}, t.id {dir}
-                     LIMIT ${limit_param}"
-            )
-        } else {
-            let limit_param = params.len() + 1;
-            format!(
-                "SELECT row_to_json(t.*) AS __row
-                 FROM ({base_sql}) AS t
-                 {where_sql}
-                 ORDER BY {sort_by} {dir}, t.id {dir}
-                 LIMIT ${limit_param}"
-            )
-        };
+        let main_sql = build_cursor_sql(
+            base_sql,
+            &sort_col,
+            &sort_by,
+            &dir,
+            &conds,
+            params.len() + 1,
+            body.after_id.is_some(),
+        );
         let main_sql = attome_db::tag_dynamic("query.execute", &main_sql);
         let mut main_q = sqlx::query_as::<_, (Value,)>(&main_sql);
         for p in &params {
@@ -3118,6 +3096,54 @@ fn is_arabic_locale(tag: &str) -> bool {
 }
 
 /// B21-T3: a sort key, under `collation` when one is given.
+/// AA4-T2: the keyset page query over `base_sql`: `conds`, then, with a
+/// cursor, the row comparison `(sort, id) > (cursor's sort, cursor id)`
+/// whose cursor value is one scalar subquery looked up by id (AA4-T1), so
+/// the planner can walk the sort index from the cursor and stop after the
+/// page. `sort_col` is the quoted column, `sort_by` the sort expression
+/// (with any collation), `next_param` the first free bind number: the
+/// cursor id takes it when `has_cursor`, and the page size the one after.
+pub fn build_cursor_sql(
+    base_sql: &str,
+    sort_col: &str,
+    sort_by: &str,
+    dir: &str,
+    conds: &[String],
+    next_param: usize,
+    has_cursor: bool,
+) -> String {
+    if has_cursor {
+        let cursor_param = next_param;
+        let cursor_op = if dir == "DESC" { "<" } else { ">" };
+        let mut cursor_conds = conds.to_vec();
+        cursor_conds.push(format!(
+            "({sort_by}, t.id) {cursor_op} (                    (SELECT c.{sort_col} FROM ({base_sql}) AS c WHERE c.id = ${cursor_param}),                    ${cursor_param}::uuid)"
+        ));
+        let cursor_where = format!("WHERE {}", cursor_conds.join(" AND "));
+        let limit_param = cursor_param + 1;
+        format!(
+            "SELECT row_to_json(t.*) AS __row
+                 FROM ({base_sql}) AS t
+                 {cursor_where}
+                 ORDER BY {sort_by} {dir}, t.id {dir}
+                 LIMIT ${limit_param}"
+        )
+    } else {
+        let where_sql = if conds.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conds.join(" AND "))
+        };
+        format!(
+            "SELECT row_to_json(t.*) AS __row
+             FROM ({base_sql}) AS t
+             {where_sql}
+             ORDER BY {sort_by} {dir}, t.id {dir}
+             LIMIT ${next_param}"
+        )
+    }
+}
+
 fn sort_expr(column_sql: &str, collation: Option<&str>) -> String {
     match collation {
         Some(collation) => format!("{column_sql} COLLATE \"{collation}\""),
