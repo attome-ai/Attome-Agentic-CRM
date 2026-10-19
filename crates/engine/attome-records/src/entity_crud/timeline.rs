@@ -690,7 +690,7 @@ const CHILD_SOURCES: &[ChildSource] = &[
 
 /// `jsonb_build_object(...)` over the readable subset of `columns` on the
 /// source entity, or an empty object.
-fn detail_object_sql(
+pub(super) fn detail_object_sql(
     ctx: &SecurityContext,
     source_entity: &str,
     attrs: &[AttrInfo],
@@ -713,7 +713,7 @@ fn detail_object_sql(
 /// with the caller's row-level-security fragment for `source_entity` appended
 /// at `{rls}`. `binds` are the query's own leading values; the RLS binds
 /// follow them.
-async fn run_source_query(
+pub(super) async fn run_source_query(
     state: &EngineState,
     ctx: &SecurityContext,
     source_entity: &str,
@@ -766,7 +766,7 @@ async fn run_source_query(
         .map_err(AppError::internal)
 }
 
-enum SourceBind {
+pub(super) enum SourceBind {
     Text(String),
     Int(i64),
     Ts(DateTime<Utc>),

@@ -15,6 +15,14 @@
         { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true }
       ]
+    },
+    {
+      "logicalname": "feed_post",
+      "display_name": "Feed Post",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "body", "display_name": "Body", "field_type": "text", "is_required": true, "max_length": 4000 }
+      ]
     }
   ],
   "queries": [

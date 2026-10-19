@@ -95,6 +95,8 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "core platform (attome-api relationship_seed)",
     ),
     ("follow", "core platform (attome-api follow_seed)"),
+    // C3-T1: feed posts ride the follow bundle.
+    ("feed_post", "core platform (attome-api follow_seed)"),
     ("resource_skill", "core platform (attome-api resource_seed)"),
     (
         "resource_availability",

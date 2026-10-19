@@ -41,6 +41,8 @@ pub mod tags;
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a
 /// thin caller of it.
 pub mod timeline;
+/// C3-T1: the caller's feed.
+pub mod feed;
 mod upsert;
 
 #[cfg(test)]
@@ -157,6 +159,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(change_type::openapi_fragment());
     doc.merge(related::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
+    doc.merge(feed::openapi_fragment());
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
     doc.merge(clone::openapi_fragment());
@@ -191,6 +194,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/tags/suggest", get(tags::suggest_tags))
         .route("/api/v1/scan/find", get(scan::scan_find))
+        .route("/api/v1/feed", get(feed::get_feed))
         .route("/api/v1/scan/act", axum::routing::post(scan::scan_act))
         .route(
             "/api/v1/admin/tags/{tag_id}/merge",

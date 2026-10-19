@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:89f90dd430a21f8cd5a17b71f0d32c54c2dbdc73007cb2a95cee54b70837622e",
+  "checksum": "sha256:18a0eff73b903733de505496e07f32b12959f46ebbb91217220db68e54ade599",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-follow.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -83,6 +83,40 @@
     {
       "args": {
         "definition": {
+          "display_name": "Feed Post",
+          "is_append_only": false,
+          "logicalname": "feed_post"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "feed_post"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Body",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "body",
+          "max_length": 4000
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "feed_post",
+        "field": "body"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "entity": "follow",
           "entity_mappings": [],
           "name": "Active Follows",
@@ -92,7 +126,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 5,
+      "seq": 7,
       "target": {
         "entity": "follow",
         "query": "Active Follows"
@@ -112,7 +146,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 6,
+      "seq": 8,
       "target": {
         "entity": "follow",
         "view": "Active Follows"
