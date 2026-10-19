@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '@attome/base';
 import { OFFLINE_STORE, OfflineQueueService, QueuedOp } from './offline-queue.service';
 import { OfflineProfileBundle, PROFILE_KEY } from './state-machine';
+import { OfflineSearch } from './offline-search';
 
 /** Most operations one push sends (the server's limit). */
 export const PUSH_BATCH = 100;
@@ -72,6 +73,8 @@ export class SyncService {
   private readonly api = inject(ApiService);
   private readonly store = inject(OFFLINE_STORE);
   private readonly queue = inject(OfflineQueueService);
+  /** B18-T11: the device search, indexed again after each pull. */
+  private readonly search = inject(OfflineSearch);
 
   readonly syncing = signal(false);
   /** Changes the server refused or that clashed, for the person to see. */
@@ -124,6 +127,7 @@ export class SyncService {
       }
       await this.pushAll();
       await this.pullAll();
+      await this.search.rebuild();
       await this.refreshProfile();
       await this.store.put('meta', 'lastSyncAt', now);
       this.backoff = 0;
