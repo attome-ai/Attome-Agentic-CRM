@@ -27,7 +27,14 @@ pub(super) fn expected_row_version(headers: &axum::http::HeaderMap) -> Result<i6
 
 /// A16-T2: whether a PATCH asks for an automatic merge
 /// (`If-Match-Merge: attributes`, the one value it takes). Absent is no.
+///
+/// A16-T3: the header is outside the S2S signature, so a signed request never
+/// merges: on one carrying `x-s2s-client-id` it is ignored and a stale
+/// version is the usual 409 (fail-closed, as `x-override-reason` is).
 pub(super) fn merge_requested(headers: &axum::http::HeaderMap) -> Result<bool, AppError> {
+    if headers.contains_key("x-s2s-client-id") {
+        return Ok(false);
+    }
     let Some(raw) = headers.get("if-match-merge") else {
         return Ok(false);
     };
@@ -121,4 +128,21 @@ pub(super) fn if_none_match_row_version(headers: &axum::http::HeaderMap) -> Opti
 /// byte-identical comparison.
 pub(super) fn row_version_etag(row_version: i64) -> String {
     format!("W/\"{row_version}\"")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::merge_requested;
+    use axum::http::{HeaderMap, HeaderValue};
+
+    /// A16-T3: the merge header is outside the S2S signature, so a signed
+    /// request never merges.
+    #[test]
+    fn merge_header_is_ignored_on_a_signed_request() {
+        let mut headers = HeaderMap::new();
+        headers.insert("if-match-merge", HeaderValue::from_static("attributes"));
+        assert!(merge_requested(&headers).unwrap());
+        headers.insert("x-s2s-client-id", HeaderValue::from_static("client"));
+        assert!(!merge_requested(&headers).unwrap());
+    }
 }

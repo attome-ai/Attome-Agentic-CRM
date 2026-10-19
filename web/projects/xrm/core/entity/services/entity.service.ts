@@ -198,7 +198,7 @@ export class EntityService {
     id: string,
     patch: Record<string, unknown>,
     rowVersion?: number,
-    options: { duplicateReason?: string } = {},
+    options: { duplicateReason?: string; mergeAttributes?: boolean } = {},
   ): Observable<EntityRecordResponse> {
     return this.api.patch<EntityRecordResponse>(`/api/v1/${entityName}/${id}`, patch, rowVersion, options);
   }

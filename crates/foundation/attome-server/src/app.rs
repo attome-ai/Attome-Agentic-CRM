@@ -189,6 +189,8 @@ const ALLOWED_METHODS: [Method; 7] = [
 ///   records into (`xrm_foundation::changeset::CHANGESET_HEADER`, D-785).
 /// - `x-override-reason` — why a caller holding the override privilege saves
 ///   a record a business-rule check refuses (A3-T4, `middleware::request_meta`).
+/// - `if-match-merge` — asks a stale PATCH to merge over attributes it does
+///   not send (A16-T2); the record form sends it on every save (A16-T3).
 ///
 /// A header added to a middleware or handler without being added here fails
 /// only in a real browser, never in a Rust test — so treat this list as part
@@ -198,13 +200,14 @@ const ALLOWED_METHODS: [Method; 7] = [
 /// `signed_header_coverage.rs` checks every header here is classified against
 /// the S2S canonical message. A copy of this list would drift, and a drifted
 /// copy is a test that silently stops testing.
-pub fn allowed_request_headers() -> [HeaderName; 11] {
+pub fn allowed_request_headers() -> [HeaderName; 12] {
     [
         header::ACCEPT,
         header::ACCEPT_LANGUAGE,
         header::AUTHORIZATION,
         header::CONTENT_TYPE,
         header::IF_MATCH,
+        HeaderName::from_static("if-match-merge"),
         HeaderName::from_static("traceparent"),
         HeaderName::from_static("x-idempotency-key"),
         HeaderName::from_static("idempotency-key"),

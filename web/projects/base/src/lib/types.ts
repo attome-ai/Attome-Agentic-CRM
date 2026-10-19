@@ -58,6 +58,31 @@ export interface DuplicateMatchRef {
   score: number;
 }
 
+/** A16-T1: one attribute another writer changed since the caller's `If-Match`. */
+export interface ConflictChange {
+  /** The attribute's logical name. */
+  name: string;
+  /** The value they saved, in its display form when it has one. */
+  their_value: string | null;
+  changed_by: string | null;
+  /** ISO 8601. */
+  changed_at: string | null;
+}
+
+/**
+ * A16-T1: what a `version_conflict` says the record holds now — its row
+ * version, who changed it last, and each attribute changed since the
+ * caller's version (newest first). `hiddenChanges` counts changes to fields
+ * the caller may not read; their values never reach the client.
+ */
+export interface VersionConflictState {
+  currentVersion: number;
+  lastChangedBy: string | null;
+  lastChangedAt: string | null;
+  changedAttributes: ConflictChange[];
+  hiddenChanges: number;
+}
+
 export interface ApiError {
   kind:    ApiErrorKind;
   /**
@@ -111,6 +136,8 @@ export interface ApiError {
    * `score`), and how many more it may not.
    */
   duplicates?: { matches: DuplicateMatchRef[]; hidden: number };
+  /** A16-T1: `version_conflict` only, when the body says what changed. */
+  versionConflict?: VersionConflictState;
   /** `reauth_required` only: the protected operation (`identity_link`, `api_key_create`). */
   operation?: string;
   /**

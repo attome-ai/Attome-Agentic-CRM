@@ -1,0 +1,68 @@
+/* A16-T3 — the save-conflict dialog. Logical properties only (RTL). */
+
+:host {
+  display: block;
+  margin-block: 12px;
+}
+
+.conflict-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 8px;
+  background: var(--color-bg-alt, #fff);
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.conflict-dialog h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.conflict-intro,
+.conflict-hidden {
+  margin: 0;
+  font-size: 13px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.conflict-table {
+  inline-size: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.conflict-table th,
+.conflict-table td {
+  padding-block: 6px;
+  padding-inline: 8px;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--color-border, #334155);
+}
+
+.conflict-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.conflict-who {
+  display: block;
+  margin-block-start: 2px;
+  margin-inline-start: 22px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.conflict-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

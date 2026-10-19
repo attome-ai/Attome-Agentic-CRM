@@ -114,6 +114,11 @@ const CLASSIFIED: &[(&str, Coverage, &str)] = &[
          silently downgrades a guarded delete to an unguarded one",
     ),
     (
+        "if-match-merge",
+        UnsignedButInert,
+        "asks a stale PATCH to merge over attributes it does not send (A16-T2).          attome-records ignores it on any request carrying x-s2s-client-id          (merge_requested), so on the S2S path a stale version is the usual          409: fail-closed",
+    ),
+    (
         "traceparent",
         UnsignedButInert,
         "W3C correlation only; no authorization or data effect",
