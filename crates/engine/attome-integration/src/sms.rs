@@ -287,6 +287,109 @@ pub async fn send_to_user(
     }
 }
 
+// ── J4-T2: inbound messages ─────────────────────────────────────────────────
+
+/// A message a person sent to the deployment's number.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InboundSms {
+    /// The sender, E.164.
+    pub from: String,
+    pub body: String,
+    pub provider_message_id: Option<String>,
+}
+
+/// Reads an inbound message: a Twilio form (`From`, `Body`, `MessageSid`)
+/// or a Unifonic JSON body (`from`/`sender`, `body`/`message`/`text`,
+/// `messageId`). Pure.
+pub fn parse_inbound(body: &[u8]) -> Option<InboundSms> {
+    let (from, text, id) = if let Ok(json) = serde_json::from_slice::<Value>(body) {
+        let field = |names: &[&str]| {
+            names
+                .iter()
+                .find_map(|n| json.get(*n))
+                .map(|v| v.to_string().trim_matches('"').to_owned())
+        };
+        (
+            field(&["from", "sender", "From"]),
+            field(&["body", "message", "text", "Body"]),
+            field(&["messageId", "MessageID", "message_id"]),
+        )
+    } else {
+        let form: Vec<(String, String)> = url::form_urlencoded::parse(body)
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+        let get = |key: &str| form.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
+        (get("From"), get("Body"), get("MessageSid"))
+    };
+    let from = e164(&from?)?;
+    let body = text?.trim().to_owned();
+    (!body.is_empty()).then_some(InboundSms {
+        from,
+        body,
+        provider_message_id: id.filter(|i| !i.is_empty() && i != "null"),
+    })
+}
+
+/// Whether a message asks to stop all texts: the carriers' keywords, and
+/// their Arabic equivalents, as the whole message. Pure.
+pub fn is_stop(body: &str) -> bool {
+    let word = body
+        .trim()
+        .trim_matches(|c: char| c.is_ascii_punctuation())
+        .to_uppercase();
+    matches!(
+        word.as_str(),
+        "STOP"
+            | "STOPALL"
+            | "UNSUBSCRIBE"
+            | "CANCEL"
+            | "END"
+            | "QUIT"
+            | "OPTOUT"
+            | "الغاء"
+            | "إلغاء"
+            | "ايقاف"
+            | "إيقاف"
+            | "توقف"
+    )
+}
+
+/// The SMS system an inbound webhook belongs to, when its key is that
+/// system's `inbound_key`; the comparison is of SHA-256 digests, so its time
+/// says nothing about the key.
+pub async fn inbound_system(
+    state: &EngineState,
+    key: &str,
+) -> Result<Option<crate::system::IntegrationSystem>, AppError> {
+    let rows: Vec<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT id, config FROM integration_system \
+          WHERE status = 'active' AND (is_active IS NULL OR is_active = true) \
+            AND CASE WHEN config IS JSON OBJECT THEN config::jsonb ->> 'sms' END \
+                IN ('twilio', 'unifonic')",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    use sha2::{Digest, Sha256};
+    let presented = Sha256::digest(key.as_bytes());
+    for (id, config) in rows {
+        let expected = config
+            .and_then(|c| serde_json::from_str::<Value>(&c).ok())
+            .and_then(|c| {
+                c.get("inbound_key")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })
+            .filter(|k| k.len() >= 16);
+        if let Some(expected) = expected
+            && Sha256::digest(expected.as_bytes()) == presented
+        {
+            return crate::system::load(&state.base.db, id).await;
+        }
+    }
+    Ok(None)
+}
+
 /// Reads a receipt body: a Twilio form or a Unifonic JSON webhook.
 pub fn parse_receipt_body(body: &[u8]) -> Option<(String, DeliveryStatus, Option<String>)> {
     if let Ok(json) = serde_json::from_slice::<Value>(body) {
@@ -382,5 +485,34 @@ mod tests {
             Some(("12".into(), DeliveryStatus::Delivered, None))
         );
         assert_eq!(parse_receipt_body(b"nothing=here"), None);
+    }
+
+    #[test]
+    fn sms_inbound_is_read_and_stop_is_recognised() {
+        let twilio = b"From=%2B966551234567&To=%2B15550001111&Body=STOP&MessageSid=SM5";
+        assert_eq!(
+            parse_inbound(twilio),
+            Some(InboundSms {
+                from: "+966551234567".into(),
+                body: "STOP".into(),
+                provider_message_id: Some("SM5".into()),
+            })
+        );
+        let unifonic = r#"{"from": "+966551234567", "message": "متى يصل الطلب؟", "messageId": 9}"#;
+        assert_eq!(
+            parse_inbound(unifonic.as_bytes()).map(|m| m.body),
+            Some("متى يصل الطلب؟".into())
+        );
+        assert_eq!(
+            parse_inbound(b"From=0551234567&Body=hi"),
+            None,
+            "a local number"
+        );
+        assert_eq!(parse_inbound(b"From=%2B966551234567&Body=%20"), None);
+        assert!(is_stop(" stop "));
+        assert!(is_stop("Stop!"));
+        assert!(is_stop("الغاء"));
+        assert!(is_stop("إيقاف"));
+        assert!(!is_stop("please stop calling me at work"));
     }
 }

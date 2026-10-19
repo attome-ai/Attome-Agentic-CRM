@@ -193,8 +193,12 @@ fn is_email_tracking_path(path: &str) -> bool {
 
 /// J4-T1: `/api/v1/sms/receipts/{token}`, one segment, nothing deeper.
 fn is_sms_receipt_path(path: &str) -> bool {
-    path.strip_prefix("/api/v1/sms/receipts/")
-        .is_some_and(|token| !token.is_empty() && !token.contains('/'))
+    ["/api/v1/sms/receipts/", "/api/v1/sms/inbound/"]
+        .iter()
+        .any(|prefix| {
+            path.strip_prefix(prefix)
+                .is_some_and(|token| !token.is_empty() && !token.contains('/'))
+        })
 }
 
 fn is_service_intake_path(path: &str) -> bool {
@@ -388,6 +392,8 @@ mod tests {
         assert!(is_bypass("/api/v1/sms/receipts/abc.def"));
         assert!(!is_bypass("/api/v1/sms/receipts/abc/more"));
         assert!(!is_bypass("/api/v1/sms/receipts/"));
+        assert!(is_bypass("/api/v1/sms/inbound/key-1234567890abcdef"));
+        assert!(!is_bypass("/api/v1/sms/inbound/a/b"));
         assert!(!is_bypass("/api/v1/consents/preference-links"));
         // Regression guard: the public capture route must never accidentally
         // sweep the authenticated withdraw endpoint or the generic

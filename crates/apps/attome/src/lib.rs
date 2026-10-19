@@ -33,6 +33,8 @@ pub mod dev_access_seed;
 pub mod jobs;
 pub mod observability;
 pub mod omnichannel;
+/// J4-T2: inbound texts and STOP opt-outs.
+pub mod sms_inbound;
 pub mod openapi;
 /// S2-T14: the document each caller is served.
 pub mod openapi_filter;

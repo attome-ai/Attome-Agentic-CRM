@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:36215098ce7216d42ef080a5bf422062bad8524f78e9f382f8a901ed2bfdfc4d",
+  "checksum": "sha256:83fdc4bf33b9843d7bd3f01d77129eae46ff2aa2db5f0aae1c268f187a0fdbc3",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-communication.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -56,6 +56,7 @@
               "email",
               "internal",
               "web_chat",
+              "sms",
               "portal",
               "call",
               "meeting",
