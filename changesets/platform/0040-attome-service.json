@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:2c3ef83b6510eadeca1d75d06c5b2dbc5266ef6a70d0179a505b7cab65da1d20",
+  "checksum": "sha256:71be610496e5e2f540902b360ce4646d6e0eda8138625d50c2ad04c8adec96f9",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-service.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -2078,6 +2078,23 @@
     {
       "args": {
         "definition": {
+          "display_name": "Merged Ticket Numbers",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "merged_numbers"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "service_ticket",
+        "field": "merged_numbers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "display_name": "Escalation Recipient",
           "field_type": "lookup",
           "is_filterable": true,
@@ -2087,7 +2104,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 106,
+      "seq": 107,
       "target": {
         "entity": "service_work_queue",
         "field": "escalation_recipient"
@@ -2104,7 +2121,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 107,
+      "seq": 108,
       "target": {
         "entity": "service_work_queue",
         "field": "last_assigned_member_ref"
@@ -2122,7 +2139,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 108,
+      "seq": 109,
       "target": {
         "entity": "service_work_queue",
         "field": "lead_ref"
@@ -2141,7 +2158,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 109,
+      "seq": 110,
       "target": {
         "entity": "service_work_queue_member",
         "field": "queue_ref"
@@ -2160,7 +2177,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 110,
+      "seq": 111,
       "target": {
         "entity": "service_work_queue_member",
         "field": "user_ref"
@@ -2178,7 +2195,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 111,
+      "seq": 112,
       "target": {
         "entity": "service_work_request",
         "field": "offering_id"
@@ -2197,7 +2214,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 112,
+      "seq": 113,
       "target": {
         "entity": "service_work_request",
         "field": "requester_id"
@@ -2215,7 +2232,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 113,
+      "seq": 114,
       "target": {
         "entity": "service_work_request",
         "field": "sla_policy_id"
@@ -2233,7 +2250,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 114,
+      "seq": 115,
       "target": {
         "entity": "service_work_request",
         "field": "work_queue_ref"
@@ -2251,7 +2268,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 115,
+      "seq": 116,
       "target": {
         "entity": "service_work_request",
         "field": "category"
@@ -2269,7 +2286,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 116,
+      "seq": 117,
       "target": {
         "entity": "service_work_request",
         "field": "reference"
@@ -2287,7 +2304,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 117,
+      "seq": 118,
       "target": {
         "entity": "service_offering",
         "query": "Active Service Offerings"
@@ -2305,7 +2322,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 118,
+      "seq": 119,
       "target": {
         "entity": "service_offering",
         "query": "Inactive Service Offerings"
@@ -2323,7 +2340,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 119,
+      "seq": 120,
       "target": {
         "entity": "service_sla_calculation",
         "query": "Active SLA Calculations"
@@ -2341,7 +2358,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 120,
+      "seq": 121,
       "target": {
         "entity": "service_sla_calculation",
         "query": "Inactive SLA Calculations"
@@ -2359,7 +2376,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 121,
+      "seq": 122,
       "target": {
         "entity": "service_sla_clock",
         "query": "Active SLA Clocks"
@@ -2377,7 +2394,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 122,
+      "seq": 123,
       "target": {
         "entity": "service_sla_clock",
         "query": "Inactive SLA Clocks"
@@ -2395,7 +2412,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 123,
+      "seq": 124,
       "target": {
         "entity": "service_sla_policy",
         "query": "Active SLA Policys"
@@ -2413,7 +2430,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 124,
+      "seq": 125,
       "target": {
         "entity": "service_sla_policy",
         "query": "Inactive SLA Policys"
@@ -2431,7 +2448,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 125,
+      "seq": 126,
       "target": {
         "entity": "service_ticket",
         "query": "Active Tickets"
@@ -2449,7 +2466,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 126,
+      "seq": 127,
       "target": {
         "entity": "service_ticket",
         "query": "Inactive Tickets"
@@ -2468,7 +2485,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 127,
+      "seq": 128,
       "target": {
         "entity": "service_ticket",
         "query": "Queue Claim-To-Resolve, Minutes (Last 30 Days)"
@@ -2487,7 +2504,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 128,
+      "seq": 129,
       "target": {
         "entity": "service_ticket",
         "query": "SLA Attainment % (Last 30 Days)"
@@ -2506,7 +2523,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 129,
+      "seq": 130,
       "target": {
         "entity": "service_ticket",
         "query": "SLA Breaches By Queue And Priority"
@@ -2525,7 +2542,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 130,
+      "seq": 131,
       "target": {
         "entity": "service_ticket",
         "query": "SLA Mean Time To Resolve, Minutes (Last 30 Days)"
@@ -2543,7 +2560,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 131,
+      "seq": 132,
       "target": {
         "entity": "service_work_queue",
         "query": "Active Work Queues"
@@ -2561,7 +2578,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 132,
+      "seq": 133,
       "target": {
         "entity": "service_work_queue",
         "query": "Inactive Work Queues"
@@ -2580,7 +2597,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 133,
+      "seq": 134,
       "target": {
         "entity": "service_work_queue",
         "query": "Queue Average Wait, Minutes (Currently Unassigned Items)"
@@ -2599,7 +2616,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 134,
+      "seq": 135,
       "target": {
         "entity": "service_work_queue",
         "query": "Queue Depth (Open, Unassigned Items Per Queue)"
@@ -2617,7 +2634,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 135,
+      "seq": 136,
       "target": {
         "entity": "service_work_queue_member",
         "query": "Active Work Queue Members"
@@ -2635,7 +2652,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 136,
+      "seq": 137,
       "target": {
         "entity": "service_work_queue_member",
         "query": "Inactive Work Queue Members"
@@ -2653,7 +2670,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 137,
+      "seq": 138,
       "target": {
         "entity": "service_work_request",
         "query": "Active Work Requests"
@@ -2671,7 +2688,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 138,
+      "seq": 139,
       "target": {
         "entity": "service_work_request",
         "query": "Inactive Work Requests"
@@ -2691,7 +2708,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 139,
+      "seq": 140,
       "target": {
         "entity": "service_offering",
         "view": "Active Service Offerings"
@@ -2711,7 +2728,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 140,
+      "seq": 141,
       "target": {
         "entity": "service_offering",
         "view": "Inactive Service Offerings"
@@ -2731,7 +2748,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 141,
+      "seq": 142,
       "target": {
         "entity": "service_sla_calculation",
         "view": "Active SLA Calculations"
@@ -2751,7 +2768,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 142,
+      "seq": 143,
       "target": {
         "entity": "service_sla_calculation",
         "view": "Inactive SLA Calculations"
@@ -2771,7 +2788,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 143,
+      "seq": 144,
       "target": {
         "entity": "service_sla_clock",
         "view": "Active SLA Clocks"
@@ -2791,7 +2808,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 144,
+      "seq": 145,
       "target": {
         "entity": "service_sla_clock",
         "view": "Inactive SLA Clocks"
@@ -2811,7 +2828,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 145,
+      "seq": 146,
       "target": {
         "entity": "service_sla_policy",
         "view": "Active SLA Policys"
@@ -2831,7 +2848,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 146,
+      "seq": 147,
       "target": {
         "entity": "service_sla_policy",
         "view": "Inactive SLA Policys"
@@ -2973,7 +2990,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 147,
+      "seq": 148,
       "target": {
         "entity": "service_ticket",
         "view": "Active Tickets"
@@ -3115,7 +3132,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 148,
+      "seq": 149,
       "target": {
         "entity": "service_ticket",
         "view": "Inactive Tickets"
@@ -3135,7 +3152,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 149,
+      "seq": 150,
       "target": {
         "entity": "service_work_queue",
         "view": "Active Work Queues"
@@ -3155,7 +3172,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 150,
+      "seq": 151,
       "target": {
         "entity": "service_work_queue",
         "view": "Inactive Work Queues"
@@ -3175,7 +3192,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 151,
+      "seq": 152,
       "target": {
         "entity": "service_work_queue_member",
         "view": "Active Work Queue Members"
@@ -3195,7 +3212,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 152,
+      "seq": 153,
       "target": {
         "entity": "service_work_queue_member",
         "view": "Inactive Work Queue Members"
@@ -3215,7 +3232,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 153,
+      "seq": 154,
       "target": {
         "entity": "service_work_request",
         "view": "Active Work Requests"
@@ -3235,7 +3252,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 154,
+      "seq": 155,
       "target": {
         "entity": "service_work_request",
         "view": "Inactive Work Requests"
@@ -3252,7 +3269,7 @@
       },
       "op": "upsert_state_model",
       "phase": "expand",
-      "seq": 155,
+      "seq": 156,
       "target": {
         "entity": "service_ticket"
       }
@@ -3268,7 +3285,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 156,
+      "seq": 157,
       "target": {
         "entity": "service_ticket",
         "transition": "closed->in_progress"
@@ -3285,7 +3302,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 157,
+      "seq": 158,
       "target": {
         "entity": "service_ticket",
         "transition": "closed->new"
@@ -3302,7 +3319,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 158,
+      "seq": 159,
       "target": {
         "entity": "service_ticket",
         "transition": "closed->open"
@@ -3319,7 +3336,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 159,
+      "seq": 160,
       "target": {
         "entity": "service_ticket",
         "transition": "closed->resolved"
@@ -3336,7 +3353,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 160,
+      "seq": 161,
       "target": {
         "entity": "service_ticket",
         "transition": "closed->waiting_on_customer"
@@ -3353,7 +3370,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 161,
+      "seq": 162,
       "target": {
         "entity": "service_ticket",
         "transition": "in_progress->closed"
@@ -3370,7 +3387,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 162,
+      "seq": 163,
       "target": {
         "entity": "service_ticket",
         "transition": "in_progress->new"
@@ -3387,7 +3404,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 163,
+      "seq": 164,
       "target": {
         "entity": "service_ticket",
         "transition": "in_progress->open"
@@ -3404,7 +3421,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 164,
+      "seq": 165,
       "target": {
         "entity": "service_ticket",
         "transition": "in_progress->resolved"
@@ -3421,7 +3438,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 165,
+      "seq": 166,
       "target": {
         "entity": "service_ticket",
         "transition": "in_progress->waiting_on_customer"
@@ -3438,7 +3455,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 166,
+      "seq": 167,
       "target": {
         "entity": "service_ticket",
         "transition": "new->closed"
@@ -3455,7 +3472,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 167,
+      "seq": 168,
       "target": {
         "entity": "service_ticket",
         "transition": "new->in_progress"
@@ -3472,7 +3489,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 168,
+      "seq": 169,
       "target": {
         "entity": "service_ticket",
         "transition": "new->open"
@@ -3489,7 +3506,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 169,
+      "seq": 170,
       "target": {
         "entity": "service_ticket",
         "transition": "new->resolved"
@@ -3506,7 +3523,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 170,
+      "seq": 171,
       "target": {
         "entity": "service_ticket",
         "transition": "new->waiting_on_customer"
@@ -3523,7 +3540,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 171,
+      "seq": 172,
       "target": {
         "entity": "service_ticket",
         "transition": "open->closed"
@@ -3540,7 +3557,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 172,
+      "seq": 173,
       "target": {
         "entity": "service_ticket",
         "transition": "open->in_progress"
@@ -3557,7 +3574,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 173,
+      "seq": 174,
       "target": {
         "entity": "service_ticket",
         "transition": "open->new"
@@ -3574,7 +3591,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 174,
+      "seq": 175,
       "target": {
         "entity": "service_ticket",
         "transition": "open->resolved"
@@ -3591,7 +3608,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 175,
+      "seq": 176,
       "target": {
         "entity": "service_ticket",
         "transition": "open->waiting_on_customer"
@@ -3608,7 +3625,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 176,
+      "seq": 177,
       "target": {
         "entity": "service_ticket",
         "transition": "resolved->closed"
@@ -3625,7 +3642,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 177,
+      "seq": 178,
       "target": {
         "entity": "service_ticket",
         "transition": "resolved->in_progress"
@@ -3642,7 +3659,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 178,
+      "seq": 179,
       "target": {
         "entity": "service_ticket",
         "transition": "resolved->new"
@@ -3659,7 +3676,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 179,
+      "seq": 180,
       "target": {
         "entity": "service_ticket",
         "transition": "resolved->open"
@@ -3676,7 +3693,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 180,
+      "seq": 181,
       "target": {
         "entity": "service_ticket",
         "transition": "resolved->waiting_on_customer"
@@ -3693,7 +3710,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 181,
+      "seq": 182,
       "target": {
         "entity": "service_ticket",
         "transition": "waiting_on_customer->closed"
@@ -3710,7 +3727,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 182,
+      "seq": 183,
       "target": {
         "entity": "service_ticket",
         "transition": "waiting_on_customer->in_progress"
@@ -3727,7 +3744,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 183,
+      "seq": 184,
       "target": {
         "entity": "service_ticket",
         "transition": "waiting_on_customer->new"
@@ -3744,7 +3761,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 184,
+      "seq": 185,
       "target": {
         "entity": "service_ticket",
         "transition": "waiting_on_customer->open"
@@ -3761,7 +3778,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 185,
+      "seq": 186,
       "target": {
         "entity": "service_ticket",
         "transition": "waiting_on_customer->resolved"
@@ -3778,7 +3795,7 @@
       },
       "op": "upsert_state_model",
       "phase": "expand",
-      "seq": 186,
+      "seq": 187,
       "target": {
         "entity": "service_work_request"
       }
@@ -3795,7 +3812,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 187,
+      "seq": 188,
       "target": {
         "entity": "service_work_request",
         "transition": "new->converted"
@@ -3812,7 +3829,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 188,
+      "seq": 189,
       "target": {
         "entity": "service_work_request",
         "transition": "new->rejected"
@@ -3829,7 +3846,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 189,
+      "seq": 190,
       "target": {
         "entity": "service_work_request",
         "transition": "new->triaged"
@@ -3846,7 +3863,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 190,
+      "seq": 191,
       "target": {
         "entity": "service_work_request",
         "transition": "rejected->new"
@@ -3864,7 +3881,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 191,
+      "seq": 192,
       "target": {
         "entity": "service_work_request",
         "transition": "triaged->converted"
@@ -3881,7 +3898,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 192,
+      "seq": 193,
       "target": {
         "entity": "service_work_request",
         "transition": "triaged->new"
@@ -3898,7 +3915,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 193,
+      "seq": 194,
       "target": {
         "entity": "service_work_request",
         "transition": "triaged->rejected"
@@ -3923,7 +3940,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 194,
+      "seq": 195,
       "target": {
         "entity": "autovalue",
         "key": {

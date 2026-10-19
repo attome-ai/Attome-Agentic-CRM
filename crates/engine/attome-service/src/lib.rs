@@ -1,4 +1,6 @@
 pub mod auth;
+/// G7-T1: the case-specific steps of a ticket merge.
+pub mod case_merge;
 pub mod change_calendar;
 pub mod clock;
 pub mod cmdb_impact;

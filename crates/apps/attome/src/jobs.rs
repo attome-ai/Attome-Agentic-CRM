@@ -1792,12 +1792,16 @@ async fn dispatch_platform_job(
                 &attome_state.base.config.notification,
             )
             .await?;
-            if reconciled > 0 || warned > 0 || breached > 0 || escalated > 0 {
+            // G7-T1: the case steps of ticket merges (messages, notes,
+            // documents and links to the survivor; the number as an alias).
+            let merged = attome_service::case_merge::sweep_case_merges(&db).await?;
+            if reconciled > 0 || warned > 0 || breached > 0 || escalated > 0 || merged > 0 {
                 tracing::info!(
                     reconciled,
                     warned,
                     breached,
                     escalated,
+                    merged,
                     "ticket SLA sweep: run complete"
                 );
             }

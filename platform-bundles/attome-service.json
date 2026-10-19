@@ -86,7 +86,8 @@
         { "logicalname": "mitigated_at", "display_name": "Mitigated At", "field_type": "date", "is_sortable": true, "is_filterable": true },
         { "logicalname": "major", "display_name": "Major Incident", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "work_queue_ref", "display_name": "Work Queue", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_work_queue" },
-        { "logicalname": "claimed_at", "display_name": "Claimed At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "claimed_at", "display_name": "Claimed At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "merged_numbers", "display_name": "Merged Ticket Numbers", "field_type": "text", "is_filterable": true }
       ]
     },
     {
