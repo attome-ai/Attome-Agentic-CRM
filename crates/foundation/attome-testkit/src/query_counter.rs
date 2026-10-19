@@ -8,6 +8,12 @@
 //! tasks do not add to each other's counts. Work spawned onto another task is
 //! not counted.
 //!
+//! AA14-T3: [`count_calls`] also counts Redis commands. fred opens one
+//! `fred.command` span per command in the task that sent it, when its client
+//! traces (the `count-redis` feature of `attome-cache`, which a counting test
+//! enables in its own dev-dependencies). Pipelined commands are not traced
+//! one by one, so a pipeline is not counted.
+//!
 //! The subscriber is process-global: a test binary that counts queries must
 //! not install another global subscriber. [`count_queries`] panics if one is
 //! already installed.
@@ -25,7 +31,12 @@ tokio::task_local! {
     /// AA4-T6: each statement's summary, when [`record_queries`] opened the
     /// scope.
     static RECORD: Arc<std::sync::Mutex<Vec<String>>>;
+    /// AA14-T3: Redis commands, when [`count_calls`] opened the scope.
+    static REDIS: Arc<AtomicUsize>;
 }
+
+/// The name of the span fred opens for each Redis command it sends.
+const REDIS_COMMAND_SPAN: &str = "fred.command";
 
 /// Reads sqlx's `summary` field: the statement's start, its Z2-T8 tag
 /// comment first when it has one.
@@ -39,11 +50,23 @@ impl tracing::field::Visit for Summary {
     }
 }
 
-/// Counts `sqlx::query` events into the current [`count_queries`] scope.
+/// Counts `sqlx::query` events into the current [`count_queries`] scope, and
+/// fred's command spans into the current [`count_calls`] scope.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct QueryCountLayer;
 
 impl<S: tracing::Subscriber> Layer<S> for QueryCountLayer {
+    fn on_new_span(
+        &self,
+        attrs: &tracing::span::Attributes<'_>,
+        _id: &tracing::span::Id,
+        _ctx: Context<'_, S>,
+    ) {
+        if attrs.metadata().name() == REDIS_COMMAND_SPAN {
+            let _ = REDIS.try_with(|count| count.fetch_add(1, Ordering::Relaxed));
+        }
+    }
+
     fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         if event.metadata().target() == "sqlx::query" {
             let _ = SCOPE.try_with(|count| count.fetch_add(1, Ordering::Relaxed));
@@ -65,8 +88,11 @@ static INSTALLED: OnceLock<bool> = OnceLock::new();
 /// global subscriber was there first.
 pub fn install() -> bool {
     *INSTALLED.get_or_init(|| {
-        let layer = QueryCountLayer
-            .with_filter(Targets::new().with_target("sqlx::query", LevelFilter::TRACE));
+        let layer = QueryCountLayer.with_filter(
+            Targets::new()
+                .with_target("sqlx::query", LevelFilter::TRACE)
+                .with_target("fred", LevelFilter::TRACE),
+        );
         tracing::subscriber::set_global_default(tracing_subscriber::registry().with(layer)).is_ok()
     })
 }
@@ -81,6 +107,32 @@ pub async fn count_queries<F: Future>(work: F) -> (F::Output, usize) {
     let count = Arc::new(AtomicUsize::new(0));
     let out = SCOPE.scope(Arc::clone(&count), work).await;
     (out, count.load(Ordering::Relaxed))
+}
+
+/// What one piece of work called: SQL statements and Redis commands.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Calls {
+    pub queries: usize,
+    pub redis: usize,
+}
+
+/// AA14-T3: runs `work` and returns its output with the SQL statements and
+/// Redis commands it ran in its own task.
+pub async fn count_calls<F: Future>(work: F) -> (F::Output, Calls) {
+    assert!(
+        install(),
+        "count_calls needs its own global tracing subscriber; another one is installed"
+    );
+    let queries = Arc::new(AtomicUsize::new(0));
+    let redis = Arc::new(AtomicUsize::new(0));
+    let out = SCOPE
+        .scope(Arc::clone(&queries), REDIS.scope(Arc::clone(&redis), work))
+        .await;
+    let calls = Calls {
+        queries: queries.load(Ordering::Relaxed),
+        redis: redis.load(Ordering::Relaxed),
+    };
+    (out, calls)
 }
 
 /// AA4-T6: runs `work` and returns its output with each SQL statement it ran
@@ -128,6 +180,21 @@ mod tests {
             .await;
             assert_eq!(recorded.len(), 1);
             assert!(recorded[0].contains("/* a.b */"), "{recorded:?}");
+            let ((), calls) = count_calls(async {
+                tracing::info!(target: "sqlx::query", "SELECT 1");
+                let _one =
+                    tracing::info_span!(target: "fred::trace::enabled", "fred.command").entered();
+                drop(tracing::info_span!(target: "fred::trace::enabled", "fred.command"));
+                drop(tracing::info_span!(target: "fred::trace::enabled", "fred.rtt"));
+            })
+            .await;
+            assert_eq!(
+                calls,
+                Calls {
+                    queries: 1,
+                    redis: 2
+                }
+            );
         });
     }
 }

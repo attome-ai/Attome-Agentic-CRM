@@ -1,0 +1,7 @@
+{
+  "record_get": { "queries": 11, "redis": 10 },
+  "record_list_50": { "queries": 15, "redis": 12 },
+  "record_update": { "queries": 20, "redis": 10 },
+  "global_search": { "queries": 7, "redis": 10 },
+  "sign_in": { "queries": 10, "redis": 10 }
+}

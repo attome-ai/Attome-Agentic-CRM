@@ -28,5 +28,11 @@ uuid.workspace          = true
 [dev-dependencies]
 attome-testkit.workspace = true
 
+[features]
+# AA14-T3: fred opens a `fred.command` tracing span for every Redis command,
+# which `attome_testkit::query_counter` counts per request. Test builds only:
+# the shipped binary is built without dev-dependencies, so never with this.
+count-redis = ["fred/partial-tracing"]
+
 [lints]
 workspace = true

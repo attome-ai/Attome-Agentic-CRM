@@ -134,7 +134,15 @@ fn apply_tls_ca(redis_config: &mut RedisConfig, ca_path: Option<&str>) -> Result
 /// - **Connect timeout:** 2 s instead of fred's 10 s, so one attempt against a
 ///   dead endpoint does not stall a reconnect cycle.
 /// - **Command timeout:** the configured `cache.timeout`, as before.
+///
+/// With the `count-redis` test feature, every client also traces its commands
+/// (AA14-T3), so a test can count the Redis calls one request makes.
 fn client_builder(redis_config: RedisConfig, command_timeout_ms: u64) -> Builder {
+    #[cfg(feature = "count-redis")]
+    let redis_config = RedisConfig {
+        tracing: fred::types::TracingConfig::new(true),
+        ..redis_config
+    };
     let mut builder = Builder::from_config(redis_config);
     builder
         .set_policy(ReconnectPolicy::new_exponential(0, 100, 5_000, 2))
