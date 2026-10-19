@@ -2,6 +2,12 @@
 // registered in app.config.ts. Arabic mirrors it key-for-key in ar.catalog.ts.
 
 export const hostEn = {
+  // B19-T1: a new version of the installed app is ready.
+  updateReady: {
+    text:   'A new version of Attome is ready.',
+    reload: 'Reload',
+    later:  'Later',
+  },
   authModal: {
     googleError: 'Google sign-in failed.',
     dialogAriaLabel: 'Sign in to Attome',

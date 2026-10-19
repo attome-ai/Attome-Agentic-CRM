@@ -2,6 +2,11 @@
 // (NGB-5.2b, D-761). Loaded on first use, never in `main`.
 
 export const hostAr = {
+  updateReady: {
+    text:   'إصدار جديد من أتوم جاهز.',
+    reload: 'إعادة التحميل',
+    later:  'لاحقًا',
+  },
   authModal: {
     googleError: 'فشل تسجيل الدخول باستخدام جوجل.',
     dialogAriaLabel: 'تسجيل الدخول إلى أتوم',

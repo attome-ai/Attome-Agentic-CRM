@@ -1,4 +1,5 @@
-import { ApplicationConfig, inject, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideRouter, withComponentInputBinding, withPreloading } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { BrandService, IdlePreloading, provideAttomeBase } from '@attome/base';
@@ -31,5 +32,12 @@ export const appConfig: ApplicationConfig = {
     // and everything after it. Not awaited: the product's own colours show
     // until it arrives, and a failure leaves them in place.
     provideAppInitializer(() => inject(BrandService).loadPublic()),
+    // B19-T1: the installable app. The service worker caches the shell and
+    // hash-named render plans, fetches a new version in the background and
+    // applies it on the next open (or a reload from the update notice).
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };
