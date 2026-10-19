@@ -1,0 +1,89 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'serviceWorkspace.title' | translate }}</h2>
+  </div>
+  <nav class="btn-row" [attr.aria-label]="'serviceWorkspace.quickActions' | translate">
+    <a class="btn-secondary" routerLink="/xrm/service/new-request">{{ 'serviceWorkspace.newRequest' | translate }}</a>
+    <a class="btn-secondary" routerLink="/xrm/service/catalog">{{ 'serviceWorkspace.catalog' | translate }}</a>
+    <a class="btn-secondary" routerLink="/xrm/service/triage">{{ 'serviceWorkspace.triage' | translate }}</a>
+  </nav>
+</div>
+
+@if (error(); as message) {
+  <p class="error-msg" role="alert">{{ message }}</p>
+}
+
+<div class="ws-tabs" role="tablist">
+  <button type="button" role="tab" data-testid="ws-home" [attr.aria-selected]="active() === null" (click)="select(null)">
+    {{ 'serviceWorkspace.home' | translate }}
+  </button>
+  @for (tab of tabs(); track tab.key) {
+    <span class="ws-tab" [class.active]="active() === tab.key">
+      <button type="button" role="tab" data-testid="ws-tab" [attr.aria-selected]="active() === tab.key" (click)="select(tab.key)">
+        {{ tab.title }}
+      </button>
+      <button type="button" class="ws-close" data-testid="ws-close" [attr.aria-label]="'serviceWorkspace.close' | translate" (click)="close(tab.key)">×</button>
+    </span>
+  }
+</div>
+
+@if (activeTab(); as tab) {
+  <div class="ws-session" data-testid="ws-session">
+    <section class="card ws-main">
+      @if (activeRecord(); as record) {
+        <h3>{{ field(record, 'title') || tab.title }}</h3>
+        @if (field(record, 'ticket_number') || field(record, 'reference'); as number) { <p class="hint">{{ number }}</p> }
+        <p>{{ field(record, 'description') }}</p>
+        <label class="field">
+          <span>{{ 'serviceWorkspace.note' | translate }}</span>
+          <textarea rows="4" data-testid="ws-draft" [value]="tab.draft" (input)="setDraft(tab.key, $any($event.target).value)"></textarea>
+        </label>
+        <a class="btn-secondary" [routerLink]="['/xrm', tab.entity, tab.recordId]">{{ 'serviceWorkspace.openRecord' | translate }}</a>
+      } @else {
+        <p class="state-msg">{{ 'serviceWorkspace.loading' | translate }}</p>
+      }
+    </section>
+    <aside class="card ws-context" [attr.aria-label]="'serviceWorkspace.context' | translate">
+      <h3>{{ 'serviceWorkspace.context' | translate }}</h3>
+      @if (activeRecord(); as record) {
+        @if (tab.entity === 'service_ticket') { <xrm-sla-badge [ticket]="record.data" /> }
+        <dl>
+          <dt>{{ 'serviceWorkspace.status' | translate }}</dt><dd>{{ field(record, 'status') }}</dd>
+          <dt>{{ 'serviceWorkspace.priority' | translate }}</dt><dd>{{ field(record, 'priority') }}</dd>
+          <dt>{{ 'serviceWorkspace.requester' | translate }}</dt><dd>{{ field(record, 'requester_id') }}</dd>
+        </dl>
+      }
+    </aside>
+  </div>
+} @else {
+  <div class="ws-home" data-testid="ws-home-panel">
+    <section class="card">
+      <h3>{{ 'serviceWorkspace.myWork' | translate }}</h3>
+      @for (item of work(); track item.record_id) {
+        <button type="button" class="ws-item" data-testid="ws-work" (click)="open(item.source_entity, item.record_id, item.title)">
+          <strong>{{ item.title }}</strong> <span class="hint">{{ item.state }}</span>
+        </button>
+      } @empty {
+        <p class="hint">{{ 'serviceWorkspace.noWork' | translate }}</p>
+      }
+    </section>
+    <section class="card">
+      <h3>{{ 'serviceWorkspace.conversations' | translate }}</h3>
+      @for (c of conversations(); track c.id) {
+        <button type="button" class="ws-item" data-testid="ws-conversation" (click)="open('service_work_request', c.id, c.title)">
+          <strong>{{ c.title }}</strong> @if (c.reference) { <span class="hint">{{ c.reference }}</span> }
+        </button>
+      } @empty {
+        <p class="hint">{{ 'serviceWorkspace.noConversations' | translate }}</p>
+      }
+    </section>
+    <section class="card">
+      <h3>{{ 'serviceWorkspace.queues' | translate }}</h3>
+      @for (q of queues(); track q.id) {
+        <a class="ws-item" [routerLink]="['/xrm', 'service_work_queue', q.id]">{{ q.name }}</a>
+      } @empty {
+        <p class="hint">{{ 'serviceWorkspace.noQueues' | translate }}</p>
+      }
+    </section>
+  </div>
+}
