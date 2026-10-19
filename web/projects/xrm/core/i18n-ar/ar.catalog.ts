@@ -425,6 +425,33 @@ export const xrmAr = {
     state: { draft: 'مسودة', published: 'منشور' },
     unusedTitle: 'لم يفتح أحد هذه العناصر خلال آخر 60 يومًا؛ فكّر في إخفائها:',
   },
+  // D20-T2: صفحة الحجز العامة ورابط إدارتها.
+  book: {
+    title: 'احجز اجتماعًا',
+    otherLanguage: 'English',
+    loading: 'جارٍ تحميل الأوقات المتاحة…',
+    notFound: 'رابط الحجز هذا غير صالح. اطلب من المرسل رابطًا جديدًا.',
+    length: 'مدة الاجتماع (دقائق)',
+    noTimes: 'لا توجد أوقات متاحة في الأسابيع القادمة. حاول مرة أخرى لاحقًا.',
+    name: 'اسمك',
+    email: 'البريد الإلكتروني',
+    phone: 'الهاتف (اختياري)',
+    notes: 'هل هناك ما يجب أن نعرفه؟ (اختياري)',
+    confirm: 'احجز هذا الوقت',
+    booking: 'جارٍ الحجز…',
+    booked: 'تم الحجز.',
+    checkEmail: 'أرسلنا تأكيدًا إلى بريدك الإلكتروني مع رابط لتغيير الموعد أو إلغائه.',
+    taken: 'حجز شخص آخر هذا الوقت للتو. اختر وقتًا آخر من فضلك.',
+    failed: 'لم ينجح ذلك. حاول مرة أخرى.',
+    linkInvalid: 'هذا الرابط غير صالح أو انتهت صلاحيته.',
+    cancelled: 'تم إلغاء هذا الاجتماع.',
+    reschedule: 'اختر وقتًا آخر',
+    cancel: 'إلغاء الاجتماع',
+    timeZone: 'الأوقات معروضة بتوقيت',
+    meetingType: { video: 'اجتماع مرئي', phone: 'مكالمة هاتفية', in_person: 'حضوري' },
+    provider: { teams: 'Microsoft Teams', meet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi' },
+    where: 'المكان',
+  },
   // B18-T9: offline conflicts and refused changes.
   offline: {
     conflict: {

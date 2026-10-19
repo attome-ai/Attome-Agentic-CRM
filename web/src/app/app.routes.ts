@@ -97,11 +97,11 @@ export const routes: Routes = [
     // D20-T2: a booking page and the reschedule/cancel page its email links
     // to. Public, no session; ahead of the Content Management catch-all below.
     path: 'book/manage/:token',
-    loadComponent: () => import('./pages/book/book-manage.component').then(m => m.BookManageComponent),
+    loadComponent: () => import('@attome/xrm/portal/booking').then(m => m.BookManageComponent),
   },
   {
     path: 'book/:slug',
-    loadComponent: () => import('./pages/book/book-page.component').then(m => m.BookPageComponent),
+    loadComponent: () => import('@attome/xrm/portal/booking').then(m => m.BookPageComponent),
   },
   {
     // E26-T2: the contact's preference page from a signed email link.

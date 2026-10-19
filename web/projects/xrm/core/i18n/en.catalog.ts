@@ -457,6 +457,33 @@ export const xrmEn = {
     state: { draft: 'Draft', published: 'Published' },
     unusedTitle: 'Nobody opened these items in the last 60 days; consider hiding them:',
   },
+  // D20-T2: the public booking page and its manage link.
+  book: {
+    title: 'Book a meeting',
+    otherLanguage: 'العربية',
+    loading: 'Loading the free times…',
+    notFound: 'This booking link is not valid. Ask the sender for a new one.',
+    length: 'Meeting length (minutes)',
+    noTimes: 'There are no free times in the next few weeks. Please try again later.',
+    name: 'Your name',
+    email: 'Email',
+    phone: 'Phone (optional)',
+    notes: 'Anything we should know? (optional)',
+    confirm: 'Book this time',
+    booking: 'Booking…',
+    booked: 'You are booked.',
+    checkEmail: 'We sent a confirmation to your email, with a link to reschedule or cancel.',
+    taken: 'Someone took that time a moment ago. Please choose another.',
+    failed: 'That did not work. Please try again.',
+    linkInvalid: 'This link is not valid or has expired.',
+    cancelled: 'This meeting is cancelled.',
+    reschedule: 'Choose another time',
+    cancel: 'Cancel the meeting',
+    timeZone: 'Times shown in',
+    meetingType: { video: 'Video meeting', phone: 'Phone call', in_person: 'In person' },
+    provider: { teams: 'Microsoft Teams', meet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi' },
+    where: 'Where',
+  },
   // B18-T9: offline conflicts and refused changes.
   offline: {
     conflict: {

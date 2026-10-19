@@ -1,8 +1,8 @@
 {
   "author": "packs",
-  "checksum": "sha256:d2d5a7dce552635485bb6e624e5c77b57529a2e7fb1c1e84b52762af14c0a1f0",
+  "checksum": "sha256:b325ba8ccc554da19a1f15177de195039d468523ca8f75078675841a012a3697",
   "closed_at": "2026-10-19T00:00:00Z",
-  "description": "Booking pages (D20-T2): a public link where prospects book a meeting with a team - meeting length, buffer, start-time step, how far ahead and how soon - given round robin to whoever on the team is free.",
+  "description": "Booking pages (D20-T2): a public link where prospects book a meeting with a team - meeting length, buffer, start-time step, how far ahead and how soon, the kind of meeting (video on a chosen service, phone or in person, and where) - given round robin to whoever on the team is free.",
   "format": "attome-changeset/v1",
   "id": "01a14f2e-7b40-7d3a-9c15-4e2b8f6a0d18",
   "layer": "product",
@@ -290,11 +290,104 @@
     },
     {
       "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Meeting Type",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "meeting_type",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "video",
+              "phone",
+              "in_person"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "booking_page",
+        "field": "meeting_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Video Service",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "video_provider",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "teams",
+              "meet",
+              "zoom",
+              "jitsi"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "booking_page",
+        "field": "video_provider"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Location",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "location",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "booking_page",
+        "field": "location"
+      }
+    },
+    {
+      "args": {
         "display_name": "صفحة حجز"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "booking_page",
@@ -307,7 +400,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.name",
@@ -320,7 +413,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 17,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.slug",
@@ -333,7 +426,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 18,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.description",
@@ -346,7 +439,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 16,
+      "seq": 19,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.team_ref",
@@ -359,7 +452,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 17,
+      "seq": 20,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.duration_minutes",
@@ -372,7 +465,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 18,
+      "seq": 21,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.buffer_minutes",
@@ -385,7 +478,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 19,
+      "seq": 22,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.step_minutes",
@@ -398,7 +491,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 20,
+      "seq": 23,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.horizon_days",
@@ -411,7 +504,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 21,
+      "seq": 24,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.min_notice_hours",
@@ -424,10 +517,49 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 22,
+      "seq": 25,
       "target": {
         "locale": "ar",
         "object_key": "booking_page.is_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نوع الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "booking_page.meeting_type",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خدمة الفيديو"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "booking_page.video_provider",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المكان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "booking_page.location",
         "object_kind": "attribute"
       }
     }

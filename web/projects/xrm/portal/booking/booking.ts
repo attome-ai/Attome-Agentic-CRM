@@ -1,12 +1,18 @@
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '@attome/base';
-import { solvePow } from '../login/pow';
+import { solvePow } from '@attome/base/pow';
 
 /** `GET /api/v1/booking/{slug}`. */
 export interface BookingPageView {
   name: string;
   description: string | null;
   duration_minutes: number;
+  /** D20-T3: `video`, `phone` or `in_person`; none when the page does not say. */
+  meeting_type: 'video' | 'phone' | 'in_person' | null;
+  /** The video service (`teams`, `meet`, `zoom`, `jitsi`) for a video meeting. */
+  video_provider: string | null;
+  /** Where an in-person meeting is, or the number a phone meeting uses. */
+  location: string | null;
   slots: { start: string; end: string }[];
 }
 
@@ -51,6 +57,22 @@ export function groupByDay(
     day.slots.push({ start: s.start, end: s.end, label: time.format(at) });
   }
   return days;
+}
+
+/** Zones the visitor may show times in, the browser's own first. Pure. */
+export function timeZones(own: string, supported?: readonly string[]): string[] {
+  const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+  const all = supported ?? intl.supportedValuesOf?.('timeZone') ?? [];
+  return [own, ...all.filter(z => z !== own)];
+}
+
+/** The browser's time zone, UTC when it cannot say. */
+export function ownTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
 }
 
 /** A meeting's time as one line, in the reader's language. Pure. */

@@ -1,16 +1,19 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, LangService, TranslatePipe } from '@attome/base';
-import { BookingPageView, challengeToken, groupByDay, meetingTime } from './booking';
+import { BookingPageView, challengeToken, groupByDay, meetingTime, ownTimeZone, timeZones } from './booking';
 
 type Stage = 'loading' | 'ready' | 'booking' | 'booked' | 'missing' | 'taken' | 'failed';
 
 /**
- * D20-T2: the public booking page at `/book/:slug`. No session: it lists the
- * times someone on the team is free (in the visitor's own time zone and
- * language), takes a name and email, solves the deployment's proof-of-work
- * challenge when one is in force, and books. The confirmation email carries
- * the link to reschedule or cancel. Logical CSS only.
+ * D20-T2/T3: the public booking page at `/book/:slug`. No session: it lists
+ * the times someone on the team is free, in the visitor's language (Arabic
+ * right to left, with a toggle) and in the time zone they pick (their own by
+ * default). It says what kind of meeting it is (video and on which service,
+ * a phone call, or in person and where), takes a name and email, solves the
+ * deployment's proof-of-work challenge when one is in force, and books. The
+ * confirmation email carries the link to reschedule or cancel. Logical CSS
+ * only.
  */
 @Component({
   selector: 'app-book-page',
@@ -36,6 +39,20 @@ type Stage = 'loading' | 'ready' | 'booking' | 'booked' | 'missing' | 'taken' | 
             @if (page(); as p) {
               @if (p.description) { <p class="bk-muted">{{ p.description }}</p> }
               <p class="bk-muted">{{ 'book.length' | translate }}: <span class="num">{{ p.duration_minutes }}</span></p>
+              @if (p.meeting_type) {
+                <p class="bk-muted" data-testid="book-type">
+                  {{ ('book.meetingType.' + p.meeting_type) | translate }}
+                  @if (p.meeting_type === 'video' && p.video_provider) {
+                    · {{ ('book.provider.' + p.video_provider) | translate }}
+                  }
+                  @if (p.location) { · {{ 'book.where' | translate }}: <bdi>{{ p.location }}</bdi> }
+                </p>
+              }
+              <label class="bk-tz">{{ 'book.timeZone' | translate }}
+                <select [value]="zone()" (change)="zone.set($any($event.target).value)" data-testid="book-zone">
+                  @for (z of zones; track z) { <option [value]="z">{{ z }}</option> }
+                </select>
+              </label>
               @if (days().length === 0) {
                 <p data-testid="book-none">{{ 'book.noTimes' | translate }}</p>
               }
@@ -96,6 +113,9 @@ type Stage = 'loading' | 'ready' | 'booking' | 'booked' | 'missing' | 'taken' | 
     .bk-head h1 { margin-block: 0; font-size: 1.25rem; }
     .bk-lang { background: none; border: none; color: var(--color-accent, #2563eb); cursor: pointer; }
     .bk-days { display: flex; flex-direction: column; gap: 0.75rem; }
+    .bk-tz { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-text-secondary, #5b616b); }
+    .bk-tz select { padding-block: 0.375rem; padding-inline: 0.5rem; border: 1px solid var(--color-border, #e3e5e8);
+      border-radius: 0.5rem; font: inherit; max-inline-size: 100%; }
     .bk-day h2 { margin-block: 0 0.375rem; font-size: 0.9375rem; }
     .bk-slots { display: flex; flex-wrap: wrap; gap: 0.375rem; }
     .bk-slot { padding-block: 0.375rem; padding-inline: 0.75rem; border: 1px solid var(--color-border, #e3e5e8);
@@ -128,11 +148,14 @@ export class BookPageComponent implements OnInit {
   readonly page = signal<BookingPageView | null>(null);
   readonly chosen = signal<string | null>(null);
   readonly dir = computed(() => (this.lang.isRtl() ? 'rtl' : 'ltr'));
-  readonly days = computed(() => groupByDay(this.page()?.slots ?? [], this.lang.intlLocale()));
+  /** D20-T3: the zone times are shown in; the visitor's own to start. */
+  readonly zone = signal(ownTimeZone());
+  readonly zones = timeZones(this.zone());
+  readonly days = computed(() => groupByDay(this.page()?.slots ?? [], this.lang.intlLocale(), this.zone()));
   readonly chosenTime = computed(() => {
     const start = this.chosen();
     const slot = this.page()?.slots.find(s => s.start === start);
-    return slot ? meetingTime(slot.start, slot.end, this.lang.intlLocale()) : '';
+    return slot ? meetingTime(slot.start, slot.end, this.lang.intlLocale(), this.zone()) : '';
   });
 
   name = '';

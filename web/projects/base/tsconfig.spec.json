@@ -10,7 +10,8 @@
       "@attome/base/i18n-ar": ["projects/base/i18n-ar/public-api.ts"],
       "@attome/base/account": ["projects/base/account/public-api.ts"],
       "@attome/base/dialog":  ["projects/base/dialog/public-api.ts"],
-      "@attome/base/step-up": ["projects/base/step-up/public-api.ts"]
+      "@attome/base/step-up": ["projects/base/step-up/public-api.ts"],
+      "@attome/base/pow":     ["projects/base/pow/public-api.ts"]
     },
     // Node types: catalog-coverage.spec.ts walks the workspace with node:fs to
     // derive required keys from consumers. Same setting projects/xrm already

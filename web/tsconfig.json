@@ -37,6 +37,7 @@
       "@attome/base/account":      ["projects/base/account/public-api.ts"],
       "@attome/base/dialog":       ["projects/base/dialog/public-api.ts"],
       "@attome/base/step-up":      ["projects/base/step-up/public-api.ts"],
+      "@attome/base/pow":          ["projects/base/pow/public-api.ts"],
       "@attome/xrm":               ["projects/xrm/src/public-api.ts"],
       "@attome/xrm/*":             ["projects/xrm/*/public-api.ts"],
       "rxjs":                      ["node_modules/rxjs"],

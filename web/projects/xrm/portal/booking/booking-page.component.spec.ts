@@ -2,14 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { ApiService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BookManageComponent } from './book-manage.component';
-import { BookPageComponent } from './book-page.component';
-import { groupByDay, meetingTime } from './booking';
+import { BookManageComponent } from './booking-manage.component';
+import { BookPageComponent } from './booking-page.component';
+import { groupByDay, meetingTime, timeZones } from './booking';
 
 const page = {
   name: 'Intro call',
   description: null,
   duration_minutes: 30,
+  meeting_type: 'video',
+  video_provider: 'teams',
+  location: null,
   slots: [
     { start: '2026-11-03T06:00:00Z', end: '2026-11-03T06:30:00Z' },
     { start: '2026-11-02T06:30:00Z', end: '2026-11-02T07:00:00Z' },
@@ -31,6 +34,14 @@ describe('booking helpers (D20-T2)', () => {
     expect(groupByDay([{ start: '2026-11-02T22:00:00Z', end: '2026-11-02T22:30:00Z' }], 'en-GB', 'Asia/Riyadh')[0].key)
       .toBe('2026-11-03');
     expect(meetingTime('2026-11-02T06:00:00Z', '2026-11-02T06:30:00Z', 'en-GB', 'Asia/Riyadh')).toContain('09:30');
+    expect(timeZones('Asia/Riyadh', ['Africa/Cairo', 'Asia/Riyadh', 'Europe/London']))
+      .toEqual(['Asia/Riyadh', 'Africa/Cairo', 'Europe/London']);
+  });
+
+  it('shows Arabic times right to left in the chosen zone', () => {
+    const ar = groupByDay(page.slots, 'ar-SA-u-nu-latn', 'Asia/Riyadh');
+    expect(ar[0].slots[0].label).toMatch(/9:00|09:00/);
+    expect(ar[0].label).not.toBe(groupByDay(page.slots, 'en-GB', 'Asia/Riyadh')[0].label);
   });
 });
 
@@ -67,6 +78,32 @@ describe('BookPageComponent (D20-T2)', () => {
       start: '2026-11-02T06:00:00Z', name: 'Sara', email: 'sara@example.sa', captcha_token: undefined,
     }));
     expect(cmp.stage()).toBe('booked');
+  });
+
+  it('says the meeting type, and re-labels the times when the visitor picks another zone', () => {
+    const fixture = TestBed.createComponent(BookPageComponent);
+    fixture.componentRef.setInput('slug', 'intro');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="book-type"]')?.textContent).toContain('book.meetingType.video');
+    expect(el.querySelector('[data-testid="book-type"]')?.textContent).toContain('book.provider.teams');
+    const cmp = fixture.componentInstance;
+    cmp.zone.set('Asia/Riyadh');
+    fixture.detectChanges();
+    expect(cmp.days()[0].slots[0].label).toBe('09:00');
+    cmp.zone.set('Europe/London');
+    fixture.detectChanges();
+    expect(cmp.days()[0].slots[0].label).toBe('06:00');
+  });
+
+  it('lays the page out right to left in Arabic', () => {
+    TestBed.overrideProvider(LangService, { useValue: { ...lang, current: () => 'ar', isRtl: () => true, intlLocale: () => 'ar' } });
+    const fixture = TestBed.createComponent(BookPageComponent);
+    fixture.componentRef.setInput('slug', 'intro');
+    fixture.detectChanges();
+    const main = (fixture.nativeElement as HTMLElement).querySelector('main');
+    expect(main?.getAttribute('dir')).toBe('rtl');
+    expect(main?.getAttribute('lang')).toBe('ar');
   });
 
   it('shows the remaining times when someone booked it first', async () => {

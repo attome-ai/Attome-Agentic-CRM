@@ -61,6 +61,12 @@ pub struct BookingPage {
     pub step_minutes: Option<f64>,
     pub horizon_days: Option<f64>,
     pub min_notice_hours: Option<f64>,
+    /// D20-T3: `video`, `phone` or `in_person`.
+    pub meeting_type: Option<String>,
+    /// For a video meeting: `teams`, `meet`, `zoom` or `jitsi` (J7-T1).
+    pub video_provider: Option<String>,
+    /// Where an in-person meeting is, or the number a phone meeting uses.
+    pub location: Option<String>,
 }
 
 /// The page's settings with defaults, as durations.
@@ -151,6 +157,12 @@ pub struct PublicBookingPage {
     pub name: String,
     pub description: Option<String>,
     pub duration_minutes: i64,
+    /// D20-T3: `video`, `phone` or `in_person`; none when the page does not say.
+    pub meeting_type: Option<String>,
+    /// The video service of a video meeting.
+    pub video_provider: Option<String>,
+    /// Where an in-person meeting is, or the number a phone meeting uses.
+    pub location: Option<String>,
     pub slots: Vec<Slot>,
 }
 
@@ -209,7 +221,7 @@ pub struct RescheduleRequest {
 const PAGE_COLUMNS: &str = "id, name, slug, description, team_ref, \
      duration_minutes::float8 AS duration_minutes, buffer_minutes::float8 AS buffer_minutes, \
      step_minutes::float8 AS step_minutes, horizon_days::float8 AS horizon_days, \
-     min_notice_hours::float8 AS min_notice_hours";
+     min_notice_hours::float8 AS min_notice_hours, meeting_type, video_provider, location";
 
 async fn installed(state: &EngineState) -> Result<bool, AppError> {
     sqlx::query_scalar("SELECT to_regclass('booking_page') IS NOT NULL")
@@ -392,6 +404,9 @@ pub async fn public_page(
         name: page.name,
         description: page.description,
         duration_minutes: rules.duration.num_minutes(),
+        meeting_type: page.meeting_type,
+        video_provider: page.video_provider,
+        location: page.location,
         slots: merge_slots(per_member, MAX_SLOTS)
             .into_iter()
             .map(|(start, end)| Slot { start, end })
@@ -580,7 +595,10 @@ async fn prospect(
 }
 
 /// Creates the meeting as `member`, on the prospect when allowed, else on
-/// the booking page.
+/// the booking page; with its join link or place, for the email. For a
+/// video page the online meeting is made first, on the member's own
+/// connection (J7-T1); when that fails the meeting is still booked, without
+/// a link, and the member sees why in the log.
 async fn create_meeting(
     state: &EngineState,
     page: &BookingPage,
@@ -588,9 +606,42 @@ async fn create_meeting(
     start: DateTime<Utc>,
     rules: &Rules,
     (name, email, phone, notes): (&str, &str, Option<&str>, Option<&str>),
-) -> Result<Uuid, AppError> {
+) -> Result<(Uuid, Option<String>), AppError> {
     let ctx = state.base.security.resolve(member).await?;
     ctx.require("activity", "create")?;
+    let mut extra = serde_json::Map::new();
+    let mut place = None;
+    match page.meeting_type.as_deref() {
+        Some("video") => {
+            if let Some(provider) = page.video_provider.as_deref().filter(|p| !p.is_empty()) {
+                let request = attome_integration::connector::adapters::video::MeetingRequest {
+                    provider: provider.to_owned(),
+                    subject: format!("{}: {name}", page.name),
+                    start,
+                    end: start + rules.duration,
+                };
+                match attome_integration::connector::adapters::video::create(
+                    state, member, &request,
+                )
+                .await
+                {
+                    Ok(meeting) => {
+                        extra.insert("meeting_provider".into(), json!(meeting.provider));
+                        extra.insert("meeting_id".into(), json!(meeting.id));
+                        extra.insert("meeting_url".into(), json!(meeting.join_url));
+                        place = Some(meeting.join_url);
+                    }
+                    Err(error) => {
+                        tracing::warn!(%member, %error, "booking: online meeting not created; booked without a link")
+                    }
+                }
+            }
+        }
+        Some("phone" | "in_person") => {
+            place = page.location.clone().filter(|l| !l.trim().is_empty());
+        }
+        _ => {}
+    }
     let mut description = format!("Booked through \"{}\" by {name} <{email}>", page.name);
     if let Some(phone) = phone {
         description.push_str(&format!(", {phone}"));
@@ -599,8 +650,11 @@ async fn create_meeting(
         description.push_str("\n\n");
         description.push_str(notes);
     }
+    if let Some(place) = &place {
+        description.push_str(&format!("\n{place}"));
+    }
     let body = |entity: &str, record: Uuid| {
-        json!({
+        let mut body = json!({
             "subject": format!("{}: {name}", page.name),
             "activity_type": "meeting",
             "due_at": start.to_rfc3339(),
@@ -608,7 +662,11 @@ async fn create_meeting(
             "description": description,
             "entity_name": entity,
             "record_id": record.to_string(),
-        })
+        });
+        if let Value::Object(map) = &mut body {
+            map.extend(extra.clone());
+        }
+        body
     };
     if let Some((entity, record)) = prospect(state, &ctx, member, name, email, phone).await {
         match attome_records::entity_crud::create_record_for(
@@ -620,7 +678,7 @@ async fn create_meeting(
         )
         .await
         {
-            Ok((id, _)) => return Ok(id),
+            Ok((id, _)) => return Ok((id, place)),
             Err(error) => {
                 tracing::warn!(%member, %error, "booking: meeting not allowed on the prospect; put on the page")
             }
@@ -634,7 +692,7 @@ async fn create_meeting(
         body("booking_page", page.id),
     )
     .await?;
-    Ok(id)
+    Ok((id, place))
 }
 
 fn link_secret(state: &EngineState) -> Result<String, AppError> {
@@ -770,7 +828,7 @@ pub async fn book(state: &EngineState, slug: &str, req: &BookRequest) -> Result<
     else {
         return Err(AppError::Conflict("that time is no longer free"));
     };
-    let activity = match create_meeting(
+    let (activity, place) = match create_meeting(
         state,
         &page,
         member,
@@ -785,7 +843,7 @@ pub async fn book(state: &EngineState, slug: &str, req: &BookRequest) -> Result<
     )
     .await
     {
-        Ok(id) => id,
+        Ok(created) => created,
         Err(error) => {
             // The claim must not hold the time for a meeting that does not exist.
             sqlx::query(
@@ -810,10 +868,11 @@ pub async fn book(state: &EngineState, slug: &str, req: &BookRequest) -> Result<
         &email,
         format!("Booked: {}", page.name),
         format!(
-            "Hello {name},\n\nYour meeting \"{}\" is booked for {}.\n\n\
+            "Hello {name},\n\nYour meeting \"{}\" is booked for {}.{}\n\n\
              To reschedule or cancel: {}",
             page.name,
             when(start, end),
+            place.map(|p| format!("\n{p}")).unwrap_or_default(),
             manage_url(state, &token)
         ),
     )
@@ -1033,6 +1092,9 @@ mod tests {
             step_minutes: None,
             horizon_days: Some(14.0),
             min_notice_hours: Some(2.0),
+            meeting_type: None,
+            video_provider: None,
+            location: None,
         }
     }
 

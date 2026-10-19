@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { ApiService, LangService, TranslatePipe } from '@attome/base';
-import { BookingPageView, ManagedBooking, groupByDay, meetingTime } from './booking';
+import { BookingPageView, ManagedBooking, groupByDay, meetingTime, ownTimeZone } from './booking';
 
 type Stage = 'loading' | 'ready' | 'busy' | 'missing' | 'failed' | 'taken';
 
@@ -89,10 +89,11 @@ export class BookManageComponent implements OnInit {
   readonly booking = signal<ManagedBooking | null>(null);
   readonly slots = signal<{ start: string; end: string }[]>([]);
   readonly dir = computed(() => (this.lang.isRtl() ? 'rtl' : 'ltr'));
-  readonly days = computed(() => groupByDay(this.slots(), this.lang.intlLocale()));
+  private readonly zone = ownTimeZone();
+  readonly days = computed(() => groupByDay(this.slots(), this.lang.intlLocale(), this.zone));
   readonly when = computed(() => {
     const b = this.booking();
-    return b ? meetingTime(b.start, b.end, this.lang.intlLocale()) : '';
+    return b ? `${meetingTime(b.start, b.end, this.lang.intlLocale(), this.zone)} (${this.zone})` : '';
   });
 
   private path(suffix = ''): string {
