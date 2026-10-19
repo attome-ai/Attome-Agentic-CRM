@@ -63,6 +63,17 @@ describe('EntityListPageComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/xrm', 'entity', 'user_account', 'form']);
   });
 
+  it('opens the create form for the record type picked (A27-T4)', () => {
+    const fixture = create('account');
+
+    fixture.componentInstance.onCreate('partner');
+
+    expect(navigate).toHaveBeenCalledWith(
+      ['/xrm', 'entity', 'account', 'form'],
+      { queryParams: { record_type: 'partner' } },
+    );
+  });
+
   it('preserves the record id when opening the edit form', () => {
     const fixture = create();
 

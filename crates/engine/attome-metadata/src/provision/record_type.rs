@@ -51,6 +51,11 @@ pub async fn ensure_column(db: &DbPool, entity_id: Uuid) -> Result<(), AppError>
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct RecordType {
     pub code: String,
+    /// A27-T4: the type's names, for the new-record picker.
+    #[serde(default)]
+    pub label_en: String,
+    #[serde(default)]
+    pub label_ar: Option<String>,
     #[serde(default)]
     pub is_default: bool,
     /// The roles that may create records of this type; empty is every role.

@@ -1,0 +1,36 @@
+/* A27-T4 — the split new-record button. Logical properties only (RTL). */
+
+.type-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.type-toggle {
+  margin-inline-start: 1px;
+  padding-inline: 8px;
+}
+
+.type-menu {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  z-index: 10;
+  min-inline-size: 180px;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 6px;
+  background: var(--color-bg-alt, #fff);
+}
+
+.type-menu button {
+  display: block;
+  inline-size: 100%;
+  padding-block: 6px;
+  padding-inline: 12px;
+  border: 0;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}

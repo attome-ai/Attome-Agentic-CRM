@@ -152,7 +152,8 @@
         </button>
         }
         @if (allowCreate()) {
-        <button type="button" class="btn btn-primary" (click)="handleAdd()">{{ 'entityList.newRecord' | translate }}</button>
+        <!-- A27-T4: a split button when the entity has record types. -->
+        <xrm-record-type-picker [entity]="entityName()" (create)="handleAdd($event)" />
         }
         <button type="button" class="btn btn-secondary" (click)="refresh()">{{ 'entityList.refresh' | translate }}</button>
         <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()" (click)="exportList('csv')">

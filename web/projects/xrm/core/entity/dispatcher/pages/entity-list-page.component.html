@@ -29,7 +29,7 @@
       [entityName]="name()"
       [allowCreate]="true"
       [viewKindFilter]="listPickerKinds"
-      (newClick)="onCreate()"
+      (newClick)="onCreate($event)"
       (editClick)="onEdit($event)"
     >
       <div xrmListToolbarStart class="view-kind-slot">

@@ -174,8 +174,11 @@ export class EntityListPageComponent {
     void this.router.navigateByUrl(urlTree);
   }
 
-  onCreate(): void {
-    this.router.navigate(entityFormRoute(this.name()));
+  /** A27-T4: a chosen record type opens the new form with it preset. */
+  onCreate(recordType: string | null = null): void {
+    const route = entityFormRoute(this.name());
+    if (recordType) this.router.navigate(route, { queryParams: { record_type: recordType } });
+    else this.router.navigate(route);
   }
 
   onEdit(record: EntityRecord): void {

@@ -8,6 +8,10 @@
 //! caller names in `clear`, each of which must be one the preview lists. The
 //! caller's roles must be allowed the new type (A27-T2). The stage itself is
 //! not moved: that stays with the state model's own transitions.
+//!
+//! A27-T4: `GET /api/v1/{entity}/record-types` lists the types the caller's
+//! roles may create, with their names and forms, the caller's default first,
+//! for the new-record button.
 
 use std::collections::HashSet;
 
@@ -16,9 +20,9 @@ use attome_core::{EngineState, quote_ident};
 use attome_metadata::provision::record_type::{
     ATTRIBUTE, decide_create, form_attributes, initial_stage, published_types,
 };
-use attome_security::record_action::Update;
+use attome_security::record_action::{Create, Update};
 use attome_server::authz::{Authorized, RecordScoped};
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json,
     extract::{Extension, Path, Query, State},
@@ -216,10 +220,84 @@ pub(super) async fn change_type(
     Ok(Json(outcome))
 }
 
+/// A27-T4: one record type the caller may create.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RecordTypeOption {
+    pub code: String,
+    pub label_en: String,
+    pub label_ar: Option<String>,
+    /// The form a record of this type shows, when it names one.
+    pub form: Option<Uuid>,
+    /// The type a new record gets when the caller names none.
+    pub is_default: bool,
+}
+
+/// Lists the record types the caller's roles may create (A27-T4), the
+/// caller's default first. Empty when the entity has no record types.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/record-types",
+    description = "The record types of this entity the caller may create, the default first, for the New button's choice (A27-T4).",
+    tag = "entity",
+    operation_id = "list_record_types",
+    params(("entity" = String, Path, description = "The entity's logical name")),
+    responses(
+        (status = 200, description = "The types the caller may create, default first", body = PaginatedResponse<RecordTypeOption>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not create records of this entity", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn list_record_types(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Create>>,
+    Path(entity_input): Path<String>,
+) -> Result<Json<PaginatedResponse<RecordTypeOption>>, AppError> {
+    let (entity_id, _, attrs, _) = resolve_entity(&state, &entity_input).await?;
+    if !attrs.iter().any(|a| a.logicalname == ATTRIBUTE) {
+        return Ok(Json(PaginatedResponse::new(Vec::new(), 0, 1, 1)));
+    }
+    let types = published_types(&state.base.db, entity_id).await?;
+    let roles = ctx.role_ids.as_deref();
+    // The caller's default; a default their roles may not use is no default.
+    let default = decide_create(&types, None, roles)
+        .ok()
+        .flatten()
+        .map(|t| t.code.clone());
+    let mut items: Vec<RecordTypeOption> = types
+        .iter()
+        .filter(|t| match roles {
+            None => true,
+            Some(held) => t.roles.is_empty() || t.roles.iter().any(|r| held.contains(r)),
+        })
+        .map(|t| RecordTypeOption {
+            code: t.code.clone(),
+            label_en: if t.label_en.is_empty() {
+                t.code.clone()
+            } else {
+                t.label_en.clone()
+            },
+            label_ar: t.label_ar.clone().filter(|l| !l.is_empty()),
+            form: t.form,
+            is_default: default.as_deref() == Some(t.code.as_str()),
+        })
+        .collect();
+    items.sort_by(|a, b| b.is_default.cmp(&a.is_default).then(a.code.cmp(&b.code)));
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    let size = total.max(1);
+    Ok(Json(PaginatedResponse::new(items, total, 1, size)))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(change_type),
-    components(schemas(RecordTypeChangeBody, RecordTypeChange, RecordTypeStage))
+    paths(change_type, list_record_types),
+    components(schemas(
+        RecordTypeChangeBody,
+        RecordTypeChange,
+        RecordTypeStage,
+        RecordTypeOption
+    ))
 )]
 struct ApiDocFragment;
 

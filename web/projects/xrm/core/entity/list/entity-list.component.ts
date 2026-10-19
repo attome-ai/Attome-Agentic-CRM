@@ -45,6 +45,7 @@ import { viewFilters } from './advanced-find';
 import { RecordAccessActionsComponent } from '../record-access/record-access-actions.component';
 import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component';
 import { ListCardsComponent, SwipeAction, mobileOptions } from './list-cards.component';
+import { RecordTypePickerComponent } from '../record-type-picker/record-type-picker.component';
 
 /** A lowercase or uppercase hyphenated UUID. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -173,7 +174,7 @@ export function richTextToPlainText(html: string): string {
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
     AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent,
-    ListCardsComponent,
+    ListCardsComponent, RecordTypePickerComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },
   templateUrl: './entity-list.component.html',
@@ -205,7 +206,8 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   readonly allowCreate = input(false);
   readonly showRelationshipActions = input(false);
 
-  readonly newClick  = output<void>();
+  /** A27-T4: the record type chosen on the New button (`null`: none). */
+  readonly newClick  = output<string | null>();
   readonly editClick = output<EntityRecord>();
   readonly addRelationshipClick = output<void>();
   readonly removeRelationshipClick = output<readonly string[]>();
@@ -1286,7 +1288,7 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     this.editClick.emit(row);
   }
 
-  handleAdd(): void { this.newClick.emit(); }
+  handleAdd(recordType: string | null = null): void { this.newClick.emit(recordType); }
 
   handleAddRelationship(): void { this.addRelationshipClick.emit(); }
 
