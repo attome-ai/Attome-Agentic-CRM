@@ -2332,6 +2332,29 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/admin/devices/{id}/offline-refresh" => {
+            // B18-T12: a device that has synced once.
+            let device: Uuid = sqlx::query_scalar(
+                "INSERT INTO user_device (user_id, platform, app_kind, app_version) \
+                 VALUES ($1, 'android', 'standard', '1.0.0') RETURNING id",
+            )
+            .bind(fx.admin_id)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a device");
+            sqlx::query("INSERT INTO offline_device_state (device_id, profile_id) VALUES ($1, $2)")
+                .bind(device)
+                .bind(Uuid::now_v7())
+                .execute(&fx.base.db)
+                .await
+                .expect("seed its sync state");
+            request(
+                "POST",
+                &format!("/api/v1/admin/devices/{device}/offline-refresh"),
+                t,
+                None,
+            )
+        }
         // ── invitations, identity links ─────────────────────────────────────
         "POST /api/v1/admin/security/invitations" => request(
             "POST",

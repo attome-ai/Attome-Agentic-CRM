@@ -74,6 +74,16 @@ pub(super) struct DeviceRow {
     wiped_at: Option<DateTime<Utc>>,
     last_seen_at: DateTime<Utc>,
     created_at: DateTime<Utc>,
+    /// B18-T12: offline sync, when the device has synced.
+    last_pull_at: Option<DateTime<Utc>>,
+    last_push_at: Option<DateTime<Utc>>,
+    /// Changes waiting on the device, as it last reported.
+    queue_size: Option<i32>,
+    /// Bytes its offline store uses, as it last reported.
+    bytes_used: Option<i64>,
+    last_sync_error: Option<String>,
+    /// A refresh is due at the device's next pull.
+    force_refresh: Option<bool>,
 }
 
 /// A registration's fields, trimmed and checked against the table's limits.
@@ -286,8 +296,11 @@ pub(super) async fn list_devices(
     let items: Vec<DeviceRow> = sqlx::query_as(
         "SELECT d.id, d.user_id, coalesce(u.user_name, u.email) AS user_name, d.platform, d.app_kind, \
                 d.app_version, d.label, d.wipe_requested_at, d.wiped_at, \
-                d.last_seen_at, d.created_at \
+                d.last_seen_at, d.created_at, \
+                o.last_pull_at, o.last_push_at, o.queue_size, o.bytes_used, \
+                o.last_error AS last_sync_error, o.force_refresh \
            FROM user_device d LEFT JOIN user_account u ON u.id = d.user_id \
+           LEFT JOIN offline_device_state o ON o.device_id = d.id \
           ORDER BY d.last_seen_at DESC, d.id LIMIT $1 OFFSET $2",
     )
     .bind(window.page_size)
@@ -362,6 +375,53 @@ pub(super) async fn wipe_device(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// B18-T12: the device starts its offline data again at its next pull: a
+/// fresh manifest, every record re-sent.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/devices/{id}/offline-refresh",
+    tag = "admin-security",
+    params(("id" = Uuid, Path)),
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "Refresh due at the next pull"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such device, or it has never synced", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn force_offline_refresh(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    let mut tx = SecurityTx::begin(
+        &state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "user_device",
+            Some(id),
+        )
+        .named("device_offline_refresh"),
+    )
+    .await?;
+    let set =
+        sqlx::query("UPDATE offline_device_state SET force_refresh = true WHERE device_id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?
+            .rows_affected();
+    if set == 0 {
+        return Err(AppError::NotFound);
+    }
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub(super) fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/devices", post(register_device))
@@ -369,6 +429,10 @@ pub(super) fn routes() -> Router<EngineState> {
         .route("/api/v1/devices/me/{id}/wiped", post(my_device_wiped))
         .route("/api/v1/admin/devices", get(list_devices))
         .route("/api/v1/admin/devices/{id}/wipe", post(wipe_device))
+        .route(
+            "/api/v1/admin/devices/{id}/offline-refresh",
+            post(force_offline_refresh),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
@@ -377,7 +441,8 @@ pub(super) fn routes() -> Router<EngineState> {
     my_device_status,
     my_device_wiped,
     list_devices,
-    wipe_device
+    wipe_device,
+    force_offline_refresh
 ))]
 struct ApiDocFragment;
 
