@@ -601,12 +601,12 @@ pub(crate) async fn add_member(
     if active_users(&state, &[body.user_id]).await?.is_empty() {
         return Err(AppError::Validation("user_id: not an active user".into()));
     }
-    if let (Some(entity), Some(record)) = (me.entity_name.as_deref(), me.record_id) {
-        if !user_can_read(&state, body.user_id, entity, record).await? {
-            return Err(AppError::Validation(
-                "user_id: cannot read this channel's record".into(),
-            ));
-        }
+    if let (Some(entity), Some(record)) = (me.entity_name.as_deref(), me.record_id)
+        && !user_can_read(&state, body.user_id, entity, record).await?
+    {
+        return Err(AppError::Validation(
+            "user_id: cannot read this channel's record".into(),
+        ));
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let added = sqlx::query(
@@ -768,6 +768,7 @@ const MESSAGE_SELECT: &str = "SELECT g.id, g.channel_id, g.thread_root_id, g.aut
 #[utoipa::path(
     get,
     path = "/api/v1/chat/channels/{id}/messages",
+    operation_id = "list_channel_messages",
     tag = "chat",
     params(("id" = Uuid, Path), MessageQuery),
     responses(
@@ -870,12 +871,12 @@ pub(crate) async fn post_message(
             ));
         }
     }
-    if let Some(file) = body.file_id {
-        if !can_read(&state, &ctx, FILE_ENTITY, file).await? {
-            return Err(AppError::Validation(
-                "file_id: not a document you may read".into(),
-            ));
-        }
+    if let Some(file) = body.file_id
+        && !can_read(&state, &ctx, FILE_ENTITY, file).await?
+    {
+        return Err(AppError::Validation(
+            "file_id: not a document you may read".into(),
+        ));
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let id: Uuid = sqlx::query_scalar(
@@ -987,6 +988,7 @@ pub(crate) async fn delete_message(
 #[utoipa::path(
     post,
     path = "/api/v1/chat/channels/{id}/read",
+    operation_id = "mark_channel_read",
     tag = "chat",
     params(("id" = Uuid, Path)),
     extensions(("x-audit-exempt" = json!(x_audit_exempt(

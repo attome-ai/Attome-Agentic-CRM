@@ -14,11 +14,11 @@
 
 pub mod admin;
 pub mod connector;
-/// D15-T2: which personal emails are captured, onto which addresses.
-pub mod mail_capture;
 pub mod credential;
 mod crypto;
 pub mod guard;
+/// D15-T2: which personal emails are captured, onto which addresses.
+pub mod mail_capture;
 pub mod model;
 /// J4-T1: SMS sending and delivery receipts.
 pub mod sms;

@@ -334,10 +334,9 @@ pub async fn decide(
     if row.expires_on.is_some_and(|e| e < Utc::now()) {
         return Err(AppError::Conflict("this quote has expired"));
     }
-    let owner = row
-        .owner_ref
-        .or(row.created_by)
-        .ok_or_else(|| AppError::Conflict("the quote has no owner to record the decision"))?;
+    let owner = row.owner_ref.or(row.created_by).ok_or(AppError::Conflict(
+        "the quote has no owner to record the decision",
+    ))?;
     let ctx = state.base.security.resolve(owner).await?;
     let now = Utc::now();
     let mut details = json!({ "accepted_by_name": name, "decided_at": now.to_rfc3339() });

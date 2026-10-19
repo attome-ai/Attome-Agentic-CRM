@@ -690,14 +690,17 @@ pub struct OrderView {
     pub items: Vec<OrderItemView>,
 }
 
+/// One order's id, title, reference and creation time.
+type OrderRow = (
+    Uuid,
+    String,
+    Option<String>,
+    Option<chrono::DateTime<chrono::Utc>>,
+);
+
 /// The caller's orders, newest first: ones placed for them or by them.
 pub async fn my_orders(db: &DbPool, user_id: Uuid) -> Result<Vec<OrderView>, AppError> {
-    let orders: Vec<(
-        Uuid,
-        String,
-        Option<String>,
-        Option<chrono::DateTime<chrono::Utc>>,
-    )> = sqlx::query_as(
+    let orders: Vec<OrderRow> = sqlx::query_as(
         "SELECT w.id, w.title, w.reference, w.created_at FROM service_work_request w \
               WHERE (w.requester_id = $1 OR w.created_by = $1) \
                 AND (w.is_active IS NULL OR w.is_active = true) \

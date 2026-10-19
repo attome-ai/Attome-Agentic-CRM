@@ -35,12 +35,12 @@ pub fn send_form<'a>(
 /// Reads a send answer: the message SID on success, the error otherwise.
 pub fn parse_send(status: u16, body: &str) -> SendAnswer {
     let json: Value = serde_json::from_str(body).unwrap_or(Value::Null);
-    if (200..300).contains(&status) {
-        if let Some(sid) = json.get("sid").and_then(Value::as_str) {
-            return SendAnswer::Accepted {
-                provider_message_id: sid.to_owned(),
-            };
-        }
+    if (200..300).contains(&status)
+        && let Some(sid) = json.get("sid").and_then(Value::as_str)
+    {
+        return SendAnswer::Accepted {
+            provider_message_id: sid.to_owned(),
+        };
     }
     let code = json
         .get("code")

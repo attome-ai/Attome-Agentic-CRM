@@ -22,7 +22,7 @@ use attome_core::EngineState;
 use attome_security::SecurityContextExt;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::{Value, json};
 use utoipa::ToSchema;
 use uuid::Uuid;

@@ -640,7 +640,7 @@ export class NotesPanelComponent implements OnInit {
   }
 
   /** Escape in the note text: closes an open mention list first. */
-  onContentEscape(event: KeyboardEvent): void {
+  onContentEscape(event: Event): void {
     event.stopPropagation();
     if ((event.target as HTMLElement | null)?.getAttribute('aria-expanded') === 'true') return;
     this.cancelForm();

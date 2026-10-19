@@ -100,7 +100,7 @@ export class IndexedDbBackend implements KvBackend {
 
 /** An encrypted value as stored. */
 interface Sealed {
-  iv: Uint8Array;
+  iv: Uint8Array<ArrayBuffer>;
   data: ArrayBuffer;
 }
 

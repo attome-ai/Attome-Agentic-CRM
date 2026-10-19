@@ -60,6 +60,7 @@ pub fn new_token() -> String {
 
 /// The deployment's double opt-in countries and consent expiry, and its own
 /// country.
+#[derive(Debug)]
 pub struct Rules {
     pub countries: Vec<String>,
     pub expiry_days: i64,

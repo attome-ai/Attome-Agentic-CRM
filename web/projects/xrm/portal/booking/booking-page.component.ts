@@ -16,7 +16,7 @@ type Stage = 'loading' | 'ready' | 'booking' | 'booked' | 'missing' | 'taken' | 
  * only.
  */
 @Component({
-  selector: 'app-book-page',
+  selector: 'xrm-book-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, TranslatePipe],

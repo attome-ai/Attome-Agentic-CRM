@@ -10,7 +10,7 @@ type Stage = 'loading' | 'ready' | 'busy' | 'missing' | 'failed' | 'taken';
  * or expired one shows a message and nobody's booking.
  */
 @Component({
-  selector: 'app-book-manage',
+  selector: 'xrm-book-manage',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],

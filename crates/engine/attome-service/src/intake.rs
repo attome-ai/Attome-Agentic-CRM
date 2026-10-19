@@ -144,9 +144,9 @@ pub const OPEN_STATUSES: [&str; 2] = ["new", "triaged"];
 /// Most open requests a submission is shown.
 pub const MAX_OPEN_REQUESTS: i64 = 5;
 
-/// The autonumber rule that gives every work request its reference
-/// (`REQ-2026-00042`, a counter per year), seeded by the service module.
-pub const REFERENCE_RULE: &str = "Work request reference";
+// Every work request's reference (`REQ-2026-00042`, a counter per year)
+// comes from the autonumber rule "Work request reference", seeded by the
+// service module's platform changeset (0040-attome-service.json).
 
 /// One of the requester's open requests, offered when they submit another.
 #[derive(Debug, Clone, serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]

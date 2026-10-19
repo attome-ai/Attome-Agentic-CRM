@@ -654,6 +654,7 @@ pub fn check_subscription(
 #[utoipa::path(
     post,
     path = "/api/v1/push/subscriptions",
+    operation_id = "register_push_subscription",
     tag = "notification",
     request_body = NewSubscription,
     extensions(("x-audit-exempt" = json!(x_audit_exempt(

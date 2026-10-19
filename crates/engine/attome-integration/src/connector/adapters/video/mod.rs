@@ -294,6 +294,7 @@ async fn post_meeting(
 #[utoipa::path(
     get,
     path = "/api/v1/me/meetings/{provider}/{id}/report",
+    operation_id = "get_meeting_report",
     tag = "integration",
     params(("provider" = String, Path), ("id" = String, Path)),
     responses(

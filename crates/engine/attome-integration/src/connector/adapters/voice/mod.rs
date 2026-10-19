@@ -524,7 +524,7 @@ pub async fn drop_voicemail(
     if call_system != system.id {
         return Err(AppError::NotFound);
     }
-    let sid = provider_call_id.ok_or_else(|| AppError::Conflict("the call has not started yet"))?;
+    let sid = provider_call_id.ok_or(AppError::Conflict("the call has not started yet"))?;
     match provider(system).as_deref() {
         Some("twilio") => twilio::play_and_hang_up(state, system, &sid, recording_url).await,
         _ => Err(AppError::Validation(

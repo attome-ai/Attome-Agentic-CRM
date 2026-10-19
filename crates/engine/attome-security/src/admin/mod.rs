@@ -20,13 +20,13 @@
 mod access_reviews;
 mod account_state;
 mod bulk_fields;
+/// B17-T4: device registration, status and remote wipe.
+mod devices;
 mod effective_access;
 mod field_security;
 mod grants;
 mod identity_links;
 mod invitations;
-/// B17-T4: device registration, status and remote wipe.
-mod devices;
 mod mfa;
 mod mfa_coverage;
 mod organizations;

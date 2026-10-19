@@ -36,6 +36,16 @@ use axum::{
     routing::get,
 };
 use chrono::{DateTime, Utc};
+
+/// A stored transcript: text, language, duration, segments, model and when.
+type TranscriptRow = (
+    String,
+    Option<String>,
+    Option<f64>,
+    serde_json::Value,
+    String,
+    DateTime<Utc>,
+);
 use object_store::{ObjectStoreExt, path::Path as ObjectPath};
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -262,7 +272,7 @@ pub(crate) async fn get_transcript(
     Path(document_id): Path<Uuid>,
 ) -> Result<Json<TranscriptView>, AppError> {
     require_document(&state, &ctx, document_id, RecordAction::Read).await?;
-    let row: Option<(String, Option<String>, Option<f64>, serde_json::Value, String, DateTime<Utc>)> =
+    let row: Option<TranscriptRow> =
         sqlx::query_as(
             "SELECT t.content_text, t.language, t.duration_seconds, t.segments, t.model, t.transcribed_at \
                FROM attome_document d JOIN recording_transcript t ON t.file_key = d.file \

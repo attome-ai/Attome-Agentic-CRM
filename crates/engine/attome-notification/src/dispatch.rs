@@ -577,7 +577,7 @@ pub async fn create_dispatch_in_tx(
                             // E27-T2: the E27 ledger decides first; the M24
                             // row counts only where the ledger knows nothing.
                             let ledger = attome_core::consent_rules::gate(
-                                &mut **tx,
+                                tx,
                                 ("user_account", user_id),
                                 None,
                                 purpose_key,

@@ -403,6 +403,7 @@ async fn list_connections(
 #[utoipa::path(
     post,
     path = "/api/v1/me/mail-connections/{provider}/start",
+    operation_id = "start_mail_connection",
     tag = "integration",
     params(("provider" = String, Path, description = "`microsoft` or `google`")),
     extensions(("x-audit-exempt" = json!(x_audit_exempt(

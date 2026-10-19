@@ -13,6 +13,8 @@ pub mod alert_notify;
 pub mod apikey_pepper_registry;
 pub mod auth;
 pub mod backup;
+/// D20-T2: public booking links.
+pub mod booking;
 pub mod boot;
 /// The other subcommands: `worker`, `migrate`, `healthcheck`,
 /// `audit-chainer`, `verify-audit-chain`, `preflight`, `changeset-replay`.
@@ -31,29 +33,27 @@ pub mod db_role_seed;
 #[cfg(debug_assertions)]
 pub mod dev_access_seed;
 pub mod jobs;
-pub mod observability;
-pub mod omnichannel;
-/// D9-T3: quote acceptance by guest link.
-pub mod quote_accept;
 /// D15-T2: personal emails captured onto matching records.
 pub mod mail_capture;
-/// J8-T1: social channels in and replies out.
-pub mod social;
-/// J6-T1: calls out and in.
-pub mod voice;
-/// D20-T2: public booking links.
-pub mod booking;
-/// J4-T2: inbound texts and STOP opt-outs.
-pub mod sms_inbound;
+pub mod observability;
+pub mod omnichannel;
 pub mod openapi;
 /// S2-T14: the document each caller is served.
 pub mod openapi_filter;
 /// S2-T7 — policy extensions on every operation.
 pub mod openapi_policy;
 pub mod platform_seed_lock;
+/// D9-T3: quote acceptance by guest link.
+pub mod quote_accept;
 pub mod readonly_role_seed;
 pub mod role_seed_lock;
 pub mod schedulers;
 /// `attome serve`: the HTTP server (and, unless configured otherwise, the
 /// inline job worker and schedulers).
 pub mod serve;
+/// J4-T2: inbound texts and STOP opt-outs.
+pub mod sms_inbound;
+/// J8-T1: social channels in and replies out.
+pub mod social;
+/// J6-T1: calls out and in.
+pub mod voice;

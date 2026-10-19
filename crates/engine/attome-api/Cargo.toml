@@ -28,6 +28,7 @@ attome-email.workspace        = true
 attome-events.workspace       = true
 attome-field.workspace        = true
 attome-grc.workspace          = true
+attome-integration.workspace  = true
 attome-jobs.workspace         = true
 attome-metadata.workspace     = true
 attome-model.workspace        = true
@@ -76,7 +77,6 @@ uuid.workspace                = true
 
 [dev-dependencies]
 attome-docgen.workspace      = true
-attome-integration.workspace = true
 attome-search.workspace      = true
 attome-testkit               = { workspace = true, features = ["app-config"] }
 attome-workflow.workspace    = true

@@ -126,6 +126,12 @@ pub struct J6Telephony {
     pub system: IntegrationSystem,
 }
 
+impl std::fmt::Debug for J6Telephony {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("J6Telephony").finish_non_exhaustive()
+    }
+}
+
 fn timed_out(_: tokio::time::error::Elapsed) -> AppError {
     AppError::CapabilityUnavailable("telephony")
 }
@@ -170,7 +176,7 @@ impl DialerTelephony for J6Telephony {
 
 /// A telephone that dials nothing, for tests: it records what it was asked.
 #[cfg(any(test, feature = "test-support"))]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct FakeTelephony {
     pub dialled: std::sync::Mutex<Vec<(String, Option<String>)>>,
     pub dropped: std::sync::Mutex<Vec<(Uuid, String)>>,

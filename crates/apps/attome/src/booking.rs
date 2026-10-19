@@ -88,6 +88,7 @@ async fn challenge(
 #[utoipa::path(
     get,
     path = "/api/v1/booking/{slug}",
+    operation_id = "get_booking_page",
     tag = "sales",
     params(("slug" = String, Path, description = "The booking page's slug"), SlotQuery),
     responses(
@@ -179,6 +180,7 @@ async fn get_managed(
 #[utoipa::path(
     post,
     path = "/api/v1/booking/manage/{token}/cancel",
+    operation_id = "cancel_booking",
     tag = "sales",
     params(("token" = String, Path, description = "The signed manage link token")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),

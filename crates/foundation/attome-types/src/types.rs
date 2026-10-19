@@ -451,6 +451,7 @@ impl PageWindow {
 pub struct OnePageQuery {
     /// One-based (D-347): page 1 is the first page. Values below 1 are
     /// clamped up to 1 rather than rejected, matching the legacy lists.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
     /// `DEFAULT_PAGE_SIZE`.
