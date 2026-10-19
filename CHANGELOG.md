@@ -115,6 +115,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Documentation site (AC9-T1): `node scripts/docs-build.mjs` builds static HTML from `docs/` in
+  English and Arabic (right to left, `docs/ar/`, untranslated pages marked) with an API reference
+  generated from `openapi.json`, one folder per version. No dependencies beyond Node.
 - Anonymous service requests (G2-T1): `POST /api/v1/service-portal/offerings/{id}/requests` files a
   request on a public offering from a web form without signing in, off by default: the offering must
   be in `service.anonymous_intake.offerings` and `service.anonymous_intake.user` must name the service

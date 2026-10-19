@@ -13,3 +13,15 @@
 - [Backup](backup.md), [Versions and support](versions-and-support.md), [API versions](api-versions.md), [API workflows (Arazzo)](api/arazzo/), [Model servers](model-servers.md)
 - [Release](release.md), [SLOs](slo.md), [Testing](testing.md), [Build machine](build-machine.md)
 - `evidence/`: dated measurements (latency, memory, AI quality) that releases are checked against.
+
+## Building the documentation site
+
+```sh
+node scripts/docs-build.mjs        # target/docs-site/<version>/en and /ar, with the API reference
+node --test scripts/docs-build.test.mjs
+```
+
+The site is static HTML, one folder per version (from `Cargo.toml`, or `--version`), in English and
+Arabic (right to left). An Arabic page is the same path under `docs/ar/`; until it exists the Arabic
+site shows the English page with a note. The API reference is generated from `openapi.json`.
+`--out <dir>` keeps several versions side by side; `versions.json` lists them.
