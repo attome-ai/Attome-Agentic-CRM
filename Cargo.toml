@@ -172,6 +172,11 @@ ed25519-dalek = { version = "3", features = ["serde"] }
 fred          = { version = "9", features = ["subscriber-client", "enable-rustls", "i-scripts", "i-streams", "sentinel-auth"] }
 flate2        = "1"
 futures-util  = "0.3"
+# J2-T1: the IMAP mailbox reader (pure Rust; TLS through rustls with ring).
+async-imap    = { version = "0.9", default-features = false, features = ["runtime-tokio"] }
+mail-parser   = "0.9"
+tokio-rustls  = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
+webpki-roots  = "0.26"
 hex           = "0.4"
 hmac          = "0.12"
 http          = "1"

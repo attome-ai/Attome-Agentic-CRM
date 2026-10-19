@@ -1,9 +1,10 @@
-//! Mailbox adapter skeleton (M52 hand-off) — Phase 1 ships no real mailbox
-//! polling/IMAP client. Every method returns a clear "not implemented"
-//! error rather than silently no-op'ing, so a system created with
-//! `kind = "mailbox"` (or any of the other not-yet-built kinds routed here
-//! by `connector::connector_for`) fails loudly at first use instead of
-//! looking like a working, always-empty connector.
+//! Mailbox adapter. J2-T1: `pull` on a `kind = "mailbox"` system reads its
+//! mailbox ([`super::mail`]: IMAP, Microsoft Graph or Gmail) from the
+//! cursor. Everything else, and every method of the other not-yet-built
+//! kinds routed here by `connector::connector_for` (esign, calendar,
+//! file_drop), returns a clear "not implemented" error rather than silently
+//! no-op'ing, so such a system fails loudly at first use instead of looking
+//! like a working, always-empty connector.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -31,10 +32,16 @@ impl Connector for MailboxAdapter {
     fn pull<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
-        _cursor: Option<&'a str>,
+        credential: Option<&'a str>,
+        cursor: Option<&'a str>,
     ) -> BoxFuture<'a, PullResult> {
-        Box::pin(async move { Err(not_implemented(system)) })
+        Box::pin(async move {
+            if system.kind == "mailbox" {
+                super::mail::pull(system, credential, cursor).await
+            } else {
+                Err(not_implemented(system))
+            }
+        })
     }
 
     fn push<'a>(
@@ -71,8 +78,8 @@ mod tests {
     fn stub_system() -> IntegrationSystem {
         IntegrationSystem {
             id: uuid::Uuid::nil(),
-            name: "Test Mailbox".into(),
-            kind: "mailbox".into(),
+            name: "Test E-signature".into(),
+            kind: "esign".into(),
             base_url: "https://example.com".into(),
             auth_type: "api_key".into(),
             credential_ref: None,
@@ -105,5 +112,20 @@ mod tests {
 
         let err = adapter.health(&system, None).await.unwrap_err();
         assert!(err.to_string().contains("not implemented"));
+    }
+
+    #[tokio::test]
+    async fn mailbox_pull_needs_its_reader_and_credential() {
+        let adapter = MailboxAdapter;
+        let mut system = stub_system();
+        system.kind = "mailbox".into();
+        let err = adapter.pull(&system, None, None).await.unwrap_err();
+        assert!(err.to_string().contains("credential"), "{err}");
+        system.config = Some(r#"{"mail":"pop3"}"#.into());
+        let err = adapter
+            .pull(&system, Some("secret"), None)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("imap, graph or gmail"), "{err}");
     }
 }

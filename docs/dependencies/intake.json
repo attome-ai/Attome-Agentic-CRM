@@ -47,6 +47,22 @@
       "licence": "MIT OR Apache-2.0",
       "maintenance": "Released in lock-step with ref-cast.",
       "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "async-imap",
+      "reason": "J2-T1: reads IMAP mailboxes (login, select, UID fetch) over the rustls connection, so shared and personal mailboxes sync into Attome.",
+      "licence": "MIT OR Apache-2.0",
+      "maintenance": "Maintained by the chatmail (Delta Chat) project; used in production by Delta Chat.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "mail-parser",
+      "reason": "J2-T1: parses IMAP messages (MIME parts, encoded words, charsets including Arabic code pages) in pure Rust, with no unsafe code.",
+      "licence": "Apache-2.0 OR MIT",
+      "maintenance": "Maintained by Stalwart Labs; the parser of the Stalwart mail server.",
+      "windows_native": true
     }
   ]
 }

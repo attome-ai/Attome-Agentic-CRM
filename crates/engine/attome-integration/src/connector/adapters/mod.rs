@@ -1,6 +1,8 @@
 /// D15-T3: two-way calendar sync of meetings.
 pub mod calendar_sync;
 pub mod mailbox;
+/// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
+pub mod mail;
 pub mod rest;
 /// J4-T1: SMS segments, senders and the provider codecs.
 pub mod sms;

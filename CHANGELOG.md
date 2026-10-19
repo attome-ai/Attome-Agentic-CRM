@@ -124,6 +124,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Mailbox readers (J2-T1): a `mailbox` integration system reads IMAP (over TLS), Microsoft 365
+  (Graph delta) or Gmail (history) mailboxes incrementally, each message once, through the
+  connector's `pull`. Two new Rust dependencies, `async-imap` and `mail-parser`, both pure Rust.
 - Browser softphone (J6-T2): with a Twilio voice system that has an API key, a TwiML app and the
   SDK's address, agents take and place calls in the browser. An incoming call pops the caller's
   record. `tel:` links on a record call through the softphone (or ring the agent's own phone when
