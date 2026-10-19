@@ -29,6 +29,55 @@ entities and fields.
 `attome sdk generate <deployment.json>` writes typed Rust structs and TypeScript interfaces for a
 deployment's entities.
 
+### Concurrent edits
+
+Every record carries a `row_version`. Send it back as `If-Match` on `PATCH`; when someone else saved
+the record since you read it, the update is refused with `409 version_conflict`, and the body says
+what changed, so you can show the differences instead of reloading blind:
+
+```http
+PATCH /api/v1/deal/0192f0c4-7d1e-7c3a-9b1e-5d6f8a9b0c1d
+If-Match: "4"
+Content-Type: application/json
+
+{"amount": 125000}
+```
+
+```json
+{
+  "error": "version_conflict",
+  "message": "version conflict",
+  "current_version": 6,
+  "current_state": {
+    "last_changed_by": "Sara Ahmed",
+    "last_changed_at": "2026-10-19T09:12:44Z",
+    "changed_attributes": [
+      {"name": "amount", "their_value": 120000,
+       "changed_by": "Sara Ahmed", "changed_at": "2026-10-19T09:12:44Z"},
+      {"name": "stage", "their_value": "Negotiation",
+       "changed_by": "Omar Ali", "changed_at": "2026-10-19T08:55:02Z"}
+    ],
+    "hidden_changes": 1
+  }
+}
+```
+
+`changed_attributes` lists each attribute changed since your `If-Match`, newest change first, with
+the other writer's value; `hidden_changes` counts changes to fields you may not read, whose values
+are never shown. Retry with `If-Match: "6"` and the values you decide to keep.
+
+To let the server merge for you, add `If-Match-Merge: attributes`. A stale update is then applied at
+the current version when none of the attributes you send changed since your version, and the 200
+answer lists the attributes others changed in `merged_over` (`merged_hidden` counts the ones you may
+not read). With `Prefer: return=minimal` the answer is just:
+
+```json
+{"id": "0192f0c4-7d1e-7c3a-9b1e-5d6f8a9b0c1d", "row_version": 7, "merged_over": ["stage"]}
+```
+
+When another writer changed an attribute you send, or the record's history cannot account for the
+versions in between, the answer is the same 409 as above.
+
 ## Building from source
 
 Rust 1.97 (pinned in `rust-toolchain.toml`) on Windows or Linux, PostgreSQL 18 with pgvector for the

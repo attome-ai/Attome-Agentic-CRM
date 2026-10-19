@@ -124,6 +124,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The developer guide explains concurrent edits (A16-T8), in English and Arabic: the
+  `409 version_conflict` body (`current_version`, and `current_state` with `changed_attributes` and
+  `hidden_changes`) and the `If-Match-Merge: attributes` header with its `merged_over` answer, with
+  an example request and response.
 - Territory realignment (D13-T3): `POST /api/v1/sales/territories/realign/preview` lists the accounts
   whose rule-made territory would change. `POST /api/v1/sales/territories/realign` queues the
   `territory_realign` job, which applies the changes in batches through the generic write path,

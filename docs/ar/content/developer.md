@@ -26,6 +26,54 @@
 
 يكتب `attome sdk generate <deployment.json>` أنواع Rust وواجهات TypeScript لكيانات النشر.
 
+### التعديلات المتزامنة
+
+لكل سجل قيمة `row_version`. أعِدها في ترويسة `If-Match` مع طلب `PATCH`، فإن كان غيرك قد حفظ السجل بعد
+قراءتك له رُفض التعديل بـ`409 version_conflict`، ويذكر جسم الرد ما تغيّر، فتعرض الفروق بدل إعادة التحميل
+دون علم:
+
+```http
+PATCH /api/v1/deal/0192f0c4-7d1e-7c3a-9b1e-5d6f8a9b0c1d
+If-Match: "4"
+Content-Type: application/json
+
+{"amount": 125000}
+```
+
+```json
+{
+  "error": "version_conflict",
+  "message": "version conflict",
+  "current_version": 6,
+  "current_state": {
+    "last_changed_by": "Sara Ahmed",
+    "last_changed_at": "2026-10-19T09:12:44Z",
+    "changed_attributes": [
+      {"name": "amount", "their_value": 120000,
+       "changed_by": "Sara Ahmed", "changed_at": "2026-10-19T09:12:44Z"},
+      {"name": "stage", "their_value": "Negotiation",
+       "changed_by": "Omar Ali", "changed_at": "2026-10-19T08:55:02Z"}
+    ],
+    "hidden_changes": 1
+  }
+}
+```
+
+تسرد `changed_attributes` كل خاصية تغيّرت منذ `If-Match` الذي أرسلته، الأحدث أولًا، مع قيمة الكاتب الآخر، وتعدّ
+`hidden_changes` التغييرات على حقول لا يحق لك قراءتها، ولا تُعرض قيمها أبدًا. أعد المحاولة بـ`If-Match: "6"`
+والقيم التي قررت إبقاءها.
+
+ليدمج الخادم عنك، أضف `If-Match-Merge: attributes`. عندها يُطبَّق التعديل القديم على الإصدار الحالي إن لم
+تتغير أي خاصية ترسلها منذ إصدارك، ويسرد رد 200 في `merged_over` الخصائص التي غيّرها غيرك (وتعدّ
+`merged_hidden` ما لا يحق لك قراءته منها). ومع `Prefer: return=minimal` يكون الرد:
+
+```json
+{"id": "0192f0c4-7d1e-7c3a-9b1e-5d6f8a9b0c1d", "row_version": 7, "merged_over": ["stage"]}
+```
+
+وإن غيّر كاتب آخر خاصية ترسلها، أو لم يستطع سجل التغييرات تفسير الإصدارات بين الاثنين، فالرد هو 409 نفسه
+أعلاه.
+
 ## البناء من المصدر
 
 Rust 1.97 (مثبّت في `rust-toolchain.toml`) على ويندوز أو لينكس، وPostgreSQL 18 مع pgvector لاختبارات
