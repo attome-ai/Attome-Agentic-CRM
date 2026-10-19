@@ -138,7 +138,56 @@ fn default_view_kind() -> String {
 /// `chart_view_metadata::validate`, which is stricter than the other three
 /// kinds here (deny-unknown-fields, closed enums) — see that module's own
 /// doc comment for why a chart's settings warrant it.
+/// B17-T6: the swipe actions a phone list offers.
+pub const MOBILE_ACTIONS: &[&str] = &["call", "complete", "assign", "open"];
+
+/// B17-T6: `view_metadata.mobile`, a phone list's cards and swipes, when
+/// present: `card_title` a field name, `card_lines` up to three, and
+/// `swipe_start` / `swipe_end` one of [`MOBILE_ACTIONS`]. Pure.
+pub fn validate_mobile_options(metadata: &Value) -> Result<(), AppError> {
+    let Some(mobile) = metadata.get("mobile").filter(|m| !m.is_null()) else {
+        return Ok(());
+    };
+    let mobile = mobile
+        .as_object()
+        .ok_or_else(|| AppError::Validation("view_metadata.mobile must be an object".into()))?;
+    let field = |v: &Value| v.as_str().is_some_and(|s| !s.trim().is_empty());
+    for (key, value) in mobile {
+        match key.as_str() {
+            "card_title" if value.is_null() || field(value) => {}
+            "card_lines" => {
+                let lines = value.as_array().ok_or_else(|| {
+                    AppError::Validation("view_metadata.mobile.card_lines must be a list".into())
+                })?;
+                if lines.len() > 3 || !lines.iter().all(field) {
+                    return Err(AppError::Validation(
+                        "view_metadata.mobile.card_lines: up to three field names".into(),
+                    ));
+                }
+            }
+            "swipe_start" | "swipe_end"
+                if value.is_null()
+                    || value.as_str().is_some_and(|a| MOBILE_ACTIONS.contains(&a)) => {}
+            "swipe_start" | "swipe_end" => {
+                return Err(AppError::Validation(format!(
+                    "view_metadata.mobile.{key} is one of {}",
+                    MOBILE_ACTIONS.join(", ")
+                )));
+            }
+            other => {
+                return Err(AppError::Validation(format!(
+                    "view_metadata.mobile.{other} is not a phone list setting"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn validate_view_kind_metadata(kind: &str, metadata: &Value) -> Result<(), AppError> {
+    if kind != "chart" {
+        validate_mobile_options(metadata)?;
+    }
     if kind == "chart" {
         return crate::chart_view_metadata::validate(metadata)
             .map(|_| ())
@@ -1819,5 +1868,32 @@ mod changeset_hook_tests {
         assert_eq!(w.len(), 4);
         assert!(w[0].contains("default"));
         assert!(w.iter().any(|m| m.contains("2 dashboard")));
+    }
+}
+
+#[cfg(test)]
+mod mobile_options_tests {
+    use super::*;
+
+    #[test]
+    fn view_mobile_options_validated() {
+        let ok = serde_json::json!({"mobile": {
+            "card_title": "subject", "card_lines": ["due_date", "owner_ref"],
+            "swipe_start": "call", "swipe_end": "complete"
+        }});
+        assert!(validate_mobile_options(&ok).is_ok());
+        assert!(validate_mobile_options(&serde_json::json!({})).is_ok());
+        assert!(validate_mobile_options(&serde_json::json!({"mobile": null})).is_ok());
+        for bad in [
+            serde_json::json!({"mobile": "cards"}),
+            serde_json::json!({"mobile": {"card_lines": ["a", "b", "c", "d"]}}),
+            serde_json::json!({"mobile": {"swipe_end": "delete"}}),
+            serde_json::json!({"mobile": {"card_title": ""}}),
+            serde_json::json!({"mobile": {"layout": "grid"}}),
+        ] {
+            assert!(validate_mobile_options(&bad).is_err(), "{bad}");
+        }
+        assert!(validate_view_kind_metadata("list", &ok).is_ok());
+        assert!(validate_view_kind_metadata("list", &serde_json::json!({"mobile": 3})).is_err());
     }
 }

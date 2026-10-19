@@ -185,6 +185,11 @@
     <div class="table-loading-overlay">{{ 'entityList.refreshingRecords' | translate }}</div>
     }
 
+    @if (isPhone()) {
+    <!-- B17-T6: a phone shows the list as cards with swipe actions. -->
+    <xrm-list-cards [records]="records()" [columns]="cardColumns()" [options]="mobile()" [rtl]="rtl()"
+                    (activate)="runCardAction($event)" />
+    } @else {
     <table class="data-table">
       <thead>
         <tr>
@@ -424,6 +429,7 @@
         }
       </tbody>
     </table>
+    }
   </div>
 
   <div class="list-footer">

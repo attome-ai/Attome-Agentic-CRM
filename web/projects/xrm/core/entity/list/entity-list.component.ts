@@ -44,6 +44,7 @@ import { viewFilters } from './advanced-find';
 // non-admin, and its dialog is itself deferred.
 import { RecordAccessActionsComponent } from '../record-access/record-access-actions.component';
 import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component';
+import { ListCardsComponent, SwipeAction, mobileOptions } from './list-cards.component';
 
 /** A lowercase or uppercase hyphenated UUID. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,6 +61,11 @@ function newOperationId(): string {
 // outside this file's own template needs the filter grammar through the
 // component barrel, so it is imported here, not re-exported. Bulk-edit's own
 // pure helpers and dialog state now live in `bulk-edit-dialog.component.ts`.
+
+/** B17-T6: phones, below 600 px. `null` where there is no window (tests, SSR). */
+function phoneQuery(): MediaQueryList | null {
+  return typeof globalThis.matchMedia === 'function' ? globalThis.matchMedia('(max-width: 599.98px)') : null;
+}
 
 // ── Column descriptor ─────────────────────────────────────────────────────────
 
@@ -167,6 +173,7 @@ export function richTextToPlainText(html: string): string {
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
     AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent,
+    ListCardsComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },
   templateUrl: './entity-list.component.html',
@@ -280,6 +287,14 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   // ── Computed ───────────────────────────────────────────────────────────────
 
   readonly columns = computed<Col[]>(() => this.columns_());
+
+  /** B17-T6: a phone-sized screen shows the list as cards. */
+  readonly isPhone = signal(phoneQuery()?.matches ?? false);
+  private readonly phoneListener = (e: MediaQueryListEvent) => this.isPhone.set(e.matches);
+  /** B17-T6: the open view's phone settings (`view_metadata.mobile`). */
+  readonly mobile = computed(() => mobileOptions(this.activeView()?.view_metadata));
+  readonly cardColumns = computed(() => this.columns().map(c => c.name));
+  readonly rtl = computed(() => this.lang.isRtl());
   readonly activeView = computed(() => this.availableViews().find(view => view.id === this.viewId()));
   readonly pickerViews = computed(() => {
     const kinds = this.viewKindFilter();
@@ -373,6 +388,7 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
 
   constructor() {
     super();
+    phoneQuery()?.addEventListener('change', this.phoneListener);
     effect(onCleanup => {
       if (!this.loading()) { this.showLoading.set(false); return; }
       const timer = setTimeout(() => this.showLoading.set(true), 300);
@@ -1367,7 +1383,37 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     void this.router.navigateByUrl(urlTree);
   }
 
+  /** B17-T6: what a card's tap or swipe does. */
+  runCardAction(event: { action: SwipeAction; record: EntityRecord }): void {
+    const row = event.record;
+    switch (event.action) {
+      case 'open':
+      case 'assign':
+        // Assigning happens on the record, where the owner can be changed.
+        this.editClick.emit(row);
+        break;
+      case 'call': {
+        const phone = ['phone', 'mobile', 'mobile_phone', 'telephone']
+          .map(f => row.data[f])
+          .find(v => typeof v === 'string' && v.trim());
+        if (typeof phone === 'string') globalThis.location.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
+        break;
+      }
+      case 'complete':
+        if (!('status' in row.data)) {
+          this.editClick.emit(row);
+          break;
+        }
+        this.entitySvc.update(this.entityName(), row.id, { status: 'completed' }, row.row_version).subscribe({
+          next: () => this.refresh(),
+          error: () => this.editClick.emit(row),
+        });
+        break;
+    }
+  }
+
   ngOnDestroy(): void {
+    phoneQuery()?.removeEventListener('change', this.phoneListener);
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.loadSub?.unsubscribe();
   }
