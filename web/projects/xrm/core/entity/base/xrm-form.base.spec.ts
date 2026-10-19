@@ -195,6 +195,97 @@ describe('EngineFormBase — submit button state', () => {
     expect(svc.update.mock.calls[1][3]).toBe(4);
   });
 
+  // ── A16-T3: conflicts ────────────────────────────────────────────────────
+
+  it('sends only the changed attributes, asking the server to merge', () => {
+    const c = editForm().componentInstance;
+    const control = c.form().get('user_name')!;
+    control.markAsDirty();
+    control.setValue('typed');
+
+    c.save();
+
+    expect(svc.update).toHaveBeenCalledWith('user_account', 'rec-1', { user_name: 'typed' }, 3, { mergeAttributes: true });
+  });
+
+  function conflictOn(version: number) {
+    return {
+      kind: 'version_conflict', status: 409, message: '',
+      versionConflict: {
+        currentVersion: version, lastChangedBy: 'Sara', lastChangedAt: null,
+        changedAttributes: [{ name: 'user_name', their_value: 'theirs', changed_by: 'Sara', changed_at: null }],
+        hiddenChanges: 0,
+      },
+    };
+  }
+
+  it('keeps the typed values on a 409 and lists what changed', () => {
+    const c = editForm().componentInstance;
+    svc.update.mockReturnValueOnce(throwError(() => conflictOn(5)));
+    const control = c.form().get('user_name')!;
+    control.markAsDirty();
+    control.setValue('typed');
+
+    c.save();
+
+    expect(c.conflict()).toBe(true);
+    expect(c.conflictDetails()?.currentVersion).toBe(5);
+    expect(c.conflictDetails()?.changedAttributes.map(a => a.name)).toEqual(['user_name']);
+    expect(control.value).toBe('typed');
+
+    c.dismissConflict();
+    expect(c.conflictDetails()).toBeNull();
+    expect(control.value).toBe('typed');
+  });
+
+  it('saves again at the newer version with "keep mine"', () => {
+    const c = editForm().componentInstance;
+    svc.update.mockReturnValueOnce(throwError(() => conflictOn(5)));
+    const control = c.form().get('user_name')!;
+    control.markAsDirty();
+    control.setValue('typed');
+    c.save();
+
+    c.resolveConflict({ user_name: 'mine' });
+
+    expect(svc.update).toHaveBeenCalledTimes(2);
+    expect(svc.update.mock.calls[1][2]).toEqual({ user_name: 'typed' });
+    expect(svc.update.mock.calls[1][3]).toBe(5);
+    expect(c.conflictDetails()).toBeNull();
+  });
+
+  it('leaves an attribute to the other writer with "take theirs" and then shows their value', () => {
+    const c = editForm().componentInstance;
+    svc.update.mockReturnValueOnce(throwError(() => conflictOn(5)));
+    svc.update.mockReturnValueOnce(of(record('theirs', 6)));
+    const control = c.form().get('user_name')!;
+    control.markAsDirty();
+    control.setValue('typed');
+    c.save();
+
+    c.resolveConflict({ user_name: 'theirs' });
+
+    const sent = svc.update.mock.calls[1][2] as Record<string, unknown>;
+    expect(sent).not.toHaveProperty('user_name');
+    expect(control.value).toBe('theirs');
+  });
+
+  it('names the attributes a save was merged over', () => {
+    const c = editForm().componentInstance;
+    svc.update.mockReturnValueOnce(of({ ...record('after', 4), merged_over: ['is_active'] }));
+    const control = c.form().get('user_name')!;
+    control.markAsDirty();
+    control.setValue('typed');
+
+    c.save();
+
+    expect(c.mergedOver()).toEqual(['is_active']);
+    control.markAsDirty();
+    control.setValue('again');
+    c.save();
+    expect(c.mergedOver()).toEqual([]);
+  });
+
   it('re-reads the record when a widget changes it on the server (U18), so the next save carries the new row_version', () => {
     const c = editForm().componentInstance;
     c.form().get('is_active')!.markAsDirty();

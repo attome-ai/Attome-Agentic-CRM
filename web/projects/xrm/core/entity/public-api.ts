@@ -64,6 +64,12 @@ export { RecordTabPanelsComponent }     from './record-tabs/record-tab-panels.co
 // services live in /data, this barrel is fine depending on it" shape
 // `EntityMetadataChangeService`'s own doc comment already describes for the
 // reverse direction.
+export { ConflictDialogComponent }      from './conflict-dialog/conflict-dialog.component';
+export { RecordTypePickerComponent }    from './record-type-picker/record-type-picker.component';
+export { PendingTimersComponent }       from './pending-timers/pending-timers.component';
+export type { PendingTimer }           from './pending-timers/pending-timers.component';
+export type { RecordTypeOption }        from './record-type-picker/record-type-picker.component';
+export type { ConflictChoice, ConflictChoices } from './conflict-dialog/conflict-dialog.component';
 export { DuplicateBannerComponent }     from './duplicate-banner/duplicate-banner.component';
 export { duplicateWarningsOf }          from './duplicate-banner/duplicate-notice';
 export type { DuplicateNotice }         from './duplicate-banner/duplicate-notice';

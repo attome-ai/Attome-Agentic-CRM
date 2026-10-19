@@ -2,6 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, contentChildren, inject, input } from '@angular/core';
 import { TranslatePipe } from '@attome/base';
 import { XRM_FIELD_POLICY, XrmFieldPolicy } from '../../business-rules/field-policy';
+import { ConflictDialogComponent } from '../../conflict-dialog/conflict-dialog.component';
+import { PendingTimersComponent } from '../../pending-timers/pending-timers.component';
 import { DuplicateBannerComponent } from '../../duplicate-banner/duplicate-banner.component';
 import { PredictionBannerComponent } from '../../prediction-banner/prediction-banner.component';
 import { RecordChangedBannerComponent } from '../../record-changed-banner/record-changed-banner.component';
@@ -58,7 +60,7 @@ import { XrmTabDirective } from './xrm-tab.directive';
   imports: [
     RecordAncestorsComponent,
     NgTemplateOutlet, TranslatePipe, DuplicateBannerComponent, PredictionBannerComponent,
-    RecordChangedBannerComponent,
+    RecordChangedBannerComponent, ConflictDialogComponent, PendingTimersComponent,
     RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent, FollowButtonComponent, RecordTagsComponent,
   ],
   styleUrls: ['../../../../styles/xrm-form.css', './xrm-base-form.component.css'],
@@ -68,6 +70,15 @@ import { XrmTabDirective } from './xrm-tab.directive';
 export class XrmBaseFormComponent {
   /** The host form (`[form]="this"`). */
   readonly form = input.required<EngineFormBase>();
+
+  /** A16-T3: an attribute's display name, for the conflict dialog. */
+  readonly labelOf = (name: string): string => this.form().label(name);
+
+  /** A16-T3: the merged-over attributes' display names, comma separated. */
+  readonly mergedFields = computed(() => {
+    const form = this.form();
+    return form.mergedOver().map(name => form.label(name)).join(', ');
+  });
   /** Prefix of the tab and panel ids (`<prefix>-tab-<id>`, `<prefix>-panel-<id>`). */
   readonly idPrefix = input('entity');
   /** Render `<xrm-record-tab-panels>` for the platform record tabs. */

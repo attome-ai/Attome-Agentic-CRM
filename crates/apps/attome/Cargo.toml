@@ -118,7 +118,10 @@ required-features = ["keycloak-tests"]
 [dev-dependencies]
 attome-approval.workspace = true
 attome-fleet.workspace    = true
-attome-testkit            = { workspace = true, features = ["app-config"] }
+# AA14-T3: request_counts counts each request's Redis commands.
+attome-cache              = { workspace = true, features = ["count-redis"] }
+attome-testapp.workspace  = true
+attome-testkit            = { workspace = true, features = ["app-config", "query-counter"] }
 base64.workspace          = true
 jsonwebtoken.workspace    = true
 rsa.workspace             = true

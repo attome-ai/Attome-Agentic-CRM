@@ -1678,6 +1678,36 @@ async fn enrolled_user_with_codes(fx: &Fx, label: &str) -> (Uuid, Totp, Vec<Stri
 /// Builds the request that exercises `key`, after creating whatever it needs,
 /// with the status it must answer (`None`: any 2xx). `None` overall means no
 /// driver exists — a test failure for a mapped route.
+/// Y8-T4: publishes a new agent, which records a new metadata version.
+async fn publish_agent(fx: &Fx) {
+    let t = Some(fx.admin_token.as_str());
+    let id = Uuid::now_v7();
+    call(
+        fx,
+        request(
+            "POST",
+            &format!("/api/v1/admin/model/agent/{id}/commands"),
+            t,
+            Some(json!({
+                "base_hash": "",
+                "name": format!("emission version {id}"),
+                "commands": agent_commands(Uuid::now_v7(), Uuid::now_v7()),
+            })),
+        ),
+    )
+    .await;
+    call(
+        fx,
+        request(
+            "POST",
+            &format!("/api/v1/admin/model/agent/{id}/publish"),
+            t,
+            None,
+        ),
+    )
+    .await;
+}
+
 async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)> {
     let t = Some(fx.admin_token.as_str());
     const S: &str = "/api/v1/admin/security";
@@ -3927,6 +3957,91 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 t,
                 None,
             )
+        }
+        // ── caches (Z3-T9) ──────────────────────────────────────────────────
+        "POST /api/v1/admin/caches/{name}/purge" => {
+            // A cache built in this process, so the purge finds it here.
+            static EMISSION: attome_cache::spec::CacheSpec = attome_cache::spec::CacheSpec {
+                name: "attome-test:emission",
+                crate_name: "attome-test",
+                purpose: "emission",
+                source_of_truth: "the emission test",
+                ttl: std::time::Duration::from_secs(60),
+                jitter_pct: 0,
+                l1_capacity: 10,
+                partition: attome_cache::spec::Partition::Shared,
+                sensitivity: attome_cache::spec::CacheSensitivity::LocalOnly,
+                failure: attome_cache::spec::FailureMode::FallBackToSource,
+                invalidation: "TTL",
+                cold_start: "empty",
+                warm_on_start: false,
+            };
+            let _cache: attome_cache::tiered::TieredCache<String> =
+                attome_cache::tiered::TieredCache::new(&EMISSION, None).expect("build the cache");
+            request(
+                "POST",
+                "/api/v1/admin/caches/attome-test:emission/purge",
+                t,
+                Some(json!({ "key": "one" })),
+            )
+        }
+        // ── option set merge (A5-T2) ────────────────────────────────────────
+        "POST /api/v1/admin/model/option_set/{id}/merge" => {
+            attome::jobs::register_job_types();
+            let id = Uuid::now_v7();
+            call(
+                fx,
+                request(
+                    "POST",
+                    &format!("/api/v1/admin/model/option_set/{id}/commands"),
+                    t,
+                    Some(json!({
+                        "base_hash": "",
+                        "name": format!("emission_set_{}", &id.simple().to_string()[..12]),
+                        "commands": [{ "op": "set", "path": "/values", "value": [
+                            { "code": "jedda", "label_en": "Jedda" },
+                            { "code": "jeddah", "label_en": "Jeddah" }
+                        ] }],
+                    })),
+                ),
+            )
+            .await;
+            call(
+                fx,
+                request(
+                    "POST",
+                    &format!("/api/v1/admin/model/option_set/{id}/publish"),
+                    t,
+                    None,
+                ),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/model/option_set/{id}/merge"),
+                t,
+                Some(json!({ "from": "jedda", "into": "jeddah" })),
+            )
+        }
+        // ── metadata versions (Y8-T4) ───────────────────────────────────────
+        "POST /api/v1/admin/metadata/versions/{version}/switch" => {
+            publish_agent(fx).await;
+            let version: i64 = sqlx::query_scalar("SELECT version FROM metadata_current")
+                .fetch_one(&fx.base.db)
+                .await
+                .expect("a publish records a current metadata version");
+            request(
+                "POST",
+                &format!("/api/v1/admin/metadata/versions/{version}/switch"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/metadata/rollback" => {
+            // Two publishes, so there is a version before the current one.
+            publish_agent(fx).await;
+            publish_agent(fx).await;
+            request("POST", "/api/v1/admin/metadata/rollback", t, None)
         }
         // ── outside MCP servers (N13-T1) ────────────────────────────────────
         "POST /api/v1/admin/mcp-servers" => request(

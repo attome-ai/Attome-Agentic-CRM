@@ -17,6 +17,8 @@
 
 /// AA7-T5: cooked artefacts at hash-named URLs.
 pub(crate) mod cooked;
+/// A5-T2: merging one option set value into another.
+pub mod option_merge;
 
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -52,20 +54,87 @@ pub fn cooked() -> &'static attome_model::runtime::CookedRegistry {
     COOKED.get_or_init(attome_model::runtime::CookedRegistry::default)
 }
 
+/// This node's name in `metadata_node_switch` (Y8-T4), set once at engine
+/// start; `localhost:0` in a process that never set it (a test).
+static NODE: OnceLock<String> = OnceLock::new();
+
+pub(crate) fn set_node(name: String) {
+    let _ = NODE.set(name);
+}
+
+fn node() -> &'static str {
+    NODE.get().map_or("localhost:0", String::as_str)
+}
+
+/// How long a publisher waits for another node's pointer move before giving
+/// up with a conflict (the publish itself is already committed).
+const POINTER_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// Rebuilds the cooked registry from the published store, reusing unchanged
-/// artefacts. Serialised so two publishes cannot interleave their swaps. On
-/// one server this keeps forms current; several servers switch versions with
-/// Y8.
+/// artefacts, and records it as the deployment's next metadata version
+/// (Y8-T4): the pointer moves and every node follows it. Serialised on this
+/// node so two publishes cannot interleave their swaps, and across nodes by
+/// the pointer lock, held from before the cook to the record, so the version
+/// recorded last is always the newest cook.
 pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
     static REBUILD: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     let _guard = REBUILD.lock().await;
-    let current = cooked().snapshot();
+    let db = &state.base.db;
+    let previous = cooked().snapshot();
+    let started = std::time::Instant::now();
+    let mut tx = loop {
+        let mut tx = attome_db::tx::begin(db).await?;
+        if attome_model::switch::lock_pointer(&mut tx).await? {
+            break tx;
+        }
+        // Dropped, so rolled back: it holds nothing yet.
+        drop(tx);
+        if started.elapsed() > POINTER_WAIT {
+            return Err(AppError::Conflict(
+                "a metadata version switch is already in progress",
+            ));
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    };
     let manifest =
-        attome_model::publish::cook_published(&state.base.db, kinds(), Some(&current.manifest))
-            .await?;
-    cooked()
-        .load_version(&state.base.db, current.version + 1, manifest)
-        .await
+        attome_model::publish::cook_published(db, kinds(), Some(&previous.manifest)).await?;
+    let hash = attome_model::switch::store_manifest(db, &manifest).await?;
+    let switched = attome_model::switch::record(&mut tx, &hash, None).await?;
+    attome_db::tx::commit(tx).await?;
+    cooked().load_version(db, switched.to, manifest).await?;
+    attome_model::switch::record_node_switch(db, node(), switched.to).await
+}
+
+/// Loads the deployment's current metadata version on this node when it is
+/// not the one loaded (Y8-T4). The metadata catch-up calls it, so every node
+/// follows a publish, a switch or a rollback made on another.
+pub(crate) async fn follow_cooked(db: &attome_db::DbPool) {
+    match attome_model::switch::follow_current(db, cooked(), node()).await {
+        Ok(Some(version)) => tracing::info!(version, "switched to metadata version"),
+        Ok(None) => {}
+        Err(error) => {
+            tracing::error!(%error, "could not switch to the current metadata version; will retry");
+        }
+    }
+}
+
+/// Cold start: the current version when one is recorded, or a first cook.
+pub(crate) async fn ensure_cooked(state: &EngineState) -> Result<(), AppError> {
+    if cooked().snapshot().version != 0 {
+        return Ok(());
+    }
+    let followed = attome_model::switch::follow_current(&state.base.db, cooked(), node()).await?;
+    if followed.is_none() && cooked().snapshot().version == 0 {
+        match refresh_cooked(state).await {
+            // Another node is recording a version: serve what it records,
+            // rather than answering a read with a conflict.
+            Err(AppError::Conflict(_)) => {
+                attome_model::switch::follow_current(&state.base.db, cooked(), node()).await?;
+            }
+            other => other?,
+        }
+    }
+    Ok(())
 }
 
 fn kind(name: &str) -> Result<&'static Arc<dyn Kind>, AppError> {
@@ -750,10 +819,7 @@ async fn form_plan(
     Path(id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    if cooked().snapshot().version == 0 {
-        // Cold start: build the cooked registry from the published store.
-        refresh_cooked(&state).await?;
-    }
+    ensure_cooked(&state).await?;
     let key = format!("form:{id}");
     let form = cooked()
         .get::<CookedForm>("form", &key)
@@ -1264,9 +1330,7 @@ async fn menu(
     ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<MenuView>, AppError> {
-    if cooked().snapshot().version == 0 {
-        refresh_cooked(&state).await?;
-    }
+    ensure_cooked(&state).await?;
     let cooked_menu = cooked()
         .get::<Value>("navigation", &format!("navigation:{id}"))
         .ok_or(AppError::NotFound)?;
@@ -1394,9 +1458,7 @@ async fn menu_usage(
     if !(1..=365).contains(&days) {
         return Err(AppError::Validation("days is 1 to 365".into()));
     }
-    if cooked().snapshot().version == 0 {
-        refresh_cooked(&state).await?;
-    }
+    ensure_cooked(&state).await?;
     let cooked_menu = cooked()
         .get::<Value>("navigation", &format!("navigation:{id}"))
         .ok_or(AppError::NotFound)?;
@@ -1692,9 +1754,7 @@ async fn tours(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
 ) -> Result<Json<PaginatedResponse<TourView>>, AppError> {
-    if cooked().snapshot().version == 0 {
-        refresh_cooked(&state).await?;
-    }
+    ensure_cooked(&state).await?;
     let registry = cooked();
     let all: Vec<Value> = registry
         .hashes("tour")
@@ -1807,9 +1867,7 @@ async fn reply_suggestions(
     let case_indexed =
         indexed.unwrap_or_else(|| reply_suggest::index_text(&record_text(record.data())));
 
-    if cooked().snapshot().version == 0 {
-        refresh_cooked(&state).await?;
-    }
+    ensure_cooked(&state).await?;
     let registry = cooked();
     let viewer = Viewer {
         user_id: ctx.user_id,
@@ -1942,8 +2000,130 @@ async fn reply_template_used(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Serialize, ToSchema)]
+pub(crate) struct VersionSwitchResponse {
+    /// The version current before; `null` when none was.
+    from: Option<i64>,
+    /// The version current now. Every node switches to it on its next
+    /// metadata catch-up.
+    to: i64,
+}
+
+impl From<attome_model::switch::Switched> for VersionSwitchResponse {
+    fn from(switched: attome_model::switch::Switched) -> Self {
+        Self {
+            from: switched.from,
+            to: switched.to,
+        }
+    }
+}
+
+/// Commits a pointer move with its audit event, then loads the version on
+/// this node; the other nodes follow on the doorbell.
+async fn finish_switch(
+    state: &EngineState,
+    mut tx: attome_db::Tx<'_>,
+    actor: Uuid,
+    switched: attome_model::switch::Switched,
+    name: &'static str,
+) -> Result<Json<VersionSwitchResponse>, AppError> {
+    let from = switched
+        .from
+        .map_or_else(|| "none".to_owned(), |v| v.to_string());
+    write_security_event(
+        &mut tx,
+        &audit_service(state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            actor,
+            "metadata_current",
+            None,
+        )
+        .named(name)
+        .comment(format!("metadata version {from} -> {}", switched.to)),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    follow_cooked(&state.base.db).await;
+    Ok(Json(switched.into()))
+}
+
+/// Makes an already published metadata version current (Y8-T4). Its cooked
+/// artefacts are loaded as they are; nothing is cooked.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/metadata/versions/{version}/switch",
+    description = "Points the deployment at a recorded metadata version; every node loads it on its next catch-up (Y8-T4). Audited.",
+    operation_id = "switch_metadata_version",
+    tag = "admin",
+    params(("version" = i64, Path, description = "A published metadata version")),
+    responses(
+        (status = 200, description = "Switched", body = VersionSwitchResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such published version", body = ErrorResponse),
+        (status = 409, description = "Another version switch is in progress", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn switch_version(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(version): Path<i64>,
+) -> Result<Json<VersionSwitchResponse>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let switched = attome_model::switch::set_current(&mut tx, version).await?;
+    finish_switch(&state, tx, ctx.user_id, switched, "metadata.version_switch").await
+}
+
+/// Rolls the metadata back one version (Y8-T4): the pointer moves to the
+/// highest published version below the current one, whose artefacts are
+/// kept, so nothing is cooked. Drafts and published objects are not changed;
+/// the next publish cooks them again.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/metadata/rollback",
+    description = "Points the deployment back at the version before the current one; every node follows (Y8-T4). Audited.",
+    operation_id = "rollback_metadata_version",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Rolled back", body = VersionSwitchResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "No earlier version, or another version switch is in progress", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn rollback_version(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+) -> Result<Json<VersionSwitchResponse>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let switched = attome_model::switch::rollback(&mut tx).await?;
+    finish_switch(
+        &state,
+        tx,
+        ctx.user_id,
+        switched,
+        "metadata.version_rollback",
+    )
+    .await
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/admin/metadata/versions/{version}/switch",
+            post(switch_version),
+        )
+        .route("/api/v1/admin/metadata/rollback", post(rollback_version))
+        .route(
+            "/api/v1/admin/model/option_set/{id}/merge",
+            post(option_merge::merge_values),
+        )
         .route("/api/v1/admin/model/kinds", get(list_kinds))
         .route("/api/v1/model/navigation/{id}", get(menu))
         .route(
@@ -2001,6 +2181,9 @@ pub fn routes() -> Router<EngineState> {
         validate,
         apply_commands,
         publish,
+        switch_version,
+        rollback_version,
+        option_merge::merge_values,
         export_files,
         import_files,
         blueprint_plan,
@@ -2025,6 +2208,9 @@ pub fn routes() -> Router<EngineState> {
         CommandsRequest,
         CommandsResponse,
         ModelPublishResponse,
+        VersionSwitchResponse,
+        option_merge::MergeValuesRequest,
+        option_merge::MergeValuesQueued,
         ModelFile,
         ModelFiles,
         MenuView,

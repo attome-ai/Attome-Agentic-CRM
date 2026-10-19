@@ -1218,6 +1218,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/caches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists each declared cache built on this node with its numbers (Z3-T9).
+         * @description Each declared cache on the node that answers, with its entries, hits, misses, evictions and hit rate (Z3-T9). Each node counts its own; no cached value is returned.
+         */
+        get: operations["list_caches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/caches/{name}/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Purges one key, or every entry, of a cache on every node (Z3-T9). Every
+         *     node drops it from its in-process tier; one key of a shared cache is also
+         *     deleted from the shared store. Shared-store copies of a whole-cache purge,
+         *     or of a partitioned cache's per-reader entries, live out their TTL.
+         * @description Drops one key, or the whole cache, here and, through a notification sent with the audit event, on every other node (Z3-T9).
+         */
+        post: operations["purge_cache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/calendars": {
         parameters: {
             query?: never;
@@ -1890,7 +1933,7 @@ export interface paths {
          * One version of a page with its content (K5-T1).
          * @description The title, SEO text and blocks exactly as that version was published.
          */
-        get: operations["get_version"];
+        get: operations["get_content_page_version"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1915,7 +1958,7 @@ export interface paths {
          *     requires approval the restored draft waits for approval (202 with the
          *     request's id) like any other publish.
          */
-        post: operations["restore_version"];
+        post: operations["restore_content_page_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2643,6 +2686,60 @@ export interface paths {
         get: operations["dev_tools_available"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every registered device, most recently seen first. */
+        get: operations["list_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/devices/{id}/offline-refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B18-T12: the device starts its offline data again at its next pull: a
+         *     fresh manifest, every record re-sent.
+         */
+        post: operations["force_offline_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/devices/{id}/wipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks a device to wipe itself and ends its owner's sessions everywhere. */
+        post: operations["wipe_device"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4033,6 +4130,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/mail-connections/microsoft/admin-consent-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The URL that asks a Microsoft tenant's administrator to consent for every
+         *     person at once.
+         */
+        get: operations["microsoft_admin_consent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/mcp-servers": {
         parameters: {
             query?: never;
@@ -4615,6 +4732,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rolls the metadata back one version (Y8-T4): the pointer moves to the
+         *     highest published version below the current one, whose artefacts are
+         *     kept, so nothing is cooked. Drafts and published objects are not changed;
+         *     the next publish cooks them again.
+         * @description Points the deployment back at the version before the current one; every node follows (Y8-T4). Audited.
+         */
+        post: operations["rollback_metadata_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/rollout/status": {
         parameters: {
             query?: never;
@@ -4651,6 +4791,27 @@ export interface paths {
          *     never opted into a pull source to sync is a no-op, not a mistake.
          */
         post: operations["sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/versions/{version}/switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Makes an already published metadata version current (Y8-T4). Its cooked
+         *     artefacts are loaded as they are; nothing is cooked.
+         * @description Points the deployment at a recorded metadata version; every node loads it on its next catch-up (Y8-T4). Audited.
+         */
+        post: operations["switch_metadata_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4918,6 +5079,26 @@ export interface paths {
         get: operations["menu_usage"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/option_set/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merges one value of an option set into another (A5-T2).
+         * @description Retires `from` (publishing the set) and queues a background job that moves every record holding `from` to `into`, as the caller (A5-T2). The retirement, its audit event and the job commit together.
+         */
+        post: operations["merge_option_set_values"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5696,7 +5877,7 @@ export interface paths {
          * @description All rules, active or not, oldest first, in one page: a deployment keeps a
          *     few dozen at most.
          */
-        get: operations["list_rules"];
+        get: operations["list_retention_rules"];
         put?: never;
         /**
          * Adds a retention rule (R3-T1).
@@ -5704,7 +5885,7 @@ export interface paths {
          *     must compile, its start attribute must be a date, and an append-only
          *     entity takes no rule. The next proposal sweep applies it.
          */
-        post: operations["create_rule"];
+        post: operations["create_retention_rule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5725,14 +5906,14 @@ export interface paths {
          *     changed since it was read answers 409. Proposals already made stay until
          *     they are approved or rejected.
          */
-        put: operations["update_rule"];
+        put: operations["update_retention_rule"];
         post?: never;
         /**
          * Removes a retention rule (R3-T1).
          * @description The rule stops proposing at once; proposals it already made stay in the
          *     review list until they are approved or rejected.
          */
-        delete: operations["delete_rule"];
+        delete: operations["delete_retention_rule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7432,6 +7613,26 @@ export interface paths {
          *     required. A failing theme is refused naming each pair and its ratio.
          */
         post: operations["publish_theme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/timers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * M10-T4: every pending timer, soonest first (administrators).
+         * @description Every pending timer on every record, soonest first: what it will do, on which record and when (M10-T4). Administrators only.
+         */
+        get: operations["list_pending_timers"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9841,6 +10042,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/booking/manage/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The booking a manage link names. */
+        get: operations["get_managed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/booking/manage/{token}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancels the booking and its meeting. */
+        post: operations["cancel_booking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/booking/manage/{token}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Moves the booking to another free time with the same person. */
+        post: operations["post_reschedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/booking/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A booking page: its name and the times that can be booked. */
+        get: operations["get_booking_page"];
+        put?: never;
+        /** Books a meeting at one of the page's free times. */
+        post: operations["post_booking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branding/asset": {
         parameters: {
             query?: never;
@@ -9952,6 +10222,240 @@ export interface paths {
         get: operations["catalog_get_entity"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's channels, most recently active first. */
+        get: operations["list_channels"];
+        put?: never;
+        /** Starts a direct, group or record channel. */
+        post: operations["post_channel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adds someone to a group or record channel; any member may. */
+        post: operations["add_member"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels/{id}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Leaves a channel, or (its owner) removes someone from it. */
+        delete: operations["remove_member"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A channel's messages: top-level ones newest first, or one thread oldest
+         *     first.
+         */
+        get: operations["list_channel_messages"];
+        put?: never;
+        /** Posts a message, optionally in a thread and with a document. */
+        post: operations["post_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels/{id}/messages/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Deletes a message: its author or the channel's owner. Under a legal hold
+         *     the text is kept for the hold and only hidden.
+         */
+        delete: operations["delete_message"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks the channel read up to now. */
+        post: operations["mark_channel_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/channels/{id}/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Sets how long the channel keeps messages (its owner only). */
+        put: operations["set_retention"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cobrowse/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Joins a co-browse session with its code (J9-T2).
+         * @description The code works once, for ten minutes; any other code answers 404.
+         */
+        post: operations["join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cobrowse/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts a co-browse session (J9-T2). */
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cobrowse/sessions/{id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ends a session from the agent's side (J9-T2). */
+        post: operations["agent_end"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cobrowse/sessions/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The customer's frames after `after` (J9-T2). */
+        get: operations["agent_read"];
+        put?: never;
+        /** Sends an agent frame (J9-T2). */
+        post: operations["agent_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cobrowse/visitor/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ends a session from the customer's side (J9-T2). */
+        post: operations["visitor_end"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cobrowse/visitor/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The agent's frames after `after`, for the customer (J9-T2). */
+        get: operations["visitor_read"];
+        put?: never;
+        /** Sends a customer frame (J9-T2). */
+        post: operations["visitor_send"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10175,6 +10679,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/consents/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The confirmation page (E27-T3).
+         * @description An HTML page with one button; the button's POST confirms. Opening the
+         *     link alone changes nothing.
+         */
+        get: operations["confirm_get"];
+        put?: never;
+        /**
+         * Confirms a subscription (E27-T3).
+         * @description The grant reaches the consent ledger with the confirmation as its proof.
+         *     A link used before, expired or unknown answers 404.
+         */
+        post: operations["confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents/preference-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a preference link for one subject (E26-T1).
+         * @description Whoever holds it can read and change that subject's marketing consent
+         *     for 180 days. Put it in the footer of what is sent to them.
+         */
+        post: operations["create_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A subject's marketing preferences, read through their link (E26-T1).
+         * @description Every consent-based purpose with each channel's state. An invalid or
+         *     expired link answers 404, like a link that never existed.
+         */
+        get: operations["read_preferences"];
+        put?: never;
+        /**
+         * Saves a subject's preferences through their link (E26-T1).
+         * @description Each change is recorded as a consent grant or withdrawal with the link
+         *     as its proof. An invalid or expired link answers 404.
+         */
+        post: operations["save_preferences"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/consents/withdraw": {
         parameters: {
             query?: never;
@@ -10244,6 +10821,27 @@ export interface paths {
         get: operations["deliver_internal_page"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/knowledge-feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * G11-T2: a signed-in person's helpful/not-helpful on an article suggested
+         *     to them, counted with the article page's votes. A cited item that is not a
+         *     published article is 404, as a missing one.
+         */
+        post: operations["knowledge_feedback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10459,6 +11057,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registers this device for the signed-in person, or refreshes it. */
+        post: operations["register_device"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/me/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether this device must wipe itself. Only its owner may ask. */
+        get: operations["my_device_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/me/{id}/wiped": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The app reports that it cleared its local data after a wipe request. */
+        post: operations["my_device_wiped"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/docgen/batches/{batch_id}": {
         parameters: {
             query?: never;
@@ -10569,6 +11218,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/{id}/transcribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asks for a recording to be transcribed (again); needs update access to the
+         *     document. The work runs on the job queue.
+         */
+        post: operations["post_transcribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{id}/transcript": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A recording's transcript, for anyone who may read the document. */
+        get: operations["get_transcript"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/einvoice/devices": {
         parameters: {
             query?: never;
@@ -10613,6 +11299,26 @@ export interface paths {
          *     gives Angular's `FeatureService` so the UI and the API agree on what's on.
          */
         get: operations["get_effective_features"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * C3-T1: the caller's feed — posts and changes to the records they follow,
+         *     newest first, each only if they may read it.
+         */
+        get: operations["get_feed"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10817,6 +11523,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["handle_webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * M12-T4: the batch jobs the caller started (imports, bulk edits, exports,
+         *     merges), newest first, with their progress. Only the caller's own, even
+         *     for an administrator.
+         * @description The batch jobs the caller started, newest first, with their progress and whether they can still be cancelled (M12-T4).
+         */
+        get: operations["list_my_batch_jobs"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11089,6 +11817,111 @@ export interface paths {
         post?: never;
         /** B9-T2: deletes one of the caller's own lists. */
         delete: operations["delete_my_list"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's mailbox connections. */
+        get: operations["list_connections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-connections/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnects: revokes at the provider where it can, then forgets the tokens. */
+        delete: operations["disconnect"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-connections/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where the provider sends the person back; keeps the tokens and returns
+         *     them to their settings page.
+         */
+        get: operations["callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-connections/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts connecting: answers the provider's sign-in URL. */
+        post: operations["start_mail_connection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** J7-T1: creates an online meeting with its join link. */
+        post: operations["post_meeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/meetings/{provider}/{id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** J7-T1: who attended and the recordings, after the meeting. */
+        get: operations["get_meeting_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11498,6 +12331,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/offline/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B18-T4: the caller's offline profile with entity metadata (no sensitive
+         *     attribute) and the rules a device evaluates before it syncs.
+         */
+        get: operations["get_offline_profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offline/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B18-T5: the device's next page of its offline profile, with the records it
+         *     must drop.
+         */
+        post: operations["post_pull"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offline/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B18-T7: applies a device's queued changes in order, once each, through
+         *     the same path as an online edit.
+         */
+        post: operations["post_push"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/omnichannel/webchat/message": {
         parameters: {
             query?: never;
@@ -11522,6 +12415,31 @@ export interface paths {
             cookie?: never;
         };
         get: operations["poll_webchat_messages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/omnichannel/webchat/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The web chat's messages as they arrive (J3-T1).
+         * @description Server-Sent Events: a `messages` event (`{messages, handed_off}`, the
+         *     poll's shape) whenever messages newer than `since` arrive or the
+         *     conversation is handed to a person, checked every 2 seconds. The stream
+         *     ends after 10 minutes and the widget reconnects with the last
+         *     `created_at` it saw; a widget that cannot hold a stream keeps polling.
+         *     Opening it counts as one poll against the session's rate limit.
+         */
+        get: operations["webchat_stream"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11892,6 +12810,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/push/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registers (or moves to the caller) one push address. */
+        post: operations["register_push_subscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes one of the caller's push addresses. */
+        delete: operations["unregister"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/vapid-public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The key a browser subscribes with; 404 while Web Push is not configured. */
+        get: operations["vapid_public_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/query/execute": {
         parameters: {
             query?: never;
@@ -11953,6 +12922,24 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["claim_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quote-acceptance/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The quote a guest link shows. */
+        get: operations["get_quote"];
+        put?: never;
+        /** Accepts or rejects the quote a guest link shows. */
+        post: operations["post_decision"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12253,6 +13240,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_claim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/call-lists/{id}/dial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_dial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/call-lists/{id}/voicemail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_voicemail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12563,6 +13582,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/quotes/{id}/guest-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Makes a sent quote's guest link. */
+        post: operations["post_guest_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/territories/realign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_realign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/territories/realign/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/undo/{snapshot_id}": {
         parameters: {
             query?: never;
@@ -12573,6 +13641,29 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_sales_undo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scan/act": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B16-T8: runs the scan action bound to a scanned code.
+         * @description Resolves the record as `scan/find` does: none is 404, more than one is
+         *     409 listing them. Then opens it, starts the action's workflow, or sets the
+         *     action's field at the record's current version, with one business event.
+         *     An `Idempotency-Key` makes a double scan run once.
+         */
+        post: operations["scan_act"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12811,6 +13902,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The service catalog (G3-T3): active offerings, searched in Arabic or
+         *     English across name, description and category.
+         */
+        get: operations["catalog_route"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service-offering/active": {
         parameters: {
             query?: never;
@@ -12837,6 +13948,90 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["create_work_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service-offering/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publishes an offering as its next version (G3-T1).
+         * @description The offering becomes public, and a snapshot of it is kept as a numbered
+         *     `service_offering_version`, so what a request was filed against stays
+         *     known after the offering changes.
+         */
+        post: operations["publish_offering_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Places a cart order (G3-T2).
+         * @description One work request with one item per line (and per offering of an order
+         *     guide, each carrying the guide's answers). An item whose offering
+         *     requires approval waits for it; the others start their fulfilment tasks
+         *     at once.
+         */
+        post: operations["place_order_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service-orders/items/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels an order item (G3-T3).
+         * @description Allowed while it waits for approval or is being fulfilled; its open and
+         *     pending tasks are cancelled with it. Only the person the order is for, the
+         *     one who placed it, or an administrator may; anyone else gets 404.
+         */
+        post: operations["cancel_item_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service-orders/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's orders and where each item stands (G3-T3). */
+        get: operations["my_orders_route"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13056,6 +14251,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sms/inbound/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** J4-T2: a text someone sent to the deployment's number. */
+        post: operations["inbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sms/receipts/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * J4-T1: a provider's delivery receipt for one message. The token names the
+         *     ledger row; a bad or expired one is 404, as is a receipt for a different
+         *     provider message.
+         */
+        post: operations["receipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social/meta/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Meta's subscription check. */
+        get: operations["meta_verify"];
+        put?: never;
+        /** Meta's signed events: messages and comments. */
+        post: operations["meta_events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answers a social message, comment or review through its provider. */
+        post: operations["post_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/status": {
         parameters: {
             query?: never;
@@ -13263,6 +14531,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/track/click/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Counts a click and sends the reader on (D16-T1).
+         * @description Redirects only to the link the signed token names; any other token
+         *     answers 404.
+         */
+        get: operations["track_click"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/track/open/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Counts an open (D16-T1). Always answers the pixel, whatever the token. */
+        get: operations["track_open"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/views": {
         parameters: {
             query?: never;
@@ -13319,6 +14625,149 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["share_personal_view"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rings the caller's own phone, then the number, and logs the call. */
+        post: operations["post_call"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/events/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Twilio's reports on one call. */
+        post: operations["post_events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The contact, lead or account a number belongs to, when the caller may
+         *     see it.
+         */
+        get: operations["get_lookup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/pbx/{key}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A PBX's call events. */
+        post: operations["post_pbx_events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/softphone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The softphone's settings and an access token for the caller. */
+        get: operations["get_softphone"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/twilio/{key}/client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Twilio asks what to do with a call placed from the browser softphone:
+         *     dial the number of the call the softphone created (`CallRef`), never a
+         *     number the browser sends.
+         */
+        post: operations["post_twilio_client"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/twilio/{key}/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A call to the deployment's Twilio number. */
+        post: operations["post_twilio_inbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/twiml/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Twilio fetches what to do when the caller answers: dial the customer. */
+        post: operations["post_twiml"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14068,6 +15517,27 @@ export interface paths {
         };
         /** A28-T2: the defaults a new record of the entity starts with, by field. */
         get: operations["new_record_defaults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/record-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the record types the caller's roles may create (A27-T4), the
+         *     caller's default first. Empty when the entity has no record types.
+         * @description The record types of this entity the caller may create, the default first, for the New button's choice (A27-T4).
+         */
+        get: operations["list_record_types"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14854,6 +16324,26 @@ export interface paths {
          *     first, up to 2000.
          */
         get: operations["export_record_timeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/timers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The record's pending timers, soonest first (at most 200).
+         * @description The pending timers on this record that the caller may see: what each will do and when (M10-T4).
+         */
+        get: operations["list_record_timers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -15896,6 +17386,11 @@ export interface components {
             /** @description The stored value (1..100 chars). Re-adding a removed value is allowed. */
             value: string;
         };
+        /** @description `POST /api/v1/chat/channels/{id}/members`. */
+        AddMember: {
+            /** Format: uuid */
+            user_id: string;
+        };
         AddOrganizationMemberBody: {
             user_email: string;
         };
@@ -16638,6 +18133,16 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        /** @description One person's time in a meeting. */
+        Attendee: {
+            email?: string | null;
+            name?: string | null;
+            /**
+             * Format: int64
+             * @description Seconds present.
+             */
+            seconds: number;
+        };
         /**
          * @description `attribute_info` — one field of an entity. `entity_ref` is the
          *     parent [`EntityDef`]; `lookup_entity_ref` is carried as the target's
@@ -17214,6 +18719,31 @@ export interface components {
         BlueprintRollback: {
             items: components["schemas"]["BlueprintAppliedItem"][];
         };
+        /** @description A booking. */
+        BookRequest: {
+            /** @description The challenge answer, when the deployment uses one. */
+            captcha_token?: string | null;
+            email: string;
+            name: string;
+            notes?: string | null;
+            phone?: string | null;
+            /**
+             * Format: date-time
+             * @description One of the listed slot starts.
+             */
+            start: string;
+        };
+        /** @description A booking made. */
+        Booked: {
+            /** Format: uuid */
+            booking_id: string;
+            /** Format: date-time */
+            end: string;
+            /** @description The token of the reschedule/cancel link (also in the email). */
+            manage_token: string;
+            /** Format: date-time */
+            start: string;
+        };
         BotAnalytics: {
             deflection: components["schemas"]["DeflectionStats"];
             feedback: components["schemas"]["FeedbackStats"];
@@ -17728,6 +19258,44 @@ export interface components {
             severity?: string | null;
             target_field?: string | null;
         };
+        /** @description What to purge: one key (as the cache's readers name it), or everything. */
+        CachePurge: {
+            /** @description The id to drop; omit it to drop every entry. */
+            key?: string | null;
+            /** @description The cache, by its declared name. Filled from the path. */
+            readonly name?: string;
+        };
+        /** @description One declared cache's numbers on one node. */
+        CacheStatsRow: {
+            /**
+             * Format: int64
+             * @description Entries in the in-process tier now.
+             */
+            entries: number;
+            /**
+             * Format: int64
+             * @description Entries pushed out by the capacity or the quota.
+             */
+            evictions: number;
+            /**
+             * Format: double
+             * @description hits / (hits + misses), or `null` before the first read.
+             */
+            hit_rate?: number | null;
+            /**
+             * Format: int64
+             * @description Reads the in-process tier answered since this node started.
+             */
+            hits: number;
+            /**
+             * Format: int64
+             * @description Reads that went on to the shared store or the source.
+             */
+            misses: number;
+            name: string;
+            /** @description The node these numbers are from (each node counts its own). */
+            node: string;
+        };
         /**
          * @description Z12-T10: one business-time question for a calendar.
          * @enum {string}
@@ -17857,6 +19425,16 @@ export interface components {
             end_minute: number;
             /** Format: int32 */
             start_minute: number;
+        };
+        /** @description A call the dialer started. */
+        CallHandle: {
+            /**
+             * Format: uuid
+             * @description The `phone_call` activity logged for it; the outcome is recorded on it.
+             */
+            activity_id: string;
+            /** Format: uuid */
+            call_id: string;
         };
         CallListRecord: {
             entity: string;
@@ -18004,12 +19582,24 @@ export interface components {
             trigger: string;
         };
         CaptureConsentBody: {
+            /** @description E27-T3: the channel consented to; `email` when unset. */
+            channel?: string | null;
+            /**
+             * @description E27-T3: the person's country (ISO code), for the double opt-in
+             *     rule; the deployment's own country when unset.
+             */
+            country?: string | null;
             evidence?: string | null;
             purpose_key: string;
             regarding_entity?: string | null;
             regarding_id?: string | null;
             subject_reference: string;
         };
+        /**
+         * @description What became of a captured grant.
+         * @enum {string}
+         */
+        CaptureOutcome: "recorded" | "awaiting_confirmation" | "not_recorded";
         CaseAdded: {
             case: unknown;
             content_hash: string;
@@ -18127,6 +19717,19 @@ export interface components {
             from_ref: string;
             /** @description `None` for an entity-level reference (0356's empty-string sentinel). */
             to_attribute?: string | null;
+        };
+        /** @description One offering in the catalog. */
+        CatalogOffering: {
+            category?: string | null;
+            category_name?: string | null;
+            /** Format: uuid */
+            category_ref?: string | null;
+            default_priority?: string | null;
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            requires_approval: boolean;
         };
         CatalogUsage: {
             /** Format: date-time */
@@ -18300,6 +19903,38 @@ export interface components {
         ChannelPollResponse: {
             handed_off: boolean;
             messages: components["schemas"]["ChatMessageOut"][];
+        };
+        /** @description A channel as its member sees it. */
+        ChannelRow: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            entity_name?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            last_message_at?: string | null;
+            members: string[];
+            name?: string | null;
+            /** Format: uuid */
+            record_id?: string | null;
+            /** Format: int32 */
+            retention_days?: number | null;
+            /** @description The caller's role: `owner` or `member`. */
+            role: string;
+            /**
+             * Format: int64
+             * @description Messages from others since the caller last marked the channel read.
+             */
+            unread: number;
+        };
+        /** @description One channel's state. */
+        ChannelState: {
+            channel: string;
+            /** @description `true` granted, `false` withdrawn, `null` never asked. */
+            granted?: boolean | null;
         };
         ChatMessageOut: {
             body: string;
@@ -19165,6 +20800,10 @@ export interface components {
             outcome: string;
             result: unknown;
         };
+        /** @description `?token=`, or the confirm form's field. */
+        ConfirmQuery: {
+            token: string;
+        };
         /**
          * @description Body of `POST …/tool-calls/{tid}/confirm`. **Only the hash the UI
          *     displayed** — the arguments that run are the server's stored copy (I-13).
@@ -19188,6 +20827,7 @@ export interface components {
         ConsentRow: {
             /** Format: uuid */
             id: string;
+            ledger?: null | components["schemas"]["CaptureOutcome"];
             status: string;
         };
         ConsentState: {
@@ -20074,6 +21714,43 @@ export interface components {
             total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_FeedItem: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description Who posted, or who made the change, when known.
+                 */
+                actor?: string | null;
+                /** @description A post's text. */
+                body?: string | null;
+                /**
+                 * @description A record event's entity, record and operation (`create`, `update`,
+                 *     `delete`, `restore`).
+                 */
+                entity?: string | null;
+                /**
+                 * Format: uuid
+                 * @description The post's id, or the change event's.
+                 */
+                id: string;
+                kind: components["schemas"]["FeedItemKind"];
+                /** Format: date-time */
+                occurred_at: string;
+                operation?: string | null;
+                /** Format: uuid */
+                record_id?: string | null;
+                /** @description The record's primary name, when its entity declares one. */
+                record_name?: string | null;
+            }[];
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_HistoryMatch: {
             items: {
                 /** Format: uuid */
@@ -20085,6 +21762,38 @@ export interface components {
                 /** Format: uuid */
                 record_id: string;
                 user_display_name?: string | null;
+            }[];
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_MessageRow: {
+            items: {
+                /** Format: uuid */
+                author_id: string;
+                /** @description Empty once deleted. */
+                body: string;
+                /** Format: uuid */
+                channel_id: string;
+                /** Format: date-time */
+                created_at: string;
+                deleted: boolean;
+                /** Format: uuid */
+                file_id?: string | null;
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: int64
+                 * @description Replies to a top-level message.
+                 */
+                reply_count: number;
+                /** Format: uuid */
+                thread_root_id?: string | null;
             }[];
             next_cursor?: string | null;
             /**
@@ -20789,6 +22498,51 @@ export interface components {
              */
             suggested_dir: string;
         };
+        /** @description One device, as an administrator sees it. */
+        DeviceRow: {
+            app_kind: string;
+            app_version: string;
+            /**
+             * Format: int64
+             * @description Bytes its offline store uses, as it last reported.
+             */
+            bytes_used?: number | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description A refresh is due at the device's next pull. */
+            force_refresh?: boolean | null;
+            /** Format: uuid */
+            id: string;
+            label?: string | null;
+            /**
+             * Format: date-time
+             * @description B18-T12: offline sync, when the device has synced.
+             */
+            last_pull_at?: string | null;
+            /** Format: date-time */
+            last_push_at?: string | null;
+            /** Format: date-time */
+            last_seen_at: string;
+            last_sync_error?: string | null;
+            platform: string;
+            /**
+             * Format: int32
+             * @description Changes waiting on the device, as it last reported.
+             */
+            queue_size?: number | null;
+            /** Format: uuid */
+            user_id: string;
+            user_name?: string | null;
+            /** Format: date-time */
+            wipe_requested_at?: string | null;
+            /** Format: date-time */
+            wiped_at?: string | null;
+        };
+        /** @description What an app asks on resume. */
+        DeviceStatus: {
+            /** @description True when an administrator asked for a wipe the app has not yet done. */
+            wipe: boolean;
+        };
         /** @description A device as administrators see it (no secrets). */
         DeviceSummary: {
             egs_serial: string;
@@ -20830,6 +22584,15 @@ export interface components {
             period_end: string;
             /** Format: date */
             period_start: string;
+        };
+        /** @description A call to make from a call list. */
+        DialRequest: {
+            /** @description The record the call is about. */
+            entity_name: string;
+            /** Format: uuid */
+            record_id: string;
+            /** @description The number, E.164. */
+            to: string;
         };
         /** @description One line of a line-based diff between two prompt versions. */
         DiffLine: {
@@ -22151,6 +23914,39 @@ export interface components {
             policy: components["schemas"]["FeatureFlagPolicy"];
             requires: string[];
         };
+        /** @description One feed item. */
+        FeedItem: {
+            /**
+             * Format: uuid
+             * @description Who posted, or who made the change, when known.
+             */
+            actor?: string | null;
+            /** @description A post's text. */
+            body?: string | null;
+            /**
+             * @description A record event's entity, record and operation (`create`, `update`,
+             *     `delete`, `restore`).
+             */
+            entity?: string | null;
+            /**
+             * Format: uuid
+             * @description The post's id, or the change event's.
+             */
+            id: string;
+            kind: components["schemas"]["FeedItemKind"];
+            /** Format: date-time */
+            occurred_at: string;
+            operation?: string | null;
+            /** Format: uuid */
+            record_id?: string | null;
+            /** @description The record's primary name, when its entity declares one. */
+            record_name?: string | null;
+        };
+        /**
+         * @description What a feed item is. Ordered by wire name, as the keyset compares it.
+         * @enum {string}
+         */
+        FeedItemKind: "post" | "record_event";
         /** @description Body of `PUT …/messages/{message_id}/feedback`. */
         FeedbackRequest: {
             /** @description `"up"` | `"down"`. */
@@ -22545,6 +24341,17 @@ export interface components {
             fields: components["schemas"]["FormPlanField"][];
             label: string;
         };
+        /** @description A frame as read back. */
+        Frame: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            payload: Record<string, never>;
+            /** @description `agent` or `customer`. */
+            sender: string;
+        };
         FulfillErasureBody: {
             scopes: components["schemas"]["DsrScope"][];
         };
@@ -22721,6 +24528,21 @@ export interface components {
         Grouping: {
             bucket?: null | components["schemas"]["DateBucket"];
             field: string;
+        };
+        /** @description A guest link. */
+        GuestLink: {
+            /** Format: date-time */
+            expires_at: string;
+            url: string;
+        };
+        /** @description A guest link request. */
+        GuestLinkRequest: {
+            /**
+             * Format: int64
+             * @description How long the link works, 1 to 90 days (30 by default); never past the
+             *     quote's own expiry.
+             */
+            expires_in_days?: number | null;
         };
         /** @description Completed agent `bot.handoff` invocations in the window. */
         HandoffStats: {
@@ -23232,6 +25054,10 @@ export interface components {
             };
             problem?: null | components["schemas"]["Problem"];
         };
+        /** @description `POST /api/v1/cobrowse/join`. */
+        JoinSession: {
+            code: string;
+        };
         JsonRpcError: {
             /** Format: int32 */
             code: number;
@@ -23345,6 +25171,16 @@ export interface components {
             passages: components["schemas"]["ExplainedPassage"][];
             /** @description The content terms, normalised and stemmed as the index stores them. */
             terms: string[];
+        };
+        /** @description `POST /api/v1/content/knowledge-feedback`. */
+        KnowledgeFeedback: {
+            /**
+             * Format: uuid
+             * @description The knowledge item a suggestion cited (`KnowledgeCitation.item_id`).
+             */
+            item_id: string;
+            /** @description Whether the article helped. */
+            useful: boolean;
         };
         KpiData: {
             metrics: components["schemas"]["KpiMetric"][];
@@ -23689,6 +25525,27 @@ export interface components {
             /** @description The target's `primary_name_attribute` value, when it declares one. */
             name?: string | null;
         };
+        /** @description A connection, as its owner sees it. */
+        MailConnection: {
+            account_email?: string | null;
+            /** Format: date-time */
+            connected_at: string;
+            /** Format: uuid */
+            id: string;
+            provider: string;
+            scopes: string;
+        };
+        /** @description A booking as its manage link shows it. */
+        ManagedBooking: {
+            /** Format: date-time */
+            end: string;
+            page_name: string;
+            slug: string;
+            /** Format: date-time */
+            start: string;
+            /** @description `booked` or `cancelled`. */
+            status: string;
+        };
         /**
          * @description One named bundle's currently-applied state — the highest-version
          *     `succeeded` ledger row for that name.
@@ -23858,6 +25715,27 @@ export interface components {
         };
         /** @enum {string} */
         MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median";
+        /** @description A created meeting. */
+        Meeting: {
+            /** @description The provider's id for it. */
+            id: string;
+            join_url: string;
+            provider: string;
+        };
+        MeetingReport: {
+            attendance: components["schemas"]["Attendee"][];
+            recordings: components["schemas"]["Recording"][];
+        };
+        /** @description What to create. */
+        MeetingRequest: {
+            /** Format: date-time */
+            end: string;
+            /** @description `teams`, `meet`, `zoom` or `jitsi`. */
+            provider: string;
+            /** Format: date-time */
+            start: string;
+            subject: string;
+        };
         MentionBody: {
             /** @description The text that mentions people, with `@[user:<id>]` / `@[team:<id>]`. */
             text: string;
@@ -23968,6 +25846,46 @@ export interface components {
             rows_moved_back: number;
             /** Format: uuid */
             survivor_id: string;
+        };
+        /** @description The merge was published and its record update queued. */
+        MergeValuesQueued: {
+            queued: boolean;
+            /**
+             * Format: int64
+             * @description The option set version that retired `from` (the current one when it
+             *     was retired already).
+             */
+            version_no: number;
+        };
+        /** @description `{from, into}`: the codes to merge. */
+        MergeValuesRequest: {
+            /** @description The value to retire. */
+            from: string;
+            /** @description The value its records take; must be an active value of the set. */
+            into: string;
+        };
+        /** @description One message. */
+        MessageRow: {
+            /** Format: uuid */
+            author_id: string;
+            /** @description Empty once deleted. */
+            body: string;
+            /** Format: uuid */
+            channel_id: string;
+            /** Format: date-time */
+            created_at: string;
+            deleted: boolean;
+            /** Format: uuid */
+            file_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description Replies to a top-level message.
+             */
+            reply_count: number;
+            /** Format: uuid */
+            thread_root_id?: string | null;
         };
         MessageView: {
             /**
@@ -24301,6 +26219,27 @@ export interface components {
             licensed: boolean;
             name: string;
         };
+        /** @description An account that changes territory. */
+        Move: {
+            /** Format: uuid */
+            account_id: string;
+            account_name?: string | null;
+            /**
+             * Format: uuid
+             * @description The rule-made territory it leaves, if any.
+             */
+            from_territory?: string | null;
+            /**
+             * Format: uuid
+             * @description The rule that matched.
+             */
+            rule_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The territory it joins, if any rule now matches.
+             */
+            to_territory?: string | null;
+        };
         /** @description Move a run to another version of its flow. */
         MoveBody: {
             /** Format: int64 */
@@ -24434,6 +26373,19 @@ export interface components {
          *     ([`CursorPage`]): `next_cursor` is omitted on the last page.
          */
         MyWorkPage: components["schemas"]["CursorPage_MyWorkItem"];
+        /** @description `POST /api/v1/chat/channels`. */
+        NewChannel: {
+            /** @description A record channel's record. */
+            entity?: string | null;
+            /** @description `direct`, `group` or `record`. */
+            kind: string;
+            /** @description The other people: exactly one for `direct`. */
+            members?: string[];
+            /** @description Required for a group; optional for a record channel. */
+            name?: string | null;
+            /** Format: uuid */
+            record_id?: string | null;
+        };
         /**
          * @description The scalar `attome_dashboard` fields a `create_from_layout` caller supplies
          *     — deliberately narrower than the full column set `lifecycle.rs`'s
@@ -24474,6 +26426,20 @@ export interface components {
             credential?: string | null;
             name: string;
             url: string;
+        };
+        /** @description `POST /api/v1/chat/channels/{id}/messages`. */
+        NewMessage: {
+            body: string;
+            /**
+             * Format: uuid
+             * @description An `attome_document` the poster may read.
+             */
+            file_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The top-level message this answers.
+             */
+            thread_root_id?: string | null;
         };
         /**
          * @description The page fields a caller may set when adding a page. `dashboard_id` is not
@@ -24532,6 +26498,23 @@ export interface components {
         };
         NewRole: {
             name: string;
+        };
+        /** @description `POST /api/v1/push/subscriptions`. */
+        NewSubscription: {
+            auth?: string | null;
+            /**
+             * Format: uuid
+             * @description The registered device (B17-T4) this address belongs to.
+             */
+            device_id?: string | null;
+            /** @description A browser's Web Push endpoint (`https://`). */
+            endpoint?: string | null;
+            /** @description A browser's `p256dh` key and `auth` secret, base64url. */
+            p256dh?: string | null;
+            /** @description `web`, `ios` or `android`. */
+            platform: string;
+            /** @description An APNs or FCM device token. */
+            token?: string | null;
         };
         NewWritePolicy: {
             /** @description A write action id, such as `record.update`. */
@@ -24685,6 +26668,15 @@ export interface components {
             /** Format: int64 */
             version_no: number;
         };
+        /** @description A published offering's version. */
+        OfferingPublished: {
+            /** Format: uuid */
+            offering_id: string;
+            /** Format: uuid */
+            version_id: string;
+            /** Format: int64 */
+            version_number: number;
+        };
         OfferingSummary: {
             category?: string | null;
             default_priority: string;
@@ -24693,6 +26685,101 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+        };
+        /** @description An attribute the device may hold; never a sensitive one. */
+        OfflineAttribute: {
+            /** @description The field type's name (`text`, `lookup`, …). */
+            field_type: string;
+            is_required: boolean;
+            /** @description Writable only with a field-security grant: shown, not edited offline. */
+            is_write_restricted: boolean;
+            logicalname: string;
+            /** Format: int32 */
+            max_length?: number | null;
+        };
+        /** @description A business rule that applies to the caller. */
+        OfflineBusinessRule: {
+            applies_to: components["schemas"]["AppliesTo"];
+            condition: components["schemas"]["ConditionTree"];
+            /** Format: uuid */
+            id: string;
+            label: string;
+            name: string;
+            policies: components["schemas"]["PolicyDef"][];
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description One entity the device keeps. */
+        OfflineEntity: {
+            attributes: components["schemas"]["OfflineAttribute"][];
+            business_rules: components["schemas"]["OfflineBusinessRule"][];
+            entity: string;
+            include_files: boolean;
+            /** @description Lookup attributes whose targets come along. */
+            include_related: string[];
+            /** Format: double */
+            max_rows?: number | null;
+            primary_name_attribute?: string | null;
+            rules: components["schemas"]["OfflineRule"][];
+            state_model?: null | components["schemas"]["OfflineStateModel"];
+            /**
+             * @description The stored query that picks the records; none keeps what the caller
+             *     may read, up to `max_rows`.
+             */
+            stored_query?: string | null;
+        };
+        /** @description The profile a device follows. */
+        OfflineProfile: {
+            /** @description Hex SHA-256 of `entities`: changes whenever the metadata or rules do. */
+            bundle_version: string;
+            entities: components["schemas"]["OfflineEntity"][];
+            /** Format: uuid */
+            id: string;
+            include_maps: boolean;
+            /** Format: double */
+            max_days_offline?: number | null;
+            /** Format: double */
+            max_storage_mb?: number | null;
+            name: string;
+        };
+        /** @description An expression rule, as source in its language version. */
+        OfflineRule: {
+            expression: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `visibility`, `requirement`, `policy`, `routing`, … */
+            kind: string;
+            language: string;
+            message?: string | null;
+            name: string;
+            severity: string;
+            target_field?: string | null;
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description An entity's state model, as a device needs it. */
+        OfflineStateModel: {
+            initial_state: string;
+            name: string;
+            state_field: string;
+            /** @description Live transitions, in display order. */
+            transitions: components["schemas"]["OfflineTransition"][];
+        };
+        /** @description One allowed move. */
+        OfflineTransition: {
+            from_state: string;
+            /** @description The guard's source in `language`; none when the move is unguarded. */
+            guard_expression?: string | null;
+            language: string;
+            name: string;
+            /** @description The privilege the move needs; the server checks it on push. */
+            required_privilege?: string | null;
+            /**
+             * @description Needs an approval: only the server can start it, so a device sends
+             *     it only when online.
+             */
+            requires_approval: boolean;
+            to_state: string;
         };
         OidcLinkBody: {
             /** @description The account's TOTP or recovery code, when it has MFA enabled. */
@@ -24727,6 +26814,30 @@ export interface components {
         OnboardRequest: {
             /** @description The one-time password the Fatoora portal shows. */
             otp: string;
+        };
+        /** @description What happened to one operation. */
+        OpResult: {
+            /** Format: uuid */
+            client_op_id: string;
+            /**
+             * @description Why it was rejected: `forbidden`, `not_found`, `invalid`,
+             *     `depends_on_failed`, …
+             */
+            code?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description Where to open the record and see the problem. */
+            link?: string | null;
+            message?: string | null;
+            /**
+             * Format: int64
+             * @description The record's row version after the change.
+             */
+            row_version?: number | null;
+            /** @description A conflict's server values for the fields that clashed. */
+            server_values?: Record<string, never> | null;
+            /** @description `applied`, `merged`, `conflict` or `rejected`. */
+            status: string;
         };
         /** @description `POST /api/v1/admin/changesets`. */
         OpenChangesetBody: {
@@ -24767,6 +26878,43 @@ export interface components {
             last_seen: string;
             node: string;
             version?: string | null;
+        };
+        /** @description One item of an order, as its owner sees it. */
+        OrderItemView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            offering_id: string;
+            offering_name?: string | null;
+            /** Format: double */
+            quantity?: number | null;
+            status: string;
+        };
+        /** @description One line of an order. */
+        OrderLine: {
+            /** @description Answers for this line's offering. */
+            answers?: Record<string, never>;
+            /** Format: uuid */
+            offering_id: string;
+            /** Format: int64 */
+            quantity?: number;
+        };
+        /** @description What an order placed. */
+        OrderPlaced: {
+            items: components["schemas"]["PlacedItem"][];
+            reference?: string | null;
+            /** Format: uuid */
+            work_request_id: string;
+        };
+        /** @description One order, as its owner sees it. */
+        OrderView: {
+            /** Format: date-time */
+            created_at?: string | null;
+            items: components["schemas"]["OrderItemView"][];
+            reference?: string | null;
+            title: string;
+            /** Format: uuid */
+            work_request_id: string;
         };
         OrganizationItem: {
             /** Format: uuid */
@@ -25543,6 +27691,44 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_BatchJobProgress: {
+            items: {
+                cancel_requested: boolean;
+                /** Format: date-time */
+                created_at: string;
+                /**
+                 * Format: int64
+                 * @description Items done so far.
+                 */
+                done: number;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @description `running`, `finished` or `cancelled`. */
+                status: string;
+                /**
+                 * Format: int64
+                 * @description Items in all, when the job knows.
+                 */
+                total?: number | null;
+                /** Format: date-time */
+                updated_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_BinSetting: {
             items: {
                 /**
@@ -25650,6 +27836,50 @@ export interface components {
                 version: number;
                 /** @description Editor warnings (single-rule reads and writes; empty in lists). */
                 warnings: components["schemas"]["RuleEditorWarning"][];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CacheStatsRow: {
+            items: {
+                /**
+                 * Format: int64
+                 * @description Entries in the in-process tier now.
+                 */
+                entries: number;
+                /**
+                 * Format: int64
+                 * @description Entries pushed out by the capacity or the quota.
+                 */
+                evictions: number;
+                /**
+                 * Format: double
+                 * @description hits / (hits + misses), or `null` before the first read.
+                 */
+                hit_rate?: number | null;
+                /**
+                 * Format: int64
+                 * @description Reads the in-process tier answered since this node started.
+                 */
+                hits: number;
+                /**
+                 * Format: int64
+                 * @description Reads that went on to the shared store or the source.
+                 */
+                misses: number;
+                name: string;
+                /** @description The node these numbers are from (each node counts its own). */
+                node: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -25806,6 +28036,32 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CatalogOffering: {
+            items: {
+                category?: string | null;
+                category_name?: string | null;
+                /** Format: uuid */
+                category_ref?: string | null;
+                default_priority?: string | null;
+                description?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                requires_approval: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ChangesetSummary: {
             items: {
                 author_label: string;
@@ -25836,6 +28092,45 @@ export interface components {
                 /** @description `open`, `closed` or `abandoned`. */
                 status: string;
                 title: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ChannelRow: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by: string;
+                entity_name?: string | null;
+                /** Format: uuid */
+                id: string;
+                kind: string;
+                /** Format: date-time */
+                last_message_at?: string | null;
+                members: string[];
+                name?: string | null;
+                /** Format: uuid */
+                record_id?: string | null;
+                /** Format: int32 */
+                retention_days?: number | null;
+                /** @description The caller's role: `owner` or `member`. */
+                role: string;
+                /**
+                 * Format: int64
+                 * @description Messages from others since the caller last marked the channel read.
+                 */
+                unread: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -26558,6 +28853,59 @@ export interface components {
                 started_at: string;
                 started_by?: string | null;
                 version: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DeviceRow: {
+            items: {
+                app_kind: string;
+                app_version: string;
+                /**
+                 * Format: int64
+                 * @description Bytes its offline store uses, as it last reported.
+                 */
+                bytes_used?: number | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description A refresh is due at the device's next pull. */
+                force_refresh?: boolean | null;
+                /** Format: uuid */
+                id: string;
+                label?: string | null;
+                /**
+                 * Format: date-time
+                 * @description B18-T12: offline sync, when the device has synced.
+                 */
+                last_pull_at?: string | null;
+                /** Format: date-time */
+                last_push_at?: string | null;
+                /** Format: date-time */
+                last_seen_at: string;
+                last_sync_error?: string | null;
+                platform: string;
+                /**
+                 * Format: int32
+                 * @description Changes waiting on the device, as it last reported.
+                 */
+                queue_size?: number | null;
+                /** Format: uuid */
+                user_id: string;
+                user_name?: string | null;
+                /** Format: date-time */
+                wipe_requested_at?: string | null;
+                /** Format: date-time */
+                wiped_at?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -27944,6 +30292,29 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OrderView: {
+            items: {
+                /** Format: date-time */
+                created_at?: string | null;
+                items: components["schemas"]["OrderItemView"][];
+                reference?: string | null;
+                title: string;
+                /** Format: uuid */
+                work_request_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_OrganizationItem: {
             items: {
                 /** Format: uuid */
@@ -28118,6 +30489,34 @@ export interface components {
                 op: string;
                 path: string;
                 value?: Record<string, never> | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PendingTimer: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                due_at: string;
+                /** Format: uuid */
+                id: string;
+                kind: string;
+                /** Format: uuid */
+                run_id?: string | null;
+                target_entity?: string | null;
+                /** Format: uuid */
+                target_id?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -28511,6 +30910,32 @@ export interface components {
                 principal_type: string;
                 /** Format: uuid */
                 record_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RecordTypeOption: {
+            items: {
+                code: string;
+                /**
+                 * Format: uuid
+                 * @description The form a record of this type shows, when it names one.
+                 */
+                form?: string | null;
+                /** @description The type a new record gets when the caller names none. */
+                is_default: boolean;
+                label_ar?: string | null;
+                label_en: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -30179,6 +32604,24 @@ export interface components {
             /** Format: uuid */
             payment_id: string;
         };
+        /**
+         * @description M10-T4: a timer still waiting, as people see it: what (its kind), for
+         *     which record, when, and from which flow run. Never its payload.
+         */
+        PendingTimer: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            due_at: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            run_id?: string | null;
+            target_entity?: string | null;
+            /** Format: uuid */
+            target_id?: string | null;
+        };
         /** @description Why a turn stopped for a human. */
         PendingView: {
             action_id: string;
@@ -30222,6 +32665,26 @@ export interface components {
             /** Format: uuid */
             query_id: string;
             widget_id: string;
+        };
+        /** @description A call to place. */
+        PlaceCall: {
+            /** @description The record the call is about. */
+            entity_name: string;
+            /**
+             * @description `phone` (the default: ring your own phone, then the number) or
+             *     `browser` (J6-T2: the softphone dials, through the TwiML app, with
+             *     the returned `call_id` as its `CallRef`).
+             */
+            mode?: string | null;
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description Which voice system; the first active one when left out.
+             */
+            system_id?: string | null;
+            /** @description The number to call, E.164. */
+            to: string;
         };
         PlaceLegalHoldBody: {
             entity_logicalname: string;
@@ -30270,6 +32733,41 @@ export interface components {
             released_at?: string | null;
             /** Format: uuid */
             resolved_steward_ref?: string | null;
+        };
+        /** @description `POST /api/v1/service-orders`. */
+        PlaceOrderRequest: {
+            guide_answers?: Record<string, never>;
+            /**
+             * Format: uuid
+             * @description An order guide whose offerings join the order with `guide_answers`.
+             */
+            guide_id?: string | null;
+            lines?: components["schemas"]["OrderLine"][];
+            /**
+             * Format: uuid
+             * @description Who the order is for.
+             */
+            requester_id: string;
+            /** @description The order's title; "Order of N items" when unset. */
+            title?: string | null;
+        };
+        /** @description A placed call. */
+        PlacedCall: {
+            /** Format: uuid */
+            activity_id: string;
+            /** Format: uuid */
+            call_id: string;
+        };
+        /** @description One placed item. */
+        PlacedItem: {
+            /** Format: uuid */
+            approval_request_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            offering_id: string;
+            /** @description `awaiting_approval`, `fulfilling` or `fulfilled`. */
+            status: string;
         };
         /**
          * @description What apply would do to one object.
@@ -30740,6 +33238,30 @@ export interface components {
             /** Format: double */
             score: number;
         };
+        /** @description One change. */
+        PreferenceChange: {
+            channel: string;
+            grant: boolean;
+            purpose_key: string;
+        };
+        /** @description A preference link. */
+        PreferenceLink: {
+            /** Format: date-time */
+            expires_at: string;
+            /** @description The token for `GET/POST /api/v1/consents/preferences?token=`. */
+            token: string;
+        };
+        /** @description `POST /api/v1/consents/preference-links`. */
+        PreferenceLinkBody: {
+            /** @description `contact`, `lead` or `account`. */
+            subject_entity: string;
+            /** Format: uuid */
+            subject_id: string;
+        };
+        /** @description The subject's preferences. */
+        Preferences: {
+            purposes: components["schemas"]["PurposePreferences"][];
+        };
         /** @description Modifiers applied on the server over the computed buckets. */
         Presentation: {
             cumulative?: boolean;
@@ -31150,6 +33672,20 @@ export interface components {
              */
             suggestion_id?: string | null;
         };
+        /** @description A booking page as the public sees it. */
+        PublicBookingPage: {
+            description?: string | null;
+            /** Format: int64 */
+            duration_minutes: number;
+            /** @description Where an in-person meeting is, or the number a phone meeting uses. */
+            location?: string | null;
+            /** @description D20-T3: `video`, `phone` or `in_person`; none when the page does not say. */
+            meeting_type?: string | null;
+            name: string;
+            slots: components["schemas"]["Slot"][];
+            /** @description The video service of a video meeting. */
+            video_provider?: string | null;
+        };
         /**
          * @description What the browser applies: the CSS variables the theme sets, and whether
          *     to hide the vendor's name.
@@ -31249,6 +33785,81 @@ export interface components {
             version_id?: string | null;
             /** Format: int64 */
             version_number?: number | null;
+        };
+        /** @description `POST /api/v1/offline/pull`. */
+        PullBody: {
+            /**
+             * Format: uuid
+             * @description The registered device (B17-T4) pulling.
+             */
+            device_id: string;
+        };
+        PullResult: {
+            /**
+             * @description The profile's bundle version (B18-T4): a different one means fetch the
+             *     profile again.
+             */
+            bundle_version: string;
+            /** @description `true` once every profile entity is up to date; pull again later. */
+            done: boolean;
+            removals: components["schemas"]["Removal"][];
+            upserts: components["schemas"]["PulledRecord"][];
+        };
+        /** @description A record to keep or update on the device. */
+        PulledRecord: {
+            entity: string;
+            /** @description The record's values, without sensitive attributes. */
+            record: Record<string, never>;
+        };
+        /** @description One purpose and its channels. */
+        PurposePreferences: {
+            channels: components["schemas"]["ChannelState"][];
+            description?: string | null;
+            key: string;
+        };
+        /** @description `POST /api/v1/offline/push`. */
+        PushBody: {
+            /**
+             * Format: int64
+             * @description Bytes the device's offline store uses.
+             */
+            bytes_used?: number | null;
+            /** Format: uuid */
+            device_id: string;
+            ops: components["schemas"]["PushOp"][];
+            /**
+             * Format: int32
+             * @description Changes still waiting on the device after this push.
+             */
+            queue_size?: number | null;
+        };
+        /** @description One queued change. */
+        PushOp: {
+            /**
+             * Format: int64
+             * @description The row version the change was made against (update, delete).
+             */
+            base_row_version?: number | null;
+            /** @description The changed fields' values before the change (update). */
+            base_values?: Record<string, never>;
+            /** @description The fields changed and their new values (create, update). */
+            changed?: Record<string, never>;
+            /**
+             * Format: uuid
+             * @description The device's own id for this operation; a retry repeats it.
+             */
+            client_op_id: string;
+            entity: string;
+            /**
+             * Format: uuid
+             * @description The record. For a create, the UUIDv7 the device gave it.
+             */
+            id: string;
+            /** @description `create`, `update` or `delete`. */
+            kind: string;
+        };
+        PushResult: {
+            results: components["schemas"]["OpResult"][];
         };
         /** @description `PUT /api/v1/me/notification-preferences`. Rows not named are unchanged. */
         PutNotificationPreferences: {
@@ -31383,7 +33994,10 @@ export interface components {
             query_id?: string | null;
             query_name?: string | null;
             required_privilege?: string | null;
-            /** @description Always true: the rows shown are the result; there is no aggregate to drill. */
+            /**
+             * @description True when the rows shown are the result (a query over more than one
+             *     entity); false when its buckets drill to records (P7-T1).
+             */
             rows_are_the_result: boolean;
             /** Format: uuid */
             view_id?: string | null;
@@ -31408,9 +34022,65 @@ export interface components {
             entity?: string | null;
             name: string;
         };
+        /** @description A customer's decision. */
+        QuoteDecision: {
+            /** @description `accept` or `reject`. */
+            decision: string;
+            /** @description The person deciding, as they sign. */
+            name: string;
+            note?: string | null;
+        };
+        /** @description One line as the customer sees it. */
+        QuoteLineView: {
+            discount_amount?: string | null;
+            line_total?: string | null;
+            product?: string | null;
+            /** @description Decimal text, exact. */
+            quantity?: string | null;
+            tax_amount?: string | null;
+            unit_price?: string | null;
+        };
+        /** @description A quote as the customer sees it. */
+        QuoteView: {
+            accepted_by_name?: string | null;
+            currency?: string | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            discount_total?: string | null;
+            /** Format: date-time */
+            expires_on?: string | null;
+            grand_total?: string | null;
+            lines: components["schemas"]["QuoteLineView"][];
+            name?: string | null;
+            payment_terms?: string | null;
+            quote_number?: string | null;
+            /** @description `sent`, `accepted`, `rejected` or `expired`. */
+            status: string;
+            /** @description Decimal text, exact. */
+            subtotal?: string | null;
+            terms?: string | null;
+            /** Format: date-time */
+            valid_from?: string | null;
+            vat_estimate?: string | null;
+        };
         ReadRequest: {
             /** Format: uuid */
             id: string;
+        };
+        /** @description A preview. */
+        RealignPreview: {
+            /** Format: int64 */
+            accounts_scanned: number;
+            /** @description The first moves (at most 500). */
+            moves: components["schemas"]["Move"][];
+            /** Format: int64 */
+            total_moves: number;
+            /** @description More accounts exist than a preview looks at. */
+            truncated: boolean;
+        };
+        /** @description A queued realignment. */
+        RealignQueued: {
+            queued: boolean;
         };
         ReassignOwnerBody: {
             entity: string;
@@ -31650,6 +34320,19 @@ export interface components {
              */
             row_version?: number | null;
         };
+        /** @description A27-T4: one record type the caller may create. */
+        RecordTypeOption: {
+            code: string;
+            /**
+             * Format: uuid
+             * @description The form a record of this type shows, when it names one.
+             */
+            form?: string | null;
+            /** @description The type a new record gets when the caller names none. */
+            is_default: boolean;
+            label_ar?: string | null;
+            label_en: string;
+        };
         /** @description The stage a record of the new type starts in. */
         RecordTypeStage: {
             initial_state: string;
@@ -31657,6 +34340,11 @@ export interface components {
             state_field: string;
             /** Format: uuid */
             state_model: string;
+        };
+        /** @description A meeting's recording. */
+        Recording: {
+            kind?: string | null;
+            url: string;
         };
         /**
          * @description A single deployment-wide snapshot, not a list — same "aggregate summary,
@@ -31769,6 +34457,21 @@ export interface components {
             /** @description Whether the regions pack is next to the server (`app.packs_root`). */
             pack_available: boolean;
         };
+        /** @description `POST /api/v1/devices`. */
+        RegisterDeviceBody: {
+            /** @description `standard`, `branded` or `pwa`. */
+            app_kind: string;
+            app_version: string;
+            /**
+             * Format: uuid
+             * @description The id this device was given before, to refresh it; absent (or no
+             *     longer the caller's live device) registers a new one.
+             */
+            id?: string | null;
+            label?: string | null;
+            /** @description `ios`, `android` or `web`. */
+            platform: string;
+        };
         RegisterRequest: {
             email: string;
             /**
@@ -31779,6 +34482,10 @@ export interface components {
              */
             invitation_token?: string | null;
             password: string;
+        };
+        RegisteredDevice: {
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description P-registration-gating (D-128) — public directory-style config, same
@@ -31950,6 +34657,12 @@ export interface components {
             /** Format: uuid */
             matter_id: string;
             status: string;
+        };
+        /** @description A record the device must drop. */
+        Removal: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
         };
         /** @description `POST .../fields/{field_id}/rename`. */
         RenameFieldBody: {
@@ -32171,6 +34884,11 @@ export interface components {
              *     — the floor the target must have reached (`attome_db::schema_state`).
              */
             schema_version: number;
+        };
+        /** @description A new time. */
+        RescheduleRequest: {
+            /** Format: date-time */
+            start: string;
         };
         ResendResult: {
             /** Format: uuid */
@@ -33254,6 +35972,11 @@ export interface components {
             /** Format: uuid */
             opportunity_id: string;
         };
+        /** @description `POST /api/v1/consents/preferences`. */
+        SavePreferences: {
+            changes: components["schemas"]["PreferenceChange"][];
+            token: string;
+        };
         SbomResponse: {
             packs: components["schemas"]["InstalledPack"][];
             /** @description The release's CycloneDX 1.5 bill of materials. */
@@ -33284,6 +36007,29 @@ export interface components {
             registry_note?: string | null;
             registry_updated: boolean;
         };
+        /** @description `POST /api/v1/scan/act`. */
+        ScanActBody: {
+            location?: null | components["schemas"]["ScanLocation"];
+            /** Format: uuid */
+            scan_action_id: string;
+            /** @description The scanned value, exactly as read. */
+            value: string;
+        };
+        /** @description What a scan did. */
+        ScanActResult: {
+            /** @description `open`, `run_workflow` or `set_field`. */
+            action_kind: string;
+            /** @description Every match, when there was more than one. */
+            hits: components["schemas"]["ScanHit"][];
+            record?: null | components["schemas"]["ScanHit"];
+            /** @description `done`, or `ambiguous` (409) with the records that matched. */
+            status: string;
+            /**
+             * Format: uuid
+             * @description The workflow instance a `run_workflow` started.
+             */
+            workflow_instance_id?: string | null;
+        };
         /** @description A record whose scan-enabled field holds the scanned value. */
         ScanHit: {
             /** @description The field that matched. */
@@ -33293,6 +36039,13 @@ export interface components {
             id: string;
             /** @description The record's primary name, when its entity declares one. */
             name?: string | null;
+        };
+        /** @description Where the device was, when the person lets scans record it. */
+        ScanLocation: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
         };
         ScenarioCloneResponse: {
             /** Format: uuid */
@@ -33391,6 +36144,13 @@ export interface components {
             scope_key: string;
             scope_kind: string;
         };
+        /** @description A screen pop: the record a caller's number belongs to. */
+        ScreenPop: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            name?: string | null;
+        };
         SearchHit: {
             entity_logicalname: string;
             /**
@@ -33485,6 +36245,11 @@ export interface components {
             context?: null | components["schemas"]["RecordContext"];
             text: string;
         };
+        /** @description One frame. */
+        SendFrame: {
+            kind: string;
+            payload: Record<string, never>;
+        };
         SendMessageRequest: {
             message: string;
             /**
@@ -33518,6 +36283,22 @@ export interface components {
             email: string;
             /** Format: uuid */
             user_id: string;
+        };
+        /** @description The customer's side of a joined session. */
+        SessionJoined: {
+            /** Format: uuid */
+            session_id: string;
+            /** @description The customer side's token for its frames. */
+            token: string;
+        };
+        /** @description A started session. */
+        SessionStarted: {
+            /** @description Read this to the customer; it works once, for ten minutes. */
+            code: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            id: string;
         };
         /** @enum {string} */
         SessionStatus: "active" | "paused" | "revoked" | "ended";
@@ -33624,6 +36405,14 @@ export interface components {
             can_read?: boolean;
             can_update?: boolean;
             entity_name: string;
+        };
+        /** @description `PUT /api/v1/chat/channels/{id}/retention`. */
+        SetRetention: {
+            /**
+             * Format: int32
+             * @description Days messages are kept, 1 to 3650; none keeps them.
+             */
+            days?: number | null;
         };
         SetSwitchRequest: {
             enabled: boolean;
@@ -33792,6 +36581,9 @@ export interface components {
             id: string;
             key: string;
             name: string;
+        };
+        SignInUrl: {
+            url: string;
         };
         SignoffVerifyResponse: {
             /**
@@ -34012,6 +36804,13 @@ export interface components {
             /** Format: double */
             p99_ms?: number | null;
         };
+        /** @description A time that can be booked. */
+        Slot: {
+            /** Format: date-time */
+            end: string;
+            /** Format: date-time */
+            start: string;
+        };
         SnapshotBreakpoint: {
             breakpoint: string;
             /** Format: double */
@@ -34133,6 +36932,40 @@ export interface components {
             sequence?: number | null;
             view_id?: string | null;
             widget_type: string;
+        };
+        /** @description A reply to a social message, comment or review. */
+        SocialReply: {
+            /** @description The reply, at most 2,000 characters. */
+            body: string;
+            /**
+             * Format: uuid
+             * @description The inbound communication being answered.
+             */
+            communication_id: string;
+        };
+        /** @description The recorded reply. */
+        SocialReplySent: {
+            /** Format: uuid */
+            communication_id: string;
+            /** @description The provider's id for the reply, when it gives one. */
+            provider_id?: string | null;
+            /** Format: uuid */
+            thread_id: string;
+        };
+        /** @description What the browser softphone needs. */
+        SoftphoneConfig: {
+            /**
+             * @description Whether a browser softphone is set up (a Twilio system with an API
+             *     key, a TwiML app and the SDK's address).
+             */
+            available: boolean;
+            /** Format: int64 */
+            expires_in: number;
+            identity?: string | null;
+            /** @description Where the provider's SDK is loaded from (an administrator's setting). */
+            sdk_url?: string | null;
+            /** @description A Voice SDK access token, valid for an hour. */
+            token?: string | null;
         };
         /** @enum {string} */
         SortOrder: "value_desc" | "value_asc" | "key_asc" | "key_desc";
@@ -34270,6 +37103,13 @@ export interface components {
             max_steps?: number | null;
             /** @description What the agent is to do. */
             task: string;
+        };
+        /** @description `POST /api/v1/cobrowse/sessions`. */
+        StartSession: {
+            /** @description The record the session is about, if any (a case, a contact). */
+            regarding_entity?: string | null;
+            /** Format: uuid */
+            regarding_id?: string | null;
         };
         /** @description Body of `POST /api/v1/agents/{id}/sessions` (D-503 §3). */
         StartSessionRequest: {
@@ -34604,6 +37444,10 @@ export interface components {
              *     never an estimate.
              */
             total: number;
+        };
+        Subscription: {
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description Same shape as `attome-s2s`'s `KeyCreatedResponse` — the plaintext secret is
@@ -35256,6 +38100,20 @@ export interface components {
             outcome: string;
             /** @description The tool call that asked for it, when an agent did. */
             tool_call_id?: string | null;
+        };
+        /** @description A recording's transcript. */
+        TranscriptView: {
+            /** Format: uuid */
+            document_id: string;
+            /** Format: double */
+            duration_seconds?: number | null;
+            language?: string | null;
+            model: string;
+            /** @description `[{start, end, text}]`, seconds from the start. */
+            segments: Record<string, never>;
+            text: string;
+            /** Format: date-time */
+            transcribed_at: string;
         };
         TransitionBody: {
             /** Format: int64 */
@@ -36071,6 +38929,10 @@ export interface components {
             valid: boolean;
             warnings: components["schemas"]["RuleEditorWarning"][];
         };
+        VapidKey: {
+            /** @description The application server key for `PushManager.subscribe`, base64url. */
+            public_key: string;
+        };
         /**
          * @description `GET /api/v1/process/case-defs/{id}/variants` — the latest computed
          *     variant list.
@@ -36149,6 +39011,19 @@ export interface components {
             state: string;
             /** Format: int64 */
             version_no: number;
+        };
+        VersionSwitchResponse: {
+            /**
+             * Format: int64
+             * @description The version current before; `null` when none was.
+             */
+            from?: number | null;
+            /**
+             * Format: int64
+             * @description The version current now. Every node switches to it on its next
+             *     metadata catch-up.
+             */
+            to: number;
         };
         ViewBody: {
             /** Format: uuid */
@@ -36260,6 +39135,23 @@ export interface components {
             sidebar_items: number;
             /** @description What to tell the person about to change it. */
             warnings: string[];
+        };
+        /** @description `POST /api/v1/cobrowse/visitor/end`. */
+        VisitorEnd: {
+            token: string;
+        };
+        /** @description A customer frame, with the side's token. */
+        VisitorFrame: {
+            kind: string;
+            payload: Record<string, never>;
+            token: string;
+        };
+        /** @description A voicemail to drop into a call. */
+        VoicemailRequest: {
+            /** Format: uuid */
+            call_id: string;
+            /** @description The recorded message (https). */
+            recording_url: string;
         };
         /**
          * @description Up or down, and nothing else.
@@ -40370,6 +43262,108 @@ export interface operations {
             };
         };
     };
+    list_caches: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description This node's caches, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CacheStatsRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    purge_cache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The cache's declared name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description `{"key": "..."}` for one key; empty for everything */
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["CachePurge"];
+            };
+        };
+        responses: {
+            /** @description Purged here; the other nodes purge on the notification */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No cache of that name is built on this node */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_calendars: {
         parameters: {
             query?: {
@@ -42899,7 +45893,7 @@ export interface operations {
             };
         };
     };
-    get_version: {
+    get_content_page_version: {
         parameters: {
             query?: never;
             header?: never;
@@ -42951,7 +45945,7 @@ export interface operations {
             };
         };
     };
-    restore_version: {
+    restore_content_page_version: {
         parameters: {
             query?: never;
             header?: never;
@@ -45948,6 +48942,149 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_devices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeviceRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    force_offline_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Refresh due at the next pull */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such device, or it has never synced */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    wipe_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Wipe requested and sessions ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such device */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -50657,6 +53794,53 @@ export interface operations {
             };
         };
     };
+    microsoft_admin_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the administrator consents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInUrl"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Microsoft is not configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_servers: {
         parameters: {
             query?: never;
@@ -52450,6 +55634,53 @@ export interface operations {
             };
         };
     };
+    rollback_metadata_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rolled back */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionSwitchResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No earlier version, or another version switch is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     rollout_status: {
         parameters: {
             query?: never;
@@ -52526,6 +55757,65 @@ export interface operations {
             };
             /** @description The pulled artifact failed to verify or parse */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    switch_metadata_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A published metadata version */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Switched */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionSwitchResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such published version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another version switch is in progress */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -53465,6 +56755,78 @@ export interface operations {
                 };
             };
             /** @description days is out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    merge_option_set_values: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The option set */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeValuesRequest"];
+            };
+        };
+        responses: {
+            /** @description `from` retired and published; the record update is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeValuesQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such option set */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The set has an open draft, or another save is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown code, the same code twice, or a retired `into` */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -55745,7 +59107,7 @@ export interface operations {
             };
         };
     };
-    list_rules: {
+    list_retention_rules: {
         parameters: {
             query?: never;
             header?: never;
@@ -55783,7 +59145,7 @@ export interface operations {
             };
         };
     };
-    create_rule: {
+    create_retention_rule: {
         parameters: {
             query?: never;
             header?: never;
@@ -55834,7 +59196,7 @@ export interface operations {
             };
         };
     };
-    update_rule: {
+    update_retention_rule: {
         parameters: {
             query?: never;
             header?: never;
@@ -55906,7 +59268,7 @@ export interface operations {
             };
         };
     };
-    delete_rule: {
+    delete_retention_rule: {
         parameters: {
             query?: never;
             header?: never;
@@ -62576,6 +65938,55 @@ export interface operations {
             };
             /** @description Missing If-Match, or colours that fail the contrast check */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_pending_timers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending timers, soonest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PendingTimer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -69998,6 +73409,242 @@ export interface operations {
             };
         };
     };
+    get_managed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed manage link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedBooking"];
+                };
+            };
+            /** @description Altered or expired link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_booking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed manage link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedBooking"];
+                };
+            };
+            /** @description Altered or expired link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already cancelled or started */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_reschedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed manage link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Moved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedBooking"];
+                };
+            };
+            /** @description Altered or expired link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The time is not free, or the booking is cancelled or started */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a time the page offers */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_booking_page: {
+        parameters: {
+            query?: {
+                /** @description From (UTC); not before the page's notice. */
+                from?: string;
+                /** @description To (UTC); not past the page's horizon, at most 31 days after `from`. */
+                to?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The booking page's slug */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page and its free times */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBookingPage"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_booking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The booking page's slug */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookRequest"];
+            };
+        };
+        responses: {
+            /** @description Booked; the confirmation email has the manage link */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booked"];
+                };
+            };
+            /** @description No such page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The time is no longer free */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid name, email or time */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited, or the challenge is unsolved (`attome-challenge` says which) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     public_brand_asset: {
         parameters: {
             query?: never;
@@ -70281,6 +73928,828 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_channels: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ChannelRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_channel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewChannel"];
+            };
+        };
+        responses: {
+            /** @description The pair's existing direct channel */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelRow"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record is not one the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMember"];
+            };
+        };
+        responses: {
+            /** @description Added, or already a member */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such channel of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A direct channel, an inactive user, or one who cannot read the record */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Only the owner removes others */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such channel or member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A direct channel cannot be left */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_channel_messages: {
+        parameters: {
+            query?: {
+                /** @description The `next_cursor` of the previous page. */
+                cursor?: string;
+                /** @description Messages per page, 1 to 200 (default 50). */
+                page_size?: number;
+                /** @description A top-level message: list it and its replies, oldest first. */
+                thread?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_MessageRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such channel of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Malformed cursor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewMessage"];
+            };
+        };
+        responses: {
+            /** @description Posted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such channel of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Empty or long body, a thread root that is not a top-level message here, or a file the caller cannot read */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither the author nor the owner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such message in a channel of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mark_channel_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Marked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such channel of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_retention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRetention"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Only the owner sets retention */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such channel of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Days out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JoinSession"];
+            };
+        };
+        responses: {
+            /** @description Joined */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionJoined"];
+                };
+            };
+            /** @description No session waits for this code */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSession"];
+            };
+        };
+        responses: {
+            /** @description The session and its join code */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    agent_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ended (or already ended) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session of yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    agent_read: {
+        parameters: {
+            query?: {
+                /** @description Only frames after this one. */
+                after?: string;
+                /** @description The customer side's token (customer reads only). */
+                token?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's frames, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Frame"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session of yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    agent_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendFrame"];
+            };
+        };
+        responses: {
+            /** @description Sent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session of yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The session is not active */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown kind or a frame over 256 KB */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    visitor_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisitorEnd"];
+            };
+        };
+        responses: {
+            /** @description Ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token names no open session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    visitor_read: {
+        parameters: {
+            query?: {
+                /** @description Only frames after this one. */
+                after?: string;
+                /** @description The customer side's token (customer reads only). */
+                token?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent's frames, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Frame"][];
+                };
+            };
+            /** @description The token names no open session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    visitor_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisitorFrame"];
+            };
+        };
+        responses: {
+            /** @description Sent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The token names no open session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The session is not active */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown kind or a frame over 256 KB */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -70991,6 +75460,221 @@ export interface operations {
             };
         };
     };
+    confirm_get: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page with a confirm button */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["ConfirmQuery"];
+            };
+        };
+        responses: {
+            /** @description Confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+            /** @description The link is not valid */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferenceLinkBody"];
+            };
+        };
+        responses: {
+            /** @description The link's token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferenceLink"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The subject is not a contact, lead or account */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_preferences: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subject's preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            /** @description The link is not valid */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    save_preferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavePreferences"];
+            };
+        };
+        responses: {
+            /** @description The subject's preferences after the save */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            /** @description The link is not valid */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No changes, too many, or an unknown purpose or channel */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     withdraw_consent: {
         parameters: {
             query?: never;
@@ -71124,6 +75808,57 @@ export interface operations {
             };
             /** @description No published page at this path in this space that the caller may read */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    knowledge_feedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeFeedback"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoteAck"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The item is not a published article */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many votes for this article from this person */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -71684,6 +76419,126 @@ export interface operations {
             };
         };
     };
+    register_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceBody"];
+            };
+        };
+        responses: {
+            /** @description The device id to keep */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredDevice"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_device_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such device of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_device_wiped: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No pending wipe on a device of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     batch_status: {
         parameters: {
             query?: never;
@@ -72001,6 +76856,93 @@ export interface operations {
             };
         };
     };
+    post_transcribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the document */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such document */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_transcript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such document, not readable, or not transcribed yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_devices: {
         parameters: {
             query?: never;
@@ -72191,6 +77133,51 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_feed: {
+        parameters: {
+            query?: {
+                /** @description The `next_cursor` of the previous page. */
+                cursor?: string;
+                /** @description Items per page, 1 to 100 (default 25). */
+                page_size?: number;
+                /** @description Only this kind of item. */
+                kind?: components["schemas"]["FeedItemKind"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_FeedItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Malformed cursor */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -72881,6 +77868,46 @@ export interface operations {
             };
             /** @description The replay-protection store is unavailable; retry later */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_my_batch_jobs: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's batch jobs, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_BatchJobProgress"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -73662,6 +78689,258 @@ export interface operations {
                 };
             };
             /** @description No such list of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailConnection"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    disconnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `microsoft` or `google` */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such connection of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    callback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back to the person's settings */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such sign-in of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The provider refused the sign-in */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_mail_connection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `microsoft` or `google` */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where to send the person */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInUrl"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The provider is not configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_meeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingRequest"];
+            };
+        };
+        responses: {
+            /** @description The meeting and its link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Meeting"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The provider is not configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad times or subject, no connected account, or the provider refused */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_meeting_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Attendance and recordings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown provider or not configured */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -74734,6 +80013,155 @@ export interface operations {
             };
         };
     };
+    get_offline_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineProfile"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No offline profile for the caller's roles */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_pull: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The device has been told to wipe itself */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the caller's device, or no offline profile */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_push: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushBody"];
+            };
+        };
+        responses: {
+            /** @description Each operation's result, in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the caller's device, or it was told to wipe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A push from this device is already running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than 100 operations */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     send_message: {
         parameters: {
             query?: never;
@@ -74822,6 +80250,53 @@ export interface operations {
                 };
             };
             /** @description Too many polls from this session */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    webchat_stream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                /**
+                 * @description Only messages strictly after this instant. Omit to fetch the whole
+                 *     conversation so far — a short-poll GET is Phase 1's transport choice
+                 *     (see the module doc); the widget is expected to pass its last-seen
+                 *     `created_at` on every subsequent poll.
+                 */
+                since: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-Sent Events: `messages` with `{messages, handed_off}` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Not licensed, or an unrecognized session token — identical response for both */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many polls or streams from this session */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -76221,6 +81696,124 @@ export interface operations {
             };
         };
     };
+    register_push_subscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSubscription"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subscription"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unregister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such address of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    vapid_public_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VapidKey"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Web Push is not configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     execute: {
         parameters: {
             query?: never;
@@ -76382,6 +81975,101 @@ export interface operations {
             };
             /** @description Queue is not active, another claim is in progress, or the caller is at capacity */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_quote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The guest link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The quote */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteView"];
+                };
+            };
+            /** @description Altered, expired or superseded link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_decision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The guest link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteDecision"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteView"];
+                };
+            };
+            /** @description Altered, expired or superseded link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or expired */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No name, or not accept or reject */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -77286,6 +82974,130 @@ export interface operations {
             };
             /** @description Caller lacks call_list.call */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_dial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DialRequest"];
+            };
+        };
+        responses: {
+            /** @description Ringing the caller's phone; the call is logged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallHandle"];
+                };
+            };
+            /** @description Caller lacks call_list.call or may not log calls on the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such call list, or no voice system */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an E.164 number, no agent number set, or the provider refused */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The phone system did not answer in time */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_voicemail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoicemailRequest"];
+            };
+        };
+        responses: {
+            /** @description The message is playing; the call hangs up after it */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller lacks call_list.call */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such call list, or not the caller's call */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Voicemail drop is off for this list, or not an https recording */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The phone system did not answer in time */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -78704,6 +84516,136 @@ export interface operations {
             };
         };
     };
+    post_guest_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The quote */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestLink"];
+                };
+            };
+            /** @description No privilege to change quotes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote the caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The quote is not sent, or has expired */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_realign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The realignment job is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealignQueued"];
+                };
+            };
+            /** @description Caller may not create and delete account territories */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Territories are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accounts that would move */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealignPreview"];
+                };
+            };
+            /** @description Caller may not create and delete account territories */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Territories are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_undo: {
         parameters: {
             query?: never;
@@ -78754,6 +84696,75 @@ export interface operations {
             };
             /** @description Already undone, past 30 minutes, or the lines changed since */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scan_act: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanActBody"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanActResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Scanning is off, no such action, or no record holds the code */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than one record holds the code */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanActResult"];
+                };
+            };
+            /** @description Empty, overlong or non-matching value, or a misconfigured action */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -79296,6 +85307,49 @@ export interface operations {
             };
         };
     };
+    catalog_route: {
+        parameters: {
+            query?: {
+                /** @description Words to look for in the name, description and category. */
+                q?: string;
+                /** @description Only offerings in this catalog category. */
+                category_ref?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching offerings, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CatalogOffering"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_active_offerings: {
         parameters: {
             query?: never;
@@ -79378,6 +85432,201 @@ export interface operations {
             };
             /** @description No such active offering */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish_offering_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published as a new version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferingPublished"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active offering */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The offering is being published already, or changed meanwhile */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    place_order_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The order and its items */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPlaced"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The first line's offering is not active */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No lines or too many, a bad quantity, or an unanswered guide question */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_item_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The order item's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such item, or not one the caller may cancel */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The item is fulfilled, rejected or cancelled already */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_orders_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's orders, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OrderView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -80037,6 +86286,214 @@ export interface operations {
             };
         };
     };
+    inbound: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The SMS system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Received */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not licensed, or no SMS system has this key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a message this route reads */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    receipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such message */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a receipt this route reads */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    meta_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Meta system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The challenge, echoed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Not licensed, no such system, or the wrong verify token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    meta_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Meta system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not licensed, no such system, or a bad signature */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SocialReply"];
+            };
+        };
+        responses: {
+            /** @description Sent and recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialReplySent"];
+                };
+            };
+            /** @description No privilege to write communications */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such communication, or not one from a social channel */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Empty or too long, or the provider refused it */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     system_status: {
         parameters: {
             query?: never;
@@ -80657,6 +87114,57 @@ export interface operations {
             };
         };
     };
+    track_click: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed click token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To the link the token names */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a valid click token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    track_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed open token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A 1x1 GIF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/gif": unknown;
+                };
+            };
+        };
+    };
     list_available_views: {
         parameters: {
             query?: never;
@@ -80906,6 +87414,310 @@ export interface operations {
             };
             /** @description A system or shared view of this entity already has this name */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_call: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceCall"];
+            };
+        };
+        responses: {
+            /** @description Ringing the caller's phone */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacedCall"];
+                };
+            };
+            /** @description No privilege to log calls on the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No voice system */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an E.164 number, no agent number set, or the provider refused */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call's signed token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Altered or expired token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a call event */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_lookup: {
+        parameters: {
+            query: {
+                /** @description E.164. */
+                number: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScreenPop"];
+                };
+            };
+            /** @description No record the caller may see has this number */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an E.164 number */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_pbx_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The voice system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not licensed, no system has this key, or an unknown outbound call */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a call event */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_softphone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings; `available` false when no softphone is set up */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoftphoneConfig"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_twilio_client: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The voice system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TwiML that dials the call's number */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/xml": string;
+                };
+            };
+            /** @description Not licensed, no system has this key, or not this agent's call */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_twilio_inbound: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The voice system's inbound key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TwiML that forwards the call */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/xml": string;
+                };
+            };
+            /** @description Not licensed, or no system has this key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a call */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_twiml: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call's signed token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TwiML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/xml": string;
+                };
+            };
+            /** @description Altered or expired token */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -83866,6 +90678,56 @@ export interface operations {
             };
         };
     };
+    list_record_types: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The types the caller may create, default first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RecordTypeOption"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not create records of this entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     staged_import: {
         parameters: {
             query?: never;
@@ -86603,6 +93465,58 @@ export interface operations {
             };
             /** @description Unknown kind */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_record_timers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's pending timers, soonest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PendingTimer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read this entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

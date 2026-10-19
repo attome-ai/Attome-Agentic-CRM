@@ -4,7 +4,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, CommandRegistry, LangService, MetadataVersion } from '@attome/base';
+import { ApiError, CommandRegistry, LangService, MetadataVersion, VersionConflictState } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
@@ -18,6 +18,7 @@ import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
 import { RecordChange, RecordChangeNotifier } from '../services/record-change-notifier.service';
 import { DuplicatesService } from '@attome/xrm/core/admin/data';
 import { DuplicateNotice, duplicateWarningsOf } from '../duplicate-banner/duplicate-notice';
+import { ConflictChoices } from '../conflict-dialog/conflict-dialog.component';
 
 /**
  * How long the post-save tick holds before the submit button returns to its
@@ -114,6 +115,16 @@ export abstract class EngineFormBase implements OnInit {
   /** Set on a 409 from a stale `row_version` — resolved via `reload()`, not a generic error banner. */
   readonly conflict  = signal(false);
   readonly reloading = signal(false);
+  /**
+   * A16-T3: what the last 409 said changed, while the conflict dialog is
+   * open; `null` when the body named nothing or the dialog was closed.
+   */
+  readonly conflictDetails = signal<VersionConflictState | null>(null);
+  /**
+   * A16-T3: the attributes another user changed that the last save was
+   * merged over (`merged_over`), for a short notice. Empty otherwise.
+   */
+  readonly mergedOver = signal<readonly string[]>([]);
   /**
    * A15-T4: the last save matched existing records under a duplicate rule —
    * refused (`block`, or `allow_with_reason` without a reason) or saved with
@@ -501,6 +512,7 @@ export abstract class EngineFormBase implements OnInit {
         this.form().patchValue(r.data);
         this.onRecordLoaded(r);
         this.conflict.set(false);
+        this.conflictDetails.set(null);
         this.reloading.set(false);
       },
       error: (e: ApiError) => {
@@ -517,6 +529,7 @@ export abstract class EngineFormBase implements OnInit {
     this.serverFieldErrors.set(new Map());
     this.saveWarnings.set([]);
     this.duplicateNotice.set(null);
+    this.mergedOver.set([]);
   }
 
   protected completeSave(): void {
@@ -557,7 +570,47 @@ export abstract class EngineFormBase implements OnInit {
     if (trimmed) this.save(trimmed);
   }
 
-  save(duplicateReason?: string): void {
+  /**
+   * A16-T3: the conflict dialog's answer. Keeps every value on screen, takes
+   * the newer row version, and saves again: an attribute marked "theirs" is
+   * left out so the server keeps their value (shown once the save answers),
+   * one marked "mine" is sent as typed.
+   */
+  resolveConflict(choices: ConflictChoices): void {
+    const details = this.conflictDetails();
+    if (!details || !this.record) return;
+    this.record = { ...this.record, row_version: details.currentVersion };
+    this.conflictDetails.set(null);
+    const theirs = Object.keys(choices).filter(name => choices[name] === 'theirs');
+    this.save(undefined, theirs);
+  }
+
+  /** A16-T3: closes the conflict dialog; the typed values stay as they are. */
+  dismissConflict(): void {
+    this.conflictDetails.set(null);
+  }
+
+  /**
+   * A16-T3: the attributes an update sends: those whose value differs from
+   * the record as loaded, so an automatic merge (`If-Match-Merge`) only
+   * conflicts on what this person changed. All of them when nothing differs,
+   * as before.
+   */
+  private changedValues(data: Record<string, unknown>, leaveOut: readonly string[]): Record<string, unknown> {
+    const stored = (this.record?.data ?? {}) as Record<string, unknown>;
+    const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    const changed: Record<string, unknown> = {};
+    for (const [name, value] of Object.entries(data)) {
+      if (leaveOut.includes(name)) continue;
+      if (!same(value, stored[name])) changed[name] = value;
+    }
+    if (Object.keys(changed).length) return changed;
+    const all = { ...data };
+    for (const name of leaveOut) delete all[name];
+    return all;
+  }
+
+  save(duplicateReason?: string, takeTheirs: readonly string[] = []): void {
     const fg = this.form();
     if (!this.canSave()) return;
     if (fg.invalid) {
@@ -574,9 +627,12 @@ export abstract class EngineFormBase implements OnInit {
     const id = this.id();
     let req$;
     if (this.isEdit() && id) {
-      req$ = duplicateReason
-        ? this.svc.update(this.entityLogicalName, id, data, this.record?.row_version, { duplicateReason })
-        : this.svc.update(this.entityLogicalName, id, data, this.record?.row_version);
+      // A16-T3: every update may merge over attributes it does not send.
+      const options = duplicateReason
+        ? { duplicateReason, mergeAttributes: true }
+        : { mergeAttributes: true };
+      req$ = this.svc.update(
+        this.entityLogicalName, id, this.changedValues(data, takeTheirs), this.record?.row_version, options);
     } else {
       req$ = duplicateReason
         ? this.svc.create(this.entityLogicalName, data, { duplicateReason })
@@ -591,6 +647,15 @@ export abstract class EngineFormBase implements OnInit {
         // would otherwise conflict on the second consecutive save.
         this.record = r;
         this.loadedVersion.set(r.row_version);
+        // A16-T3: what the other writer changed (left to them, or merged
+        // over) now shows their value, so the next save does not send the
+        // old one back over it.
+        const theirs = [...takeTheirs, ...(r.merged_over ?? [])];
+        if (theirs.length) {
+          const stored = r.data as Record<string, unknown>;
+          this.form().patchValue(Object.fromEntries(theirs.map(name => [name, stored[name]])));
+        }
+        this.mergedOver.set(r.merged_over ?? []);
         this.completeSave();
         // D-791 rule 6: warnings never block; the save went through.
         this.saveWarnings.set(writeWarnings(r));
@@ -603,14 +668,25 @@ export abstract class EngineFormBase implements OnInit {
         // Preserve the user's in-progress edits — never overwrite the form on
         // a version conflict; the operator chooses when to discard them via
         // `reload()`.
-        if (e.kind === 'version_conflict') this.conflict.set(true);
+        if (e.kind === 'version_conflict') {
+          this.conflict.set(true);
+          // A16-T3: the dialog lists what changed when the server said so.
+          const details = e.versionConflict;
+          this.conflictDetails.set(details && details.changedAttributes.length ? details : null);
+        }
         else if (e.duplicates) this.onDuplicateRefusal(data, e.duplicates);
         else {
           this.error.set(e.message);
           // D-789 sections 3.4/3.5: a `field_locked*` or field-attached
           // `rule_violation` refusal is also shown under its field (it covers
           // a rule that changed after the form loaded).
-          this.serverFieldErrors.set(fieldErrorsFromApiError(e));
+          // A3-T7: every failing field of a 422 under its field, in the
+          // user's language where the code is known.
+          this.serverFieldErrors.set(fieldErrorsFromApiError(e, (code, message) => {
+            const key = `xrmForm.fieldError.${code}`;
+            const text = this.formInjector.get(LangService).translate(key);
+            return text === key ? message : text;
+          }));
         }
       },
     });

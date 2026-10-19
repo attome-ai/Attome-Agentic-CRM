@@ -12,7 +12,7 @@
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::ErrorResponse;
-use attome_types::{AppError, PaginatedResponse};
+use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
     Json, Router,
@@ -290,6 +290,75 @@ fn batch_body(batch: attome_jobs::batch::BatchProgress) -> BatchJobProgress {
     }
 }
 
+/// M12-T4: the batch jobs the caller started (imports, bulk edits, exports,
+/// merges), newest first, with their progress. Only the caller's own, even
+/// for an administrator.
+#[utoipa::path(
+    get,
+    path = "/api/v1/jobs",
+    description = "The batch jobs the caller started, newest first, with their progress and whether they can still be cancelled (M12-T4).",
+    tag = "jobs",
+    operation_id = "list_my_batch_jobs",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "The caller's batch jobs, newest first", body = PaginatedResponse<BatchJobProgress>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn my_batches(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<BatchJobProgress>>, AppError> {
+    let window = page.window();
+    let (batches, total) = attome_jobs::batch::list_started_by(
+        &state.base.db,
+        ctx.user_id,
+        window.page_size,
+        window.offset,
+    )
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(
+        batches.into_iter().map(batch_body).collect(),
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
+/// M10-T4: every pending timer, soonest first (administrators).
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/timers",
+    description = "Every pending timer on every record, soonest first: what it will do, on which record and when (M10-T4). Administrators only.",
+    tag = "admin",
+    operation_id = "list_pending_timers",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "Pending timers, soonest first", body = PaginatedResponse<attome_core::timer::PendingTimer>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn pending_timers(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<attome_core::timer::PendingTimer>>, AppError> {
+    let window = page.window();
+    let (items, total) =
+        attome_core::timer::pending_page(&state.base.db, window.page_size, window.offset).await?;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
 /// Z7-T4: a chunked batch job's progress, for the person who started it or
 /// an administrator.
 #[utoipa::path(
@@ -363,6 +432,8 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/jobs/dead-letter", get(list_dead_letter))
         .route("/api/v1/admin/jobs/{id}/replay", post(replay))
         .route("/api/v1/admin/jobs/{id}", delete(discard))
+        .route("/api/v1/jobs", get(my_batches))
+        .route("/api/v1/admin/timers", get(pending_timers))
         .route("/api/v1/jobs/{id}", get(batch_progress))
         .route("/api/v1/jobs/{id}/cancel", post(cancel_batch))
 }
@@ -372,7 +443,15 @@ pub fn routes() -> Router<EngineState> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_dead_letter, replay, discard, batch_progress, cancel_batch))]
+#[openapi(paths(
+    list_dead_letter,
+    replay,
+    discard,
+    my_batches,
+    pending_timers,
+    batch_progress,
+    cancel_batch
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

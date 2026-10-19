@@ -7,6 +7,7 @@
 - [Builder](content/builder.md): entities and fields, model objects, rules and flows, packs.
 - [Developer](content/developer.md): the API, and building from source.
 - [Extension](content/extension.md): packs, agents, integrations, web forms, branding.
+- [Partners](content/partners/README.md): the partner programme, its tiers and the implementation methodology.
 - [Upgrade](content/upgrade.md): upgrading and rolling back.
 
 ## Reference
@@ -18,10 +19,13 @@
 - [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.
 - [Offline use](offline.md): offline profiles, what a device gets and never gets, remote wipe and the device view.
 - [Deal teams and splits](deal-teams.md): team members, revenue and overlay splits, won deals and leavers.
+- [Opportunity lines](opportunity-lines.md): lines and the product picker, pricing order, the deal's amount, schedules, quote sync, undo and the feature flags.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Invoicing](invoicing.md): drafts, issue and numbering, notes, the invoice document, statements, ageing and write-offs.
 - [Rule language functions](rule-language.md): language versions and the functions V2 adds.
 - [Data layer](data-layer.md): pools, statement classes, retry, locks, query tags, read-your-writes and the censuses.
+- [Caching](caching.md): adding a cache with a CacheSpec and TieredCache, partitions, sensitivity, failure, dependencies, warm start, quotas and purging.
+- [Background jobs](jobs.md): registering a job type, schedules and batch jobs with checkpoints, progress and cancel.
 - [Slow statements](slow-queries.md): turning on pg_stat_statements and auto_explain, reading query tags and plans.
 - [Backup](backup.md), [Versions and support](versions-and-support.md), [API versions](api-versions.md), [API workflows (Arazzo)](api/arazzo/), [Model servers](model-servers.md)
 - [Release](release.md), [SLOs](slo.md), [Testing](testing.md), [Build machine](build-machine.md)

@@ -113,6 +113,29 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.SystemSettingsComponent),
           },
           {
+            // Z3-T10: per-cache numbers and purge.
+            path: 'caches',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.CachesComponent),
+          },
+          {
+            // Z1-T14. Their sidebar rows are seeded server-side (sidebar_seed.rs).
+            path: 'secrets',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.SecretsInventoryComponent),
+          },
+          {
+            // M10-T4: every pending timer.
+            path: 'timers',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity').then(m => m.PendingTimersComponent),
+          },
+          {
+            path: 'config-starts',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.ConfigStartsComponent),
+          },
+          {
             // D-404 / M83 Phase 1.
             path: 'calendars',
             canActivate: [authGuard],
@@ -622,6 +645,13 @@ export const xrmShellRoutes: Routes = [
             path: 'tags/:tagId',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/entity').then(m => m.TagPageComponent),
+          },
+          {
+            // M12-T4 — the long work the signed-in person started, from the
+            // profile menu. Literal segments, ahead of the entity wildcard.
+            path: 'me/background-work',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/shell').then(m => m.MyJobsComponent),
           },
           {
             // U5 (D-602) — the signed-in user's own notification

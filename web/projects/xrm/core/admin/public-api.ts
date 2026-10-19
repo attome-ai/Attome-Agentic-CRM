@@ -25,6 +25,10 @@ export { EntityManagerComponent }     from './entity-metadata/list/entity-manage
 export { EntityEditorComponent }      from './entity-metadata/form/entity-editor/entity-editor.component';
 export { SidebarManagerComponent }    from './sidebar-manager/sidebar-manager.component';
 export { SystemSettingsComponent }    from './system-settings/system-settings.component';
+// Z1-T14: the secret inventory and the configuration history.
+export { CachesComponent }             from './caches/caches.component';
+export { SecretsInventoryComponent }  from './secrets-inventory/secrets-inventory.component';
+export { ConfigStartsComponent }      from './config-starts/config-starts.component';
 export { CalendarManagerComponent }   from './calendar-manager/calendar-manager.component';
 // D-432 / M13 — the duplicate-candidate steward queue.
 export { DuplicatesManagerComponent } from './duplicates-manager/duplicates-manager.component';

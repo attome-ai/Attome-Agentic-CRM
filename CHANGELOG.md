@@ -124,6 +124,51 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Metadata versions (Y8-T4): every publish records the deployment's next metadata version (its cooked
+  manifest kept as an artefact), and `POST /api/v1/admin/metadata/versions/{version}/switch` and
+  `POST /api/v1/admin/metadata/rollback` move the current version without cooking anything. Every node
+  follows the move on its next metadata catch-up and records it in `metadata_node_switch`.
+- Save conflicts on the record form (A16-T3): a save that someone else's change overtook opens a dialog
+  listing each attribute they changed, with your value and theirs, to keep or take per attribute;
+  nothing typed is lost. The form now sends only the attributes it changed, with
+  `If-Match-Merge: attributes`, so a save merges over other people's changes to other attributes and
+  says which. `If-Match-Merge` is allowed through CORS and ignored on server-to-server requests.
+- Cache numbers and purge (Z3-T9): `GET /api/v1/admin/caches` lists each declared cache on this node
+  with entries, hits, misses, evictions and hit rate; `POST /api/v1/admin/caches/{name}/purge` drops one
+  key or everything on every node (audited). Metrics `cache_requests_total`, `cache_evictions_total`
+  and `cache_entries`.
+- Admin > Caches (Z3-T10, `/xrm/admin/caches`): each cache's entries, hit rate and evictions on the
+  server that answered, and a purge of one key or the whole cache after a confirmation, in English
+  and Arabic. No cached value is shown.
+- Record types on the New button (A27-T4): `GET /api/v1/{entity}/record-types` lists the types the
+  caller may create, their default first; with several, the New button offers each, and the form opens
+  with the chosen type.
+- Option set merge (A5-T2): `POST /api/v1/admin/model/option_set/{id}/merge` retires one value,
+  publishes the set and moves every record holding it to another value in a background job, through
+  the ordinary update path (audited, in each record's history).
+- Secret inventory and configuration history screens (Z1-T14), in English and Arabic, at
+  `/xrm/admin/secrets` and `/xrm/admin/config-starts`, with their sidebar entries.
+- My background work (M12-T4): `GET /api/v1/jobs` lists the batch jobs a person started, newest
+  first, and the profile menu opens a page showing their progress with Cancel for a running one.
+- Pending timers (M10-T4): `GET /api/v1/{entity}/{id}/timers` lists what is waiting to happen to a
+  record and when (shown on the record form), and `GET /api/v1/admin/timers` every pending timer for
+  administrators (`/xrm/admin/timers`).
+- Installable app (B19-T1): a web manifest and a service worker cache the app shell and the
+  hash-named render plans; a new version downloads in the background and a notice offers to reload.
+- Every failing field under its field (A3-T7, part): when a save is refused with several field
+  failures at once, the record form shows each under its field, in Arabic or English by the failure's
+  code.
+- Offline search (B18-T11): the records on a device can be searched without a network, by prefix
+  and with light fuzzy matching; Arabic matches however it was typed (diacritics ignored, alef forms,
+  ta marbuta and alef maqsura unified). The index is rebuilt after each sync pull (MiniSearch 7.2.0).
+- Opportunity lines are documented for builders and administrators (D6-T14, `docs/opportunity-lines.md`):
+  the flags, pricing order, how the deal's amount follows its lines, schedules, quote sync and undo.
+- Share an attachment by link (B3-T3): the K1 expiring, password-protected file links cover record
+  attachments, proven end to end.
+- Developer tooling: per-request SQL and Redis call budgets for key requests
+  (`crates/apps/attome/tests/request_counts.json`, AA14-T3); `attome_testkit::jobs` runs a job at
+  once and moves schedule time with a fake clock (Z7-T7); `attome_inference::adapter::ModelAdapter`
+  puts model providers behind one trait (Z9-T1).
 - The developer guide explains concurrent edits (A16-T8), in English and Arabic: the
   `409 version_conflict` body (`current_version`, and `current_state` with `changed_attributes` and
   `hidden_changes`) and the `If-Match-Merge: attributes` header with its `merged_over` answer, with
@@ -1567,6 +1612,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Lists and entity schemas revalidate (AA7-T11): the web app remembers the last answer to each
+  `query/execute` and `/schema` request with its ETag (in memory, 200 at most, forgotten on sign-out
+  and on a language change) and sends `If-None-Match`, so returning to an unchanged list costs one
+  `304`.
+- Seven operations had an `operationId` another operation already used, which made the generated
+  API types fail to compile; they are now `get_booking_page`, `cancel_booking`,
+  `get_meeting_report`, `list_channel_messages`, `mark_channel_read`,
+  `register_push_subscription` and `start_mail_connection`. Paths and payloads are unchanged.
 - `GET /api/v1/openapi.json` is filtered per caller (S2-T14): only the operations of the modules
   switched on (`x-module`), none under `/api/v1/admin` for a caller who is not an administrator,
   and only the component schemas still referred to. It carries an `ETag` (the release, the module

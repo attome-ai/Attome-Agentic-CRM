@@ -43,6 +43,8 @@ pub mod tags;
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a
 /// thin caller of it.
 pub mod timeline;
+/// M10-T4: a record's pending timers.
+mod timers;
 mod upsert;
 
 #[cfg(test)]
@@ -157,6 +159,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(hierarchy::openapi_fragment());
     doc.merge(merge::openapi_fragment());
     doc.merge(change_type::openapi_fragment());
+    doc.merge(timers::openapi_fragment());
     doc.merge(related::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(feed::openapi_fragment());
@@ -334,6 +337,11 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/{id}/change-type",
             axum::routing::post(change_type::change_type),
         )
+        .route(
+            "/api/v1/{entity}/record-types",
+            get(change_type::list_record_types),
+        )
+        .route("/api/v1/{entity}/{id}/timers", get(timers::record_timers))
         .route(
             "/api/v1/{entity}/{id}/merge/preview",
             axum::routing::post(merge::merge_preview_route),

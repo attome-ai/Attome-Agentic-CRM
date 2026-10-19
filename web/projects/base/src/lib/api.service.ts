@@ -2,7 +2,12 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { EMPTY, Observable, catchError, defer, expand, map, of, reduce, throwError } from 'rxjs';
 import { ATTOME_CONFIG } from './config';
-import { ApiError } from './types';
+import { ConditionalCache } from './conditional-cache';
+import { ApiError, VersionConflictState } from './types';
+
+/** AA7-T11: the requests `ApiService` revalidates with `If-None-Match`. */
+const SCHEMA_PATH = '/api/v1/schema/';
+const QUERY_EXECUTE_PATH = '/api/v1/query/execute';
 
 /**
  * The `{items, total, page, page_size}` envelope every paginated admin-catalog
@@ -37,6 +42,12 @@ export interface WriteOptions {
    * duplicate rule. The audit keeps it.
    */
   duplicateReason?: string;
+  /**
+   * A16-T3: sent as `If-Match-Merge: attributes` on a PATCH — a stale update
+   * is applied at the current version when none of the attributes it sends
+   * changed since its `If-Match`, and answers `merged_over`.
+   */
+  mergeAttributes?: boolean;
 }
 
 /** `If-Match` from `etag`, plus the idempotency key. */
@@ -46,6 +57,7 @@ function writeHeaders(options: WriteOptions, etag?: number): Record<string, stri
   if (etag !== undefined) headers['If-Match'] = `"${etag}"`;
   if (options.operationId) headers['Attome-Operation-Id'] = options.operationId;
   if (options.duplicateReason) headers['Attome-Duplicate-Reason'] = options.duplicateReason;
+  if (options.mergeAttributes) headers['If-Match-Merge'] = 'attributes';
   return headers;
 }
 
@@ -138,6 +150,7 @@ function refusalProse(message: string, code: ChangesetRefusalCode): string {
 export class ApiService {
   private readonly http   = inject(HttpClient);
   private readonly config = inject(ATTOME_CONFIG);
+  private readonly conditional = inject(ConditionalCache);
 
   /**
    * Solution 7 (D-785): the changeset id every mutating request names through
@@ -180,8 +193,53 @@ export class ApiService {
         else httpParams = httpParams.set(key, val);
       }
     }
+    if (path.startsWith(SCHEMA_PATH)) return this.revalidated<T>('GET', path, httpParams, undefined, {});
     return this.http.get<T>(this.url(path), { params: httpParams, withCredentials: true })
       .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * AA7-T11: a request whose last answer is remembered in `ConditionalCache`
+   * sends that answer's ETag as `If-None-Match`, and a `304` returns the
+   * remembered body. A `200` with an ETag replaces the entry; one without
+   * drops it. A `304` with nothing remembered (cleared since it was sent) is
+   * passed on as the error it is.
+   */
+  private revalidated<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    params: HttpParams,
+    body: unknown,
+    headers: Record<string, string>,
+  ): Observable<T> {
+    const key = `${method} ${path}?${params.toString()}#${body === undefined ? '' : JSON.stringify(body)}`;
+    return defer(() => {
+      const cached = this.conditional.get(key);
+      const sent = cached ? { ...headers, 'If-None-Match': cached.etag } : headers;
+      return this.http.request<T>(method, this.url(path), {
+        body,
+        params,
+        headers: sent,
+        observe: 'response',
+        withCredentials: true,
+      }).pipe(
+        map(response => {
+          const etag = response.headers.get('ETag');
+          if (etag) this.conditional.set(key, etag, response.body);
+          else this.conditional.delete(key);
+          return response.body as T;
+        }),
+        catchError((err: unknown) =>
+          err instanceof HttpErrorResponse && err.status === 304 && cached
+            ? of(cached.body as T)
+            : this.handleError(err as HttpErrorResponse)),
+      );
+    });
+  }
+
+  /** AA7-T11: forgets every remembered answer (sign-out, language change). */
+  clearConditionalCache(): void {
+    this.conditional.clear();
   }
 
   /**
@@ -270,6 +328,9 @@ export class ApiService {
    * Credentials and CSRF stay with the interceptor, never here.
    */
   post<T>(path: string, body: unknown, options: WriteOptions = {}): Observable<T> {
+    if (path === QUERY_EXECUTE_PATH) {
+      return this.revalidated<T>('POST', path, new HttpParams(), body, this.mutationHeaders(options, options.ifMatch));
+    }
     return this.http.post<T>(this.url(path), body, {
       headers: this.mutationHeaders(options, options.ifMatch),
       withCredentials: true,
@@ -364,6 +425,12 @@ export class ApiService {
       };
     }
 
+    // A16-T1: a version conflict says what the record holds now, so a form
+    // can show the differences instead of reloading blind.
+    if (body?.error === 'version_conflict' && typeof body?.current_version === 'number') {
+      error.versionConflict = versionConflictState(body.current_version, body.current_state);
+    }
+
     // D-510 rule 6: the step-up prompt is built from these two fields, so they
     // are the only extra body fields kept — and only for this one code.
     if (error.kind === 'reauth_required') {
@@ -374,6 +441,27 @@ export class ApiService {
     }
     return throwError(() => error);
   }
+}
+
+/** A16-T1: the `current_state` of a `version_conflict` body, read defensively. */
+function versionConflictState(currentVersion: number, state: unknown): VersionConflictState {
+  const s = (state ?? {}) as Record<string, unknown>;
+  const text = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+  const changes = Array.isArray(s['changed_attributes']) ? s['changed_attributes'] : [];
+  return {
+    currentVersion,
+    lastChangedBy: text(s['last_changed_by']),
+    lastChangedAt: text(s['last_changed_at']),
+    changedAttributes: changes
+      .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object' && typeof c['name'] === 'string')
+      .map(c => ({
+        name: c['name'] as string,
+        their_value: c['their_value'] === null || c['their_value'] === undefined ? null : String(c['their_value']),
+        changed_by: text(c['changed_by']),
+        changed_at: text(c['changed_at']),
+      })),
+    hiddenChanges: typeof s['hidden_changes'] === 'number' ? s['hidden_changes'] : 0,
+  };
 }
 
 /**

@@ -57,6 +57,21 @@ describe('computeFieldPolicies (D-789 section 3.3)', () => {
 describe('fieldErrorsFromApiError', () => {
   const base: ApiError = { kind: 'validation', status: 422, message: '' };
 
+  it('puts every failing field of a validation error under its field (A3-T7)', () => {
+    const err = {
+      ...base, code: 'validation_error', message: 'two fields failed',
+      details: [
+        { field: 'email', code: 'invalid', message: 'email: not an email address' },
+        { field: 'name', code: 'required', message: 'name: field is required' },
+      ],
+    } as ApiError;
+    const plain = fieldErrorsFromApiError(err);
+    expect(plain.get('email')).toBe('email: not an email address');
+    expect(plain.get('name')).toBe('name: field is required');
+    const arabic = fieldErrorsFromApiError(err, code => (code === 'required' ? 'هذا الحقل مطلوب.' : 'x'));
+    expect(arabic.get('name')).toBe('هذا الحقل مطلوب.');
+  });
+
   it('reads the structured lock list when present', () => {
     const err = {
       ...base, code: 'field_locked', message: 'm',

@@ -1,0 +1,119 @@
+/* Z1-T14 — the secret inventory and the configuration history. Logical properties only (RTL). */
+
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.config-admin h2 {
+  margin-block: 0 8px;
+  font-size: 18px;
+}
+
+.config-admin h3 {
+  margin-block: 16px 8px;
+  font-size: 15px;
+}
+
+.config-intro,
+.config-state {
+  margin-block: 0 12px;
+  font-size: 13px;
+}
+
+.config-error {
+  color: var(--color-danger, #dc2626);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.config-table {
+  inline-size: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.config-table th,
+.config-table td {
+  padding-block: 6px;
+  padding-inline: 8px;
+  text-align: start;
+  border-block-end: 1px solid var(--color-border, #334155);
+}
+
+.mono {
+  font-family: var(--font-mono, monospace);
+}
+
+.config-badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding-inline: 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: var(--color-bg-alt, #f1f5f9);
+}
+
+.config-badge-warn {
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning, #92400e);
+}
+
+.config-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-start: 12px;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* Z3-T10 — the caches screen's actions and its purge confirmation. */
+.config-action {
+  padding-block: 4px;
+  padding-inline: 10px;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.config-action:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.config-action-danger {
+  border-color: var(--color-danger, #dc2626);
+  color: var(--color-danger, #dc2626);
+}
+
+.config-confirm {
+  margin-block-start: 16px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 6px;
+  max-inline-size: 480px;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.config-field input {
+  padding-block: 4px;
+  padding-inline: 8px;
+}

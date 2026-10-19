@@ -417,7 +417,10 @@ async fn ensure_sidebar_privilege(
 // holds Module Management and Feature Flags, tied to no module.
 // Bumped 16 -> 17 (Topic 15 #9): an admin-only "Relationships" group listing
 // the junction-table entities (User Teams, User Privileges).
-const SEED_VERSION: &str = "17";
+// Bumped 17 -> 18: admin-only "Secrets" and "Configuration History" (Z1-T14),
+// "Pending Timers" (M10-T4) and "Caches" (Z3-T10) under Management, each
+// linked to `system.admin` like its route. Icons are in the subset.
+const SEED_VERSION: &str = "18";
 
 pub async fn seed(db: &DbPool) -> Result<(), AppError> {
     attome_core::seed_gate::run_if_stale(db, "sidebar", SEED_VERSION, || seed_body(db)).await
@@ -1023,6 +1026,59 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         Some("core"),
     )
     .await?;
+
+    // Z1-T14: the secret inventory and the configuration history, admin-only
+    // like their routes.
+    let secrets = upsert_sidebar(
+        db,
+        "Secrets",
+        Some("/xrm/admin/secrets"),
+        "las la-key",
+        "#b45309",
+        Some(management_group),
+        46,
+        Some("core"),
+    )
+    .await?;
+    ensure_sidebar_privilege(db, secrets, ADMIN_PRIVILEGE_KEY).await?;
+    let config_starts = upsert_sidebar(
+        db,
+        "Configuration History",
+        Some("/xrm/admin/config-starts"),
+        "las la-history",
+        "#475569",
+        Some(management_group),
+        46,
+        Some("core"),
+    )
+    .await?;
+    ensure_sidebar_privilege(db, config_starts, ADMIN_PRIVILEGE_KEY).await?;
+    // M10-T4: every pending timer, admin-only like its route.
+    let timers = upsert_sidebar(
+        db,
+        "Pending Timers",
+        Some("/xrm/admin/timers"),
+        "las la-stopwatch",
+        "#7c3aed",
+        Some(management_group),
+        46,
+        Some("core"),
+    )
+    .await?;
+    ensure_sidebar_privilege(db, timers, ADMIN_PRIVILEGE_KEY).await?;
+    // Z3-T10: per-cache numbers and purge, admin-only like its routes.
+    let caches = upsert_sidebar(
+        db,
+        "Caches",
+        Some("/xrm/admin/caches"),
+        "las la-layer-group",
+        "#0891b2",
+        Some(management_group),
+        46,
+        Some("core"),
+    )
+    .await?;
+    ensure_sidebar_privilege(db, caches, ADMIN_PRIVILEGE_KEY).await?;
 
     // Basic Units U8 — the state-model editor. Its routes are
     // `Authorized<Admin>`, so the row is linked to `system.admin`

@@ -98,8 +98,21 @@
       <xrm-duplicate-banner [entity]="f.name()" [recordId]="f.id()" [notice]="f.duplicateNotice()"
                             (saveWithReason)="f.saveWithDuplicateReason($event)" (changed)="f.reload()" />
 
+      <!-- M10-T4 — what is waiting to happen to this record; nothing when none. -->
+      @if (f.id()) {
+        <xrm-pending-timers [entity]="f.name()" [recordId]="f.id()" />
+      }
+
       <!-- M36 (D-473) — renders nothing until the record has a live prediction. -->
       <xrm-prediction-banner [entity]="f.name()" [recordId]="f.id()" />
+
+      <!-- A16-T3 — a save merged over attributes someone else changed. -->
+      @if (f.mergedOver().length) {
+        <div class="xf-warning-banner" role="status" data-merged-over>
+          <i class="las la-info-circle" aria-hidden="true"></i>
+          <span>{{ 'xrmForm.mergedOver' | translate: { fields: mergedFields() } }}</span>
+        </div>
+      }
 
       <!-- One banner at a time: conflict, then error, then validation. -->
       @if (f.conflict()) {
@@ -119,6 +132,11 @@
             {{ (f.reloading() ? 'xrmForm.reloading' : 'xrmForm.reload') | translate }}
           </button>
         </div>
+        <!-- A16-T3 — what changed, attribute by attribute; the typed values stay. -->
+        @if (f.conflictDetails(); as details) {
+          <xrm-conflict-dialog [details]="details" [mine]="f.form().getRawValue()" [labelOf]="labelOf"
+                               (resolve)="f.resolveConflict($event)" (cancelled)="f.dismissConflict()" />
+        }
       } @else if (f.error()) {
         <div class="xf-error-banner" role="alert">
           <i class="las la-exclamation-circle" aria-hidden="true"></i>

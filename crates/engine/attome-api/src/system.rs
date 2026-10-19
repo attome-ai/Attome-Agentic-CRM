@@ -1181,6 +1181,10 @@ impl EngineSystemBuilder {
             attome_cache::Subscriber::connect(&state.base.redis, &state.base.config).await?;
 
         let debounce_pending = Arc::new(AtomicBool::new(false));
+        // Y8-T4: the name this node records its metadata version switches under.
+        crate::model_admin::set_node(attome_server::metrics_store::node_name(
+            state.base.config.app.port,
+        ));
 
         {
             // C-18: `subscriber` is now shared across every channel this
@@ -1308,6 +1312,41 @@ impl EngineSystemBuilder {
             });
         }
         {
+            // Z3-T9: a cache purge announced by any node (in its audit
+            // event's transaction) reaches this one. A dropped connection
+            // waits a second and listens again; a purge sent meanwhile is
+            // lost here, and the entries live out their TTL.
+            let config = state.base.config.clone();
+            tokio::spawn(async move {
+                loop {
+                    match attome_db::notify::listen(
+                        &config,
+                        crate::profiler_admin::CACHE_PURGE_CHANNEL,
+                    )
+                    .await
+                    {
+                        Ok(mut listener) => loop {
+                            match listener.try_recv().await {
+                                Ok(Some(notification)) => {
+                                    crate::profiler_admin::apply_purge(notification.payload())
+                                        .await;
+                                }
+                                Ok(None) => break,
+                                Err(error) => {
+                                    tracing::warn!(%error, "cache purge listener failed; reconnecting");
+                                    break;
+                                }
+                            }
+                        },
+                        Err(error) => {
+                            tracing::warn!(%error, "cache purge listener could not connect; retrying");
+                        }
+                    }
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            });
+        }
+        {
             // P-metadata-sync-hardening Phase 1 (a): a third trigger into the
             // *same* debounced catch-up entry point as on_message/on_reconnect
             // above — not a parallel mechanism. on_reconnect's comment already
@@ -1337,6 +1376,8 @@ impl EngineSystemBuilder {
                 let mut behind_polls: u32 = 0;
                 loop {
                     interval.tick().await;
+                    // Y8-T4: the safety net for a lost version-switch doorbell.
+                    crate::model_admin::follow_cooked(&db).await;
                     let applied = watermark.load(Ordering::Acquire);
                     match attome_core::log_watermark(&db).await {
                         Ok(db_watermark) if db_watermark < applied => {
@@ -1945,6 +1986,8 @@ async fn catch_up(
     redis: &Store,
     last_applied: &AtomicI64,
 ) {
+    // Y8-T4: a version switch moves only the pointer, not the change log.
+    crate::model_admin::follow_cooked(db).await;
     loop {
         let after = last_applied.load(Ordering::Acquire);
         let rows = match attome_core::changes_since(db, after, CATCH_UP_BATCH_LIMIT).await {

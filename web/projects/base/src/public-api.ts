@@ -16,6 +16,8 @@ export type {
 export { ATTOME_CONFIG, AttomeBaseConfig } from './lib/config';
 export { ApiService, MAX_ALL_PAGES_ITEMS } from './lib/api.service';
 export type { Page } from './lib/api.service';
+export { ConditionalCache } from './lib/conditional-cache';
+export type { ConditionalEntry } from './lib/conditional-cache';
 // Solution 7 (D-785) — the changeset header and the 409 refusal codes.
 export { CHANGESET_HEADER, CHANGESET_REFUSAL_CODES, changesetRefusalCode } from './lib/api.service';
 export type { ChangesetRefusalCode } from './lib/api.service';
@@ -78,7 +80,7 @@ export type { ModalHandle }                from './lib/a11y/modal-stack';
 
 export { isMfaChallenge } from './lib/types';
 export type {
-  ApiError, ApiErrorKind, DuplicateMatchRef,
+  ApiError, ApiErrorKind, DuplicateMatchRef, ConflictChange, VersionConflictState,
   AuthResponse, GoogleAuthRequest, LoginRequest, RegisterRequest,
   OidcProviderInfo, IdentityLinkInfo,
   MfaChallenge, MfaVerifyBody, MfaPendingEnrollBody, MfaEnrollResponse,

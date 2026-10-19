@@ -41,6 +41,10 @@ export { SidebarPreferencesService } from './services/sidebar-preferences.servic
 export type { SidebarStyle } from './services/sidebar-preferences.service';
 // M02/D-412 — the typed runtime-settings API System Settings drives.
 export { SettingsService } from './services/settings.service';
+export { CacheAdminService } from './services/cache-admin.service';
+export type { CacheStatsRow } from './services/cache-admin.service';
+export { SecretsAdminService } from './services/secrets-admin.service';
+export type { SecretInventoryRow, ConfigStartRow, ConfigChange } from './services/secrets-admin.service';
 export type { SettingValueView, SettingListResponse, SettingScope } from './services/settings.service';
 // M95/D-430 — the feature-flag client and its `*xrmFeatureFlag` structural
 // directive companion.

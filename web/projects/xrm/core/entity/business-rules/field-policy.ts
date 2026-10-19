@@ -130,8 +130,15 @@ export const FIELD_LOCKED_CODES: readonly string[] = ['field_locked', 'field_loc
  *   `'<field>' is required but the rule '<rule>' locks it…`
  *   (`attome-types::error::field_locked_message`).
  * - `rule_violation`: `details.field` when the body carries it.
+ * - `validation_error` (A3-T1): `details` lists every failing field at once
+ *   (`FieldError {field, code, message}`); each goes under its field.
+ *   `label` turns a failure's stable `code` into the user's language (A3-T7),
+ *   falling back to the server's English message.
  */
-export function fieldErrorsFromApiError(err: ApiError | null | undefined): Map<string, string> {
+export function fieldErrorsFromApiError(
+  err: ApiError | null | undefined,
+  label: (code: string, message: string) => string = (_code, message) => message,
+): Map<string, string> {
   const out = new Map<string, string>();
   if (!err) return out;
   const details = (typeof err.details === 'object' && err.details !== null)
@@ -151,6 +158,13 @@ export function fieldErrorsFromApiError(err: ApiError | null | undefined): Map<s
     }
   } else if (err.kind === 'rule_violation' && typeof details?.field === 'string') {
     out.set(details.field, err.message);
+  } else if (err.code === 'validation_error' && Array.isArray(err.details)) {
+    for (const failure of err.details as unknown[]) {
+      const f = failure as { field?: unknown; code?: unknown; message?: unknown } | null;
+      if (typeof f?.field !== 'string' || out.has(f.field)) continue;
+      const message = typeof f.message === 'string' ? f.message : '';
+      out.set(f.field, typeof f.code === 'string' ? label(f.code, message) : message);
+    }
   }
   return out;
 }
