@@ -12,6 +12,8 @@ mod change_type;
 pub mod clone;
 mod expand;
 pub mod favourites;
+/// C3-T1: the caller's feed.
+pub mod feed;
 mod hierarchy;
 /// U6 (basic-units plan B-R12, D-601): `/{entity}/{id}/history`, the
 /// record-scoped, field-security-filtered change history.
@@ -41,8 +43,6 @@ pub mod tags;
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a
 /// thin caller of it.
 pub mod timeline;
-/// C3-T1: the caller's feed.
-pub mod feed;
 mod upsert;
 
 #[cfg(test)]
@@ -113,8 +113,8 @@ pub(crate) use mutations::sync_file_field_documents;
 /// `entity_mutation` public for `attome-workflow`'s Create/Update nodes.
 pub use mutations::{ACTION_RECORD_HARD_DELETE, hard_delete_record_for};
 pub use mutations::{
-    CreateCheck, CreateCheckWarning, UpdateOutcome, create_record_for, delete_record_for,
-    read_record, read_record_bulk, restore_record_for, update_record_for,
+    CreateCheck, CreateCheckWarning, UpdateOutcome, create_record_for, create_record_with_id_for,
+    delete_record_for, read_record, read_record_bulk, restore_record_for, update_record_for,
     update_record_for_outcome, update_record_for_with_comment, validate_create,
 };
 pub use recycle_bin::{LargeDelete, take_large_deletes};

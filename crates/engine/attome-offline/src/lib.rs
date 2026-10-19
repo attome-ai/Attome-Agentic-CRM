@@ -9,6 +9,8 @@ pub mod model;
 pub mod profile;
 /// B18-T5: a device's pull.
 pub mod pull;
+/// B18-T7: a device's push.
+pub mod push;
 
 pub use model::OfflineModel;
 
@@ -23,5 +25,5 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(profile::get_offline_profile, pull::post_pull))]
+#[openapi(paths(profile::get_offline_profile, pull::post_pull, push::post_push))]
 struct ApiDocFragment;

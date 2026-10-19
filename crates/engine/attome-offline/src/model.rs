@@ -30,5 +30,6 @@ impl EngineModel for OfflineModel {
                 get(crate::profile::get_offline_profile),
             )
             .route("/api/v1/offline/pull", post(crate::pull::post_pull))
+            .route("/api/v1/offline/push", post(crate::push::post_push))
     }
 }

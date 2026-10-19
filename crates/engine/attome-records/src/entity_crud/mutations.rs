@@ -683,6 +683,67 @@ pub async fn create_record_for(
     entity_input: &str,
     body: Value,
 ) -> Result<(uuid::Uuid, EntityRecordResponse), AppError> {
+    create_record_in_mode(
+        state,
+        ctx,
+        acting_user_id,
+        entity_input,
+        body,
+        MutationMode::Strict,
+    )
+    .await
+}
+
+/// B18-T7: [`create_record_for`] with the record id an offline device chose,
+/// so the device's later operations on the new record can name it. Same
+/// authorization contract (the caller checks the create privilege first).
+/// Only a UUIDv7 is taken, and only when no row of the entity has it; the
+/// public create route never reaches this.
+pub async fn create_record_with_id_for(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    acting_user_id: uuid::Uuid,
+    entity_input: &str,
+    body: Value,
+    record_id: uuid::Uuid,
+) -> Result<(uuid::Uuid, EntityRecordResponse), AppError> {
+    if record_id.get_version_num() != 7 {
+        return Err(AppError::Validation("id: a UUIDv7 is required".into()));
+    }
+    let (_, entity_name, _, _) = resolve_entity(state, entity_input).await?;
+    let taken: bool = sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.create",
+        &format!(
+            "SELECT EXISTS (SELECT 1 FROM {} WHERE id = $1)",
+            attome_core::quote_ident(&entity_name)
+        ),
+    ))
+    .bind(record_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if taken {
+        return Err(AppError::Conflict("a record with this id already exists"));
+    }
+    create_record_in_mode(
+        state,
+        ctx,
+        acting_user_id,
+        entity_input,
+        body,
+        MutationMode::ClientId(record_id),
+    )
+    .await
+}
+
+async fn create_record_in_mode(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    acting_user_id: uuid::Uuid,
+    entity_input: &str,
+    body: Value,
+    mode: MutationMode,
+) -> Result<(uuid::Uuid, EntityRecordResponse), AppError> {
     let state = state.clone();
     let entity_input = entity_input.to_owned();
     let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
@@ -761,7 +822,7 @@ pub async fn create_record_for(
                         obj,
                         acting_user_id,
                         actor.org_ref,
-                        MutationMode::Strict,
+                        mode,
                     )
                     .await?
                 });

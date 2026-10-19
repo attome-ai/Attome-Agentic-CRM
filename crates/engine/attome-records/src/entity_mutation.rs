@@ -90,6 +90,10 @@ pub enum MutationMode {
     MirroredFileWrite,
     BundleRecordSet(Option<Uuid>),
     ApprovalFlow(Uuid),
+    /// B18-T7: a create whose id an offline device chose. Every check of
+    /// `Strict` applies; only the id is the caller's, and
+    /// [`crate::entity_crud::create_record_with_id_for`] checks it first.
+    ClientId(Uuid),
 }
 
 impl MutationMode {
@@ -100,11 +104,15 @@ impl MutationMode {
                 | Self::MirroredFileWrite
                 | Self::BundleRecordSet(_)
                 | Self::ApprovalFlow(_)
+                | Self::ClientId(_)
         )
     }
 
     fn enforce_file_session_ownership(&self) -> bool {
-        matches!(self, Self::Strict | Self::ApprovedStagedImport)
+        matches!(
+            self,
+            Self::Strict | Self::ApprovedStagedImport | Self::ClientId(_)
+        )
     }
 }
 
@@ -604,7 +612,7 @@ pub(crate) fn validate_engine_managed_fields(
     obj: &serde_json::Map<String, Value>,
     mode: MutationMode,
 ) -> Result<(), AppError> {
-    if mode != MutationMode::Strict {
+    if !matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {
         return Ok(());
     }
     for key in obj.keys() {
@@ -1992,7 +2000,7 @@ pub async fn create_one_as(
     // came before" — no renumbering of the already-built `$6.."` attrs
     // placeholders above.
     let bundle_id = match mode {
-        MutationMode::BundleRecordSet(Some(id)) => Some(id),
+        MutationMode::BundleRecordSet(Some(id)) | MutationMode::ClientId(id) => Some(id),
         _ => None,
     };
     if bundle_id.is_some() {
