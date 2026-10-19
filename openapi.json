@@ -38207,6 +38207,145 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/setup/region": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The first-run region setup's state (X12-T3).",
+        "description": "The deployment's country, if one was picked, and the countries the\nregions pack presets (currency, time zone, default calendar and business\nweek), so the first-run wizard can offer them. `pack_available` is false\nwhen the regions pack is not next to the server.",
+        "operationId": "get_region_setup",
+        "responses": {
+          "200": {
+            "description": "The deployment's country and the presets on offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionSetupView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sets the deployment up for a country (X12-T3).",
+        "description": "Installs the regions pack (its changesets through the same idempotent\nledger path as `attome init --pack`; a second run changes nothing), then\nstores the deployment defaults: `core.country`, `core.locale`\n(`{language}-{country}`), `core.time_zone` and `core.calendar` (the given\none, else the country's). Each setting write is audited. A person's own\nchoices still win over these defaults.",
+        "operationId": "post_region_setup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionSetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The deployment is set up for the country",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionSetupView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown country, language or calendar, or the regions pack is not next to the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/slo": {
       "get": {
         "tags": [
@@ -123685,6 +123824,105 @@
           }
         }
       },
+      "RegionPreset": {
+        "type": "object",
+        "description": "One country the regions pack presets, from its `region_country` record.",
+        "required": [
+          "code",
+          "name",
+          "time_zone",
+          "default_date_calendar"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "ISO 3166 alpha-2 code, e.g. `SA`."
+          },
+          "currency_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_date_calendar": {
+            "type": "string",
+            "description": "`gregorian`, `hijri` or `both`."
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "time_zone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. `Asia/Riyadh`."
+          },
+          "week_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "First day of the business week (`sun`, `mon`, `sat`)."
+          }
+        }
+      },
+      "RegionSetupRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/setup/region`.",
+        "required": [
+          "country",
+          "language"
+        ],
+        "properties": {
+          "calendar": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`gregorian`, `hijri` or `both`; omitted, the country's default."
+          },
+          "country": {
+            "type": "string",
+            "description": "A code from `countries`."
+          },
+          "language": {
+            "type": "string",
+            "description": "`ar` or `en`."
+          }
+        }
+      },
+      "RegionSetupView": {
+        "type": "object",
+        "description": "`GET`/`POST /api/v1/admin/setup/region`.",
+        "required": [
+          "pack_available",
+          "countries"
+        ],
+        "properties": {
+          "countries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegionPreset"
+            },
+            "description": "The countries the pack presets, by code."
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The deployment's country (`core.country`), or null before the first\nrun picked one."
+          },
+          "pack_available": {
+            "type": "boolean",
+            "description": "Whether the regions pack is next to the server (`app.packs_root`)."
+          }
+        }
+      },
       "RegisterRequest": {
         "type": "object",
         "required": [
@@ -135783,8 +136021,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -135836,5 +136072,7 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }

@@ -6731,6 +6731,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/setup/region": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The first-run region setup's state (X12-T3).
+         * @description The deployment's country, if one was picked, and the countries the
+         *     regions pack presets (currency, time zone, default calendar and business
+         *     week), so the first-run wizard can offer them. `pack_available` is false
+         *     when the regions pack is not next to the server.
+         */
+        get: operations["get_region_setup"];
+        put?: never;
+        /**
+         * Sets the deployment up for a country (X12-T3).
+         * @description Installs the regions pack (its changesets through the same idempotent
+         *     ledger path as `attome init --pack`; a second run changes nothing), then
+         *     stores the deployment defaults: `core.country`, `core.locale`
+         *     (`{language}-{country}`), `core.time_zone` and `core.calendar` (the given
+         *     one, else the country's). Each setting write is audited. A person's own
+         *     choices still win over these defaults.
+         */
+        post: operations["post_region_setup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/slo": {
         parameters: {
             query?: never;
@@ -30778,6 +30810,41 @@ export interface components {
             /** Format: double */
             amount: number;
             reason: string;
+        };
+        /** @description One country the regions pack presets, from its `region_country` record. */
+        RegionPreset: {
+            /** @description ISO 3166 alpha-2 code, e.g. `SA`. */
+            code: string;
+            currency_code?: string | null;
+            /** @description `gregorian`, `hijri` or `both`. */
+            default_date_calendar: string;
+            name: string;
+            name_ar?: string | null;
+            /** @description IANA time zone, e.g. `Asia/Riyadh`. */
+            time_zone: string;
+            /** @description First day of the business week (`sun`, `mon`, `sat`). */
+            week_start?: string | null;
+        };
+        /** @description `POST /api/v1/admin/setup/region`. */
+        RegionSetupRequest: {
+            /** @description `gregorian`, `hijri` or `both`; omitted, the country's default. */
+            calendar?: string | null;
+            /** @description A code from `countries`. */
+            country: string;
+            /** @description `ar` or `en`. */
+            language: string;
+        };
+        /** @description `GET`/`POST /api/v1/admin/setup/region`. */
+        RegionSetupView: {
+            /** @description The countries the pack presets, by code. */
+            countries: components["schemas"]["RegionPreset"][];
+            /**
+             * @description The deployment's country (`core.country`), or null before the first
+             *     run picked one.
+             */
+            country?: string | null;
+            /** @description Whether the regions pack is next to the server (`app.packs_root`). */
+            pack_available: boolean;
         };
         RegisterRequest: {
             email: string;
@@ -58709,6 +58776,95 @@ export interface operations {
                 };
             };
             /** @description Validation failed, or the key is boot-time-only */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_region_setup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deployment's country and the presets on offer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionSetupView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_region_setup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegionSetupRequest"];
+            };
+        };
+        responses: {
+            /** @description The deployment is set up for the country */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionSetupView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown country, language or calendar, or the regions pack is not next to the server */
             422: {
                 headers: {
                     [name: string]: unknown;
