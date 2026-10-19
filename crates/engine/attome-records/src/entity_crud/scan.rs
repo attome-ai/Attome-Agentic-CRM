@@ -208,8 +208,277 @@ pub(super) async fn scan_find(
     )))
 }
 
+// ── B16-T8: act on a scan ───────────────────────────────────────────────────
+
+/// Where the device was, when the person lets scans record it.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, ToSchema)]
+pub struct ScanLocation {
+    pub lat: f64,
+    pub lng: f64,
+}
+
+/// `POST /api/v1/scan/act`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ScanActBody {
+    /// The scanned value, exactly as read.
+    pub value: String,
+    pub scan_action_id: Uuid,
+    #[serde(default)]
+    pub location: Option<ScanLocation>,
+}
+
+/// What a scan did.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ScanActResult {
+    /// `done`, or `ambiguous` (409) with the records that matched.
+    pub status: String,
+    /// `open`, `run_workflow` or `set_field`.
+    pub action_kind: String,
+    pub record: Option<ScanHit>,
+    /// The workflow instance a `run_workflow` started.
+    pub workflow_instance_id: Option<Uuid>,
+    /// Every match, when there was more than one.
+    pub hits: Vec<ScanHit>,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct ScanActionRow {
+    entity_logicalname: String,
+    match_attribute: Option<String>,
+    code_pattern: Option<String>,
+    action_kind: String,
+    workflow_ref: Option<Uuid>,
+    set_field_attribute: Option<String>,
+    set_field_value: Option<String>,
+}
+
+/// Whether a scanned value fits the action's code pattern (a full-match
+/// regular expression); no pattern accepts every value. Pure.
+pub fn fits_pattern(value: &str, pattern: Option<&str>) -> Result<bool, AppError> {
+    match pattern.map(str::trim).filter(|p| !p.is_empty()) {
+        None => Ok(true),
+        Some(pattern) => attome_rules::full_match_regex(pattern)
+            .map(|re| re.is_match(value))
+            .map_err(|_| {
+                AppError::Validation("the scan action's code pattern is not valid".into())
+            }),
+    }
+}
+
+/// Whether the person lets scans record where they were (personal setting
+/// `scan.record_location`, off unless they turn it on).
+fn records_location(state: &EngineState, ctx: &SecurityContext) -> bool {
+    let settings = state.settings.load();
+    attome_core::setting_registry()
+        .get("scan.record_location")
+        .map(|d| settings.resolve(d, Some(ctx.user_id), None).0)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
+/// Runs a scan action (B16-T8): resolves the scanned record exactly as
+/// `scan/find` does, under the caller's permissions, then opens it, starts
+/// its workflow or sets its field (through the entity engine, at the
+/// record's current version), with one business event in the same
+/// transaction as the change.
+pub async fn act(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    body: &ScanActBody,
+) -> Result<(axum::http::StatusCode, ScanActResult), AppError> {
+    let action: ScanActionRow = sqlx::query_as(
+        "SELECT entity_logicalname, match_attribute, code_pattern, action_kind::text AS action_kind, \
+                workflow_ref, set_field_attribute, set_field_value \
+           FROM scan_action \
+          WHERE id = $1 AND (is_active IS NULL OR is_active = TRUE) AND coalesce(enabled, true)",
+    )
+    .bind(body.scan_action_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?
+    .ok_or(AppError::NotFound)?;
+    let value = check_scan_value(&body.value)?;
+    if !fits_pattern(value, action.code_pattern.as_deref())? {
+        return Err(AppError::Validation(
+            "value: this code is not one this scan action takes".into(),
+        ));
+    }
+    let mut hits = find_scanned(state, ctx, value, Some(&action.entity_logicalname)).await?;
+    if let Some(attribute) = action.match_attribute.as_deref().filter(|a| !a.is_empty()) {
+        hits.retain(|hit| hit.attribute == attribute);
+    }
+    let kind = action.action_kind.clone();
+    match hits.len() {
+        0 => return Err(AppError::NotFound),
+        1 => {}
+        _ => {
+            return Ok((
+                axum::http::StatusCode::CONFLICT,
+                ScanActResult {
+                    status: "ambiguous".into(),
+                    action_kind: kind,
+                    record: None,
+                    workflow_instance_id: None,
+                    hits,
+                },
+            ));
+        }
+    }
+    let hit = hits.remove(0);
+    let location = body
+        .location
+        .filter(|_| records_location(state, ctx))
+        .map(|l| format!(" at {:.5},{:.5}", l.lat, l.lng))
+        .unwrap_or_default();
+    let comment = format!(
+        "scan action {} ({kind}) on {} {}{location}",
+        body.scan_action_id, hit.entity, hit.id
+    );
+
+    // A workflow starts through the starter's own transaction, before ours.
+    let mut workflow_instance_id = None;
+    if kind == "run_workflow" {
+        ctx.require(&hit.entity, "update")?;
+        let definition: String = sqlx::query_scalar(
+            "SELECT logicalname FROM workflow_definition               WHERE id = $1 AND is_active = TRUE AND is_deleted = FALSE",
+        )
+        .bind(action.workflow_ref)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(attome_db::classify)?
+        .ok_or_else(|| AppError::Validation("the scan action names no active workflow".into()))?;
+        let starter = state.workflow_starter.as_ref().ok_or(AppError::NotFound)?;
+        workflow_instance_id = Some(
+            starter
+                .start(
+                    state,
+                    attome_core::workflow_start::WorkflowStartRequest {
+                        definition_logicalname: definition,
+                        started_by: ctx.user_id,
+                        correlation_entity_id: Some(hit.id),
+                        context: serde_json::json!({
+                            "entity": hit.entity,
+                            "record_id": hit.id,
+                            "scanned": value,
+                        }),
+                    },
+                )
+                .await?,
+        );
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    match kind.as_str() {
+        "open" | "run_workflow" => {}
+        "set_field" => {
+            ctx.require(&hit.entity, "update")?;
+            let attribute = action
+                .set_field_attribute
+                .as_deref()
+                .filter(|a| !a.is_empty())
+                .ok_or_else(|| {
+                    AppError::Validation("the scan action names no field to set".into())
+                })?;
+            let (entity_id, entity_name, attrs, _) =
+                super::resolve::resolve_entity(state, &hit.entity).await?;
+            let row_version: i64 = sqlx::query_scalar(&attome_db::tag_dynamic(
+                "entity.scan",
+                &format!(
+                    "SELECT row_version FROM {} WHERE id = $1",
+                    quote_ident(&entity_name)
+                ),
+            ))
+            .bind(hit.id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(attome_db::classify)?;
+            let mut patch = serde_json::Map::new();
+            patch.insert(
+                attribute.to_owned(),
+                serde_json::Value::String(action.set_field_value.clone().unwrap_or_default()),
+            );
+            crate::entity_mutation::update_one(
+                &mut tx,
+                state,
+                ctx,
+                &entity_name,
+                entity_id,
+                hit.id,
+                &attrs,
+                &patch,
+                ctx.user_id,
+                row_version,
+                crate::entity_mutation::MutationMode::Strict,
+            )
+            .await?;
+        }
+        other => {
+            return Err(AppError::Validation(format!(
+                "scan actions of kind {other} are not run here"
+            )));
+        }
+    }
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::BusinessEvent::new(
+            &hit.entity,
+            hit.id,
+            attome_audit::AuditOperation::Update,
+            "scan.act",
+            ctx.user_id,
+        )
+        .comment(comment),
+    )
+    .await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok((
+        axum::http::StatusCode::OK,
+        ScanActResult {
+            status: "done".into(),
+            action_kind: kind,
+            record: Some(hit),
+            workflow_instance_id,
+            hits: Vec::new(),
+        },
+    ))
+}
+
+/// B16-T8: runs the scan action bound to a scanned code.
+///
+/// Resolves the record as `scan/find` does: none is 404, more than one is
+/// 409 listing them. Then opens it, starts the action's workflow, or sets the
+/// action's field at the record's current version, with one business event.
+/// An `Idempotency-Key` makes a double scan run once.
+#[utoipa::path(
+    post,
+    path = "/api/v1/scan/act",
+    tag = "entity",
+    request_body = ScanActBody,
+    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Done", body = ScanActResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not change the record", body = ErrorResponse),
+        (status = 404, description = "Scanning is off, no such action, or no record holds the code", body = ErrorResponse),
+        (status = 409, description = "More than one record holds the code", body = ScanActResult),
+        (status = 422, description = "Empty, overlong or non-matching value, or a misconfigured action", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn scan_act(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Json(body): Json<ScanActBody>,
+) -> Result<(axum::http::StatusCode, Json<ScanActResult>), AppError> {
+    if !state.feature_flags().is_on("scan.enabled", &ctx).await {
+        return Err(AppError::NotFound);
+    }
+    let (status, result) = act(&state, &ctx, &body).await?;
+    Ok((status, Json(result)))
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(scan_find))]
+#[openapi(paths(scan_find, scan_act))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -323,5 +592,25 @@ mod tests {
         assert!(is_number("12.5"));
         assert!(!is_number("ABC-1"));
         assert!(!is_number("NaN"));
+    }
+}
+
+#[cfg(test)]
+mod scan_act_tests {
+    use super::*;
+
+    #[test]
+    fn scan_act_codes_must_fit_the_actions_pattern() {
+        assert_eq!(fits_pattern("ABC-123", None).ok(), Some(true));
+        assert_eq!(fits_pattern("ABC-123", Some("  ")).ok(), Some(true));
+        assert_eq!(
+            fits_pattern("ABC-123", Some("[A-Z]{3}-[0-9]{3}")).ok(),
+            Some(true)
+        );
+        assert_eq!(
+            fits_pattern("ABC-1234", Some("[A-Z]{3}-[0-9]{3}")).ok(),
+            Some(false)
+        );
+        assert!(fits_pattern("x", Some("(")).is_err());
     }
 }

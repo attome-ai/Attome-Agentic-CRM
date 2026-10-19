@@ -245,6 +245,10 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          full boot) does not — this DB-focused harness has no equivalent seed",
     ),
     (
+        "POST /api/v1/scan/act",
+        "scan_action is a seeded platform-bundle entity boot.rs provisions, which this          DB-focused harness does not (same gap as convert-to-ticket), and the route is          hidden while the scan.enabled flag is off",
+    ),
+    (
         "POST /api/v1/consents/confirm",
         "a form post carrying a token that only a double opt-in email holds (the \
          token is stored hashed); the confirmation's consent event and security \

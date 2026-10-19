@@ -191,6 +191,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/tags/suggest", get(tags::suggest_tags))
         .route("/api/v1/scan/find", get(scan::scan_find))
+        .route("/api/v1/scan/act", axum::routing::post(scan::scan_act))
         .route(
             "/api/v1/admin/tags/{tag_id}/merge",
             axum::routing::post(tags::merge_tag_route),

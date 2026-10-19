@@ -456,6 +456,15 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             || json!("UTC"),
         ),
         SettingDescriptor::new(
+            "scan.record_location",
+            "Whether a scan action records where the device was, when the \
+             device sends it (B16-T8). Off: the location is dropped.",
+            || json!({"type": "boolean"}),
+            PERSONAL,
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
             "core.calendar",
             "Calendar dates are shown in: gregorian, hijri (Umm al-Qura), or \
              both. A date attribute's own display_calendar option wins.",
