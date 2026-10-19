@@ -919,7 +919,7 @@ pub(crate) async fn post_message(
     path = "/api/v1/chat/channels/{id}/messages/{message_id}",
     tag = "chat",
     params(("id" = Uuid, Path), ("message_id" = Uuid, Path)),
-    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Deleted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -968,7 +968,7 @@ pub(crate) async fn delete_message(
         event(
             "chat_message",
             message,
-            AuditOperation::Delete,
+            AuditOperation::SoftDelete,
             "chat.message_deleted",
             ctx.user_id,
         )
