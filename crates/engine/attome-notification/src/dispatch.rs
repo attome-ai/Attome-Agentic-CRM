@@ -574,13 +574,25 @@ pub async fn create_dispatch_in_tx(
                     // a restricted person may have stopped.
                     let consent_ok = match &consent_purpose_key {
                         Some(purpose_key) => {
-                            crate::consent_gate::has_active_consent(
+                            // E27-T2: the E27 ledger decides first; the M24
+                            // row counts only where the ledger knows nothing.
+                            let ledger = attome_core::consent_rules::gate(
+                                &mut **tx,
+                                ("user_account", user_id),
+                                None,
+                                purpose_key,
+                                "email",
+                                None,
+                            )
+                            .await?;
+                            let legacy = crate::consent_gate::has_active_consent(
                                 &mut **tx,
                                 "user_account",
                                 &user_id.to_string(),
                                 purpose_key,
                             )
-                            .await?
+                            .await?;
+                            crate::consent_gate::email_allowed(ledger, legacy)
                                 && !attome_core::processing_restriction::record_is_restricted(
                                     &mut **tx,
                                     "user_account",

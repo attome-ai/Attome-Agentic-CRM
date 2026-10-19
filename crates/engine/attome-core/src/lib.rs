@@ -76,6 +76,8 @@ pub mod change_log;
 /// operation catalogue, `Recording`/`RecordingCtx`, and the changeset store.
 pub mod changeset;
 pub mod chart_view_metadata;
+/// E27-T2: the marketing consent rule, shared by every sender.
+pub mod consent_rules;
 /// ARCH-1a-i — generic metadata-driven record insert, moved here from
 /// `attome-metadata`. Its only XRM dependency was ever `quote_ident`, and its own
 /// header always described it as cross-crate ("callable from other crates

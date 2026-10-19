@@ -19,8 +19,23 @@
 //! here for one SELECT would be the wrong-shaped boundary (guidelines §1:
 //! don't create one to avoid a few related lines).
 
+use attome_core::consent_rules::Decision;
 use attome_types::AppError;
 use sqlx::PgExecutor;
+
+/// E27-T2: whether a marketing email may go, from the E27 ledger's decision
+/// for the recipient and the older M24 consent row. The ledger decides
+/// whenever it holds anything: a grant sends, and a withdrawal or an
+/// account-wide opt-out stops it. Only a recipient the ledger knows
+/// nothing about falls back to the M24 row, and with neither the email is
+/// not sent (fails closed). Pure.
+pub fn email_allowed(ledger: Decision, legacy_granted: bool) -> bool {
+    match ledger {
+        Decision::Allowed | Decision::Bypassed => true,
+        Decision::NoConsent => legacy_granted,
+        Decision::Withdrawn | Decision::AccountOptOut => false,
+    }
+}
 
 /// True iff the most recent `audit_consent` row for
 /// `(regarding_entity, regarding_id, purpose_key)` has `status = 'granted'`.
@@ -58,4 +73,28 @@ where
     .map_err(AppError::internal)?;
 
     Ok(status.as_deref() == Some("granted"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn consent_gate_sends_only_with_consent_and_never_after_a_withdrawal() {
+        assert!(email_allowed(Decision::Allowed, false));
+        assert!(email_allowed(Decision::Bypassed, false));
+        assert!(
+            email_allowed(Decision::NoConsent, true),
+            "an older M24 grant still counts"
+        );
+        assert!(
+            !email_allowed(Decision::NoConsent, false),
+            "nothing at all fails closed"
+        );
+        assert!(
+            !email_allowed(Decision::Withdrawn, true),
+            "a ledger withdrawal wins"
+        );
+        assert!(!email_allowed(Decision::AccountOptOut, true));
+    }
 }
