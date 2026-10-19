@@ -25,6 +25,8 @@ mod field_security;
 mod grants;
 mod identity_links;
 mod invitations;
+/// B17-T4: device registration, status and remote wipe.
+mod devices;
 mod mfa;
 mod mfa_coverage;
 mod organizations;
@@ -74,6 +76,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         teams::openapi_fragment(),
         shares::openapi_fragment(),
         field_security::openapi_fragment(),
+        devices::openapi_fragment(),
         mfa::openapi_fragment(),
         mfa_coverage::openapi_fragment(),
         account_state::openapi_fragment(),
@@ -104,6 +107,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(teams::routes())
         .merge(shares::routes())
         .merge(field_security::routes())
+        .merge(devices::routes())
         .merge(mfa::routes())
         .merge(mfa_coverage::routes())
         .merge(account_state::routes())

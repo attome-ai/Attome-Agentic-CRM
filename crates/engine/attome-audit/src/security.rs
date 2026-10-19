@@ -269,6 +269,11 @@ impl SecurityEvent {
         self.record_id = Some(record_id);
     }
 
+    /// For a comment that depends on what the mutation found.
+    pub fn set_comment(&mut self, comment: impl Into<String>) {
+        self.event_comment = Some(comment.into());
+    }
+
     pub fn set_event_name(&mut self, event_name: impl Into<String>) {
         self.event_name = Some(event_name.into());
     }

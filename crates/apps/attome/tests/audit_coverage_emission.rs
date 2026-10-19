@@ -2306,6 +2306,47 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             let (user, _) = enrolled_user(fx, "mfa-reset").await;
             request("POST", &format!("{S}/users/{user}/mfa/reset"), t, None)
         }
+        // ── devices (B17-T4) ────────────────────────────────────────────────
+        "POST /api/v1/devices" => request(
+            "POST",
+            "/api/v1/devices",
+            t,
+            Some(json!({"platform": "web", "app_kind": "pwa", "app_version": "1.0.0"})),
+        ),
+        "POST /api/v1/devices/me/{id}/wiped" => {
+            // The admin's own device with a wipe already pending (seeded, so
+            // the admin's sessions are not ended by a wipe request).
+            let device: Uuid = sqlx::query_scalar(
+                "INSERT INTO user_device (user_id, platform, app_kind, app_version, wipe_requested_at)                  VALUES ($1, 'ios', 'standard', '1.0.0', now()) RETURNING id",
+            )
+            .bind(fx.admin_id)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a device awaiting its wipe");
+            request(
+                "POST",
+                &format!("/api/v1/devices/me/{device}/wiped"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/devices/{id}/wipe" => {
+            // Another person's device, so the wipe ends their sessions only.
+            let (user, _) = seed_user(&fx.base, "device-owner").await;
+            let device: Uuid = sqlx::query_scalar(
+                "INSERT INTO user_device (user_id, platform, app_kind, app_version)                  VALUES ($1, 'android', 'standard', '1.0.0') RETURNING id",
+            )
+            .bind(user)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a device");
+            request(
+                "POST",
+                &format!("/api/v1/admin/devices/{device}/wipe"),
+                t,
+                None,
+            )
+        }
         // ── invitations, identity links ─────────────────────────────────────
         "POST /api/v1/admin/security/invitations" => request(
             "POST",
