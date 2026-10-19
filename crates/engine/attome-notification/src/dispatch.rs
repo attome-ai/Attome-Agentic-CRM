@@ -324,6 +324,82 @@ async fn load_template(
     ))
 }
 
+/// Every active `system.admin` holder (moved here from `attome-ai`'s
+/// quality monitor so engines below `attome-ai` can alert administrators) — direct grant or role-mediated
+/// (`user_account_mm_privilege` / `role_mm_privilege` joined
+/// through `user_account_mm_role`), same join shape
+/// `attome_security::db::resolve_privileges` uses per-user, inverted here to
+/// resolve every user holding one specific privilege. Team-mediated
+/// `system.admin` grants (via `role_mm_team`) are not swept — a
+/// best-effort audience for a best-effort alert, the same trade-off
+/// `attome_metric::metric::run_scheduled_snapshot_sweep`'s per-metric failure
+/// isolation documents for a comparable "one gap costs one data point, not
+/// the whole sweep" reason.
+pub async fn admin_recipients(db: &DbPool) -> Result<Vec<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "SELECT DISTINCT su.id \
+         FROM user_account su \
+         WHERE (su.is_active IS NULL OR su.is_active = true) \
+           AND ( \
+             EXISTS ( \
+               SELECT 1 FROM user_account_mm_privilege up \
+               JOIN privilege p ON p.id = up.privilege_ref \
+               WHERE up.user_ref = su.id AND up.is_active = true AND p.is_active = true \
+                 AND p.key = 'system.admin' \
+             ) \
+             OR EXISTS ( \
+               SELECT 1 FROM user_account_mm_role ur \
+               JOIN role_mm_privilege rp ON rp.role_ref = ur.role_ref \
+               JOIN privilege p ON p.id = rp.privilege_ref \
+               WHERE ur.user_ref = su.id AND ur.is_deleted = false AND rp.is_deleted = false \
+                 AND p.is_active = true AND p.key = 'system.admin' \
+             ) \
+           )",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Sends one alert to every administrator, best effort: a failure is logged
+/// and never fails the caller's job (the caller has already logged the fact).
+pub async fn alert_admins(
+    db: &DbPool,
+    notification_cfg: &attome_config::NotificationSection,
+    subject: String,
+    body: String,
+    route: &str,
+) {
+    let recipients = match admin_recipients(db).await {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!(error = %e, "ai alert: failed to resolve admin recipients");
+            return;
+        }
+    };
+    for user_id in recipients {
+        let req = DispatchRequest {
+            template_key: None,
+            locale: "en".to_string(),
+            recipient_user_ref: Some(user_id),
+            is_global: false,
+            organization_ref: None,
+            channels: None,
+            subject: Some(subject.clone()),
+            body_html: None,
+            body_text: Some(body.clone()),
+            route: Some(route.to_string()),
+            variables: HashMap::new(),
+            priority: "high".to_string(),
+            escalate_after_minutes: None,
+            escalate_channels: None,
+        };
+        if let Err(e) = create_dispatch(db, notification_cfg, req).await {
+            tracing::error!(error = %e, user_id = %user_id, "ai alert: dispatch failed for one recipient");
+        }
+    }
+}
+
 /// Persists a dispatch intent. Most channels are delivered later, off the
 /// request path (`process_claimed`, driven by `crate::poller`) -- the
 /// `email` channel on a direct dispatch is the one exception (M51 Phase 1),

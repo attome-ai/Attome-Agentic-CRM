@@ -181,6 +181,10 @@ enum ScanOutcome {
         audit_detail: String,
         keep_quarantine_object: bool,
     },
+    /// K2-T1: the scanner found malware. Rejected like any other refusal,
+    /// with the object kept under the quarantine prefix as evidence and
+    /// never promoted, and the uploader and administrators are told.
+    Infected { signature: String },
 }
 
 /// Rejection used both when `GetResult::meta.size` already reports an
@@ -359,17 +363,111 @@ async fn run_scan(
             actual_content_type: sniffed.unwrap_or_else(|| claimed.declared_content_type.clone()),
             actual_checksum_sha256: computed_checksum,
         }),
-        ClamOutcome::Result(ClamResult::Positive(signature)) => Ok(ScanOutcome::Rejected {
-            client_reason: "rejected",
-            audit_detail: format!("malware signature: {signature}"),
-            keep_quarantine_object: true,
-        }),
+        ClamOutcome::Result(ClamResult::Positive(signature)) => {
+            Ok(ScanOutcome::Infected { signature })
+        }
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum ClamResult {
     Clean,
     Positive(String),
+}
+
+/// clamd's INSTREAM answer: `stream: OK`, or `stream: <signature> FOUND`.
+/// Anything else (an `ERROR` line, a size-limit refusal, nothing) is an
+/// error, so the job retries and the file stays pending (fail closed).
+fn parse_clamd_response(raw: &str) -> Result<ClamResult, String> {
+    let response = raw.trim_end_matches('\0').trim();
+    if let Some(signature) = response
+        .strip_prefix("stream: ")
+        .and_then(|s| s.strip_suffix(" FOUND"))
+    {
+        Ok(ClamResult::Positive(signature.to_string()))
+    } else if response.ends_with("OK") && !response.contains("ERROR") {
+        Ok(ClamResult::Clean)
+    } else {
+        Err(format!("unexpected clamd response: {response}"))
+    }
+}
+
+/// K2-T1: what the uploader and the administrators are told when an upload
+/// held malware, as `(subject, body)`. The uploader's names the file and the
+/// record kind only; the administrators' also names the record, the field and
+/// the scanner's signature, so they can find it and judge the threat.
+fn infected_notices(
+    filename: &str,
+    entity: &str,
+    record_id: Uuid,
+    field: &str,
+    signature: &str,
+) -> ((String, String), (String, String)) {
+    let uploader = (
+        "A file you uploaded was blocked".to_owned(),
+        format!(
+            "The file \"{filename}\" you added to a {entity} record contained malware. \
+             It was quarantined and not saved. Check the device you uploaded it from."
+        ),
+    );
+    let admins = (
+        "Malware blocked in an upload".to_owned(),
+        format!(
+            "The virus scanner found {signature} in \"{filename}\", uploaded to the {field} \
+             field of {entity} record {record_id}. The file was quarantined and never served."
+        ),
+    );
+    (uploader, admins)
+}
+
+/// Sends the [`infected_notices`], best effort: the rejection and its audit
+/// event are already committed, so a failed notice is logged, not retried.
+/// A portal uploader has no staff inbox and is told through the upload's
+/// status (`rejected`) only.
+async fn notify_infected(state: &EngineState, claimed: &ClaimedSession, signature: &str) {
+    let ((user_subject, user_body), (admin_subject, admin_body)) = infected_notices(
+        &claimed.declared_filename,
+        &claimed.entity_logicalname,
+        claimed.record_id,
+        &claimed.field_logicalname,
+        signature,
+    );
+    let notification_cfg = &state.base.config.notification;
+    if let FileOwner::Staff(user_id) = claimed.owner {
+        let request = attome_notification::dispatch::DispatchRequest {
+            template_key: None,
+            locale: "en".to_owned(),
+            recipient_user_ref: Some(user_id),
+            is_global: false,
+            organization_ref: None,
+            channels: None,
+            subject: Some(user_subject),
+            body_html: None,
+            body_text: Some(user_body),
+            route: None,
+            variables: std::collections::HashMap::new(),
+            priority: "high".to_owned(),
+            escalate_after_minutes: None,
+            escalate_channels: None,
+        };
+        if let Err(error) = attome_notification::dispatch::create_dispatch(
+            &state.base.db,
+            notification_cfg,
+            request,
+        )
+        .await
+        {
+            tracing::warn!(%error, %user_id, "scan: the uploader was not told about blocked malware");
+        }
+    }
+    attome_notification::dispatch::alert_admins(
+        &state.base.db,
+        notification_cfg,
+        admin_subject,
+        admin_body,
+        "/xrm/admin/audit/search",
+    )
+    .await;
 }
 
 enum ClamOutcome {
@@ -476,22 +574,9 @@ async fn clamav_instream_scan(
             .await
             .map_err(AppError::internal)?;
         let response = String::from_utf8_lossy(&response);
-        let response = response.trim_end_matches('\0').trim();
-
-        if let Some(signature) = response
-            .strip_prefix("stream: ")
-            .and_then(|s| s.strip_suffix(" FOUND"))
-        {
-            Ok(ClamOutcome::Result(ClamResult::Positive(
-                signature.to_string(),
-            )))
-        } else if response.ends_with("OK") {
-            Ok(ClamOutcome::Result(ClamResult::Clean))
-        } else {
-            Err(AppError::internal(format!(
-                "unexpected clamd response: {response}"
-            )))
-        }
+        parse_clamd_response(&response)
+            .map(ClamOutcome::Result)
+            .map_err(AppError::internal)
     })
     .await
     .map_err(|_| AppError::internal("clamd scan timed out"))?
@@ -756,6 +841,25 @@ pub async fn process(state: &EngineState, session_id: Uuid) -> Result<(), AppErr
             )
             .await?;
         }
+        ScanOutcome::Infected { signature } => {
+            reject_session(
+                state,
+                session_id,
+                &claimed,
+                &quarantine_path,
+                "rejected",
+                &format!("malware signature: {signature}"),
+                true,
+            )
+            .await?;
+            tracing::warn!(
+                %session_id,
+                entity = %claimed.entity_logicalname,
+                record_id = %claimed.record_id,
+                "scan: malware found; the upload is quarantined"
+            );
+            notify_infected(state, &claimed, &signature).await;
+        }
     }
     Ok(())
 }
@@ -910,6 +1014,47 @@ async fn reject_scan_deadline_sessions(state: &EngineState) -> Result<(), AppErr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// K2-T1: the EICAR test file's clamd answer is malware, a clean answer is
+    /// clean, and anything else keeps the file pending (the job retries).
+    #[test]
+    fn scan_hold_reads_clamd_answers_and_fails_closed() {
+        assert_eq!(
+            parse_clamd_response("stream: Eicar-Test-Signature FOUND\0"),
+            Ok(ClamResult::Positive("Eicar-Test-Signature".to_owned()))
+        );
+        assert_eq!(
+            parse_clamd_response("stream: Win.Test.EICAR_HDB-1 FOUND\n"),
+            Ok(ClamResult::Positive("Win.Test.EICAR_HDB-1".to_owned()))
+        );
+        assert_eq!(parse_clamd_response("stream: OK\0"), Ok(ClamResult::Clean));
+        for refused in [
+            "",
+            "INSTREAM size limit exceeded. ERROR",
+            "stream: lstat() failed: No such file. ERROR",
+            "UNKNOWN COMMAND",
+        ] {
+            assert!(parse_clamd_response(refused).is_err(), "{refused:?}");
+        }
+    }
+
+    #[test]
+    fn scan_hold_notices_tell_the_uploader_less_than_the_administrators() {
+        let record = Uuid::nil();
+        let ((user_subject, user_body), (admin_subject, admin_body)) = infected_notices(
+            "invoice.pdf",
+            "account",
+            record,
+            "contract_file",
+            "Eicar-Test-Signature",
+        );
+        assert!(!user_subject.is_empty() && !admin_subject.is_empty());
+        assert!(user_body.contains("invoice.pdf"), "{user_body}");
+        assert!(!user_body.contains("Eicar"), "{user_body}");
+        assert!(admin_body.contains("Eicar-Test-Signature"), "{admin_body}");
+        assert!(admin_body.contains(&record.to_string()), "{admin_body}");
+        assert!(admin_body.contains("contract_file"), "{admin_body}");
+    }
 
     #[test]
     fn sha256_of_known_bytes_matches_expected_hex() {

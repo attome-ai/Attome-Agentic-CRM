@@ -29,7 +29,6 @@ use attome_db::DbPool;
 use attome_notification::dispatch::{DispatchRequest, create_dispatch};
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 /// A group needs at least this many DECIDED (non-pending) suggestions in
 /// BOTH the current and prior period before a drift is trusted — a group
@@ -130,42 +129,6 @@ async fn fetch_group_outcomes(
     .map_err(AppError::internal)
 }
 
-/// Every active `system.admin` holder — direct grant or role-mediated
-/// (`user_account_mm_privilege` / `role_mm_privilege` joined
-/// through `user_account_mm_role`), same join shape
-/// `attome_security::db::resolve_privileges` uses per-user, inverted here to
-/// resolve every user holding one specific privilege. Team-mediated
-/// `system.admin` grants (via `role_mm_team`) are not swept — a
-/// best-effort audience for a best-effort alert, the same trade-off
-/// `attome_metric::metric::run_scheduled_snapshot_sweep`'s per-metric failure
-/// isolation documents for a comparable "one gap costs one data point, not
-/// the whole sweep" reason.
-async fn admin_recipients(db: &DbPool) -> Result<Vec<Uuid>, AppError> {
-    sqlx::query_scalar(
-        "SELECT DISTINCT su.id \
-         FROM user_account su \
-         WHERE (su.is_active IS NULL OR su.is_active = true) \
-           AND ( \
-             EXISTS ( \
-               SELECT 1 FROM user_account_mm_privilege up \
-               JOIN privilege p ON p.id = up.privilege_ref \
-               WHERE up.user_ref = su.id AND up.is_active = true AND p.is_active = true \
-                 AND p.key = 'system.admin' \
-             ) \
-             OR EXISTS ( \
-               SELECT 1 FROM user_account_mm_role ur \
-               JOIN role_mm_privilege rp ON rp.role_ref = ur.role_ref \
-               JOIN privilege p ON p.id = rp.privilege_ref \
-               WHERE ur.user_ref = su.id AND ur.is_deleted = false AND rp.is_deleted = false \
-                 AND p.is_active = true AND p.key = 'system.admin' \
-             ) \
-           )",
-    )
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)
-}
-
 /// Best-effort: a dispatch failure for one admin (or the whole recipient
 /// resolution) is logged and never fails the sweep — the drop is already
 /// logged at `warn` by [`run`] regardless of whether the notification
@@ -176,7 +139,7 @@ async fn alert_significant_drop(
     notification_cfg: &NotificationSection,
     group: &GroupOutcome,
 ) {
-    let recipients = match admin_recipients(db).await {
+    let recipients = match attome_notification::dispatch::admin_recipients(db).await {
         Ok(r) => r,
         Err(e) => {
             tracing::error!(
@@ -231,44 +194,9 @@ async fn alert_significant_drop(
     }
 }
 
-/// Sends one alert to every administrator, best effort: a failure is logged
-/// and never fails the caller's job (the caller has already logged the fact).
-pub async fn alert_admins(
-    db: &DbPool,
-    notification_cfg: &NotificationSection,
-    subject: String,
-    body: String,
-    route: &str,
-) {
-    let recipients = match admin_recipients(db).await {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!(error = %e, "ai alert: failed to resolve admin recipients");
-            return;
-        }
-    };
-    for user_id in recipients {
-        let req = DispatchRequest {
-            template_key: None,
-            locale: "en".to_string(),
-            recipient_user_ref: Some(user_id),
-            is_global: false,
-            organization_ref: None,
-            channels: None,
-            subject: Some(subject.clone()),
-            body_html: None,
-            body_text: Some(body.clone()),
-            route: Some(route.to_string()),
-            variables: HashMap::new(),
-            priority: "high".to_string(),
-            escalate_after_minutes: None,
-            escalate_channels: None,
-        };
-        if let Err(e) = create_dispatch(db, notification_cfg, req).await {
-            tracing::error!(error = %e, user_id = %user_id, "ai alert: dispatch failed for one recipient");
-        }
-    }
-}
+/// Sends one alert to every administrator, best effort (now in
+/// `attome_notification::dispatch`; kept here for existing callers).
+pub use attome_notification::dispatch::alert_admins;
 
 pub struct QualityMonitorSummary {
     pub groups_checked: usize,

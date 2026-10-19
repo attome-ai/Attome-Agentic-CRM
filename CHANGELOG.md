@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Malware in an upload (K2-T1): when the virus scanner finds malware, the uploader (a staff user) is
+  told their file was blocked and every administrator gets the file, record, field and signature;
+  the file stays quarantined and is never served, as before. An unclear scanner answer keeps the
+  file pending. `attome_notification::dispatch::alert_admins` now holds the administrator alert
+  that `attome-ai` used.
 - `attome secrets` (Z1-T9): `generate --env-file <path>` fills the secrets an install issues itself
   (encryption keys, peppers, role passwords) that are missing from an env file, never a provider's
   credential and never an existing value; `rotate <VAR>` turns a key-ring secret into
