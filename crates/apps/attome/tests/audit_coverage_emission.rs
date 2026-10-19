@@ -245,6 +245,12 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          full boot) does not — this DB-focused harness has no equivalent seed",
     ),
     (
+        "POST /api/v1/consents/confirm",
+        "a form post carrying a token that only a double opt-in email holds (the \
+         token is stored hashed); the confirmation's consent event and security \
+         event are written by the same code path as the capture's",
+    ),
+    (
         "POST /api/v1/service-orders/items/{id}/cancel",
         "service_request_item is a seeded platform-bundle entity this DB-focused harness \
          does not provision (same gap as convert-to-ticket)",

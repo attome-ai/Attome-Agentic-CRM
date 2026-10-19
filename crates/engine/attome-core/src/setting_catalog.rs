@@ -383,6 +383,26 @@ fn core_settings() -> Vec<SettingDescriptor> {
             || json!(""),
         ),
         SettingDescriptor::new(
+            "compliance.double_opt_in_countries",
+            "Countries (ISO 3166 alpha-2 codes) where a marketing consent \
+             captured from a public form counts only once the person confirms \
+             it from an email (E27-T3). A form that names no country uses \
+             core.country. Empty: consent counts when given.",
+            || json!({"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z]{2}$"}, "maxItems": 250}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
+        SettingDescriptor::new(
+            "compliance.consent_expiry_days",
+            "Days a marketing consent lasts before it lapses and must be given \
+             again (E27-T3); 0 means it does not lapse.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 3650}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
             "compliance.dsr_response_days",
             "Days a data-subject request (access, erasure, restriction, \
              rectification and the rest) must be answered within, counted from \

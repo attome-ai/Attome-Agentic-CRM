@@ -811,6 +811,11 @@ async fn dispatch_platform_job(
             let proposed =
                 attome_compliance::retention::propose_retention_actions(&attome_state).await?;
             tracing::info!(proposed, "retention propose: sweep complete");
+            // E27-T3: consent older than compliance.consent_expiry_days lapses.
+            let lapsed = attome_compliance::double_opt_in::expire_grants(&attome_state).await?;
+            if lapsed > 0 {
+                tracing::info!(lapsed, "consent expiry: grants withdrawn");
+            }
         }
         EngineJob::ExecuteRetentionAction { action_id } => {
             attome_compliance::retention::execute_action(&attome_state, action_id).await?;

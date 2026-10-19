@@ -45,6 +45,7 @@ pub mod config_starts;
 pub mod consent;
 pub mod consent_admin;
 pub mod consent_seed;
+pub mod double_opt_in;
 pub mod dsr_admin;
 /// R1-T1: restriction and rectification requests.
 pub mod dsr_restriction;

@@ -97,6 +97,10 @@ fn require_non_empty(field: &str, value: &str) -> Result<(), AppError> {
 struct ConsentRow {
     id: Uuid,
     status: String,
+    /// E27-T3: what became of a captured grant in the consent ledger, when
+    /// the form named a contact, lead or account.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ledger: Option<crate::double_opt_in::CaptureOutcome>,
 }
 
 // ── Withdraw ─────────────────────────────────────────────────────────────
@@ -204,6 +208,7 @@ async fn withdraw_consent(
         Json(ConsentRow {
             id: row.0,
             status: row.1,
+            ledger: None,
         }),
     ))
 }
@@ -217,6 +222,13 @@ struct CaptureConsentBody {
     regarding_entity: Option<String>,
     regarding_id: Option<String>,
     evidence: Option<String>,
+    /// E27-T3: the person's country (ISO code), for the double opt-in
+    /// rule; the deployment's own country when unset.
+    #[serde(default)]
+    country: Option<String>,
+    /// E27-T3: the channel consented to; `email` when unset.
+    #[serde(default)]
+    channel: Option<String>,
 }
 
 /// `POST /api/v1/consents/capture` — the platform's public, anonymous
@@ -281,8 +293,35 @@ async fn capture_consent(
     .await
     .map_err(AppError::internal)?;
 
-    // E27-T1: an anonymous form's grant is not trusted for sending: it
-    // reaches the consent ledger only once confirmed (double opt-in, E27-T3).
+    // E27-T3: a form naming a contact, lead or account puts the grant in
+    // the consent ledger, or asks the person to confirm it first where their
+    // country requires double opt-in.
+    let regarding_id = body
+        .regarding_id
+        .as_deref()
+        .and_then(|id| Uuid::parse_str(id.trim()).ok());
+    let ledger = match (body.regarding_entity.as_deref(), regarding_id) {
+        (Some(entity), Some(subject_id))
+            if crate::preference_centre::SUBJECTS.contains(&entity) =>
+        {
+            Some(
+                crate::double_opt_in::capture_grant(
+                    &state,
+                    &mut tx,
+                    &crate::double_opt_in::CapturedGrant {
+                        subject_entity: entity.to_owned(),
+                        subject_id,
+                        purpose_key: body.purpose_key.trim().to_owned(),
+                        channel: body.channel.clone().unwrap_or_else(|| "email".to_owned()),
+                        email: Some(subject_reference.to_owned()),
+                        country: body.country.clone(),
+                    },
+                )
+                .await?,
+            )
+        }
+        _ => None,
+    };
 
     // No authenticated actor: this is the one genuinely public, anonymous
     // route in this crate (see module doc). `Uuid::nil()` per D-541 rule 6,
@@ -307,6 +346,7 @@ async fn capture_consent(
         Json(ConsentRow {
             id: row.0,
             status: row.1,
+            ledger,
         }),
     ))
 }
@@ -330,6 +370,8 @@ pub fn public_routes() -> Router<EngineState> {
         .route("/api/v1/consents/capture", post(capture_consent))
         // E26-T1: the preference page, through its signed link.
         .merge(crate::preference_centre::public_routes())
+        // E27-T3: confirming a double opt-in.
+        .merge(crate::double_opt_in::public_routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -344,5 +386,6 @@ struct ApiDocFragment;
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::preference_centre::openapi_fragment());
+    doc.merge(crate::double_opt_in::openapi_fragment());
     doc
 }

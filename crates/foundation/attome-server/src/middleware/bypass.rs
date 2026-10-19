@@ -86,6 +86,8 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/consents/capture",
     // E26-T1: the preference page; its signed link is the authority.
     "/api/v1/consents/preferences",
+    // E27-T3: the double opt-in confirmation; its emailed token is the authority.
+    "/api/v1/consents/confirm",
     // Omnichannel web chat widget (M53 Phase 1, D-474): public, anonymous
     // message-send and reply-poll routes. Same "own manual license check,
     // uniform response regardless of the reason for a miss" discipline as
@@ -350,6 +352,7 @@ mod tests {
         assert!(is_bypass("/api/v1/consents/capture"));
         assert!(is_csrf_exempt("/api/v1/consents/capture"));
         assert!(is_bypass("/api/v1/consents/preferences"));
+        assert!(is_bypass("/api/v1/consents/confirm"));
         assert!(!is_bypass("/api/v1/consents/preference-links"));
         // Regression guard: the public capture route must never accidentally
         // sweep the authenticated withdraw endpoint or the generic

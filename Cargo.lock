@@ -707,6 +707,8 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-document",
+ "attome-email",
+ "attome-html",
  "attome-jobs",
  "attome-metadata",
  "attome-modules",
