@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- `attome secrets` (Z1-T9): `generate --env-file <path>` fills the secrets an install issues itself
+  (encryption keys, peppers, role passwords) that are missing from an env file, never a provider's
+  credential and never an existing value; `rotate <VAR>` turns a key-ring secret into
+  `ring:<new>=…;<old>=…` after a `.bak` copy, so the old key stays readable; `rewrap <domain>`
+  starts the rewrap through the API. No subcommand prints a secret.
 - The `secrets.list` agent action (Z1-T13, administrators): each configured secret's name, the
   features that use it, whether it is set and its active key's age in days. Never a value or key id.
 - Rejection counts (Z5-T11): every protective layer counts its refusals in

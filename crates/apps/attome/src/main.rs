@@ -41,6 +41,9 @@ Usage:
   attome restore <archive|latest> --yes
                                 Put the database back to a backup (stop the server
                                 first; the current database is backed up before)
+  attome secrets generate|rotate <VAR> --env-file <path> | rewrap <domain>
+                                Fill the secrets an install generates, rotate a
+                                key ring (old key kept readable), start a rewrap
   attome status [--url <url>]...
                                 Each node's version, schema, and whether it has
                                 started and is ready
@@ -135,6 +138,10 @@ fn main() -> ExitCode {
         ["backup", "drill"] => attome::backup::run_drill_now(),
         ["restore", rest @ ..] => {
             attome::backup::run_restore(rest.iter().map(|arg| (*arg).to_owned()).collect())
+        }
+        ["secrets", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::secrets::run(&rest)
         }
         ["status", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
