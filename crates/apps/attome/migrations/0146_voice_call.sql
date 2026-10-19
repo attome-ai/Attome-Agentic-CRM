@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS voice_call (
     ended_at timestamptz,
     duration_seconds integer,
     recording_url text,
+    -- J6-T3: the recording as a document on the call, its upload session,
+    -- and whether it is attached (or was refused by the scan).
+    recording_document_id uuid,
+    recording_session_id uuid,
+    recording_attached boolean NOT NULL DEFAULT false,
     activity_done boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),

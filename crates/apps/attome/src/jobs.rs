@@ -2620,6 +2620,10 @@ pub const SECRET_AGE_REMINDER: attome_jobs::JobType =
 /// registered type, like the reminder above.
 pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calendar_sync", 1);
 
+/// J6-T3: a call's recording to a document on the call, then to
+/// transcription (payload `{"call_id"}`).
+pub const VOICE_RECORDING: attome_jobs::JobType = attome_jobs::JobType::new("voice_recording", 1);
+
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
     attome_jobs::JobType::new("social_reviews_sync", 1);
@@ -2637,6 +2641,22 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            VOICE_RECORDING,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                #[derive(serde::Deserialize)]
+                struct Payload {
+                    call_id: uuid::Uuid,
+                }
+                let payload: Payload = job.payload()?;
+                crate::voice::attach_recording(&state, payload.call_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");

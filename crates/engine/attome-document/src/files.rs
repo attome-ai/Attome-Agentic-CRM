@@ -96,6 +96,12 @@ pub const ALLOWED_CONTENT_TYPES: &[&str] = &[
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    // N22-T2/J6-T3: call recordings and voice notes, as the scan's sniff
+    // names them (MP3, WAV, Ogg, M4A).
+    "audio/mpeg",
+    "audio/x-wav",
+    "audio/ogg",
+    "audio/m4a",
 ];
 
 /// Content types whose bytes carry no reliable magic signature, so the scan
@@ -923,6 +929,63 @@ fn not_yours(caller: FileOwner) -> AppError {
 /// and moves the session to `uploaded` (enqueuing the scan) or `rejected`.
 /// Only the session's own owner may finalize it. One path for the staff and
 /// the portal route (D-774); the caller has authorized the record and field.
+/// J6-T3: files the server itself fetched (a call recording) go through the
+/// same pipeline as a person's upload: a session for `field_name` of the
+/// record, the bytes into its quarantine key, then finalize, which queues the
+/// virus scan. Nothing is attached here: the scan promotes the file, and the
+/// caller sets the field once the session is clean. Answers the session id.
+#[allow(clippy::too_many_arguments)]
+pub async fn ingest(
+    state: &EngineState,
+    owner: FileOwner,
+    entity_name: &str,
+    record_id: Uuid,
+    field_name: &str,
+    filename: &str,
+    content_type: &str,
+    bytes: Vec<u8>,
+) -> Result<Uuid, AppError> {
+    let size = i64::try_from(bytes.len())
+        .map_err(|_| AppError::Validation("the file is too large".into()))?;
+    let session = start_upload(
+        state,
+        owner,
+        entity_name,
+        record_id,
+        field_name,
+        UploadSessionRequest {
+            filename: filename.to_owned(),
+            content_type: content_type.to_owned(),
+            declared_size_bytes: size,
+            checksum_sha256: None,
+        },
+    )
+    .await?;
+    let key: String = sqlx::query_scalar("SELECT quarantine_key FROM upload_session WHERE id = $1")
+        .bind(session.session_id)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    let path = ObjectPath::parse(&key).map_err(AppError::internal)?;
+    state
+        .base
+        .storage
+        .store()
+        .put(&path, bytes.into())
+        .await
+        .map_err(AppError::internal)?;
+    finalize_upload(
+        state,
+        owner,
+        entity_name,
+        record_id,
+        field_name,
+        session.session_id,
+    )
+    .await?;
+    Ok(session.session_id)
+}
+
 pub async fn finalize_upload(
     state: &EngineState,
     owner: FileOwner,

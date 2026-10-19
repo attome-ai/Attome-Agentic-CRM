@@ -124,6 +124,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Call recordings and outcomes (J6-T3): when a call ends, whoever placed it is asked for its
+  outcome in the app. Its recording is fetched from the provider (only from Twilio's API host or the
+  PBX's own address), stored as a document on the call through the upload pipeline and virus scan,
+  and sent to transcription (the `voice_recording` job). Uploads now accept audio: MP3, WAV, Ogg and
+  M4A.
 - Calls (J6-T1): with a Twilio Voice or Asterisk voice system, `POST /api/v1/voice/calls` rings the
   caller's own phone (personal setting `voice.agent_number`) and then the customer, logging a phone
   call on the record. Calls to the Twilio number or reported by the PBX open a phone call on the

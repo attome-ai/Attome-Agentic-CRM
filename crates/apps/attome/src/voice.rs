@@ -19,6 +19,13 @@
 //! harm; when the call ends the activity is completed once, with the
 //! duration, and the recording link is added when it is ready. Every
 //! activity change goes through the generic mutation path.
+//!
+//! **After the call** (J6-T3) the person who placed it is asked for its
+//! outcome (an in-app notification that opens the record). The recording is
+//! fetched from the provider (its own host only), stored as a document on
+//! the call through the upload pipeline (so the virus scan runs), attached
+//! once the scan passes, and sent to N22 transcription: the
+//! `voice_recording` job, retried until the scan has finished.
 
 use attome_auth::signed_link;
 use attome_core::EngineState;
@@ -221,9 +228,25 @@ async fn apply_event(
     .map_err(AppError::internal)?;
     attome_db::tx::commit(tx).await?;
 
+    if new_recording.is_some() {
+        enqueue_recording(state, call.id).await?;
+    }
     let Some(activity) = call.activity_id else {
         return Ok(());
     };
+    if finishing
+        && next == Some("ended")
+        && let Some(user) = call.user_id
+    {
+        prompt_outcome(
+            state,
+            user,
+            activity,
+            call.to_number.as_deref(),
+            event.duration_seconds,
+        )
+        .await;
+    }
     if !finishing && new_recording.is_none() {
         return Ok(());
     }
@@ -266,6 +289,239 @@ async fn apply_event(
         body.insert("description".into(), Value::String(description));
     }
     update_activity(state, actor, activity, Value::Object(body)).await
+}
+
+/// J6-T3: asks the caller for the call's outcome: an in-app notification
+/// that opens the record the call is on. Best effort; a failure is logged.
+async fn prompt_outcome(
+    state: &EngineState,
+    user: Uuid,
+    activity: Uuid,
+    to: Option<&str>,
+    seconds: Option<i64>,
+) {
+    let place: Option<(String, String)> =
+        sqlx::query_as("SELECT entity_name, record_id FROM activity WHERE id = $1")
+            .bind(activity)
+            .fetch_optional(&state.base.db)
+            .await
+            .ok()
+            .flatten();
+    let route = place.map_or_else(
+        || format!("/xrm/entity/activity/form?id={activity}"),
+        |(entity, record)| format!("/xrm/entity/{entity}/form?id={record}"),
+    );
+    let minutes = seconds.filter(|s| *s > 0).map(|s| (s + 59) / 60);
+    let body = match (to, minutes) {
+        (Some(to), Some(m)) => format!("Your call to {to} ended after {m} min. Add its outcome."),
+        (Some(to), None) => format!("Your call to {to} ended. Add its outcome."),
+        _ => "Your call ended. Add its outcome.".to_owned(),
+    };
+    let req = attome_notification::dispatch::DispatchRequest {
+        template_key: None,
+        locale: "en".to_owned(),
+        recipient_user_ref: Some(user),
+        is_global: false,
+        organization_ref: None,
+        channels: Some(vec!["in_app".to_owned()]),
+        subject: Some("Call ended: add the outcome".to_owned()),
+        body_html: None,
+        body_text: Some(body),
+        route: Some(route),
+        variables: std::collections::HashMap::new(),
+        priority: "normal".to_owned(),
+        escalate_after_minutes: None,
+        escalate_channels: None,
+    };
+    if let Err(error) = attome_notification::dispatch::create_dispatch(
+        &state.base.db,
+        &state.base.config.notification,
+        req,
+    )
+    .await
+    {
+        tracing::warn!(%user, %activity, %error, "voice: outcome prompt not sent");
+    }
+}
+
+/// Queues the `voice_recording` job for a call.
+async fn enqueue_recording(state: &EngineState, call: Uuid) -> Result<(), AppError> {
+    crate::jobs::register_job_types();
+    let job = attome_core::jobs::JOB_TYPES
+        .job(
+            crate::jobs::VOICE_RECORDING.name,
+            &json!({ "call_id": call }),
+        )
+        .map_err(AppError::internal)?;
+    attome_jobs::enqueue_on_pool(
+        &state.base.db,
+        attome_core::jobs::EngineJob::Registered(job),
+    )
+    .await
+    .map_err(AppError::internal)
+}
+
+#[derive(sqlx::FromRow)]
+struct RecordingRow {
+    system_id: Uuid,
+    user_id: Option<Uuid>,
+    activity_id: Option<Uuid>,
+    recording_url: Option<String>,
+    recording_document_id: Option<Uuid>,
+    recording_session_id: Option<Uuid>,
+    recording_attached: bool,
+}
+
+/// How long one run waits for the virus scan before handing the call back
+/// to the queue.
+const SCAN_WAIT_ROUNDS: u32 = 24;
+const SCAN_WAIT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// J6-T3, the `voice_recording` job: fetches the call's recording, stores
+/// it as a document on the call through the upload pipeline, attaches it
+/// once the scan is clean and sends it to transcription. Resumable: each
+/// step is kept on the `voice_call` row, so a retry starts where the last
+/// run stopped. An error while the scan is still running makes the queue
+/// try again later.
+pub async fn attach_recording(state: &EngineState, call_id: Uuid) -> Result<(), AppError> {
+    let row: RecordingRow = sqlx::query_as(
+        "SELECT system_id, user_id, activity_id, recording_url, recording_document_id, \
+                recording_session_id, recording_attached \
+           FROM voice_call WHERE id = $1",
+    )
+    .bind(call_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let (Some(url), Some(activity)) = (row.recording_url.as_deref(), row.activity_id) else {
+        return Ok(());
+    };
+    if row.recording_attached {
+        return Ok(());
+    }
+    let system = attome_integration::system::load(&state.base.db, row.system_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let actor = match row.user_id {
+        Some(user) => user,
+        None => attome_integration::system::service_principal_id(&system)?,
+    };
+    let ctx = state.base.security.resolve(actor).await?;
+
+    let (document, session) = match (row.recording_document_id, row.recording_session_id) {
+        (Some(document), Some(session)) => (document, session),
+        _ => {
+            let max = state.base.config.storage.max_upload_size_bytes;
+            let (bytes, content_type, filename) =
+                voice::fetch_recording(state, &system, url, max).await?;
+            let document = match row.recording_document_id {
+                Some(document) => document,
+                None => {
+                    let (document, _) = attome_records::entity_crud::create_record_for(
+                        state,
+                        &ctx,
+                        actor,
+                        "attome_document",
+                        json!({
+                            "name": filename,
+                            "entity_name": "activity",
+                            "record_id": activity.to_string(),
+                        }),
+                    )
+                    .await?;
+                    sqlx::query("UPDATE voice_call SET recording_document_id = $2, updated_at = now() WHERE id = $1")
+                        .bind(call_id)
+                        .bind(document)
+                        .execute(&state.base.db)
+                        .await
+                        .map_err(AppError::internal)?;
+                    document
+                }
+            };
+            let session = attome_document::files::ingest(
+                state,
+                attome_document::files::FileOwner::Staff(actor),
+                "attome_document",
+                document,
+                "file",
+                filename,
+                content_type,
+                bytes,
+            )
+            .await?;
+            sqlx::query(
+                "UPDATE voice_call SET recording_session_id = $2, updated_at = now() WHERE id = $1",
+            )
+            .bind(call_id)
+            .bind(session)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            (document, session)
+        }
+    };
+
+    let mut clean_key = None;
+    for _ in 0..SCAN_WAIT_ROUNDS {
+        let status: Option<(String, Option<String>)> =
+            sqlx::query_as("SELECT status, final_key FROM upload_session WHERE id = $1")
+                .bind(session)
+                .fetch_optional(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+        match status {
+            Some((status, Some(key))) if status == "clean" => {
+                clean_key = Some(key);
+                break;
+            }
+            Some((status, _)) if status == "rejected" || status == "expired" => {
+                sqlx::query("UPDATE voice_call SET recording_attached = true, updated_at = now() WHERE id = $1")
+                    .bind(call_id)
+                    .execute(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+                tracing::warn!(%call_id, %session, "voice: the recording did not pass the upload scan; not attached");
+                return Ok(());
+            }
+            _ => tokio::time::sleep(SCAN_WAIT).await,
+        }
+    }
+    let Some(final_key) = clean_key else {
+        return Err(AppError::Conflict("the recording is still being scanned"));
+    };
+    let version: Option<i64> = sqlx::query_scalar(
+        "SELECT row_version FROM attome_document WHERE id = $1 AND is_active IS NOT FALSE",
+    )
+    .bind(document)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(version) = version else {
+        return Ok(());
+    };
+    attome_records::entity_crud::update_record_for(
+        state,
+        &ctx,
+        actor,
+        "attome_document",
+        document,
+        version,
+        json!({ "file": final_key }),
+    )
+    .await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    attome_document::transcribe::enqueue_in_tx(&mut tx, document).await?;
+    sqlx::query(
+        "UPDATE voice_call SET recording_attached = true, updated_at = now() WHERE id = $1",
+    )
+    .bind(call_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    tracing::info!(%call_id, %document, "voice: recording attached and sent to transcription");
+    Ok(())
 }
 
 /// Opens an inbound call: its `voice_call` row and a `phone_call` activity
