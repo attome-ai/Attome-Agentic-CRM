@@ -51,7 +51,7 @@ jobs:
       - name: test
         run: |
           set -o pipefail
-          { npm run test:base && npm run test:xrm && npm run test:sdk && npm test; } 2>&1 | tee -a ../web-check.log
+          { npm run test:base && npm run test:xrm && npm run test:sdk && npm test && npm run test:embed; } 2>&1 | tee -a ../web-check.log
         shell: bash
       # AC7-T1: npm advisories at the thresholds web/package.json sets
       # (moderate for production dependencies, high for development ones).
