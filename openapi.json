@@ -8995,6 +8995,220 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/content/pages/{id}/article": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Makes a page a knowledge article, or an ordinary page again (G11-T1).",
+        "description": "An article names the knowledge data source it is filed under, a category\nand products; while published it is searchable as a knowledge item\nwritten as the caller, who needs to be able to create knowledge items.\n`knowledge_source_id: null` makes it an ordinary page and withdraws it\nfrom search.",
+        "operationId": "set_article",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The page's article settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, may not create knowledge items, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad category or product, or a knowledge source the caller cannot see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/audience": {
+      "put": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Sets who may read a page (K5-T2).",
+        "description": "`public`: anyone, through the public view and delivery routes.\n`internal`: signed-in people only; the public routes answer it with the\nsame 404 as a missing page.",
+        "operationId": "set_audience",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AudienceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The audience was set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudienceBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The audience is not public or internal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/content/pages/{id}/move": {
       "post": {
         "tags": [
@@ -9099,16 +9313,126 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/content/pages/{id}/preview-link": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A signed link to a page's current draft (K5-T2).",
+        "description": "Anyone with the link reads the draft until it expires (60 minutes unless\n`minutes` says otherwise, at most seven days); it opens nothing else.",
+        "operationId": "create_preview_link",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewLinkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The preview link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "minutes is out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/content/pages/{id}/publish": {
       "post": {
         "tags": [
           "admin-content"
         ],
+        "summary": "Publishes a page's draft (K5-T1: as a new numbered version).",
+        "description": "The draft's blocks are checked again and become the published content; the\npublish is kept as the page's next version. In a space that requires\napproval the publish waits for it instead (202 with the request's id).",
         "operationId": "publish_page",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The page's id",
             "required": true,
             "schema": {
               "type": "string",
@@ -9118,7 +9442,17 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Published as a new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The publish waits for approval",
             "content": {
               "application/json": {
                 "schema": {
@@ -9671,6 +10005,657 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/translation/current": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Marks a translation up to date with its source (K5-T4).",
+        "description": "Records the source's latest published version against the translation,\nso it is no longer stale until the source is published again. Asked of a\npage that is not a translation, it answers 404.",
+        "operationId": "mark_current",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The translation's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The translation is up to date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such translation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/translations": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's translations and whether each is stale (K5-T4).",
+        "description": "Asked of a source page or of any of its translations, it answers the\nsource and every translation of it.",
+        "operationId": "list_translations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "A source page's id, or a translation's",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The source and its translations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Creates a linked translation of a page (K5-T4).",
+        "description": "The new page sits beside its source (same space and parent) with the\nsource's published blocks as its draft, ready to translate; it starts up to\ndate with the source's latest version. A translation cannot itself be\ntranslated: translate its source.",
+        "operationId": "create_translation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTranslationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The translation was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The url_path is taken, or the page already has a translation into this language",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Bad language, title or url_path, or the page is itself a translation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "A page's versions, newest first (K5-T1).",
+        "description": "Every published version of the page with who published it and when, and\nwhich version a restore came from.",
+        "operationId": "list_versions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's versions, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PageVersionSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions/compare": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Compares two versions of a page (K5-T1).",
+        "description": "Whether the title or SEO text changed, and each block added, removed,\nchanged or moved between `from` and `to`, by block id.",
+        "operationId": "compare_versions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The older version.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The newer version.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The differences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDiff"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions/{number}": {
+      "get": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "One version of a page with its content (K5-T1).",
+        "description": "The title, SEO text and blocks exactly as that version was published.",
+        "operationId": "get_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "description": "The version number",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageVersion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/content/pages/{id}/versions/{number}/restore": {
+      "post": {
+        "tags": [
+          "admin-content"
+        ],
+        "summary": "Restores an old version of a page (K5-T1).",
+        "description": "The version's title, SEO text and blocks become the page's draft and are\npublished as a new version that names the restored one. In a space that\nrequires approval the restored draft waits for approval (202 with the\nrequest's id) like any other publish.",
+        "operationId": "restore_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "description": "The version to restore",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restored and published as a new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Restored to the draft; the publish waits for approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Content Management is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page or version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The restored blocks fail today's block validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "content",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/content/spaces": {
@@ -14538,7 +15523,7 @@
           {
             "name": "request_type",
             "in": "path",
-            "description": "`\"access\" | \"erasure\" | \"portability\" | \"objection\"`.",
+            "description": "`\"access\" | \"erasure\" | \"portability\" | \"objection\" | \"restriction\" |\n\"rectification\"`.",
             "required": true,
             "schema": {
               "type": [
@@ -14979,6 +15964,307 @@
             {
               "category": "security",
               "operation": "export"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/dsr/requests/{id}/lift": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lifts a restriction (R1-T1).",
+        "description": "Every record the restriction request restricted is processed normally\nagain. The request stays fulfilled; the lift is recorded on each\nrestriction and in the audit trail.",
+        "operationId": "lift",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The restriction request's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The restriction is lifted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestrictionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No restriction request with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/dsr/requests/{id}/rectify": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Closes a rectification request (R1-T1).",
+        "description": "The corrections are made through the ordinary record API first; this\nrecords the outcome on the request — `fulfilled` with what was corrected,\nor `rejected` with the reason the data was found accurate.",
+        "operationId": "rectify",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The rectification request's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RectifyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The request is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestrictionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No pending rectification request with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad outcome, or an empty or too long resolution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/dsr/requests/{id}/restrict": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Restricts the processing of a subject's records (R1-T1).",
+        "description": "For a pending `restriction` request: every live record the scopes match\nis left out of AI, bulk export and marketing email until the restriction\nis lifted. People who may read the records still can. The request is\nfulfilled.",
+        "operationId": "restrict",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The restriction request's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestrictBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The records are restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestrictionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No pending restriction request with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No scopes, or a scope naming an unknown entity or attribute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "update"
             }
           ],
           "policy": "mandatory"
@@ -30253,6 +31539,340 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/retention/rules": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Every retention rule (R3-T1).",
+        "description": "All rules, active or not, oldest first, in one page: a deployment keeps a\nfew dozen at most.",
+        "operationId": "list_rules",
+        "responses": {
+          "200": {
+            "description": "Every retention rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RetentionRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Adds a retention rule (R3-T1).",
+        "description": "The rule is checked against the entity's live metadata: its condition\nmust compile, its start attribute must be a date, and an append-only\nentity takes no rule. The next proposal sweep applies it.",
+        "operationId": "create_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionRuleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The rule does not fit its entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/retention/rules/{id}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Changes a retention rule (R3-T1).",
+        "description": "The whole rule is replaced and checked again. With `row_version`, a rule\nchanged since it was read answers 409. Proposals already made stay until\nthey are approved or rejected.",
+        "operationId": "update_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The rule's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionRuleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The rule changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The rule does not fit its entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Removes a retention rule (R3-T1).",
+        "description": "The rule stops proposing at once; proposals it already made stay in the\nreview list until they are approved or rejected.",
+        "operationId": "delete_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The rule's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The rule is removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/admin/s2s/clients": {
@@ -54842,6 +56462,203 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/content/delivery": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A published page as JSON for a headless site (K5-T3).",
+        "description": "The page's latest published version (title, SEO text and blocks), frozen\nwhen it was published, with an ETag naming the page and version: a client\nthat sends it back in `If-None-Match` gets 304 until the page is published\nagain. No sign-in; the same 404 for a missing, unpublished or unlicensed\npage.",
+        "operationId": "deliver_page",
+        "parameters": [
+          {
+            "name": "space",
+            "in": "path",
+            "description": "The content space's id.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "description": "The page's URL path in that space, e.g. `/pricing`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's published version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveredPage"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The client already holds this version"
+          },
+          "404": {
+            "description": "No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/content/internal": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A published page for a signed-in person (K5-T2).",
+        "description": "The same answer as `/api/v1/content/delivery`, for `public` and\n`internal` pages; anything else is the same 404.",
+        "operationId": "deliver_internal_page",
+        "parameters": [
+          {
+            "name": "space",
+            "in": "path",
+            "description": "The content space's id.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "description": "The page's URL path in that space, e.g. `/pricing`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's published version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveredPage"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The client already holds this version"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published page at this path in this space that the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/content/preview": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A page's current draft through a signed preview link (K5-T2).",
+        "description": "Anyone with an unexpired link reads the draft (title, SEO text and draft\nblocks), whatever the page's audience. A wrong, expired or forged token\nand a deleted page are the same 404.",
+        "operationId": "preview_page",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The signed token from `POST /api/v1/admin/content/pages/{id}/preview-link`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPageView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The link is wrong or expired, or the page is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/content/view": {
       "get": {
         "tags": [
@@ -55676,6 +57493,84 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/docgen/batches/{batch_id}": {
+      "get": {
+        "tags": [
+          "docgen"
+        ],
+        "summary": "A render batch's progress (K3-T3).",
+        "description": "How many of its renders are pending, running, completed (and attached)\nor failed. The person who started it and administrators see it; anyone\nelse gets 404.",
+        "operationId": "batch_status",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "description": "The batch's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The batch's progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderBatchStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such batch, or not one the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "docgen",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/docgen/renders/{render_id}": {
       "get": {
         "tags": [
@@ -55840,6 +57735,109 @@
         ],
         "x-audit-exempt": {
           "note": "the route only enqueues a render; the job writes entity+export in the render's completion transaction",
+          "reason": "delegated",
+          "via": "EngineJob::DocgenRender"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "docgen",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/docgen/templates/{id}/render-batch": {
+      "post": {
+        "tags": [
+          "docgen"
+        ],
+        "summary": "Renders one template for many records (K3-T3).",
+        "description": "One render per record, each its own job, so one failing record does not\nstop the others and each retries on its own; each renders as the caller,\nsees only what the caller may see, and is attached to its record when the\ntemplate names an `attach_to_field`. Answers the batch id;\n`GET /api/v1/docgen/batches/{id}` shows its progress.",
+        "operationId": "render_batch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The template's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderBatchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The renders are queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderBatchStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records, more than 500, or a template that cannot render",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "the route only enqueues renders; each job writes its entity and export events in its completion transaction",
           "reason": "delegated",
           "via": "EngineJob::DocgenRender"
         },
@@ -59796,6 +61794,243 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/model/reply-suggestions": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "The likely replies for a record (G6-T3).",
+        "description": "Ranks the reply templates the caller may use by what was used on similar\nearlier records of the same entity, by how much of the template's wording\nthe record shares, and by how often it is used, best first (at most 5).\nEach comes rendered for the record and channel, with the reasons it was\nsuggested. The caller must be able to read the record.",
+        "operationId": "reply_suggestions",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "The record's entity, e.g. `service_ticket`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "record_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "description": "The channel the reply is for (`email`, `sms`, `whatsapp`, `chat`,\n`portal`); `email` when unset.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The suggested replies, best first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_Suggestion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/model/reply-templates/{id}/used": {
+      "post": {
+        "tags": [
+          "model"
+        ],
+        "summary": "Records that a reply template was used on a record (G6-T3).",
+        "description": "The reply suggestions learn from it: what was used on similar records,\nand how often. The caller must be able to read the record.",
+        "operationId": "reply_template_used",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The reply template's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyTemplateUsed"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Counted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "counts a reply template's use for suggestions; the reply itself is audited where it is sent",
+          "reason": "telemetry",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/model/tours": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "The guided tours this caller may see (B14-T1).",
+        "description": "Every published tour that names none of the roles or one the caller holds\n(an administrator sees all), with its steps in English and Arabic. The web\napp starts a tour by itself once per person on its route, and offers it\nagain on request.",
+        "operationId": "tours",
+        "responses": {
+          "200": {
+            "description": "The tours this caller sees",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TourView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/my-work/counts": {
@@ -67992,6 +70227,94 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/service-portal/offerings/{id}/requests": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Files an anonymous request on a public offering (G2-T1).",
+        "description": "Off by default: the offering must be listed in\n`service.anonymous_intake.offerings` and `service.anonymous_intake.user`\nmust name the service account the request is filed as. Every other case\n(not listed, not public, inactive, unlicensed) is the same 404. At most\nfive requests a minute from one address and sixty a minute to one\noffering; when the deployment has a challenge (proof-of-work or a CAPTCHA\nprovider), `captcha_token` must carry it solved, or the answer is 429 with\n`Attome-Challenge` naming the kind. The request goes through the same\ncreate path, routing and audit as a staff one; the answer is the status\ntoken, shown once.",
+        "operationId": "submit_request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The public offering's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnonymousRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The request was filed; the status token is shown once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousRequestAccepted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This offering does not take anonymous requests (the same answer for every reason)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is missing or too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests, or the challenge was not solved (Attome-Challenge names its kind)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "anonymous submission recorded as intake: the work request's own Entity audit event and its business event are written by the create path, as the intake service account",
+          "reason": "delegated",
+          "via": "attome_service::offering::create_work_request_from_offering"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/service-portal/status": {
       "get": {
         "tags": [
@@ -70930,6 +73253,130 @@
         "x-cache": "no-store",
         "x-idempotent": "key",
         "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/work-request/{id}/convert": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Converts a work request with conversion maps (G2-T3).",
+        "description": "Each map creates one record of its entity from the request's fields; more\nthan one map splits the request into several records, created together.",
+        "operationId": "convert_with_maps_route",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertWithMapsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The records the request became",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertWithMapsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such work request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already converted or rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A map is not active or not valid, or a target record failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            },
+            {
+              "category": "entity",
+              "operation": "create"
+            },
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
@@ -85274,6 +87721,67 @@
           }
         }
       },
+      "AnonymousRequest": {
+        "type": "object",
+        "description": "G2-T1: what an anonymous web form sends.",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "captcha_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The solved challenge (`{challenge}:{answer}` for proof-of-work, or the\nCAPTCHA provider's token) when the deployment asks for one."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "At most 10,000 characters."
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How to reach the person, kept with the description; at most 200\ncharacters each."
+          },
+          "title": {
+            "type": "string",
+            "description": "1 to 200 characters."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AnonymousRequestAccepted": {
+        "type": "object",
+        "description": "What an anonymous submitter gets back: the status token, once.",
+        "required": [
+          "status_token"
+        ],
+        "properties": {
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "G2-T2: the request's reference, to quote when following it up."
+          },
+          "status_token": {
+            "type": "string",
+            "description": "The `{public_id}.{secret}` bearer for `GET /api/v1/service-portal/status`."
+          }
+        }
+      },
       "ApiGroupOut": {
         "type": "object",
         "required": [
@@ -86223,6 +88731,78 @@
         ],
         "description": "One archive row with its decrypted value."
       },
+      "ArticleBody": {
+        "type": "object",
+        "description": "`PUT .../article`.",
+        "properties": {
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "knowledge_source_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The knowledge data source to file the article under; `null` makes the\npage an ordinary page again."
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ArticleSettings": {
+        "type": "object",
+        "description": "A page's article settings.",
+        "required": [
+          "id",
+          "page_type",
+          "article_products"
+        ],
+        "properties": {
+          "article_category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "article_products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "knowledge_item_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The knowledge item the article is projected into, once it has been."
+          },
+          "knowledge_source_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "page_type": {
+            "type": "string",
+            "description": "`page` or `article`."
+          }
+        }
+      },
       "AssessmentStartResponse": {
         "type": "object",
         "required": [
@@ -86568,6 +89148,19 @@
           "entity": {
             "type": "string",
             "description": "Target entity logicalname. Must already exist on the deployment this\nbundle is applied to, or the patch is `Blocked` at plan time."
+          }
+        }
+      },
+      "AudienceBody": {
+        "type": "object",
+        "description": "`PUT .../audience`.",
+        "required": [
+          "audience"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "description": "`public` or `internal`."
           }
         }
       },
@@ -87459,6 +90052,48 @@
           },
           "props": {
             "type": "object"
+          }
+        }
+      },
+      "BlockChange": {
+        "type": "string",
+        "description": "What happened to one block between two versions, by block `id`.",
+        "enum": [
+          "added",
+          "removed",
+          "changed",
+          "moved"
+        ]
+      },
+      "BlockDiff": {
+        "type": "object",
+        "description": "One block's change.",
+        "required": [
+          "block_id",
+          "change"
+        ],
+        "properties": {
+          "block_id": {
+            "type": "string"
+          },
+          "change": {
+            "$ref": "#/components/schemas/BlockChange"
+          },
+          "from_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Its position in the older version, if it was there.",
+            "minimum": 0
+          },
+          "to_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Its position in the newer version, if it is there.",
+            "minimum": 0
           }
         }
       },
@@ -92686,6 +95321,7 @@
         "required": [
           "id",
           "name",
+          "require_approval",
           "row_version",
           "created_at",
           "updated_at"
@@ -92707,6 +95343,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "require_approval": {
+            "type": "boolean",
+            "description": "K5-T1: a publish in this space waits for approval."
           },
           "row_version": {
             "type": "integer",
@@ -93036,6 +95676,59 @@
           },
           "ticket_number": {
             "type": "string"
+          }
+        }
+      },
+      "ConvertWithMapsRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/work-request/{id}/convert`.",
+        "required": [
+          "map_ids"
+        ],
+        "properties": {
+          "map_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The maps to convert with, in order; more than one splits the request."
+          },
+          "values": {
+            "type": "object",
+            "description": "Values for the target records that the request cannot supply (a\nrequired parent, say), applied over every map's result."
+          }
+        }
+      },
+      "ConvertWithMapsResponse": {
+        "type": "object",
+        "description": "What a conversion with maps created.",
+        "required": [
+          "records"
+        ],
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConvertedRecord"
+            }
+          }
+        }
+      },
+      "ConvertedRecord": {
+        "type": "object",
+        "description": "A record a conversion created.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -94086,6 +96779,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "require_approval": {
+            "type": "boolean",
+            "description": "K5-T1: a publish in this space waits for approval."
           }
         }
       },
@@ -94459,6 +97156,28 @@
           }
         }
       },
+      "CreateTranslationBody": {
+        "type": "object",
+        "description": "`POST .../translations`.",
+        "required": [
+          "language",
+          "title",
+          "url_path"
+        ],
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "The translation's language code, e.g. `ar` or `en-GB`."
+          },
+          "title": {
+            "type": "string"
+          },
+          "url_path": {
+            "type": "string",
+            "description": "The translation's own URL path."
+          }
+        }
+      },
       "CreateVersionBody": {
         "type": "object",
         "properties": {
@@ -94473,6 +97192,13 @@
           "requester_id"
         ],
         "properties": {
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "G2-T1: the `channel` choice the request came through (`portal` for\nan anonymous web form); unset leaves it empty."
+          },
           "description": {
             "type": [
               "string",
@@ -94498,12 +97224,35 @@
         "required": [
           "work_request_id",
           "status",
-          "portal_token"
+          "portal_token",
+          "open_requests",
+          "converted"
         ],
         "properties": {
+          "converted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConvertedRecord"
+            },
+            "description": "G2-T3: the records the request became at once, through the\noffering's direct-creation conversion maps; empty when it has none\n(or the conversion could not be made, which leaves the request to\nconvert by hand)."
+          },
+          "open_requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpenRequest"
+            },
+            "description": "G2-T2: the requester's other open requests, newest first, so the\nsubmission can be added to one instead. Empty when the caller may not\nread work requests."
+          },
           "portal_token": {
             "type": "string",
             "description": "The self-service portal bearer token (`{public_id}.{secret}`) —\nreturned exactly once, here. Only its argon2 hash is persisted\n(`service_work_request.portal_secret_hash`); this response is the only\nplace the raw secret ever exists."
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "G2-T2: the request's reference (`REQ-2026-00042`), when the\ndeployment's reference rule numbered it."
           },
           "status": {
             "type": "string"
@@ -96302,6 +99051,59 @@
           }
         }
       },
+      "DeliveredPage": {
+        "type": "object",
+        "description": "One published page for a headless site (K5-T3).",
+        "required": [
+          "space_id",
+          "path",
+          "version",
+          "title",
+          "blocks"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "path": {
+            "type": "string"
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "seo_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seo_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The published version served (0 for a page published before versions\nwere kept)."
+          }
+        }
+      },
       "DeliveryListItem": {
         "type": "object",
         "required": [
@@ -97388,6 +100190,14 @@
               "null"
             ]
           },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "R1-T1: when the request must be answered by."
+          },
           "evidence_ref": {
             "type": [
               "string",
@@ -97405,6 +100215,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "law": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The law the deadline follows, when the platform knows it."
+          },
           "request_type": {
             "type": "string"
           },
@@ -97415,6 +100232,13 @@
           "requested_by": {
             "type": "string",
             "format": "uuid"
+          },
+          "resolution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A rectification's outcome: what was corrected, or why not."
           },
           "status": {
             "type": "string"
@@ -106321,6 +109145,33 @@
           }
         }
       },
+      "OpenRequest": {
+        "type": "object",
+        "description": "One of the requester's open requests, offered when they submit another.",
+        "required": [
+          "id",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "OpenShareLinkRequest": {
         "type": "object",
         "description": "`POST /api/v1/shared-files/{token}`.",
@@ -106759,6 +109610,10 @@
           "updated_at"
         ],
         "properties": {
+          "audience": {
+            "type": "string",
+            "description": "K5-T2: `public` (anyone) or `internal` (signed-in people only)."
+          },
           "blocks_draft": {
             "type": "array",
             "items": {
@@ -106998,6 +109853,94 @@
           },
           "url_path": {
             "type": "string"
+          }
+        }
+      },
+      "PageVersion": {
+        "type": "object",
+        "description": "One version with its content.",
+        "required": [
+          "version_number",
+          "title",
+          "blocks",
+          "published_by",
+          "published_at"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "published_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restored_from": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "seo_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seo_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "version_number": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PageVersionSummary": {
+        "type": "object",
+        "description": "One version in a page's list.",
+        "required": [
+          "version_number",
+          "title",
+          "published_by",
+          "published_at"
+        ],
+        "properties": {
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "published_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restored_from": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The version this one restored, if it was a restore."
+          },
+          "title": {
+            "type": "string"
+          },
+          "version_number": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -111260,6 +114203,14 @@
                     "null"
                   ]
                 },
+                "due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "R1-T1: when the request must be answered by."
+                },
                 "evidence_ref": {
                   "type": [
                     "string",
@@ -111277,6 +114228,13 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "law": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The law the deadline follows, when the platform knows it."
+                },
                 "request_type": {
                   "type": "string"
                 },
@@ -111287,6 +114245,13 @@
                 "requested_by": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "resolution": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "A rectification's outcome: what was corrected, or why not."
                 },
                 "status": {
                   "type": "string"
@@ -114954,6 +117919,75 @@
           }
         }
       },
+      "PaginatedResponse_PageVersionSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One version in a page's list.",
+              "required": [
+                "version_number",
+                "title",
+                "published_by",
+                "published_at"
+              ],
+              "properties": {
+                "published_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "published_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "restored_from": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "The version this one restored, if it was a restore."
+                },
+                "title": {
+                  "type": "string"
+                },
+                "version_number": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PatchOpView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -116495,6 +119529,109 @@
                 },
                 "target": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_RetentionRule": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One stored rule.",
+              "required": [
+                "id",
+                "name",
+                "entity_logicalname",
+                "condition",
+                "start_attribute",
+                "period_days",
+                "action",
+                "is_active",
+                "created_at",
+                "updated_at",
+                "row_version"
+              ],
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "`purge`, `archive` or `review`."
+                },
+                "category": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "condition": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Filter"
+                  },
+                  "description": "Filters the covered records must match, as the list views use."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entity_logicalname": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "period_days": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "start_attribute": {
+                  "type": "string",
+                  "description": "The date the period starts from: `created_at`, `modified_at` or a\ndate attribute of the entity."
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
                 }
               }
             }
@@ -118130,6 +121267,81 @@
           }
         }
       },
+      "PaginatedResponse_Suggestion": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One suggestion.",
+              "required": [
+                "id",
+                "name",
+                "score",
+                "reasons",
+                "reply"
+              ],
+              "properties": {
+                "folder": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Why it was suggested, for the person: `similar_cases`, `wording` or\n`often_used`, strongest first."
+                },
+                "reply": {
+                  "type": "string",
+                  "description": "The reply, rendered for the case and channel."
+                },
+                "score": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "0 to 1."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SuppressionSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -119232,6 +122444,79 @@
                 "turn_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_TourView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One guided tour as a signed-in person receives it (B14-T1).",
+              "required": [
+                "id",
+                "name",
+                "title",
+                "route",
+                "auto_start",
+                "steps"
+              ],
+              "properties": {
+                "auto_start": {
+                  "type": "boolean",
+                  "description": "Starts by itself the first time the person opens `route`."
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "route": {
+                  "type": "string",
+                  "description": "The app path prefix the tour belongs to."
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  },
+                  "description": "`[{ selector, title?, text, placement? }]`."
+                },
+                "title": {
+                  "type": "object",
+                  "description": "`{ \"en\": .., \"ar\": .. }`."
                 }
               }
             }
@@ -121657,6 +124942,38 @@
         },
         "additionalProperties": false
       },
+      "PreviewLink": {
+        "type": "object",
+        "description": "A signed preview link.",
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string",
+            "description": "The token for `GET /api/v1/content/preview?token=`."
+          }
+        }
+      },
+      "PreviewLinkBody": {
+        "type": "object",
+        "description": "`POST .../preview-link`.",
+        "properties": {
+          "minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "How long the link works, 1 to 10,080 minutes; 60 when unset."
+          }
+        }
+      },
       "PreviewOutput": {
         "type": "string",
         "description": "The output a preview renders.",
@@ -122598,22 +125915,42 @@
       },
       "PublishResult": {
         "type": "object",
+        "description": "A publish's outcome: published (with its version), or waiting for\napproval in a space that requires it (K5-T1).",
         "required": [
           "id",
-          "status",
-          "published_at"
+          "status"
         ],
         "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The approval request a publish waits for."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
           },
           "published_at": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "`published`, or `pending_approval`."
+          },
+          "version_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The version this publish recorded."
           }
         }
       },
@@ -123724,6 +127061,24 @@
           }
         }
       },
+      "RectifyBody": {
+        "type": "object",
+        "description": "`POST …/rectify`.",
+        "required": [
+          "outcome",
+          "resolution"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "description": "`fulfilled` (the records were corrected) or `rejected`."
+          },
+          "resolution": {
+            "type": "string",
+            "description": "What was corrected, or why the request was rejected."
+          }
+        }
+      },
       "RecurringMeasures": {
         "type": "object",
         "required": [
@@ -124304,6 +127659,67 @@
           }
         }
       },
+      "RenderBatchBody": {
+        "type": "object",
+        "description": "`POST /api/v1/docgen/templates/{id}/render-batch`.",
+        "required": [
+          "record_ids"
+        ],
+        "properties": {
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records to render, 1 to 500; a repeated id renders once."
+          }
+        }
+      },
+      "RenderBatchStatus": {
+        "type": "object",
+        "description": "A batch's progress.",
+        "required": [
+          "batch_id",
+          "total",
+          "pending",
+          "running",
+          "completed",
+          "failed",
+          "attached"
+        ],
+        "properties": {
+          "attached": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Completed renders attached to their record."
+          },
+          "batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "completed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "running": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "RenderEnqueueResponse": {
         "type": "object",
         "required": [
@@ -124451,6 +127867,24 @@
         "properties": {
           "body": {
             "type": "string"
+          }
+        }
+      },
+      "ReplyTemplateUsed": {
+        "type": "object",
+        "description": "`POST /api/v1/model/reply-templates/{id}/used`.",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The record the reply was for."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -124995,6 +128429,46 @@
           }
         }
       },
+      "RestrictBody": {
+        "type": "object",
+        "description": "`POST …/restrict`.",
+        "required": [
+          "scopes"
+        ],
+        "properties": {
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DsrScope"
+            }
+          }
+        }
+      },
+      "RestrictionResult": {
+        "type": "object",
+        "description": "A restriction placed or lifted.",
+        "required": [
+          "id",
+          "status",
+          "scopes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The DSR request."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScopeRestriction"
+            }
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "RetentionActionSummary": {
         "type": "object",
         "required": [
@@ -125056,6 +128530,132 @@
             "type": "string"
           }
         }
+      },
+      "RetentionRule": {
+        "type": "object",
+        "description": "One stored rule.",
+        "required": [
+          "id",
+          "name",
+          "entity_logicalname",
+          "condition",
+          "start_attribute",
+          "period_days",
+          "action",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "row_version"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "`purge`, `archive` or `review`."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "condition": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            },
+            "description": "Filters the covered records must match, as the list views use."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity_logicalname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "period_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "start_attribute": {
+            "type": "string",
+            "description": "The date the period starts from: `created_at`, `modified_at` or a\ndate attribute of the entity."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RetentionRuleBody": {
+        "type": "object",
+        "description": "A rule as an administrator writes it.",
+        "required": [
+          "name",
+          "entity",
+          "period_days",
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "condition": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            }
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity's logical name."
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "period_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "On an update, the version read; a newer stored version answers 409."
+          },
+          "start_attribute": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Defaults to `created_at`."
+          }
+        },
+        "additionalProperties": false
       },
       "ReverseRequest": {
         "type": "object",
@@ -127795,6 +131395,23 @@
             "type": "string"
           },
           "withheld_for_legal_hold": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ScopeRestriction": {
+        "type": "object",
+        "description": "How many records one scope restricted.",
+        "required": [
+          "entity_logicalname",
+          "records"
+        ],
+        "properties": {
+          "entity_logicalname": {
+            "type": "string"
+          },
+          "records": {
             "type": "integer",
             "format": "int64"
           }
@@ -131090,29 +134707,42 @@
       },
       "Suggestion": {
         "type": "object",
+        "description": "One suggestion.",
         "required": [
-          "text",
-          "kind",
-          "entity_logicalname"
+          "id",
+          "name",
+          "score",
+          "reasons",
+          "reply"
         ],
         "properties": {
-          "entity_logicalname": {
-            "type": "string",
-            "description": "For `\"entity\"`: the entity to route to. For `\"saved_search\"`: always\n`\"saved_search\"` — pair with `record_id` to call `run`."
-          },
-          "kind": {
-            "type": "string",
-            "description": "`\"entity\"` | `\"saved_search\"`."
-          },
-          "record_id": {
+          "folder": {
             "type": [
               "string",
               "null"
-            ],
-            "format": "uuid"
+            ]
           },
-          "text": {
+          "id": {
             "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Why it was suggested, for the person: `similar_cases`, `wording` or\n`often_used`, strongest first."
+          },
+          "reply": {
+            "type": "string",
+            "description": "The reply, rendered for the case and channel."
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "0 to 1."
           }
         }
       },
@@ -132566,6 +136196,45 @@
         ],
         "description": "How many matches there are."
       },
+      "TourView": {
+        "type": "object",
+        "description": "One guided tour as a signed-in person receives it (B14-T1).",
+        "required": [
+          "id",
+          "name",
+          "title",
+          "route",
+          "auto_start",
+          "steps"
+        ],
+        "properties": {
+          "auto_start": {
+            "type": "boolean",
+            "description": "Starts by itself the first time the person opens `route`."
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string",
+            "description": "The app path prefix the tour belongs to."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`[{ selector, title?, text, placement? }]`."
+          },
+          "title": {
+            "type": "object",
+            "description": "`{ \"en\": .., \"ar\": .. }`."
+          }
+        }
+      },
       "TracePartOut": {
         "type": "object",
         "required": [
@@ -132832,6 +136501,78 @@
           "to_state": {
             "type": "string",
             "description": "The state the record is in now. For a transition that requires\napproval (M07 Phase F) this is the transition's pending state, not the\none asked for — see `approval_request_id`."
+          }
+        }
+      },
+      "TranslationSet": {
+        "type": "object",
+        "description": "A page and its translations.",
+        "required": [
+          "source_id",
+          "translations"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The source's latest published version; none when never published."
+          },
+          "translations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranslationSummary"
+            }
+          }
+        }
+      },
+      "TranslationSummary": {
+        "type": "object",
+        "description": "One translation of a page.",
+        "required": [
+          "id",
+          "title",
+          "url_path",
+          "status",
+          "stale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "The source has a newer published version than that."
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "translated_from_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The source version this translation was last brought up to date with."
+          },
+          "url_path": {
+            "type": "string"
           }
         }
       },
@@ -134071,6 +137812,13 @@
               "string",
               "null"
             ]
+          },
+          "require_approval": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "K5-T1: `None` leaves it unchanged."
           }
         }
       },
@@ -134725,6 +138473,39 @@
             "type": "string"
           },
           "version_number": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "VersionDiff": {
+        "type": "object",
+        "description": "Two versions compared.",
+        "required": [
+          "from_version",
+          "to_version",
+          "title_changed",
+          "seo_changed",
+          "blocks"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlockDiff"
+            }
+          },
+          "from_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "seo_changed": {
+            "type": "boolean"
+          },
+          "title_changed": {
+            "type": "boolean"
+          },
+          "to_version": {
             "type": "integer",
             "format": "int32"
           }
@@ -136021,6 +139802,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -136072,7 +139855,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }

@@ -1590,6 +1590,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/content/pages/{id}/article": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Makes a page a knowledge article, or an ordinary page again (G11-T1).
+         * @description An article names the knowledge data source it is filed under, a category
+         *     and products; while published it is searchable as a knowledge item
+         *     written as the caller, who needs to be able to create knowledge items.
+         *     `knowledge_source_id: null` makes it an ordinary page and withdraws it
+         *     from search.
+         */
+        put: operations["set_article"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets who may read a page (K5-T2).
+         * @description `public`: anyone, through the public view and delivery routes.
+         *     `internal`: signed-in people only; the public routes answer it with the
+         *     same 404 as a missing page.
+         */
+        put: operations["set_audience"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/content/pages/{id}/move": {
         parameters: {
             query?: never;
@@ -1606,6 +1652,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/content/pages/{id}/preview-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A signed link to a page's current draft (K5-T2).
+         * @description Anyone with the link reads the draft until it expires (60 minutes unless
+         *     `minutes` says otherwise, at most seven days); it opens nothing else.
+         */
+        post: operations["create_preview_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/content/pages/{id}/publish": {
         parameters: {
             query?: never;
@@ -1615,6 +1682,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Publishes a page's draft (K5-T1: as a new numbered version).
+         * @description The draft's blocks are checked again and become the published content; the
+         *     publish is kept as the page's next version. In a space that requires
+         *     approval the publish waits for it instead (202 with the request's id).
+         */
         post: operations["publish_page"];
         delete?: never;
         options?: never;
@@ -1708,6 +1781,141 @@ export interface paths {
         get: operations["page_stats"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/translation/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marks a translation up to date with its source (K5-T4).
+         * @description Records the source's latest published version against the translation,
+         *     so it is no longer stale until the source is published again. Asked of a
+         *     page that is not a translation, it answers 404.
+         */
+        post: operations["mark_current"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/translations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page's translations and whether each is stale (K5-T4).
+         * @description Asked of a source page or of any of its translations, it answers the
+         *     source and every translation of it.
+         */
+        get: operations["list_translations"];
+        put?: never;
+        /**
+         * Creates a linked translation of a page (K5-T4).
+         * @description The new page sits beside its source (same space and parent) with the
+         *     source's published blocks as its draft, ready to translate; it starts up to
+         *     date with the source's latest version. A translation cannot itself be
+         *     translated: translate its source.
+         */
+        post: operations["create_translation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page's versions, newest first (K5-T1).
+         * @description Every published version of the page with who published it and when, and
+         *     which version a restore came from.
+         */
+        get: operations["list_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/versions/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compares two versions of a page (K5-T1).
+         * @description Whether the title or SEO text changed, and each block added, removed,
+         *     changed or moved between `from` and `to`, by block id.
+         */
+        get: operations["compare_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/versions/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One version of a page with its content (K5-T1).
+         * @description The title, SEO text and blocks exactly as that version was published.
+         */
+        get: operations["get_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/pages/{id}/versions/{number}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restores an old version of a page (K5-T1).
+         * @description The version's title, SEO text and blocks become the page's draft and are
+         *     published as a new version that names the restored one. In a space that
+         *     requires approval the restored draft waits for approval (202 with the
+         *     request's id) like any other publish.
+         */
+        post: operations["restore_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2515,6 +2723,73 @@ export interface paths {
         put?: never;
         /** `POST /api/v1/admin/dsr/requests/{id}/fulfill-portability` — `system.admin` only. */
         post: operations["fulfill_portability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dsr/requests/{id}/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lifts a restriction (R1-T1).
+         * @description Every record the restriction request restricted is processed normally
+         *     again. The request stays fulfilled; the lift is recorded on each
+         *     restriction and in the audit trail.
+         */
+        post: operations["lift"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dsr/requests/{id}/rectify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Closes a rectification request (R1-T1).
+         * @description The corrections are made through the ordinary record API first; this
+         *     records the outcome on the request — `fulfilled` with what was corrected,
+         *     or `rejected` with the reason the data was found accurate.
+         */
+        post: operations["rectify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dsr/requests/{id}/restrict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restricts the processing of a subject's records (R1-T1).
+         * @description For a pending `restriction` request: every live record the scopes match
+         *     is left out of AI, bulk export and marketing email until the restriction
+         *     is lifted. People who may read the records still can. The request is
+         *     fulfilled.
+         */
+        post: operations["restrict"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5404,6 +5679,60 @@ export interface paths {
          */
         post: operations["trigger_propose"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/retention/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every retention rule (R3-T1).
+         * @description All rules, active or not, oldest first, in one page: a deployment keeps a
+         *     few dozen at most.
+         */
+        get: operations["list_rules"];
+        put?: never;
+        /**
+         * Adds a retention rule (R3-T1).
+         * @description The rule is checked against the entity's live metadata: its condition
+         *     must compile, its start attribute must be a date, and an append-only
+         *     entity takes no rule. The next proposal sweep applies it.
+         */
+        post: operations["create_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/retention/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Changes a retention rule (R3-T1).
+         * @description The whole rule is replaced and checked again. With `row_version`, a rule
+         *     changed since it was read answers 409. Proposals already made stay until
+         *     they are approved or rejected.
+         */
+        put: operations["update_rule"];
+        post?: never;
+        /**
+         * Removes a retention rule (R3-T1).
+         * @description The rule stops proposing at once; proposals it already made stay in the
+         *     review list until they are approved or rejected.
+         */
+        delete: operations["delete_rule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -9876,6 +10205,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A published page as JSON for a headless site (K5-T3).
+         * @description The page's latest published version (title, SEO text and blocks), frozen
+         *     when it was published, with an ETag naming the page and version: a client
+         *     that sends it back in `If-None-Match` gets 304 until the page is published
+         *     again. No sign-in; the same 404 for a missing, unpublished or unlicensed
+         *     page.
+         */
+        get: operations["deliver_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/internal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A published page for a signed-in person (K5-T2).
+         * @description The same answer as `/api/v1/content/delivery`, for `public` and
+         *     `internal` pages; anything else is the same 404.
+         */
+        get: operations["deliver_internal_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page's current draft through a signed preview link (K5-T2).
+         * @description Anyone with an unexpired link reads the draft (title, SEO text and draft
+         *     blocks), whatever the page's audience. A wrong, expired or forged token
+         *     and a deleted page are the same 404.
+         */
+        get: operations["preview_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/content/view": {
         parameters: {
             query?: never;
@@ -10063,6 +10459,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/docgen/batches/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A render batch's progress (K3-T3).
+         * @description How many of its renders are pending, running, completed (and attached)
+         *     or failed. The person who started it and administrators see it; anyone
+         *     else gets 404.
+         */
+        get: operations["batch_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/docgen/renders/{render_id}": {
         parameters: {
             query?: never;
@@ -10089,6 +10507,30 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["render_document"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/docgen/templates/{id}/render-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renders one template for many records (K3-T3).
+         * @description One render per record, each its own job, so one failing record does not
+         *     stop the others and each retries on its own; each renders as the caller,
+         *     sees only what the caller may see, and is attached to its record when the
+         *     template names an `attach_to_field`. Answers the batch id;
+         *     `GET /api/v1/docgen/batches/{id}` shows its progress.
+         */
+        post: operations["render_batch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10849,6 +11291,74 @@ export interface paths {
         put?: never;
         /** A21-T5: counts one open of a menu item for today. */
         post: operations["menu_item_opened"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/reply-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The likely replies for a record (G6-T3).
+         * @description Ranks the reply templates the caller may use by what was used on similar
+         *     earlier records of the same entity, by how much of the template's wording
+         *     the record shares, and by how often it is used, best first (at most 5).
+         *     Each comes rendered for the record and channel, with the reasons it was
+         *     suggested. The caller must be able to read the record.
+         */
+        get: operations["reply_suggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/reply-templates/{id}/used": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Records that a reply template was used on a record (G6-T3).
+         * @description The reply suggestions learn from it: what was used on similar records,
+         *     and how often. The caller must be able to read the record.
+         */
+        post: operations["reply_template_used"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/tours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The guided tours this caller may see (B14-T1).
+         * @description Every published tour that names none of the roles or one the caller holds
+         *     (an administrator sees all), with its steps in English and Arabic. The web
+         *     app starts a tour by itself once per person on its route, and offers it
+         *     again on request.
+         */
+        get: operations["tours"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12349,6 +12859,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service-portal/offerings/{id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Files an anonymous request on a public offering (G2-T1).
+         * @description Off by default: the offering must be listed in
+         *     `service.anonymous_intake.offerings` and `service.anonymous_intake.user`
+         *     must name the service account the request is filed as. Every other case
+         *     (not listed, not public, inactive, unlicensed) is the same 404. At most
+         *     five requests a minute from one address and sixty a minute to one
+         *     offering; when the deployment has a challenge (proof-of-work or a CAPTCHA
+         *     provider), `captcha_token` must carry it solved, or the answer is 429 with
+         *     `Attome-Challenge` naming the kind. The request goes through the same
+         *     create path, routing and audit as a staff one; the answer is the status
+         *     token, shown once.
+         */
+        post: operations["submit_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service-portal/status": {
         parameters: {
             query?: never;
@@ -12876,6 +13415,27 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["recrawl_target"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-request/{id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Converts a work request with conversion maps (G2-T3).
+         * @description Each map creates one record of its entity from the request's fields; more
+         *     than one map splits the request into several records, created together.
+         */
+        post: operations["convert_with_maps_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15578,6 +16138,31 @@ export interface components {
             id: string;
             title: string;
         };
+        /** @description G2-T1: what an anonymous web form sends. */
+        AnonymousRequest: {
+            /**
+             * @description The solved challenge (`{challenge}:{answer}` for proof-of-work, or the
+             *     CAPTCHA provider's token) when the deployment asks for one.
+             */
+            captcha_token?: string | null;
+            /** @description At most 10,000 characters. */
+            description?: string | null;
+            email?: string | null;
+            /**
+             * @description How to reach the person, kept with the description; at most 200
+             *     characters each.
+             */
+            name?: string | null;
+            /** @description 1 to 200 characters. */
+            title: string;
+        };
+        /** @description What an anonymous submitter gets back: the status token, once. */
+        AnonymousRequestAccepted: {
+            /** @description G2-T2: the request's reference, to quote when following it up. */
+            reference?: string | null;
+            /** @description The `{public_id}.{secret}` bearer for `GET /api/v1/service-portal/status`. */
+            status_token: string;
+        };
         ApiGroupOut: {
             api: components["schemas"]["StatOut"];
             parts: components["schemas"]["StatOut"][];
@@ -15968,6 +16553,33 @@ export interface components {
             /** @description The archived value (its JSON form: number, text, boolean, array). */
             value: Record<string, never>;
         };
+        /** @description `PUT .../article`. */
+        ArticleBody: {
+            category?: string | null;
+            /**
+             * Format: uuid
+             * @description The knowledge data source to file the article under; `null` makes the
+             *     page an ordinary page again.
+             */
+            knowledge_source_id?: string | null;
+            products?: string[];
+        };
+        /** @description A page's article settings. */
+        ArticleSettings: {
+            article_category?: string | null;
+            article_products: string[];
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The knowledge item the article is projected into, once it has been.
+             */
+            knowledge_item_id?: string | null;
+            /** Format: uuid */
+            knowledge_source_id?: string | null;
+            /** @description `page` or `article`. */
+            page_type: string;
+        };
         AssessmentStartResponse: {
             /** Format: uuid */
             id: string;
@@ -16153,6 +16765,11 @@ export interface components {
              *     bundle is applied to, or the patch is `Blocked` at plan time.
              */
             entity: string;
+        };
+        /** @description `PUT .../audience`. */
+        AudienceBody: {
+            /** @description `public` or `internal`. */
+            audience: string;
         };
         AuditSearchRow: {
             /** Format: int32 */
@@ -16532,6 +17149,20 @@ export interface components {
             id: string;
             kind: components["schemas"]["BlockKind"];
             props: Record<string, never>;
+        };
+        /**
+         * @description What happened to one block between two versions, by block `id`.
+         * @enum {string}
+         */
+        BlockChange: "added" | "removed" | "changed" | "moved";
+        /** @description One block's change. */
+        BlockDiff: {
+            block_id: string;
+            change: components["schemas"]["BlockChange"];
+            /** @description Its position in the older version, if it was there. */
+            from_index?: number | null;
+            /** @description Its position in the newer version, if it is there. */
+            to_index?: number | null;
         };
         /**
          * @description The full block library (mockup's block-library modal). Kept as a real
@@ -18610,6 +19241,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description K5-T1: a publish in this space waits for approval. */
+            require_approval: boolean;
             /** Format: int64 */
             row_version: number;
             /** Format: date-time */
@@ -18743,6 +19376,26 @@ export interface components {
             /** Format: uuid */
             ticket_id: string;
             ticket_number: string;
+        };
+        /** @description `POST /api/v1/work-request/{id}/convert`. */
+        ConvertWithMapsRequest: {
+            /** @description The maps to convert with, in order; more than one splits the request. */
+            map_ids: string[];
+            /**
+             * @description Values for the target records that the request cannot supply (a
+             *     required parent, say), applied over every map's result.
+             */
+            values?: Record<string, never>;
+        };
+        /** @description What a conversion with maps created. */
+        ConvertWithMapsResponse: {
+            records: components["schemas"]["ConvertedRecord"][];
+        };
+        /** @description A record a conversion created. */
+        ConvertedRecord: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
         };
         /** @description One artefact of the current version. */
         CookedRef: {
@@ -19125,6 +19778,8 @@ export interface components {
         CreateSpaceBody: {
             description?: string | null;
             name: string;
+            /** @description K5-T1: a publish in this space waits for approval. */
+            require_approval?: boolean;
         };
         CreateStateModelBody: {
             entity_logicalname: string;
@@ -19246,10 +19901,23 @@ export interface components {
             required_privilege?: string | null;
             to_state: string;
         };
+        /** @description `POST .../translations`. */
+        CreateTranslationBody: {
+            /** @description The translation's language code, e.g. `ar` or `en-GB`. */
+            language: string;
+            title: string;
+            /** @description The translation's own URL path. */
+            url_path: string;
+        };
         CreateVersionBody: {
             graph?: unknown;
         };
         CreateWorkRequestFromOfferingRequest: {
+            /**
+             * @description G2-T1: the `channel` choice the request came through (`portal` for
+             *     an anonymous web form); unset leaves it empty.
+             */
+            channel?: string | null;
             description?: string | null;
             /**
              * @description `project_request | change_request | issue_report | it_request |
@@ -19271,12 +19939,30 @@ export interface components {
         };
         CreateWorkRequestFromOfferingResponse: {
             /**
+             * @description G2-T3: the records the request became at once, through the
+             *     offering's direct-creation conversion maps; empty when it has none
+             *     (or the conversion could not be made, which leaves the request to
+             *     convert by hand).
+             */
+            converted: components["schemas"]["ConvertedRecord"][];
+            /**
+             * @description G2-T2: the requester's other open requests, newest first, so the
+             *     submission can be added to one instead. Empty when the caller may not
+             *     read work requests.
+             */
+            open_requests: components["schemas"]["OpenRequest"][];
+            /**
              * @description The self-service portal bearer token (`{public_id}.{secret}`) —
              *     returned exactly once, here. Only its argon2 hash is persisted
              *     (`service_work_request.portal_secret_hash`); this response is the only
              *     place the raw secret ever exists.
              */
             portal_token: string;
+            /**
+             * @description G2-T2: the request's reference (`REQ-2026-00042`), when the
+             *     deployment's reference rule numbered it.
+             */
+            reference?: string | null;
             status: string;
             /** Format: uuid */
             work_request_id: string;
@@ -19982,6 +20668,24 @@ export interface components {
             /** @description Why, when a reason was given. */
             reason?: string | null;
         };
+        /** @description One published page for a headless site (K5-T3). */
+        DeliveredPage: {
+            blocks: Record<string, never>[];
+            path: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            seo_description?: string | null;
+            seo_title?: string | null;
+            /** Format: uuid */
+            space_id: string;
+            title: string;
+            /**
+             * Format: int32
+             * @description The published version served (0 for a page published before versions
+             *     were kept).
+             */
+            version: number;
+        };
         DeliveryListItem: {
             /** Format: int32 */
             attempts: number;
@@ -20378,16 +21082,25 @@ export interface components {
         };
         DsrRequestSummary: {
             block_reason?: string | null;
+            /**
+             * Format: date-time
+             * @description R1-T1: when the request must be answered by.
+             */
+            due_at?: string | null;
             evidence_ref?: string | null;
             /** Format: date-time */
             fulfilled_at?: string | null;
             /** Format: uuid */
             id: string;
+            /** @description The law the deadline follows, when the platform knows it. */
+            law?: string | null;
             request_type: string;
             /** Format: date-time */
             requested_at: string;
             /** Format: uuid */
             requested_by: string;
+            /** @description A rectification's outcome: what was corrected, or why not. */
+            resolution?: string | null;
             status: string;
             subject_reference: string;
         };
@@ -24034,6 +24747,14 @@ export interface components {
             scope: string;
             title: string;
         };
+        /** @description One of the requester's open requests, offered when they submit another. */
+        OpenRequest: {
+            /** Format: uuid */
+            id: string;
+            reference?: string | null;
+            status: string;
+            title: string;
+        };
         /** @description `POST /api/v1/shared-files/{token}`. */
         OpenShareLinkRequest: {
             password?: string | null;
@@ -24184,6 +24905,8 @@ export interface components {
             widgets: components["schemas"]["PageWidgetResult"][];
         };
         PageDetail: {
+            /** @description K5-T2: `public` (anyone) or `internal` (signed-in people only). */
+            audience?: string;
             blocks_draft: Record<string, never>[];
             blocks_published?: Record<string, never>[] | null;
             /** Format: uuid */
@@ -24281,6 +25004,36 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             url_path: string;
+        };
+        /** @description One version with its content. */
+        PageVersion: {
+            blocks: Record<string, never>[];
+            /** Format: date-time */
+            published_at: string;
+            /** Format: uuid */
+            published_by: string;
+            /** Format: int32 */
+            restored_from?: number | null;
+            seo_description?: string | null;
+            seo_title?: string | null;
+            title: string;
+            /** Format: int32 */
+            version_number: number;
+        };
+        /** @description One version in a page's list. */
+        PageVersionSummary: {
+            /** Format: date-time */
+            published_at: string;
+            /** Format: uuid */
+            published_by: string;
+            /**
+             * Format: int32
+             * @description The version this one restored, if it was a restore.
+             */
+            restored_from?: number | null;
+            title: string;
+            /** Format: int32 */
+            version_number: number;
         };
         PageWidgetResult: {
             data?: null | components["schemas"]["WidgetDataResponse"];
@@ -25886,16 +26639,25 @@ export interface components {
         PaginatedResponse_DsrRequestSummary: {
             items: {
                 block_reason?: string | null;
+                /**
+                 * Format: date-time
+                 * @description R1-T1: when the request must be answered by.
+                 */
+                due_at?: string | null;
                 evidence_ref?: string | null;
                 /** Format: date-time */
                 fulfilled_at?: string | null;
                 /** Format: uuid */
                 id: string;
+                /** @description The law the deadline follows, when the platform knows it. */
+                law?: string | null;
                 request_type: string;
                 /** Format: date-time */
                 requested_at: string;
                 /** Format: uuid */
                 requested_by: string;
+                /** @description A rectification's outcome: what was corrected, or why not. */
+                resolution?: string | null;
                 status: string;
                 subject_reference: string;
             }[];
@@ -27323,6 +28085,34 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PageVersionSummary: {
+            items: {
+                /** Format: date-time */
+                published_at: string;
+                /** Format: uuid */
+                published_by: string;
+                /**
+                 * Format: int32
+                 * @description The version this one restored, if it was a restore.
+                 */
+                restored_from?: number | null;
+                title: string;
+                /** Format: int32 */
+                version_number: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PatchOpView: {
             items: {
                 op: string;
@@ -27876,6 +28666,45 @@ export interface components {
                 proposed_at: string;
                 status: string;
                 target: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RetentionRule: {
+            items: {
+                /** @description `purge`, `archive` or `review`. */
+                action: string;
+                category?: string | null;
+                /** @description Filters the covered records must match, as the list views use. */
+                condition: components["schemas"]["Filter"][];
+                /** Format: date-time */
+                created_at: string;
+                entity_logicalname: string;
+                /** Format: uuid */
+                id: string;
+                is_active: boolean;
+                name: string;
+                /** Format: int32 */
+                period_days: number;
+                /** Format: int64 */
+                row_version: number;
+                /**
+                 * @description The date the period starts from: `created_at`, `modified_at` or a
+                 *     date attribute of the entity.
+                 */
+                start_attribute: string;
+                /** Format: date-time */
+                updated_at: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -28515,6 +29344,37 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Suggestion: {
+            items: {
+                folder?: string | null;
+                id: string;
+                name: string;
+                /**
+                 * @description Why it was suggested, for the person: `similar_cases`, `wording` or
+                 *     `often_used`, strongest first.
+                 */
+                reasons: string[];
+                /** @description The reply, rendered for the case and channel. */
+                reply: string;
+                /**
+                 * Format: double
+                 * @description 0 to 1.
+                 */
+                score: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SuppressionSummary: {
             items: {
                 /** Format: date-time */
@@ -28927,6 +29787,32 @@ export interface components {
                 tool_call_id: string;
                 /** Format: uuid */
                 turn_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_TourView: {
+            items: {
+                /** @description Starts by itself the first time the person opens `route`. */
+                auto_start: boolean;
+                id: string;
+                name: string;
+                /** @description The app path prefix the tour belongs to. */
+                route: string;
+                /** @description `[{ selector, title?, text, placement? }]`. */
+                steps: Record<string, never>[];
+                /** @description `{ "en": .., "ar": .. }`. */
+                title: Record<string, never>;
             }[];
             /** Format: int64 */
             page: number;
@@ -29874,6 +30760,21 @@ export interface components {
             /** Format: double */
             threshold?: number | null;
         };
+        /** @description A signed preview link. */
+        PreviewLink: {
+            /** Format: date-time */
+            expires_at: string;
+            /** @description The token for `GET /api/v1/content/preview?token=`. */
+            token: string;
+        };
+        /** @description `POST .../preview-link`. */
+        PreviewLinkBody: {
+            /**
+             * Format: int64
+             * @description How long the link works, 1 to 10,080 minutes; 60 when unset.
+             */
+            minutes?: number | null;
+        };
         /**
          * @description The output a preview renders.
          * @enum {string}
@@ -30309,12 +31210,27 @@ export interface components {
             /** Format: int64 */
             version_number?: number | null;
         };
+        /**
+         * @description A publish's outcome: published (with its version), or waiting for
+         *     approval in a space that requires it (K5-T1).
+         */
         PublishResult: {
+            /**
+             * Format: uuid
+             * @description The approval request a publish waits for.
+             */
+            approval_request_id?: string | null;
             /** Format: uuid */
             id: string;
             /** Format: date-time */
-            published_at: string;
+            published_at?: string | null;
+            /** @description `published`, or `pending_approval`. */
             status: string;
+            /**
+             * Format: int32
+             * @description The version this publish recorded.
+             */
+            version_number?: number | null;
         };
         /** @description D-521 — what a viewer of `dashboard_id` sees. */
         PublishedDashboard: {
@@ -30778,6 +31694,13 @@ export interface components {
         RecoveryCodesBody: {
             recovery_codes: string[];
         };
+        /** @description `POST …/rectify`. */
+        RectifyBody: {
+            /** @description `fulfilled` (the records were corrected) or `rejected`. */
+            outcome: string;
+            /** @description What was corrected, or why the request was rejected. */
+            resolution: string;
+        };
         RecurringMeasures: {
             /** Format: date */
             as_of: string;
@@ -31034,6 +31957,31 @@ export interface components {
             /** @description The new logical and column name (`^[a-z][a-z0-9_]*$`). */
             new_name: string;
         };
+        /** @description `POST /api/v1/docgen/templates/{id}/render-batch`. */
+        RenderBatchBody: {
+            /** @description The records to render, 1 to 500; a repeated id renders once. */
+            record_ids: string[];
+        };
+        /** @description A batch's progress. */
+        RenderBatchStatus: {
+            /**
+             * Format: int64
+             * @description Completed renders attached to their record.
+             */
+            attached: number;
+            /** Format: uuid */
+            batch_id: string;
+            /** Format: int64 */
+            completed: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            pending: number;
+            /** Format: int64 */
+            running: number;
+            /** Format: int64 */
+            total: number;
+        };
         RenderEnqueueResponse: {
             /** Format: uuid */
             id: string;
@@ -31079,6 +32027,13 @@ export interface components {
         };
         ReplyRequest: {
             body: string;
+        };
+        /** @description `POST /api/v1/model/reply-templates/{id}/used`. */
+        ReplyTemplateUsed: {
+            /** @description The record the reply was for. */
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
         };
         /** @description One report item, without its sealed values. */
         ReportItem: {
@@ -31297,6 +32252,20 @@ export interface components {
             /** Format: int32 */
             version_no: number;
         };
+        /** @description `POST …/restrict`. */
+        RestrictBody: {
+            scopes: components["schemas"]["DsrScope"][];
+        };
+        /** @description A restriction placed or lifted. */
+        RestrictionResult: {
+            /**
+             * Format: uuid
+             * @description The DSR request.
+             */
+            id: string;
+            scopes: components["schemas"]["ScopeRestriction"][];
+            status: string;
+        };
         RetentionActionSummary: {
             action_type: string;
             /** Format: date-time */
@@ -31313,6 +32282,51 @@ export interface components {
             proposed_at: string;
             status: string;
             target: string;
+        };
+        /** @description One stored rule. */
+        RetentionRule: {
+            /** @description `purge`, `archive` or `review`. */
+            action: string;
+            category?: string | null;
+            /** @description Filters the covered records must match, as the list views use. */
+            condition: components["schemas"]["Filter"][];
+            /** Format: date-time */
+            created_at: string;
+            entity_logicalname: string;
+            /** Format: uuid */
+            id: string;
+            is_active: boolean;
+            name: string;
+            /** Format: int32 */
+            period_days: number;
+            /** Format: int64 */
+            row_version: number;
+            /**
+             * @description The date the period starts from: `created_at`, `modified_at` or a
+             *     date attribute of the entity.
+             */
+            start_attribute: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description A rule as an administrator writes it. */
+        RetentionRuleBody: {
+            action: string;
+            category?: string | null;
+            condition?: components["schemas"]["Filter"][];
+            /** @description The entity's logical name. */
+            entity: string;
+            is_active?: boolean;
+            name: string;
+            /** Format: int32 */
+            period_days: number;
+            /**
+             * Format: int64
+             * @description On an update, the version read; a newer stored version answers 409.
+             */
+            row_version?: number | null;
+            /** @description Defaults to `created_at`. */
+            start_attribute?: string | null;
         };
         ReverseRequest: {
             reason: string;
@@ -32350,6 +33364,12 @@ export interface components {
             object_key: string;
             /** Format: int64 */
             withheld_for_legal_hold: number;
+        };
+        /** @description How many records one scope restricted. */
+        ScopeRestriction: {
+            entity_logicalname: string;
+            /** Format: int64 */
+            records: number;
         };
         ScopeSwitchRequest: {
             enabled: boolean;
@@ -33642,17 +34662,23 @@ export interface components {
         SuggestResponse: {
             items: components["schemas"]["Suggestion"][];
         };
+        /** @description One suggestion. */
         Suggestion: {
+            folder?: string | null;
+            id: string;
+            name: string;
             /**
-             * @description For `"entity"`: the entity to route to. For `"saved_search"`: always
-             *     `"saved_search"` — pair with `record_id` to call `run`.
+             * @description Why it was suggested, for the person: `similar_cases`, `wording` or
+             *     `often_used`, strongest first.
              */
-            entity_logicalname: string;
-            /** @description `"entity"` | `"saved_search"`. */
-            kind: string;
-            /** Format: uuid */
-            record_id?: string | null;
-            text: string;
+            reasons: string[];
+            /** @description The reply, rendered for the case and channel. */
+            reply: string;
+            /**
+             * Format: double
+             * @description 0 to 1.
+             */
+            score: number;
         };
         SuggestionOutcomeRequest: {
             /**
@@ -34192,6 +35218,19 @@ export interface components {
             /** Format: int64 */
             value: number;
         };
+        /** @description One guided tour as a signed-in person receives it (B14-T1). */
+        TourView: {
+            /** @description Starts by itself the first time the person opens `route`. */
+            auto_start: boolean;
+            id: string;
+            name: string;
+            /** @description The app path prefix the tour belongs to. */
+            route: string;
+            /** @description `[{ selector, title?, text, placement? }]`. */
+            steps: Record<string, never>[];
+            /** @description `{ "en": .., "ar": .. }`. */
+            title: Record<string, never>;
+        };
         TracePartOut: {
             /** Format: double */
             ms: number;
@@ -34296,6 +35335,33 @@ export interface components {
              *     one asked for — see `approval_request_id`.
              */
             to_state: string;
+        };
+        /** @description A page and its translations. */
+        TranslationSet: {
+            /** Format: uuid */
+            source_id: string;
+            /**
+             * Format: int32
+             * @description The source's latest published version; none when never published.
+             */
+            source_version?: number | null;
+            translations: components["schemas"]["TranslationSummary"][];
+        };
+        /** @description One translation of a page. */
+        TranslationSummary: {
+            /** Format: uuid */
+            id: string;
+            language?: string | null;
+            /** @description The source has a newer published version than that. */
+            stale: boolean;
+            status: string;
+            title: string;
+            /**
+             * Format: int32
+             * @description The source version this translation was last brought up to date with.
+             */
+            translated_from_version?: number | null;
+            url_path: string;
         };
         TraverseRequest: {
             direction?: components["schemas"]["Direction"];
@@ -34794,6 +35860,8 @@ export interface components {
              */
             description?: string | null;
             name?: string | null;
+            /** @description K5-T1: `None` leaves it unchanged. */
+            require_approval?: boolean | null;
         };
         /**
          * @description Full replacement of the model's mutable fields (`entity_logicalname` is
@@ -35050,6 +36118,16 @@ export interface components {
             status: string;
             /** Format: int32 */
             version_number: number;
+        };
+        /** @description Two versions compared. */
+        VersionDiff: {
+            blocks: components["schemas"]["BlockDiff"][];
+            /** Format: int32 */
+            from_version: number;
+            seo_changed: boolean;
+            title_changed: boolean;
+            /** Format: int32 */
+            to_version: number;
         };
         VersionSummary: {
             /** Format: uuid */
@@ -40941,6 +42019,132 @@ export interface operations {
             };
         };
     };
+    set_article: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArticleBody"];
+            };
+        };
+        responses: {
+            /** @description The page's article settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArticleSettings"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, may not create knowledge items, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad category or product, or a knowledge source the caller cannot see */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_audience: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AudienceBody"];
+            };
+        };
+        responses: {
+            /** @description The audience was set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudienceBody"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The audience is not public or internal */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     move_page: {
         parameters: {
             query?: never;
@@ -41003,19 +42207,92 @@ export interface operations {
             };
         };
     };
+    create_preview_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewLinkBody"];
+            };
+        };
+        responses: {
+            /** @description The preview link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewLink"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description minutes is out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     publish_page: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                /** @description The page's id */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Success */
+            /** @description Published as a new version */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResult"];
+                };
+            };
+            /** @description The publish waits for approval */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -41345,6 +42622,396 @@ export interface operations {
             };
             /** @description Page not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mark_current: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The translation's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The translation is up to date */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslationSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such translation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_translations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A source page's id, or a translation's */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The source and its translations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslationSet"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_translation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The source page's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTranslationBody"];
+            };
+        };
+        responses: {
+            /** @description The translation was created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslationSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The url_path is taken, or the page already has a translation into this language */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad language, title or url_path, or the page is itself a translation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_versions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's versions, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PageVersionSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compare_versions: {
+        parameters: {
+            query: {
+                /** @description The older version. */
+                from: number;
+                /** @description The newer version. */
+                to: number;
+            };
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The differences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionDiff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+                /** @description The version number */
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's id */
+                id: string;
+                /** @description The version to restore */
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restored and published as a new version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResult"];
+                };
+            };
+            /** @description Restored to the draft; the publish waits for approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Content Management is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such page or version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The restored blocks fail today's block validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -44297,7 +45964,10 @@ export interface operations {
             path: {
                 /** @description `"pending" | "blocked" | "fulfilled" | "rejected"`. */
                 status: string | null;
-                /** @description `"access" | "erasure" | "portability" | "objection"`. */
+                /**
+                 * @description `"access" | "erasure" | "portability" | "objection" | "restriction" |
+                 *     "rectification"`.
+                 */
                 request_type: string | null;
                 /** @description One-based: page 1 is the first page. */
                 page: number | null;
@@ -44543,6 +46213,182 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The restriction request's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restriction is lifted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestrictionResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No restriction request with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rectify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The rectification request's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RectifyBody"];
+            };
+        };
+        responses: {
+            /** @description The request is closed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestrictionResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No pending rectification request with this id */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad outcome, or an empty or too long resolution */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restrict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The restriction request's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestrictBody"];
+            };
+        };
+        responses: {
+            /** @description The records are restricted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestrictionResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No pending restriction request with this id */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No scopes, or a scope naming an unknown entity or attribute */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -53890,6 +55736,215 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_rules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every retention rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RetentionRule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionRuleBody"];
+            };
+        };
+        responses: {
+            /** @description The rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionRule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule does not fit its entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The rule's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionRuleBody"];
+            };
+        };
+        responses: {
+            /** @description The rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionRule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule does not fit its entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The rule's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rule is removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -68987,6 +71042,129 @@ export interface operations {
             };
         };
     };
+    deliver_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The content space's id. */
+                space: string;
+                /** @description The page's URL path in that space, e.g. `/pricing`. */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's published version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveredPage"];
+                };
+            };
+            /** @description The client already holds this version */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deliver_internal_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The content space's id. */
+                space: string;
+                /** @description The page's URL path in that space, e.g. `/pricing`. */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's published version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveredPage"];
+                };
+            };
+            /** @description The client already holds this version */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published page at this path in this space that the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed token from `POST /api/v1/admin/content/pages/{id}/preview-link`. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPageView"];
+                };
+            };
+            /** @description The link is wrong or expired, or the page is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     view_page: {
         parameters: {
             query?: never;
@@ -69506,6 +71684,56 @@ export interface operations {
             };
         };
     };
+    batch_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The batch's id */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The batch's progress */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderBatchStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such batch, or not one the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     render_status: {
         parameters: {
             query?: never;
@@ -69607,6 +71835,69 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    render_batch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenderBatchBody"];
+            };
+        };
+        responses: {
+            /** @description The renders are queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RenderBatchStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No records, more than 500, or a template that cannot render */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -71982,6 +74273,152 @@ export interface operations {
             };
             /** @description No item, or an item over 300 characters */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reply_suggestions: {
+        parameters: {
+            query: {
+                /** @description The record's entity, e.g. `service_ticket`. */
+                entity: string;
+                record_id: string;
+                /**
+                 * @description The channel the reply is for (`email`, `sms`, `whatsapp`, `chat`,
+                 *     `portal`); `email` when unset.
+                 */
+                channel?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggested replies, best first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Suggestion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown channel */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reply_template_used: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The reply template's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyTemplateUsed"];
+            };
+        };
+        responses: {
+            /** @description Counted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tours this caller sees */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TourView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -76970,6 +79407,60 @@ export interface operations {
             };
         };
     };
+    submit_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The public offering's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnonymousRequest"];
+            };
+        };
+        responses: {
+            /** @description The request was filed; the status token is shown once */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnonymousRequestAccepted"];
+                };
+            };
+            /** @description This offering does not take anonymous requests (the same answer for every reason) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A field is missing or too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests, or the challenge was not solved (Attome-Challenge names its kind) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     lookup_status: {
         parameters: {
             query?: never;
@@ -78764,6 +81255,77 @@ export interface operations {
             };
             /** @description Target not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    convert_with_maps_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConvertWithMapsRequest"];
+            };
+        };
+        responses: {
+            /** @description The records the request became */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConvertWithMapsResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such work request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already converted or rejected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A map is not active or not valid, or a target record failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
