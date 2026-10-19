@@ -3,6 +3,10 @@ export type { OfferingSummary, CreateWorkRequestFromOfferingRequest, CreateWorkR
 export { NewRequestPickerComponent } from './new-request/new-request-picker/new-request-picker.component';
 // G2-T4: the triage board.
 export { TriageBoardComponent } from './triage/triage-board.component';
+// G3-T3: the service catalog with cart and my orders.
+export { CatalogComponent } from './catalog/catalog.component';
+export { itemCancellable } from './services/service-admin.service';
+export type { CatalogOffering, CartLine, OrderView, OrderItemView, OrderPlaced, OrderRecipient } from './services/service-admin.service';
 export { TRIAGE_STATUSES, triageColumns } from './services/service-admin.service';
 export type { TriageItem, ConversionMapOption, KnowledgeSuggestion } from './services/service-admin.service';
 export { registerServiceEntityForms } from './provide-service-entity-forms';

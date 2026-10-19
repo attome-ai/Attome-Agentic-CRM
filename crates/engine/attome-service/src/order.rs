@@ -20,7 +20,7 @@ use attome_records::mutation_ring::MutationActor;
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege};
 use attome_server::security::SecurityContext;
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -562,12 +562,352 @@ async fn place_order_route(
     Ok((StatusCode::CREATED, Json(placed)))
 }
 
+// ── G3-T3: catalog, my orders and cancel ────────────────────────────────────
+
+/// Most offerings one catalog search answers.
+pub const CATALOG_LIMIT: i64 = 100;
+/// Most orders one listing answers.
+pub const ORDERS_LIMIT: i64 = 50;
+
+/// Text folded for matching in Arabic and English: lower case, the alef and
+/// teh marbuta forms people type interchangeably made one. Pure.
+pub fn fold_search(text: &str) -> String {
+    text.trim()
+        .to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'أ' | 'إ' | 'آ' => 'ا',
+            'ة' => 'ه',
+            'ى' => 'ي',
+            other => other,
+        })
+        .collect()
+}
+
+/// `GET /api/v1/service-catalog`.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct CatalogQuery {
+    /// Words to look for in the name, description and category.
+    pub q: Option<String>,
+    /// Only offerings in this catalog category.
+    pub category_ref: Option<Uuid>,
+}
+
+/// One offering in the catalog.
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct CatalogOffering {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub category_ref: Option<Uuid>,
+    pub category_name: Option<String>,
+    pub default_priority: Option<String>,
+    pub requires_approval: bool,
+}
+
+/// The active offerings matching `q`, by name. Only active offerings are
+/// ever listed; a caller without `service_offering.read` gets none.
+pub async fn search_catalog(
+    db: &DbPool,
+    query: &CatalogQuery,
+) -> Result<Vec<CatalogOffering>, AppError> {
+    let pattern = query
+        .q
+        .as_deref()
+        .map(fold_search)
+        .filter(|q| !q.is_empty())
+        .map(|q| {
+            format!(
+                "%{}%",
+                q.replace('\\', "\\\\")
+                    .replace('%', "\\%")
+                    .replace('_', "\\_")
+            )
+        });
+    sqlx::query_as(
+        "SELECT o.id, o.name, o.description, o.category::text AS category, o.category_ref, \
+                c.name AS category_name, o.default_priority::text AS default_priority, \
+                coalesce(o.requires_approval, false) AS requires_approval \
+           FROM service_offering o \
+           LEFT JOIN service_category c ON c.id = o.category_ref \
+          WHERE (o.is_active IS NULL OR o.is_active = true) \
+            AND ($2::uuid IS NULL OR o.category_ref = $2) \
+            AND ($1::text IS NULL OR translate(lower(concat_ws(' ', o.name, o.description, \
+                     o.category::text, c.name)), 'أإآةى', 'اااهي') LIKE $1) \
+          ORDER BY o.name LIMIT $3",
+    )
+    .bind(pattern)
+    .bind(query.category_ref)
+    .bind(CATALOG_LIMIT)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// The service catalog (G3-T3): active offerings, searched in Arabic or
+/// English across name, description and category.
+#[utoipa::path(
+    get,
+    path = "/api/v1/service-catalog",
+    tag = "service",
+    params(CatalogQuery),
+    responses(
+        (status = 200, description = "Matching offerings, by name", body = PaginatedResponse<CatalogOffering>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn catalog_route(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<crate::auth::OfferingRead>>,
+    axum::extract::Query(query): axum::extract::Query<CatalogQuery>,
+) -> Result<Json<PaginatedResponse<CatalogOffering>>, AppError> {
+    let items = search_catalog(&state.base.db, &query).await?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(items, total, 1, CATALOG_LIMIT)))
+}
+
+/// One item of an order, as its owner sees it.
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct OrderItemView {
+    pub id: Uuid,
+    pub offering_id: Uuid,
+    pub offering_name: Option<String>,
+    pub quantity: Option<f64>,
+    pub status: String,
+}
+
+/// One order, as its owner sees it.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OrderView {
+    pub work_request_id: Uuid,
+    pub title: String,
+    pub reference: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub items: Vec<OrderItemView>,
+}
+
+/// The caller's orders, newest first: ones placed for them or by them.
+pub async fn my_orders(db: &DbPool, user_id: Uuid) -> Result<Vec<OrderView>, AppError> {
+    let orders: Vec<(
+        Uuid,
+        String,
+        Option<String>,
+        Option<chrono::DateTime<chrono::Utc>>,
+    )> = sqlx::query_as(
+        "SELECT w.id, w.title, w.reference, w.created_at FROM service_work_request w \
+              WHERE (w.requester_id = $1 OR w.created_by = $1) \
+                AND (w.is_active IS NULL OR w.is_active = true) \
+                AND EXISTS (SELECT 1 FROM service_request_item i WHERE i.work_request_ref = w.id) \
+              ORDER BY w.created_at DESC LIMIT $2",
+    )
+    .bind(user_id)
+    .bind(ORDERS_LIMIT)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let ids: Vec<Uuid> = orders.iter().map(|o| o.0).collect();
+    let items: Vec<(Uuid, OrderItemView)> = sqlx::query_as::<
+        _,
+        (Uuid, Uuid, Uuid, Option<String>, Option<f64>, String),
+    >(
+        "SELECT i.work_request_ref, i.id, i.offering_ref, o.name, i.quantity::double precision, \
+                coalesce(i.status, 'awaiting_approval') \
+           FROM service_request_item i LEFT JOIN service_offering o ON o.id = i.offering_ref \
+          WHERE i.work_request_ref = ANY($1) AND (i.is_active IS NULL OR i.is_active = true) \
+          ORDER BY i.created_at, i.id",
+    )
+    .bind(&ids)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .map(
+        |(order, id, offering_id, offering_name, quantity, status)| {
+            (
+                order,
+                OrderItemView {
+                    id,
+                    offering_id,
+                    offering_name,
+                    quantity,
+                    status,
+                },
+            )
+        },
+    )
+    .collect();
+    let mut views: Vec<OrderView> = orders
+        .into_iter()
+        .map(|(id, title, reference, created_at)| OrderView {
+            work_request_id: id,
+            title,
+            reference,
+            created_at,
+            items: Vec::new(),
+        })
+        .collect();
+    for (order, item) in items {
+        if let Some(view) = views.iter_mut().find(|v| v.work_request_id == order) {
+            view.items.push(item);
+        }
+    }
+    Ok(views)
+}
+
+/// The caller's orders and where each item stands (G3-T3).
+#[utoipa::path(
+    get,
+    path = "/api/v1/service-orders/mine",
+    tag = "service",
+    responses(
+        (status = 200, description = "The caller's orders, newest first", body = PaginatedResponse<OrderView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn my_orders_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<attome_server::authz::SelfService>,
+) -> Result<Json<PaginatedResponse<OrderView>>, AppError> {
+    let items = my_orders(&state.base.db, ctx.user_id).await?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(items, total, 1, ORDERS_LIMIT)))
+}
+
+/// Whether an item in `status` can still be cancelled. Pure.
+pub fn cancellable(status: &str) -> bool {
+    matches!(status, "awaiting_approval" | "fulfilling")
+}
+
+/// Cancels an order item (G3-T3): its unfinished tasks are cancelled too,
+/// and an approval it waits for no longer starts anything. Only the person
+/// the order is for, the one who placed it, or an administrator may.
+pub async fn cancel_item(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    item_id: Uuid,
+) -> Result<(), AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row: Option<(String, Option<Uuid>, Option<Uuid>)> = sqlx::query_as(
+        "SELECT coalesce(i.status, ''), w.requester_id, w.created_by \
+           FROM service_request_item i JOIN service_work_request w ON w.id = i.work_request_ref \
+          WHERE i.id = $1 AND (i.is_active IS NULL OR i.is_active = true) FOR UPDATE OF i",
+    )
+    .bind(item_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let (status, requester, creator) = row.ok_or(AppError::NotFound)?;
+    let owner = Some(ctx.user_id) == requester || Some(ctx.user_id) == creator;
+    if !owner && !ctx.is_admin {
+        return Err(AppError::NotFound);
+    }
+    if !cancellable(&status) {
+        return Err(AppError::Conflict("this item can no longer be cancelled"));
+    }
+    sqlx::query("UPDATE service_request_item SET status = 'cancelled' WHERE id = $1")
+        .bind(item_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    sqlx::query(
+        "UPDATE service_fulfilment_task SET status = 'cancelled' \
+          WHERE item_ref = $1 AND status IN ('pending', 'open')",
+    )
+    .bind(item_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_core::change_feed::emit_tx(&mut tx, ITEM, item_id, attome_core::ChangeOperation::Update)
+        .await?;
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::BusinessEvent::new(
+            ITEM,
+            item_id,
+            attome_audit::AuditOperation::Update,
+            "service_order.cancel_item",
+            ctx.user_id,
+        )
+        .comment(format!("cancelled while {status}")),
+    )
+    .await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Cancels an order item (G3-T3).
+///
+/// Allowed while it waits for approval or is being fulfilled; its open and
+/// pending tasks are cancelled with it. Only the person the order is for, the
+/// one who placed it, or an administrator may; anyone else gets 404.
+#[utoipa::path(
+    post,
+    path = "/api/v1/service-orders/items/{id}/cancel",
+    tag = "service",
+    params(("id" = Uuid, Path, description = "The order item's id")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update),
+    ])))),
+    responses(
+        (status = 204, description = "Cancelled"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such item, or not one the caller may cancel", body = ErrorResponse),
+        (status = 409, description = "The item is fulfilled, rejected or cancelled already", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn cancel_item_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<attome_server::authz::SelfService>,
+    axum::extract::Path(item_id): axum::extract::Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    cancel_item(&state, &ctx, item_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod catalog_browse {
+    use super::*;
+
+    #[test]
+    fn catalog_search_folds_arabic_letter_forms_and_case() {
+        assert_eq!(fold_search(" Laptop "), "laptop");
+        assert_eq!(fold_search("إجازة"), "اجازه");
+        assert_eq!(fold_search("أجازه"), fold_search("اجازة"));
+    }
+
+    #[test]
+    fn catalog_items_cancel_only_before_they_finish() {
+        assert!(cancellable("awaiting_approval"));
+        assert!(cancellable("fulfilling"));
+        assert!(!cancellable("fulfilled"));
+        assert!(!cancellable("rejected"));
+        assert!(!cancellable("cancelled"));
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/service-orders", post(place_order_route))
+    Router::new()
+        .route("/api/v1/service-orders", post(place_order_route))
+        .route("/api/v1/service-catalog", axum::routing::get(catalog_route))
+        .route(
+            "/api/v1/service-orders/mine",
+            axum::routing::get(my_orders_route),
+        )
+        .route(
+            "/api/v1/service-orders/items/{id}/cancel",
+            post(cancel_item_route),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(place_order_route))]
+#[openapi(paths(place_order_route, catalog_route, my_orders_route, cancel_item_route))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

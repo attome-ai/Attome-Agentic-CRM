@@ -1,0 +1,97 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'serviceCatalog.title' | translate }}</h2>
+    <p class="subtitle">{{ 'serviceCatalog.subtitle' | translate }}</p>
+  </div>
+</div>
+
+@if (error(); as message) {
+  <p class="error-msg" role="alert">{{ message }}</p>
+}
+@if (placedReference(); as reference) {
+  <p class="state-msg" role="status" data-testid="order-placed">{{ 'serviceCatalog.placed' | translate: { reference: reference } }}</p>
+}
+
+<div class="catalog-layout">
+  <section class="card catalog-results">
+    <input type="search" class="catalog-search" data-testid="catalog-search"
+           [attr.aria-label]="'serviceCatalog.search' | translate"
+           [attr.placeholder]="'serviceCatalog.search' | translate"
+           (input)="search($any($event.target).value)" />
+    @if (loading() && offerings().length === 0) {
+      <p class="state-msg">{{ 'serviceCatalog.loading' | translate }}</p>
+    } @else {
+      @for (offering of offerings(); track offering.id) {
+        <article class="catalog-offering" data-testid="catalog-offering" [attr.data-id]="offering.id">
+          <strong>{{ offering.name }}</strong>
+          @if (offering.category_name || offering.category) {
+            <span class="hint">{{ offering.category_name || offering.category }}</span>
+          }
+          @if (offering.description) { <p class="hint">{{ offering.description }}</p> }
+          @if (offering.requires_approval) {
+            <span class="badge badge-other">{{ 'serviceCatalog.needsApproval' | translate }}</span>
+          }
+          <button class="btn-secondary" type="button" data-testid="catalog-add" (click)="add(offering)">
+            {{ 'serviceCatalog.add' | translate }}
+          </button>
+        </article>
+      } @empty {
+        <p class="hint">{{ 'serviceCatalog.noResults' | translate }}</p>
+      }
+    }
+  </section>
+
+  <aside class="card catalog-cart" [attr.aria-label]="'serviceCatalog.cart' | translate">
+    <h3>{{ 'serviceCatalog.cart' | translate }} <span class="badge badge-other">{{ cartCount() }}</span></h3>
+    @for (line of cart(); track line.offering.id) {
+      <div class="cart-line" data-testid="cart-line">
+        <span>{{ line.offering.name }}</span>
+        <input type="number" min="1" max="1000" class="cart-quantity"
+               [attr.aria-label]="'serviceCatalog.quantity' | translate"
+               [value]="line.quantity" (change)="setQuantity(line, $any($event.target).value)" />
+        <button class="btn-secondary" type="button" (click)="remove(line)">{{ 'serviceCatalog.remove' | translate }}</button>
+      </div>
+    } @empty {
+      <p class="hint">{{ 'serviceCatalog.cartEmpty' | translate }}</p>
+    }
+    @if (recipients().length > 0) {
+      <label class="field">
+        <span>{{ 'serviceCatalog.orderFor' | translate }}</span>
+        <select data-testid="order-for" (change)="recipientId.set($any($event.target).value)">
+          <option value="">{{ 'serviceCatalog.myself' | translate }}</option>
+          @for (person of recipients(); track person.id) {
+            <option [value]="person.id">{{ person.label }}</option>
+          }
+        </select>
+      </label>
+    }
+    <button class="btn-primary" type="button" data-testid="place-order"
+            [disabled]="cart().length === 0 || placing()" (click)="placeOrder()">
+      {{ 'serviceCatalog.placeOrder' | translate }}
+    </button>
+  </aside>
+</div>
+
+<section class="card">
+  <h3>{{ 'serviceCatalog.myOrders' | translate }}</h3>
+  @for (order of orders(); track order.work_request_id) {
+    <article class="catalog-order" data-testid="my-order">
+      <strong>{{ order.reference || order.title }}</strong>
+      <ul>
+        @for (item of order.items; track item.id) {
+          <li [attr.data-status]="item.status">
+            {{ item.offering_name }} × {{ item.quantity }} —
+            {{ ('serviceCatalog.itemStatus.' + item.status) | translate }}
+            @if (canCancel(item.status)) {
+              <button class="btn-secondary" type="button" data-testid="cancel-item" (click)="cancel(item.id)">
+                {{ 'serviceCatalog.cancel' | translate }}
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    </article>
+  } @empty {
+    <p class="hint">{{ 'serviceCatalog.noOrders' | translate }}</p>
+  }
+</section>

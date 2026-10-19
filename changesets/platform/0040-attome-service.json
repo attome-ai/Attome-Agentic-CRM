@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:a3e5947949ea2bb7de1e88e62a94d160dd46c19ac275c2023eaf9ba6f616d524",
+  "checksum": "sha256:065ceea7b143f5cdc6eec420fc8a34b17547b4444befd14d377452bd77dd3c2d",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-service.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -2501,7 +2501,8 @@
               "awaiting_approval",
               "rejected",
               "fulfilling",
-              "fulfilled"
+              "fulfilled",
+              "cancelled"
             ],
             "multi": false
           }

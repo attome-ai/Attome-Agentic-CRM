@@ -56,6 +56,60 @@ export interface KnowledgeSuggestion {
   passage: string;
 }
 
+/** G3-T3: one offering in the catalog. */
+export interface CatalogOffering {
+  id:                string;
+  name:              string;
+  description:       string | null;
+  category:          string | null;
+  category_ref:      string | null;
+  category_name:     string | null;
+  default_priority:  string | null;
+  requires_approval: boolean;
+}
+
+/** G3-T3: one line of a cart. */
+export interface CartLine {
+  offering: CatalogOffering;
+  quantity: number;
+}
+
+/** G3-T3: an order's item as its owner sees it. */
+export interface OrderItemView {
+  id:            string;
+  offering_id:   string;
+  offering_name: string | null;
+  quantity:      number | null;
+  status:        string;
+}
+
+/** G3-T3: an order as its owner sees it. */
+export interface OrderView {
+  work_request_id: string;
+  title:           string;
+  reference:       string | null;
+  created_at:      string | null;
+  items:           OrderItemView[];
+}
+
+/** G3-T3: what placing an order answers. */
+export interface OrderPlaced {
+  work_request_id: string;
+  reference:       string | null;
+  items:           { id: string; offering_id: string; status: string; approval_request_id: string | null }[];
+}
+
+/** G3-T3: a person an order can be placed for. */
+export interface OrderRecipient {
+  id:    string;
+  label: string;
+}
+
+/** Whether an order item can still be cancelled. Pure. */
+export function itemCancellable(status: string): boolean {
+  return status === 'awaiting_approval' || status === 'fulfilling';
+}
+
 /** The statuses the triage board shows, in column order. */
 export const TRIAGE_STATUSES = ['new', 'triaged', 'converted', 'rejected'] as const;
 
@@ -141,6 +195,49 @@ export class ServiceAdminService {
     return this.api
       .get<{ items: KnowledgeSuggestion[] }>('/api/v1/search/knowledge', { q: query, limit: '3' })
       .pipe(map(page => page.items ?? []));
+  }
+
+  /** G3-T3: the catalog, searched in Arabic or English. */
+  searchCatalog(q: string): Observable<CatalogOffering[]> {
+    const params: Record<string, string> = {};
+    if (q.trim()) params['q'] = q.trim();
+    return this.api
+      .get<{ items: CatalogOffering[] }>('/api/v1/service-catalog', params)
+      .pipe(map(page => page.items ?? []));
+  }
+
+  /** G3-T3: places a cart as one order for `requesterId`. */
+  placeOrder(requesterId: string, lines: CartLine[]): Observable<OrderPlaced> {
+    return this.api.post<OrderPlaced>('/api/v1/service-orders', {
+      requester_id: requesterId,
+      lines: lines.map(l => ({ offering_id: l.offering.id, quantity: l.quantity })),
+    });
+  }
+
+  /** G3-T3: the caller's orders. */
+  myOrders(): Observable<OrderView[]> {
+    return this.api
+      .get<{ items: OrderView[] }>('/api/v1/service-orders/mine')
+      .pipe(map(page => page.items ?? []));
+  }
+
+  /** G3-T3: cancels one order item. */
+  cancelOrderItem(itemId: string): Observable<unknown> {
+    return this.api.post(`/api/v1/service-orders/items/${itemId}/cancel`, {});
+  }
+
+  /** G3-T3: people an order can be placed for (the first 200). */
+  listRecipients(): Observable<OrderRecipient[]> {
+    return this.api
+      .get<{ items: Record<string, unknown>[] }>('/api/v1/user_account', {
+        select: 'id,user_name,email',
+        sort: 'email',
+        page_size: '200',
+      })
+      .pipe(map(page => (page.items ?? []).map(row => ({
+        id: String(row['id']),
+        label: text(row['user_name']) ?? text(row['email']) ?? String(row['id']),
+      }))));
   }
 
   createWorkRequestFromOffering(

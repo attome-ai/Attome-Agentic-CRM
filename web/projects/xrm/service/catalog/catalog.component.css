@@ -1,0 +1,45 @@
+.catalog-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .catalog-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.catalog-search {
+  inline-size: 100%;
+  margin-block-end: 10px;
+}
+
+.catalog-offering,
+.catalog-order {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-block-end: 1px solid var(--color-border);
+  padding-block: 8px;
+}
+
+.catalog-offering button {
+  align-self: flex-start;
+}
+
+.cart-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: 6px;
+}
+
+.cart-line span {
+  flex: 1;
+}
+
+.cart-quantity {
+  inline-size: 64px;
+}

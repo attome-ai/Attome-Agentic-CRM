@@ -246,7 +246,7 @@
         { "logicalname": "work_request_ref", "display_name": "Request", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_work_request" },
         { "logicalname": "offering_ref", "display_name": "Offering", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_offering" },
         { "logicalname": "quantity", "display_name": "Quantity", "field_type": "number" },
-        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["awaiting_approval", "rejected", "fulfilling", "fulfilled"], "multi": false } },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["awaiting_approval", "rejected", "fulfilling", "fulfilled", "cancelled"], "multi": false } },
         { "logicalname": "answers", "display_name": "Answers (JSON)", "field_type": "text" },
         { "logicalname": "approval_request_id", "display_name": "Approval Request", "field_type": "text" },
         { "logicalname": "fulfilment_mode", "display_name": "Fulfilment Mode", "field_type": "choice", "is_filterable": true, "options": { "choices": ["sequential", "parallel"], "multi": false } }

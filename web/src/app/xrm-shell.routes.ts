@@ -379,6 +379,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.NewRequestPickerComponent),
           },
           {
+            // G3-T3: the service catalog, cart and my orders.
+            path: 'service/catalog',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/service').then(m => m.CatalogComponent),
+          },
+          {
             // G2-T4: the intake triage board.
             path: 'service/triage',
             canActivate: [authGuard],

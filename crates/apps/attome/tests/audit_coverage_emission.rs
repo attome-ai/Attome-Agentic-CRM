@@ -245,6 +245,11 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          full boot) does not — this DB-focused harness has no equivalent seed",
     ),
     (
+        "POST /api/v1/service-orders/items/{id}/cancel",
+        "service_request_item is a seeded platform-bundle entity this DB-focused harness \
+         does not provision (same gap as convert-to-ticket)",
+    ),
+    (
         "POST /api/v1/service-orders",
         "service_offering/service_request_item are seeded platform-bundle entities \
          boot.rs provisions, which this DB-focused harness does not (same gap as \
