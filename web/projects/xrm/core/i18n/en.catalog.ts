@@ -1575,6 +1575,24 @@ export const xrmEn = {
     },
   },
   // ── U14 (basic-units-10-10 §6.2): the ticket form's SLA badge and actions ──
+  serviceTriage: {
+    title: 'Triage',
+    subtitle: 'Accept, reject or convert incoming requests.',
+    reload: 'Reload',
+    loading: 'Loading requests…',
+    empty: 'Nothing here.',
+    accept: 'Accept',
+    reject: 'Reject',
+    convert: 'Convert',
+    convertWith: 'Convert with',
+    status: {
+      new: 'New',
+      triaged: 'Triaged',
+      converted: 'Converted',
+      rejected: 'Rejected',
+    },
+    suggestions: 'These articles may already answer it:',
+  },
   serviceSla: {
     title: 'SLA',
     badge: {

@@ -1,0 +1,58 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'serviceTriage.title' | translate }}</h2>
+    <p class="subtitle">{{ 'serviceTriage.subtitle' | translate }}</p>
+  </div>
+  <div class="btn-row">
+    <button class="btn-secondary" type="button" (click)="reload()">{{ 'serviceTriage.reload' | translate }}</button>
+  </div>
+</div>
+
+@if (error(); as message) {
+  <p class="error-msg" role="alert">{{ message }}</p>
+}
+
+@if (loading() && items().length === 0) {
+  <p class="state-msg">{{ 'serviceTriage.loading' | translate }}</p>
+} @else {
+  <div class="triage-board" data-testid="triage-board">
+    @for (status of statuses; track status) {
+      <section class="triage-column" [attr.data-status]="status" [attr.aria-label]="('serviceTriage.status.' + status) | translate">
+        <h3>
+          {{ ('serviceTriage.status.' + status) | translate }}
+          <span class="badge badge-other">{{ columns()[status].length }}</span>
+        </h3>
+        @for (item of columns()[status]; track item.id) {
+          <article class="triage-card" data-testid="triage-card" [attr.data-id]="item.id">
+            <strong>{{ item.title }}</strong>
+            @if (item.reference) { <span class="hint">{{ item.reference }}</span> }
+            @if (item.priority) { <span class="badge badge-other">{{ item.priority }}</span> }
+            @if (item.category) { <span class="hint">{{ item.category }}</span> }
+            <div class="btn-row">
+              @if (canAccept(item)) {
+                <button class="btn-primary" type="button" data-testid="triage-accept"
+                        [disabled]="busy() === item.id" (click)="accept(item)">{{ 'serviceTriage.accept' | translate }}</button>
+              }
+              @if (canReject(item)) {
+                <button class="btn-secondary" type="button" data-testid="triage-reject"
+                        [disabled]="busy() === item.id" (click)="reject(item)">{{ 'serviceTriage.reject' | translate }}</button>
+              }
+              @if (canConvert(item)) {
+                <select [attr.aria-label]="'serviceTriage.convertWith' | translate"
+                        (change)="chooseMap(item, $any($event.target).value)">
+                  @for (map of maps(); track map.id) {
+                    <option [value]="map.id">{{ map.name }}</option>
+                  }
+                </select>
+                <button class="btn-secondary" type="button" data-testid="triage-convert"
+                        [disabled]="busy() === item.id" (click)="convert(item)">{{ 'serviceTriage.convert' | translate }}</button>
+              }
+            </div>
+          </article>
+        } @empty {
+          <p class="hint">{{ 'serviceTriage.empty' | translate }}</p>
+        }
+      </section>
+    }
+  </div>
+}

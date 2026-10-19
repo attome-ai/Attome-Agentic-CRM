@@ -379,6 +379,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.NewRequestPickerComponent),
           },
           {
+            // G2-T4: the intake triage board.
+            path: 'service/triage',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/service').then(m => m.TriageBoardComponent),
+          },
+          {
             // D-365 — Web Crawling for Knowledge Base.
             path: 'webcrawl/targets',
             canActivate: [authGuard],

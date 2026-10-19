@@ -1498,6 +1498,24 @@ export const xrmAr = {
     },
   },
   // ── U14 — شارة اتفاقية مستوى الخدمة وإجراءاتها في نموذج التذكرة ──
+  serviceTriage: {
+    title: 'الفرز',
+    subtitle: 'اقبل الطلبات الواردة أو ارفضها أو حوّلها.',
+    reload: 'إعادة التحميل',
+    loading: 'جارٍ تحميل الطلبات…',
+    empty: 'لا شيء هنا.',
+    accept: 'قبول',
+    reject: 'رفض',
+    convert: 'تحويل',
+    convertWith: 'التحويل باستخدام',
+    status: {
+      new: 'جديد',
+      triaged: 'مفروز',
+      converted: 'محوّل',
+      rejected: 'مرفوض',
+    },
+    suggestions: 'قد تجيب هذه المقالات عن طلبك:',
+  },
   serviceSla: {
     title: 'اتفاقية مستوى الخدمة',
     badge: {

@@ -1,6 +1,10 @@
 export { ServiceAdminService } from './services/service-admin.service';
 export type { OfferingSummary, CreateWorkRequestFromOfferingRequest, CreateWorkRequestFromOfferingResponse } from './services/service-admin.service';
 export { NewRequestPickerComponent } from './new-request/new-request-picker/new-request-picker.component';
+// G2-T4: the triage board.
+export { TriageBoardComponent } from './triage/triage-board.component';
+export { TRIAGE_STATUSES, triageColumns } from './services/service-admin.service';
+export type { TriageItem, ConversionMapOption, KnowledgeSuggestion } from './services/service-admin.service';
 export { registerServiceEntityForms } from './provide-service-entity-forms';
 // U14 — ticket SLA: the service over `sla.rs`/`clock.rs`, the status badge
 // (reusable in a list cell) and the pure status derivation behind it.

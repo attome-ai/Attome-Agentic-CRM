@@ -1,0 +1,35 @@
+.triage-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.triage-column {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  min-block-size: 120px;
+}
+
+.triage-column h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-block: 0 8px;
+}
+
+.triage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-block-end: 8px;
+}
+
+.triage-card .btn-row {
+  flex-wrap: wrap;
+  gap: 6px;
+}

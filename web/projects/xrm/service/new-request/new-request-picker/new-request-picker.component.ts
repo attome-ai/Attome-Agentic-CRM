@@ -1,8 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ApiError, AuthService } from '@attome/base';
+import { ApiError, AuthService, TranslatePipe } from '@attome/base';
+import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 
-import { OfferingSummary, ServiceAdminService, CreateWorkRequestFromOfferingResponse } from '../../services/service-admin.service';
+import {
+  OfferingSummary, ServiceAdminService, CreateWorkRequestFromOfferingResponse, KnowledgeSuggestion,
+} from '../../services/service-admin.service';
 
 /**
  * The "New Request" picker — an authenticated user browses the active
@@ -17,7 +21,7 @@ import { OfferingSummary, ServiceAdminService, CreateWorkRequestFromOfferingResp
 @Component({
   selector: 'attome-service-new-request-picker',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../../styles/admin-page.css', './new-request-picker.component.css'],
   templateUrl: './new-request-picker.component.html',
@@ -42,6 +46,30 @@ export class NewRequestPickerComponent implements OnInit {
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly result = signal<CreateWorkRequestFromOfferingResponse | null>(null);
+
+  /** G2-T4: knowledge that may answer the request before it is filed. */
+  readonly suggestions = signal<KnowledgeSuggestion[]>([]);
+  private readonly typed = new Subject<string>();
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    this.typed
+      .pipe(
+        debounceTime(400),
+        distinctUntilChanged(),
+        switchMap(text => text.length < 3
+          ? of([] as KnowledgeSuggestion[])
+          : this.svc.suggestKnowledge(text).pipe(catchError(() => of([] as KnowledgeSuggestion[])))),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(found => this.suggestions.set(found));
+  }
+
+  /** The title changed: looks for matching knowledge. */
+  onTitle(value: string): void {
+    this.title.set(value);
+    this.typed.next(value.trim());
+  }
 
   ngOnInit(): void {
     this.svc.listActiveOfferings().subscribe({

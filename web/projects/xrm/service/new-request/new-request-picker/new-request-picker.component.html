@@ -48,9 +48,19 @@
         <div class="form-row-1">
           <div class="field">
             <label for="req-title">Title</label>
-            <input id="req-title" type="text" [ngModel]="title()" (ngModelChange)="title.set($event)" />
+            <input id="req-title" type="text" [ngModel]="title()" (ngModelChange)="onTitle($event)" />
           </div>
         </div>
+        @if (suggestions().length > 0) {
+          <div class="form-row-1" data-testid="knowledge-suggestions">
+            <p class="hint">{{ 'serviceTriage.suggestions' | translate }}</p>
+            <ul>
+              @for (s of suggestions(); track s.item_id) {
+                <li><strong>{{ s.title }}</strong> — <span class="hint">{{ s.passage }}</span></li>
+              }
+            </ul>
+          </div>
+        }
         <div class="form-row-1">
           <div class="field">
             <label for="req-description">Description</label>
