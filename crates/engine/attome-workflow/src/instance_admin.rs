@@ -561,15 +561,13 @@ async fn start_instance_inner(
 
     let entry_node_id = match trigger_node_id {
         Some(id) => id.to_string(),
-        None => graph
-            .nodes
-            .iter()
-            .find(|n| {
-                crate::node_types::NodeType::parse(&n.node_type)
-                    == Some(crate::node_types::NodeType::Trigger)
-            })
-            .map(|n| n.id.clone())
-            .ok_or_else(|| AppError::internal("published graph has no Trigger node"))?,
+        // B16-T13: a start that names its trigger kind (`context.trigger`,
+        // e.g. `scan`) enters at a trigger of that kind when the flow has one.
+        None => crate::node_types::entry_trigger(
+            &graph,
+            context.get("trigger").and_then(serde_json::Value::as_str),
+        )
+        .ok_or_else(|| AppError::internal("published graph has no Trigger node"))?,
     };
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;

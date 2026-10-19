@@ -539,6 +539,59 @@ pub fn agent_step_allowed_action_ids(
     }
 }
 
+/// B16-T13: the trigger kind a scan action's `run_workflow` starts a flow
+/// with (`POST /api/v1/scan/act`). A `trigger` node whose
+/// `config.trigger_type` is `scan` is where such a start enters.
+pub const TRIGGER_SCAN: &str = "scan";
+
+/// The trigger node a start enters at: the first trigger of `kind` when the
+/// start names one and the flow has it, else the flow's first trigger. Pure.
+pub fn entry_trigger(graph: &crate::graph::Graph, kind: Option<&str>) -> Option<String> {
+    let triggers = || {
+        graph
+            .nodes
+            .iter()
+            .filter(|n| NodeType::parse(&n.node_type) == Some(NodeType::Trigger))
+    };
+    kind.and_then(|kind| {
+        triggers().find(|n| {
+            n.config
+                .get("trigger_type")
+                .and_then(serde_json::Value::as_str)
+                == Some(kind)
+        })
+    })
+    .or_else(|| triggers().next())
+    .map(|n| n.id.clone())
+}
+
+#[cfg(test)]
+mod entry_trigger_tests {
+    use super::*;
+
+    #[test]
+    fn a_scan_start_enters_at_the_scan_trigger() {
+        let graph = crate::graph::Graph::parse(&serde_json::json!({
+            "nodes": [
+                {"id": "manual", "type": "trigger", "config": {"trigger_type": "manual"}},
+                {"id": "scan", "type": "trigger", "config": {"trigger_type": "scan"}},
+                {"id": "step", "type": "update_record"}
+            ]
+        }))
+        .unwrap();
+        assert_eq!(
+            entry_trigger(&graph, Some(TRIGGER_SCAN)).as_deref(),
+            Some("scan")
+        );
+        assert_eq!(entry_trigger(&graph, None).as_deref(), Some("manual"));
+        assert_eq!(
+            entry_trigger(&graph, Some("webhook")).as_deref(),
+            Some("manual")
+        );
+        assert!(entry_trigger(&crate::graph::Graph::default(), Some(TRIGGER_SCAN)).is_none());
+    }
+}
+
 #[cfg(test)]
 mod agent_step_governance_tests {
     use super::*;

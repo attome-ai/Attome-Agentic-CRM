@@ -358,6 +358,8 @@ pub async fn act(
                         started_by: ctx.user_id,
                         correlation_entity_id: Some(hit.id),
                         context: serde_json::json!({
+                            // B16-T13: enters at the flow's `scan` trigger.
+                            "trigger": "scan",
                             "entity": hit.entity,
                             "record_id": hit.id,
                             "scanned": value,

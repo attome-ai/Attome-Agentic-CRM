@@ -44,6 +44,8 @@ pub mod route_classify;
 pub mod sales_competitors;
 pub mod sales_lines;
 pub mod sales_team;
+/// B16-T13: scan.lookup and code.generate.
+pub mod scan;
 pub mod search_records;
 pub mod secrets_list;
 pub mod sentiment;
@@ -104,6 +106,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(billing::descriptors());
     all.extend(billing_payment::descriptors());
     all.extend(sales_team::descriptors());
+    all.extend(scan::descriptors());
     all
 }
 
@@ -159,5 +162,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(billing::executors());
     all.extend(billing_payment::executors());
     all.extend(sales_team::executors());
+    all.extend(scan::executors());
     all
 }
