@@ -32,10 +32,11 @@ describe('ListCardsComponent', () => {
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     const cards = () => el.querySelectorAll<HTMLElement>('[data-testid="list-card"]');
+    // MouseEvent carries clientX everywhere; not every test DOM has PointerEvent.
     const swipe = (card: HTMLElement, dx: number) => {
-      card.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200 }));
-      card.dispatchEvent(new PointerEvent('pointermove', { clientX: 200 + dx }));
-      card.dispatchEvent(new PointerEvent('pointerup', { clientX: 200 + dx }));
+      card.dispatchEvent(new MouseEvent('pointerdown', { clientX: 200 }));
+      card.dispatchEvent(new MouseEvent('pointermove', { clientX: 200 + dx }));
+      card.dispatchEvent(new MouseEvent('pointerup', { clientX: 200 + dx }));
       fixture.detectChanges();
     };
     return { fixture, cards, fired, swipe };
