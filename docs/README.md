@@ -1,5 +1,16 @@
 # Documentation
 
+## Guides
+
+- [Install](content/install.md): Linux, Windows, PostgreSQL in Docker, and the first steps after.
+- [Admin](content/admin.md): people and access, settings, health, records and compliance.
+- [Builder](content/builder.md): entities and fields, model objects, rules and flows, packs.
+- [Developer](content/developer.md): the API, and building from source.
+- [Extension](content/extension.md): packs, agents, integrations, web forms, branding.
+- [Upgrade](content/upgrade.md): upgrading and rolling back.
+
+## Reference
+
 - [Architecture](architecture.md)
 - [Agents](agents.md): what agents may do, their tools, delegation and safety.
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
