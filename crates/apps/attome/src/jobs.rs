@@ -687,6 +687,17 @@ async fn dispatch_platform_job(
             if purged > 0 {
                 tracing::info!(purged, "recovery archive purge: run complete");
             }
+            // C9-T1: chat messages past their channel's retention (legal
+            // holds suspend it per channel; `retention.legal_hold` suspends
+            // it all).
+            let chat = attome_chat::retention::purge_expired(
+                &attome_state.base.db,
+                config.retention.legal_hold,
+            )
+            .await?;
+            if chat > 0 {
+                tracing::info!(purged = chat, "chat retention: expired messages removed");
+            }
             // Y12-T8: renamed attributes' old names past their alias period.
             let aliases = attome_metadata::provision::field_change::prune_expired_aliases(
                 &attome_state.base.db,

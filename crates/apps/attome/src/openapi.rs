@@ -102,6 +102,10 @@ fn build() -> utoipa::openapi::OpenApi {
         "core",
     ));
     doc.merge(attome_server::openapi::tag_module(
+        attome_chat::openapi(),
+        "chat",
+    ));
+    doc.merge(attome_server::openapi::tag_module(
         attome_search::engine::openapi(),
         "search",
     ));

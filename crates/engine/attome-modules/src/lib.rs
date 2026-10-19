@@ -176,6 +176,8 @@ pub const MODULE_CONTRACT: ModuleId = ModuleId::new(40);
 pub const MODULE_OFFLINE: ModuleId = ModuleId::new(41);
 /// Procurement: requisitions, purchase orders, receipts and vendor bills (W3).
 pub const MODULE_PROCUREMENT: ModuleId = ModuleId::new(42);
+/// Internal chat: direct, group and record channels with threads and retention (C9).
+pub const MODULE_CHAT: ModuleId = ModuleId::new(43);
 
 /// Every module by its configuration name.
 pub const MODULE_MAP: &[(&str, ModuleId)] = &[
@@ -216,6 +218,7 @@ pub const MODULE_MAP: &[(&str, ModuleId)] = &[
     ("contract", MODULE_CONTRACT),
     ("offline", MODULE_OFFLINE),
     ("procurement", MODULE_PROCUREMENT),
+    ("chat", MODULE_CHAT),
 ];
 
 /// The module named `name` in [`MODULE_MAP`].

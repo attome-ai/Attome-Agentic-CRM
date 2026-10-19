@@ -1668,6 +1668,8 @@ pub fn register_engines(
         .register(attome_offline::OfflineModel)
         .register(attome_procurement::ProcurementModel)
         .register(attome_hr::HrModel)
+        // C9-T1: gated on the `chat` module.
+        .register(attome_chat::ChatModel)
         // Route-mounting/license-gating only (D-383) — attome-compliance's own
         // seeds (`consent_seed`, `legal_matter_seed`) also run from inside
         // `.build()`, same shape as attome-project/attome-service/attome-grc/

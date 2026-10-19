@@ -283,6 +283,7 @@ dependencies = [
  "attome-billing",
  "attome-cache",
  "attome-callintel",
+ "attome-chat",
  "attome-commission",
  "attome-compliance",
  "attome-config",
@@ -667,6 +668,28 @@ dependencies = [
  "attome-rules",
  "axum",
  "serde",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "attome-chat"
+version = "0.1.0"
+dependencies = [
+ "attome-audit",
+ "attome-core",
+ "attome-db",
+ "attome-modules",
+ "attome-records",
+ "attome-security",
+ "attome-server",
+ "attome-types",
+ "axum",
+ "base64 0.23.1",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
  "utoipa",
  "uuid",
 ]
