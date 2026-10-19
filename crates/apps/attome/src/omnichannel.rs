@@ -1329,6 +1329,8 @@ pub fn routes() -> Router<EngineState> {
             get(poll_webchat_messages),
         )
         .route("/api/v1/omnichannel/webchat/stream", get(webchat_stream))
+        // J9-T2: co-browse sessions ride the same bundle.
+        .merge(crate::cobrowse::routes())
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1336,5 +1338,7 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::cobrowse::openapi());
+    doc
 }

@@ -122,6 +122,11 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("GET", "/api/v1/omnichannel/webchat/poll", "webchat"),
     // J3-T1: the same widget, as a live stream.
     ("GET", "/api/v1/omnichannel/webchat/stream", "webchat"),
+    // J9-T2: the customer's side of co-browse, anonymous like web chat.
+    ("POST", "/api/v1/cobrowse/join", "portal_status"),
+    ("GET", "/api/v1/cobrowse/visitor/messages", "webchat"),
+    ("POST", "/api/v1/cobrowse/visitor/messages", "webchat"),
+    ("POST", "/api/v1/cobrowse/visitor/end", "webchat"),
 ];
 pub(crate) const DEFAULT_CATEGORY: &str = "api";
 

@@ -99,6 +99,12 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/omnichannel/webchat/poll",
     // J3-T1: the same session token, as a live stream.
     "/api/v1/omnichannel/webchat/stream",
+    // J9-T2: the customer's side of co-browse; its code or token is the
+    // authority. The agent's side (`/api/v1/cobrowse/sessions...`) is not
+    // bypassed.
+    "/api/v1/cobrowse/join",
+    "/api/v1/cobrowse/visitor/messages",
+    "/api/v1/cobrowse/visitor/end",
 ];
 
 /// M59 Phase 1 (`xrm-integration`, D-425) — the inbound connector webhook,
@@ -352,6 +358,9 @@ mod tests {
         assert!(is_csrf_exempt("/api/v1/omnichannel/webchat/message"));
         assert!(is_csrf_exempt("/api/v1/omnichannel/webchat/poll"));
         assert!(is_bypass("/api/v1/omnichannel/webchat/stream"));
+        assert!(is_bypass("/api/v1/cobrowse/join"));
+        assert!(is_bypass("/api/v1/cobrowse/visitor/messages"));
+        assert!(!is_bypass("/api/v1/cobrowse/sessions"));
         // Regression guard: no other omnichannel surface (a future admin/
         // metrics route) may ever be swept into bypass by a prefix match with
         // these two exact entries.
