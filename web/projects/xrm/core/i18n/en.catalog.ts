@@ -1802,6 +1802,21 @@ export const xrmEn = {
       failed: 'The reminder could not be saved.',
     },
   },
+  // ── C2-T2: following a record ──
+  follow: {
+    follow: 'Follow',
+    following: 'Following',
+    unfollow: 'Stop following',
+    followHint: 'Hear about changes to this record',
+    unfollowHint: 'Stop hearing about changes to this record',
+    listTitle: 'Records you follow',
+    loading: 'Loading…',
+    empty: 'You do not follow any records yet.',
+    error: {
+      notAllowed: 'You cannot follow this record.',
+      failed: 'Following could not be changed.',
+    },
+  },
   // ── U11 (basic-units-10-10 §5.3, D-606): CSV import in the migration wizard ──
   csvImport: {
     wizardTitle: 'Data import',

@@ -30,6 +30,8 @@ export { CommunicationsPanelComponent } from './communications/communications-pa
 export { NotesPanelComponent }          from './notes/notes-panel.component';
 // U4 (D-602) — "Remind me" on the record form header.
 export { RemindMeComponent, REMINDER_ENTITY } from './reminders/remind-me.component';
+export { FollowButtonComponent, FOLLOW_ENTITY } from './follow-button/follow-button.component';
+export { FollowingListComponent } from './follow-button/following-list.component';
 // U7 Phase A — admin-only Assign / Share on the record form header and the
 // list's bulk bar. Only the button pair is exported; its dialog is deferred
 // inside it and stays out of this entry's shared chunk.

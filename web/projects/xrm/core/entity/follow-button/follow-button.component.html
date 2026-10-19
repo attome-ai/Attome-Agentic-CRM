@@ -1,0 +1,12 @@
+@if (loaded()) {
+  <button type="button" class="fb-btn" [class.fb-on]="!!followId()"
+          [attr.aria-pressed]="!!followId()" [disabled]="busy()"
+          [attr.title]="(followId() ? 'follow.unfollowHint' : 'follow.followHint') | translate"
+          (click)="toggle()" data-testid="follow-toggle">
+    <i class="las" [class.la-bell]="!followId()" [class.la-bell-slash]="!!followId()" aria-hidden="true"></i>
+    {{ (followId() ? 'follow.following' : 'follow.follow') | translate }}
+  </button>
+  @if (error(); as message) {
+    <span class="fb-error" role="alert" data-testid="follow-error">{{ message }}</span>
+  }
+}

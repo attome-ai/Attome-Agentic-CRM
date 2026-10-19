@@ -599,6 +599,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/entity').then(m => m.RecycleBinComponent),
           },
           {
+            // C2-T2: the records the signed-in person follows.
+            path: 'following',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity').then(m => m.FollowingListComponent),
+          },
+          {
             // B4-T4 — every record carrying a tag, across entities. Literal
             // segment, ahead of the entity wildcard below.
             path: 'tags/:tagId',
