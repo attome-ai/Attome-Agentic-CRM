@@ -5537,6 +5537,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_secrets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/access-reviews": {
         parameters: {
             query?: never;
@@ -20640,11 +20656,23 @@ export interface components {
                 [key: string]: components["schemas"]["LookupMeta"];
             } | null;
             /**
+             * Format: int64
+             * @description A16-T2: how many more such attributes the caller may not read.
+             *     Omitted when 0.
+             */
+            merged_hidden?: number;
+            /**
              * Format: uuid
              * @description A15-T5: this record was merged into that one (the entity keeps merged
              *     records); omitted otherwise.
              */
             merged_into?: string | null;
+            /**
+             * @description A16-T2: on an update sent with `If-Match-Merge: attributes` over a
+             *     stale version, the attributes others changed since that version,
+             *     which the update was merged over. Omitted otherwise.
+             */
+            merged_over?: string[];
             /** Format: int64 */
             row_version: number;
             /** Format: date-time */
@@ -26016,11 +26044,23 @@ export interface components {
                     [key: string]: components["schemas"]["LookupMeta"];
                 } | null;
                 /**
+                 * Format: int64
+                 * @description A16-T2: how many more such attributes the caller may not read.
+                 *     Omitted when 0.
+                 */
+                merged_hidden?: number;
+                /**
                  * Format: uuid
                  * @description A15-T5: this record was merged into that one (the entity keeps merged
                  *     records); omitted otherwise.
                  */
                 merged_into?: string | null;
+                /**
+                 * @description A16-T2: on an update sent with `If-Match-Merge: attributes` over a
+                 *     stale version, the attributes others changed since that version,
+                 *     which the update was merged over. Omitted otherwise.
+                 */
+                merged_over?: string[];
                 /** Format: int64 */
                 row_version: number;
                 /** Format: date-time */
@@ -28041,6 +28081,50 @@ export interface components {
                 reason?: string | null;
                 scope_key: string;
                 scope_kind: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SecretInventoryRow: {
+            items: {
+                /** @description A key ring's active key id. */
+                active_key_id?: string | null;
+                /**
+                 * Format: date-time
+                 * @description Since when the active key (or the plain secret) has been in use, as
+                 *     far as the recorded starts show.
+                 */
+                active_since?: string | null;
+                /**
+                 * Format: int64
+                 * @description Whole days since `active_since`.
+                 */
+                age_days?: number | null;
+                /** @description A key ring's key ids; empty for a plain secret. */
+                key_ids: string[];
+                /**
+                 * @description The configuration path, e.g. `auth.jwt_secret` or
+                 *     `oidc.providers.okta.client_secret`.
+                 */
+                name: string;
+                /** @description Older than `security.secret_max_age_days`. */
+                over_age: boolean;
+                /** @description `key_ring` (a new key is added beside the old ones) or `replace`. */
+                rotation: string;
+                /** @description Whether this node is configured with it. */
+                set: boolean;
+                /** @description The features that use it. */
+                used_by: string[];
             }[];
             /** Format: int64 */
             page: number;
@@ -32203,6 +32287,37 @@ export interface components {
             route: string;
             route_hint?: null | components["schemas"]["RouteHintDto"];
             total: components["schemas"]["Total"];
+        };
+        /** @description One secret, as an administrator sees it. There is no value field. */
+        SecretInventoryRow: {
+            /** @description A key ring's active key id. */
+            active_key_id?: string | null;
+            /**
+             * Format: date-time
+             * @description Since when the active key (or the plain secret) has been in use, as
+             *     far as the recorded starts show.
+             */
+            active_since?: string | null;
+            /**
+             * Format: int64
+             * @description Whole days since `active_since`.
+             */
+            age_days?: number | null;
+            /** @description A key ring's key ids; empty for a plain secret. */
+            key_ids: string[];
+            /**
+             * @description The configuration path, e.g. `auth.jwt_secret` or
+             *     `oidc.providers.okta.client_secret`.
+             */
+            name: string;
+            /** @description Older than `security.secret_max_age_days`. */
+            over_age: boolean;
+            /** @description `key_ring` (a new key is added beside the old ones) or `replace`. */
+            rotation: string;
+            /** @description Whether this node is configured with it. */
+            set: boolean;
+            /** @description The features that use it. */
+            used_by: string[];
         };
         SecretRotatedResponse: {
             /** Format: uuid */
@@ -54242,6 +54357,55 @@ export interface operations {
                 };
             };
             /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_secrets: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every secret of this node's configuration by name: the features that use it, its key ids, the active one and its age. Never a value. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SecretInventoryRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -81234,7 +81398,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag` */
+            /** @description Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`. With `If-Match-Merge: attributes` over a stale version whose changes touched none of the attributes sent, the update is applied at the current version and `merged_over` lists the attributes others changed (`merged_hidden` counts those the caller cannot read) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -81261,7 +81425,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read */
+            /** @description version_conflict: the record changed since If-Match (with `If-Match-Merge: attributes`, in an attribute this update sends, or in a way the record's history cannot account for). `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read */
             409: {
                 headers: {
                     [name: string]: unknown;
