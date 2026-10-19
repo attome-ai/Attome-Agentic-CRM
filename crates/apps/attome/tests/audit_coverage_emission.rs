@@ -4139,6 +4139,17 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "PUT /api/v1/admin/content/pages/{id}/article" => {
+            // G11-T1: no knowledge source keeps it an ordinary page; the
+            // settings write and its event happen either way.
+            let (id, _) = content_page(fx).await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/content/pages/{id}/article"),
+                t,
+                Some(json!({"knowledge_source_id": null, "category": "Accounts"})),
+            )
+        }
         "PUT /api/v1/admin/content/pages/{id}/schedule" => {
             let (id, row_version) = content_page(fx).await;
             with_if_match(

@@ -1572,6 +1572,12 @@ async fn dispatch_platform_job(
         EngineJob::DocgenRender { render_id } => {
             attome_docgen::render::process(&attome_state, render_id).await?;
         }
+        // G11-T1 — see this variant's doc comment. Needs the full
+        // `EngineState`: it writes the knowledge item through the entity
+        // engine.
+        EngineJob::ContentArticleIndex { page_id } => {
+            attome_content::article::sync(&attome_state, page_id).await?;
+        }
         // M36 Phase 1 (Predictive Intelligence, D-473) — see this variant's
         // doc comment in attome_jobs::job. Runtime pool only: training reads
         // ticket/SLA history and writes `prediction_model` by plain SQL,

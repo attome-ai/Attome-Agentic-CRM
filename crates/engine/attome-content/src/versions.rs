@@ -209,7 +209,7 @@ pub async fn record_version_in_tx(
     actor: Uuid,
     restored_from: Option<i32>,
 ) -> Result<i32, AppError> {
-    sqlx::query_scalar(
+    let version: i32 = sqlx::query_scalar(
         "INSERT INTO content_page_version \
              (page_id, version_number, title, blocks, seo_title, seo_description, \
               published_by, restored_from) \
@@ -226,7 +226,10 @@ pub async fn record_version_in_tx(
     .bind(restored_from)
     .fetch_one(&mut **tx)
     .await
-    .map_err(AppError::internal)
+    .map_err(AppError::internal)?;
+    // G11-T1: a published article is projected into the knowledge index.
+    crate::article::enqueue_sync_in_tx(tx, page_id).await?;
+    Ok(version)
 }
 
 /// Whether the page's space asks for approval before a publish.

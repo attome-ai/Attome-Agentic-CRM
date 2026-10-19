@@ -191,6 +191,10 @@ pub async fn sweep_scheduled_transitions(state: &EngineState) -> Result<SweepSta
 
         if unpublished.is_some() {
             stats.unpublished += 1;
+            // G11-T1: an unpublished article leaves the knowledge index.
+            if let Err(e) = crate::article::enqueue_sync(&state.base.db, page.id).await {
+                tracing::warn!(page_id = %page.id, error = ?e, "could not queue the article's index update");
+            }
             write_transition_audit(
                 state,
                 page.id,

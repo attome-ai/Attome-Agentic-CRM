@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c8e1dbd6da90ac1dba73c034ccada8bed5241ca38b2459218d4a1a6eba3298ab",
+  "checksum": "sha256:f9af24d6376cfcb97df61b016d9b45ed9904ed449006dcbc536343075cdf94ec",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-webcrawl.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -65,6 +65,48 @@
     {
       "args": {
         "definition": {
+          "display_name": "Audience",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "audience",
+          "options": {
+            "choices": [
+              "public",
+              "internal"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "knowledge_data_item",
+        "field": "audience"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "category"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "knowledge_data_item",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "display_name": "Lifecycle",
           "field_type": "choice",
           "is_filterable": true,
@@ -82,10 +124,27 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 4,
+      "seq": 6,
       "target": {
         "entity": "knowledge_data_item",
         "field": "lifecycle"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Products",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "products"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "knowledge_data_item",
+        "field": "products"
       }
     },
     {
@@ -100,7 +159,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 5,
+      "seq": 8,
       "target": {
         "entity": "knowledge_data_item",
         "field": "review_by"
@@ -117,7 +176,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 6,
+      "seq": 9,
       "target": {
         "entity": "knowledge_data_item",
         "field": "source_entity"
@@ -133,7 +192,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 7,
+      "seq": 10,
       "target": {
         "entity": "knowledge_data_item",
         "field": "source_record_id"
@@ -149,7 +208,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
+      "seq": 11,
       "target": {
         "entity": "knowledge_data_item",
         "field": "text"
@@ -166,7 +225,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 12,
       "target": {
         "entity": "knowledge_data_item",
         "field": "title"
@@ -182,7 +241,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 13,
       "target": {
         "entity": "knowledge_data_source",
         "field": "description"
@@ -199,7 +258,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 11,
+      "seq": 14,
       "target": {
         "entity": "knowledge_data_source",
         "field": "name"
@@ -218,7 +277,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 12,
+      "seq": 15,
       "target": {
         "entity": "knowledge_data_item",
         "field": "data_source_ref"
@@ -236,7 +295,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 13,
+      "seq": 16,
       "target": {
         "entity": "knowledge_data_item",
         "query": "Active Data Items"
@@ -254,7 +313,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 14,
+      "seq": 17,
       "target": {
         "entity": "knowledge_data_item",
         "query": "Data Items (Related)"
@@ -272,7 +331,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 15,
+      "seq": 18,
       "target": {
         "entity": "knowledge_data_item",
         "query": "Inactive Data Items"
@@ -290,7 +349,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 16,
+      "seq": 19,
       "target": {
         "entity": "knowledge_data_item",
         "query": "Published Data Items"
@@ -308,7 +367,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 17,
+      "seq": 20,
       "target": {
         "entity": "knowledge_data_source",
         "query": "Active Data Sources"
@@ -326,7 +385,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 18,
+      "seq": 21,
       "target": {
         "entity": "knowledge_data_source",
         "query": "Inactive Data Sources"
@@ -346,7 +405,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 19,
+      "seq": 22,
       "target": {
         "entity": "knowledge_data_item",
         "view": "Active Data Items"
@@ -366,7 +425,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 20,
+      "seq": 23,
       "target": {
         "entity": "knowledge_data_item",
         "view": "Data Items (Related)"
@@ -386,7 +445,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 21,
+      "seq": 24,
       "target": {
         "entity": "knowledge_data_item",
         "view": "Inactive Data Items"
@@ -406,7 +465,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 22,
+      "seq": 25,
       "target": {
         "entity": "knowledge_data_item",
         "view": "Published Data Items"
@@ -426,7 +485,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 23,
+      "seq": 26,
       "target": {
         "entity": "knowledge_data_source",
         "view": "Active Data Sources"
@@ -446,7 +505,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 24,
+      "seq": 27,
       "target": {
         "entity": "knowledge_data_source",
         "view": "Inactive Data Sources"

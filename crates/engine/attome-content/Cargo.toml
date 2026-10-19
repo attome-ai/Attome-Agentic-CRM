@@ -16,7 +16,11 @@ attome-audit.workspace        = true
 attome-config.workspace       = true
 attome-core.workspace         = true
 attome-db.workspace           = true
+attome-html.workspace         = true
+attome-jobs.workspace         = true
 attome-notification.workspace = true
+attome-records.workspace      = true
+attome-security.workspace     = true
 attome-server.workspace       = true
 attome-types.workspace        = true
 axum.workspace                = true
@@ -32,7 +36,6 @@ uuid.workspace                = true
 [dev-dependencies]
 attome-cache.workspace   = true
 attome-config.workspace  = true
-attome-jobs.workspace    = true
 attome-storage.workspace = true
 attome-testkit = { workspace = true, features = ["app-config"] }
 tokio                    = { workspace = true, features = ["macros", "rt-multi-thread"] }

@@ -29,6 +29,8 @@
 
 pub mod admin;
 pub mod analytics;
+/// G11-T1: knowledge articles as a page type.
+pub mod article;
 /// K5-T2: page audiences and signed preview links.
 pub mod audience;
 pub mod blocks;

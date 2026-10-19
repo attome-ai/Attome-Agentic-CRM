@@ -811,6 +811,13 @@ pub enum EngineJob {
     /// update_record_for`. Never `is_batch`: one record per render, same
     /// shape as `ReportRun`.
     DocgenRender { render_id: Uuid },
+    /// G11-T1 — brings one content page's knowledge item in line with the
+    /// page (`attome_content::article::sync`): projects a published article
+    /// into `knowledge_data_item`, or sets its item back to draft once it is
+    /// unpublished, deleted or no longer an article. Pure pointer: the
+    /// handler re-reads the page and writes through the entity engine as the
+    /// page's knowledge author. Idempotent; one record, so never `is_batch`.
+    ContentArticleIndex { page_id: Uuid },
     /// M36 Phase 1 (Predictive Intelligence, D-473) — trains one
     /// `prediction_model`: extracts a labeled feature set from ticket/SLA
     /// history (bounded sample size), fits the model (`spawn_blocking` —
@@ -1056,6 +1063,7 @@ impl EngineJob {
             | Self::TicketSlaSweep
             | Self::ResourceUtilizationSweep
             | Self::DocgenRender { .. }
+            | Self::ContentArticleIndex { .. }
             | Self::PredictTrainModel { .. }
             | Self::PredictScoringSweep
             | Self::PredictOutcomeFillSweep
@@ -1195,6 +1203,7 @@ impl EngineJob {
             EngineJob::CatalogDashboardLineageSweep => "CatalogDashboardLineageSweep",
             EngineJob::CatalogUsageRollup => "CatalogUsageRollup",
             EngineJob::DocgenRender { .. } => "DocgenRender",
+            EngineJob::ContentArticleIndex { .. } => "ContentArticleIndex",
             EngineJob::PredictTrainModel { .. } => "PredictTrainModel",
             EngineJob::PredictScoringSweep => "PredictScoringSweep",
             EngineJob::PredictOutcomeFillSweep => "PredictOutcomeFillSweep",
@@ -1246,6 +1255,7 @@ impl EngineJob {
             | Self::LegalMatterCollect { .. }
             | Self::LegalMatterRelease { .. }
             | Self::DocgenRender { .. }
+            | Self::ContentArticleIndex { .. }
             | Self::PredictTrainModel { .. } => JobPriority::High,
 
             // Low — periodic maintenance/sweep work with no observer.
@@ -1515,6 +1525,7 @@ impl EngineJob {
             | Self::DataBulkTransform(_)
             | Self::ReportRun { .. }
             | Self::DocgenRender { .. }
+            | Self::ContentArticleIndex { .. }
             | Self::PredictTrainModel { .. } => 10,
             // Decided by its registered type in the `Job` impl below; 5 when
             // the type is not registered on the producing node.
@@ -1764,6 +1775,13 @@ mod tests {
         for domain in RewrapDomain::ALL {
             assert_round_trips(EngineJob::RewrapSecrets { domain });
         }
+    }
+
+    #[test]
+    fn content_article_index_round_trips() {
+        assert_round_trips(EngineJob::ContentArticleIndex {
+            page_id: Uuid::now_v7(),
+        });
     }
 
     #[test]

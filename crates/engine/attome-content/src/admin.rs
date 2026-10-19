@@ -471,6 +471,8 @@ async fn delete_page(
         .named("content_page.delete"),
     )
     .await?;
+    // G11-T1: a deleted article leaves the knowledge index.
+    crate::article::enqueue_sync_in_tx(&mut tx, id).await?;
 
     tx.commit().await.map_err(AppError::internal)?;
     Ok(StatusCode::NO_CONTENT)
@@ -1142,6 +1144,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(crate::versions::routes())
         .merge(crate::audience::routes())
         .merge(crate::translations::routes())
+        .merge(crate::article::routes())
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1167,5 +1170,6 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     doc.merge(crate::versions::openapi_fragment());
     doc.merge(crate::audience::openapi_fragment());
     doc.merge(crate::translations::openapi_fragment());
+    doc.merge(crate::article::openapi_fragment());
     doc
 }

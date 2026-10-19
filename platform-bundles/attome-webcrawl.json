@@ -29,7 +29,10 @@
         { "logicalname": "lifecycle", "display_name": "Lifecycle", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "published", "expired"], "multi": false } },
         { "logicalname": "review_by", "display_name": "Review By", "field_type": "date", "is_sortable": true, "is_filterable": true },
         { "logicalname": "source_entity", "display_name": "Source Entity", "field_type": "text", "is_filterable": true },
-        { "logicalname": "source_record_id", "display_name": "Source Record", "field_type": "text" }
+        { "logicalname": "source_record_id", "display_name": "Source Record", "field_type": "text" },
+        { "logicalname": "category", "display_name": "Category", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "products", "display_name": "Products", "field_type": "text", "is_filterable": true },
+        { "logicalname": "audience", "display_name": "Audience", "field_type": "choice", "is_filterable": true, "options": { "choices": ["public", "internal"], "multi": false } }
       ]
     }
   ],
