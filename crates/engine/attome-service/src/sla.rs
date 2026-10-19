@@ -561,6 +561,9 @@ pub(crate) async fn set_ticket_deadline(
     if updated.rows_affected() != 1 {
         return Err(AppError::NotFound);
     }
+    // G9-T1: the clock learns its next moment from the new deadline.
+    crate::clock::ensure_tracked_clock(conn, ticket_id).await?;
+    crate::clock::refresh_next_due(conn, ticket_id).await?;
     Ok(())
 }
 
@@ -949,45 +952,64 @@ pub async fn sweep_breaches(
 
     let mut breached = 0u64;
     for ticket_id in due {
-        let mut tx = attome_db::tx::begin(db).await?;
-
-        let updated = sqlx::query(
-            "UPDATE service_ticket SET sla_breached = true \
-             WHERE id = $1 AND (sla_breached IS NULL OR sla_breached = false)",
-        )
-        .bind(ticket_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-        if updated.rows_affected() == 0 {
-            // Another sweep pass (or a concurrent one) already caught it.
-            tx.rollback().await.map_err(AppError::internal)?;
-            continue;
-        }
-
-        sqlx::query(
-            "INSERT INTO note (id, entity_name, record_id, note_text, is_customer_visible) \
-             VALUES ($1, 'service_ticket', $2, 'SLA resolution target missed.', false)",
-        )
-        .bind(Uuid::now_v7())
-        .bind(ticket_id.to_string())
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-
-        tx.commit().await.map_err(AppError::internal)?;
-        breached += 1;
-
-        if let Err(e) = crate::clock::escalate_on_breach(db, notification_cfg, ticket_id).await {
-            tracing::error!(
-                error = %e,
-                ticket_id = %ticket_id,
-                "sla: post-breach escalation failed (ticket is still correctly marked breached)"
-            );
+        if breach_one(db, notification_cfg, ticket_id).await? {
+            breached += 1;
         }
     }
-
     Ok(breached)
+}
+
+/// Marks one ticket breached, with its internal note, and runs the
+/// escalation chain — unless it is already breached, resolved or closed, or
+/// its clock is paused. Shared by [`sweep_breaches`] and G9-T1's due-clock
+/// sweep (`clock::sweep_due_clocks`). Whether it was newly breached.
+pub(crate) async fn breach_one(
+    db: &DbPool,
+    notification_cfg: &attome_config::NotificationSection,
+    ticket_id: Uuid,
+) -> Result<bool, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+
+    let updated = sqlx::query(
+        "UPDATE service_ticket t SET sla_breached = true \
+         WHERE t.id = $1 AND (t.sla_breached IS NULL OR t.sla_breached = false) \
+           AND t.status NOT IN ('resolved', 'closed') \
+           AND NOT EXISTS (SELECT 1 FROM service_sla_clock c \
+                            WHERE c.ticket_ref = t.id AND c.state = 'paused')",
+    )
+    .bind(ticket_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if updated.rows_affected() == 0 {
+        // Another sweep pass (or a concurrent one) already caught it, or it
+        // no longer qualifies.
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(false);
+    }
+
+    sqlx::query(
+        "INSERT INTO note (id, entity_name, record_id, note_text, is_customer_visible) \
+         VALUES ($1, 'service_ticket', $2, 'SLA resolution target missed.', false)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(ticket_id.to_string())
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    // G9-T1: a breached clock waits for nothing more.
+    crate::clock::refresh_next_due(&mut tx, ticket_id).await?;
+
+    tx.commit().await.map_err(AppError::internal)?;
+
+    if let Err(e) = crate::clock::escalate_on_breach(db, notification_cfg, ticket_id).await {
+        tracing::error!(
+            error = %e,
+            ticket_id = %ticket_id,
+            "sla: post-breach escalation failed (ticket is still correctly marked breached)"
+        );
+    }
+    Ok(true)
 }
 
 /// Pre-breach warning: a ticket whose elapsed *wall-clock* fraction of its
@@ -1038,43 +1060,62 @@ pub async fn sweep_warnings(
 
     let mut warned = 0u64;
     for ticket_id in due {
-        let mut tx = attome_db::tx::begin(db).await?;
-
-        let updated = sqlx::query(
-            "UPDATE service_ticket SET sla_warned = true \
-             WHERE id = $1 AND (sla_warned IS NULL OR sla_warned = false)",
-        )
-        .bind(ticket_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-        if updated.rows_affected() == 0 {
-            tx.rollback().await.map_err(AppError::internal)?;
-            continue;
-        }
-
-        attome_core::change_feed::emit_named(
-            &mut tx,
-            "service_ticket",
-            ticket_id,
-            attome_core::change_feed::ChangeOperation::Update,
-            "sla.warning",
-        )
-        .await?;
-
-        tx.commit().await.map_err(AppError::internal)?;
-        warned += 1;
-
-        if let Err(e) = crate::clock::notify_warning(db, notification_cfg, ticket_id).await {
-            tracing::error!(
-                error = %e,
-                ticket_id = %ticket_id,
-                "sla: post-warning notification failed (ticket is still correctly marked warned)"
-            );
+        if warn_one(db, notification_cfg, ticket_id).await? {
+            warned += 1;
         }
     }
-
     Ok(warned)
+}
+
+/// Marks one ticket warned, emits `sla.warning` and tells its assignee —
+/// unless it is already warned or breached, resolved or closed, or its clock
+/// is paused. Shared by [`sweep_warnings`] and G9-T1's due-clock sweep.
+/// Whether it was newly warned.
+pub(crate) async fn warn_one(
+    db: &DbPool,
+    notification_cfg: &attome_config::NotificationSection,
+    ticket_id: Uuid,
+) -> Result<bool, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+
+    let updated = sqlx::query(
+        "UPDATE service_ticket t SET sla_warned = true \
+         WHERE t.id = $1 AND (t.sla_warned IS NULL OR t.sla_warned = false) \
+           AND (t.sla_breached IS NULL OR t.sla_breached = false) \
+           AND t.status NOT IN ('resolved', 'closed') \
+           AND NOT EXISTS (SELECT 1 FROM service_sla_clock c \
+                            WHERE c.ticket_ref = t.id AND c.state = 'paused')",
+    )
+    .bind(ticket_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if updated.rows_affected() == 0 {
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(false);
+    }
+
+    attome_core::change_feed::emit_named(
+        &mut tx,
+        "service_ticket",
+        ticket_id,
+        attome_core::change_feed::ChangeOperation::Update,
+        "sla.warning",
+    )
+    .await?;
+    // G9-T1: after the warning the clock waits for the breach.
+    crate::clock::refresh_next_due(&mut tx, ticket_id).await?;
+
+    tx.commit().await.map_err(AppError::internal)?;
+
+    if let Err(e) = crate::clock::notify_warning(db, notification_cfg, ticket_id).await {
+        tracing::error!(
+            error = %e,
+            ticket_id = %ticket_id,
+            "sla: post-warning notification failed (ticket is still correctly marked warned)"
+        );
+    }
+    Ok(true)
 }
 
 #[cfg(test)]

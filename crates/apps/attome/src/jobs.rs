@@ -1334,6 +1334,19 @@ async fn dispatch_platform_job(
             if !claimed.is_empty() {
                 tracing::info!(fired = claimed.len(), "timers: due timers queued");
             }
+            // G9-T1: SLA clocks whose warning or breach moment has come, on
+            // time. Its own failure must not hold back the timers above.
+            match attome_service::clock::sweep_due_clocks(
+                &db,
+                &attome_state.base.config.notification,
+                chrono::Utc::now(),
+            )
+            .await
+            {
+                Ok(0) => {}
+                Ok(acted) => tracing::info!(acted, "timers: SLA clocks warned or breached"),
+                Err(e) => tracing::warn!(error = ?e, "timers: the SLA due-clock sweep failed"),
+            }
         }
         // M10-T1: one fired timer. No kind has an action yet; each later
         // feature registers its kind here.

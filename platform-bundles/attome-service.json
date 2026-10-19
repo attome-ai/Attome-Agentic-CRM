@@ -116,7 +116,10 @@
         { "logicalname": "paused_reason", "display_name": "Paused Reason", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["waiting_customer", "on_hold", "out_of_scope"], "multi": false } },
         { "logicalname": "elapsed_business_seconds", "display_name": "Elapsed Business Seconds", "field_type": "number" },
         { "logicalname": "state_changed_at", "display_name": "State Changed At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "unsettled_segments", "display_name": "Unsettled Running Segments (JSON, awaiting a usable calendar)", "field_type": "text" }
+        { "logicalname": "unsettled_segments", "display_name": "Unsettled Running Segments (JSON, awaiting a usable calendar)", "field_type": "text" },
+        { "logicalname": "target_attribute", "display_name": "Target Attribute", "field_type": "text" },
+        { "logicalname": "next_due_at", "display_name": "Next Due At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "next_due_kind", "display_name": "Next Due Kind", "field_type": "choice", "is_filterable": true, "options": { "choices": ["warning", "breach"], "multi": false } }
       ]
     },
     {

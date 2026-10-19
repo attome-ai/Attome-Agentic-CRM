@@ -410,6 +410,8 @@ async fn pause_in_tx(
     };
     let banked = settle_segments(db, policy.as_ref(), clock, Some(segment)).await?;
     write_clock(tx, clock.id, ClockState::Paused, Some(reason), &banked, now).await?;
+    // G9-T1: a paused clock waits for nothing.
+    refresh_next_due(tx, ticket_id).await?;
     if let Some(policy) = &policy {
         if let Some(unresolved) = &banked.unresolved {
             crate::sla::set_ticket_deadline(tx, ticket_id, Err(unresolved)).await?;
@@ -447,6 +449,9 @@ async fn resume_in_tx(
     let policy = assigned_policy(tx, db, ticket_id).await?;
     let banked = settle_segments(db, policy.as_ref(), clock, None).await?;
     write_clock(tx, clock.id, ClockState::Running, None, &banked, now).await?;
+    // G9-T1: running again; `store_deadline` below refreshes it once more
+    // with the new deadline.
+    refresh_next_due(tx, ticket_id).await?;
     if let Some(policy) = &policy {
         store_deadline(
             tx,
@@ -1034,18 +1039,24 @@ pub async fn sweep_auto_pause(db: &DbPool) -> Result<u64, AppError> {
     }
 
     // De-duplicate to the latest event per ticket in this batch — a ticket
-    // touched several times only needs reconciling once per sweep pass.
-    let mut ticket_ids: Vec<Uuid> = events
+    // touched several times only needs reconciling once per sweep pass. G9-T1:
+    // keep that event's time, so a pause or resume starts when the status
+    // changed, not when this sweep happened to run.
+    let mut latest: std::collections::BTreeMap<Uuid, DateTime<Utc>> =
+        std::collections::BTreeMap::new();
+    for event in events
         .iter()
         .filter(|e| e.entity_logicalname == "service_ticket")
-        .map(|e| e.record_id)
-        .collect();
-    ticket_ids.sort_unstable();
-    ticket_ids.dedup();
+    {
+        let at = latest.entry(event.record_id).or_insert(event.created_at);
+        if event.created_at > *at {
+            *at = event.created_at;
+        }
+    }
 
     let mut reconciled = 0u64;
-    for ticket_id in ticket_ids {
-        let paused_or_resumed = reconcile_auto_pause(db, ticket_id).await?;
+    for (ticket_id, changed_at) in latest {
+        let paused_or_resumed = reconcile_auto_pause(db, ticket_id, changed_at).await?;
         let resolved_changed = reconcile_resolved_at(db, ticket_id).await?;
         // G9-T3: the supplier clock follows the ticket's hand-off.
         crate::supplier_sla::reconcile(db, ticket_id, Utc::now()).await?;
@@ -1112,7 +1123,11 @@ async fn reconcile_resolved_at(db: &DbPool, ticket_id: Uuid) -> Result<bool, App
     Ok(updated.rows_affected() > 0)
 }
 
-async fn reconcile_auto_pause(db: &DbPool, ticket_id: Uuid) -> Result<bool, AppError> {
+async fn reconcile_auto_pause(
+    db: &DbPool,
+    ticket_id: Uuid,
+    changed_at: DateTime<Utc>,
+) -> Result<bool, AppError> {
     let status: Option<String> =
         sqlx::query_scalar("SELECT status FROM service_ticket WHERE id = $1")
             .bind(ticket_id)
@@ -1139,13 +1154,15 @@ async fn reconcile_auto_pause(db: &DbPool, ticket_id: Uuid) -> Result<bool, AppE
             // per-actor — a system-authored `note`, same convention
             // `sla.rs::sweep_breaches` already uses for its own breach mark,
             // is the visible record here instead.
-            get_or_create_and_pause_system(db, ticket_id, PauseReason::WaitingCustomer).await?;
+            get_or_create_and_pause_system(db, ticket_id, PauseReason::WaitingCustomer, changed_at)
+                .await?;
             Ok(true)
         }
         Some((state, _))
             if waiting_on_customer && ClockState::parse(&state) == ClockState::Running =>
         {
-            get_or_create_and_pause_system(db, ticket_id, PauseReason::WaitingCustomer).await?;
+            get_or_create_and_pause_system(db, ticket_id, PauseReason::WaitingCustomer, changed_at)
+                .await?;
             Ok(true)
         }
         Some((state, Some(reason)))
@@ -1153,7 +1170,7 @@ async fn reconcile_auto_pause(db: &DbPool, ticket_id: Uuid) -> Result<bool, AppE
                 && ClockState::parse(&state) == ClockState::Paused
                 && reason == PauseReason::WaitingCustomer.as_str() =>
         {
-            resume_system(db, ticket_id).await?;
+            resume_system(db, ticket_id, changed_at).await?;
             Ok(true)
         }
         _ => Ok(false),
@@ -1164,6 +1181,7 @@ async fn get_or_create_and_pause_system(
     db: &DbPool,
     ticket_id: Uuid,
     reason: PauseReason,
+    changed_at: DateTime<Utc>,
 ) -> Result<(), AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
     lock_ticket(&mut tx, ticket_id).await?;
@@ -1172,8 +1190,8 @@ async fn get_or_create_and_pause_system(
         tx.rollback().await.map_err(AppError::internal)?;
         return Ok(());
     }
-    let now = Utc::now();
-    pause_in_tx(&mut tx, db, ticket_id, &clock, reason, now).await?;
+    let at = transition_time(changed_at, clock.state_changed_at, Utc::now());
+    pause_in_tx(&mut tx, db, ticket_id, &clock, reason, at).await?;
     sqlx::query(
         "INSERT INTO note (id, entity_name, record_id, note_text, is_customer_visible) \
          VALUES ($1, 'service_ticket', $2, 'SLA clock auto-paused: ticket is waiting on customer.', false)",
@@ -1186,7 +1204,11 @@ async fn get_or_create_and_pause_system(
     tx.commit().await.map_err(AppError::internal)
 }
 
-async fn resume_system(db: &DbPool, ticket_id: Uuid) -> Result<(), AppError> {
+async fn resume_system(
+    db: &DbPool,
+    ticket_id: Uuid,
+    changed_at: DateTime<Utc>,
+) -> Result<(), AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
     lock_ticket(&mut tx, ticket_id).await?;
     let clock = get_or_create_clock(&mut tx, ticket_id).await?;
@@ -1194,8 +1216,8 @@ async fn resume_system(db: &DbPool, ticket_id: Uuid) -> Result<(), AppError> {
         tx.rollback().await.map_err(AppError::internal)?;
         return Ok(());
     }
-    let now = Utc::now();
-    resume_in_tx(&mut tx, db, ticket_id, &clock, now).await?;
+    let at = transition_time(changed_at, clock.state_changed_at, Utc::now());
+    resume_in_tx(&mut tx, db, ticket_id, &clock, at).await?;
     sqlx::query(
         "INSERT INTO note (id, entity_name, record_id, note_text, is_customer_visible) \
          VALUES ($1, 'service_ticket', $2, 'SLA clock auto-resumed: ticket is no longer waiting on customer.', false)",
@@ -1206,6 +1228,277 @@ async fn resume_system(db: &DbPool, ticket_id: Uuid) -> Result<(), AppError> {
     .await
     .map_err(AppError::internal)?;
     tx.commit().await.map_err(AppError::internal)
+}
+
+// ── G9-T1: the clock's next moment, swept on time ─────────────────────────
+
+/// The clock waits to warn.
+pub const DUE_WARNING: &str = "warning";
+/// The clock waits to breach.
+pub const DUE_BREACH: &str = "breach";
+/// The ticket attribute a service clock runs against.
+pub const TARGET_ATTRIBUTE: &str = "resolution_due_at";
+/// Most clocks one due sweep acts on, and most it backfills.
+const DUE_BATCH: i64 = 500;
+
+/// When an automatic pause or resume takes effect: when the status changed,
+/// but never before the clock's last change nor after now. Pure.
+pub fn transition_time(
+    changed_at: DateTime<Utc>,
+    clock_changed_at: DateTime<Utc>,
+    now: DateTime<Utc>,
+) -> DateTime<Utc> {
+    changed_at.max(clock_changed_at).min(now)
+}
+
+/// The next moment a clock waits for: the warning (`warn_at_percent` of the
+/// way from the ticket's creation to its deadline, the same measure
+/// `sla::sweep_warnings` uses) until it has warned, then the breach at the
+/// deadline; nothing while paused, breached, closed or without a deadline.
+/// Pure.
+pub fn next_due(
+    created_at: DateTime<Utc>,
+    due_at: Option<DateTime<Utc>>,
+    warn_at_percent: Option<f64>,
+    warned: bool,
+    breached: bool,
+    running: bool,
+    open: bool,
+) -> Option<(DateTime<Utc>, &'static str)> {
+    if !running || !open || breached {
+        return None;
+    }
+    let due = due_at?;
+    if !warned
+        && due > created_at
+        && let Some(percent) = warn_at_percent.filter(|p| *p > 0.0 && *p < 100.0)
+    {
+        let span = (due - created_at).num_milliseconds() as f64;
+        let offset = chrono::Duration::milliseconds((span * percent / 100.0).round() as i64);
+        return Some((created_at + offset, DUE_WARNING));
+    }
+    Some((due, DUE_BREACH))
+}
+
+/// Recomputes a ticket clock's next moment from the ticket and its policy.
+/// Called wherever the deadline, the clock's state, or the warned/breached
+/// marks change, in that change's transaction.
+pub(crate) async fn refresh_next_due(
+    conn: &mut sqlx::PgConnection,
+    ticket_id: Uuid,
+) -> Result<(), AppError> {
+    type Row = (
+        DateTime<Utc>,
+        Option<DateTime<Utc>>,
+        Option<f64>,
+        bool,
+        bool,
+        String,
+        String,
+    );
+    let row: Option<Row> = sqlx::query_as(
+        "SELECT t.created_at, t.resolution_due_at, p.warn_at_percent::double precision, \
+                coalesce(t.sla_warned, false), coalesce(t.sla_breached, false), \
+                coalesce(t.status, ''), c.state \
+           FROM service_sla_clock c \
+           JOIN service_ticket t ON t.id = c.ticket_ref \
+           LEFT JOIN service_sla_policy p ON p.id = t.sla_policy_id \
+          WHERE c.ticket_ref = $1",
+    )
+    .bind(ticket_id)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((created_at, due_at, warn_at, warned, breached, status, state)) = row else {
+        return Ok(());
+    };
+    let next = next_due(
+        created_at,
+        due_at,
+        warn_at,
+        warned,
+        breached,
+        ClockState::parse(&state) == ClockState::Running,
+        status != "resolved" && status != "closed",
+    );
+    sqlx::query(
+        "UPDATE service_sla_clock \
+            SET target_attribute = $2, next_due_at = $3, next_due_kind = $4 \
+          WHERE ticket_ref = $1",
+    )
+    .bind(ticket_id)
+    .bind(TARGET_ATTRIBUTE)
+    .bind(next.map(|(at, _)| at))
+    .bind(next.map(|(_, kind)| kind))
+    .execute(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Gives a ticket that has a deadline a running clock, so the due sweep
+/// tracks it from the start (a clock was created only on the first pause
+/// before G9-T1). Takes the ticket's clock lock without waiting; when a
+/// pause or resume holds it, that call creates the clock itself.
+pub(crate) async fn ensure_tracked_clock(
+    conn: &mut sqlx::PgConnection,
+    ticket_id: Uuid,
+) -> Result<(), AppError> {
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-service/sla-clock:{ticket_id}"))
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Ok(());
+    }
+    sqlx::query(
+        "INSERT INTO service_sla_clock \
+             (id, ticket_ref, state, paused_reason, elapsed_business_seconds, state_changed_at) \
+         SELECT $1, t.id, 'running', NULL, 0, t.created_at FROM service_ticket t \
+          WHERE t.id = $2 AND t.resolution_due_at IS NOT NULL \
+            AND NOT EXISTS (SELECT 1 FROM service_sla_clock c WHERE c.ticket_ref = t.id)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(ticket_id)
+    .execute(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Whether this deployment's clocks carry `next_due_at` (the service
+/// module's bundle is applied).
+async fn clocks_track_due(db: &DbPool) -> Result<bool, AppError> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns \
+                         WHERE table_schema = current_schema() \
+                           AND table_name = 'service_sla_clock' AND column_name = 'next_due_at')",
+    )
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// G9-T1, from the timer sweep (M10) every 15 seconds: fires the warnings
+/// and breaches whose moment has come, from the clocks' `next_due_at`, and
+/// fills `next_due_at` on clocks that predate it, a batch per pass. Returns
+/// how many clocks it acted on.
+pub async fn sweep_due_clocks(
+    db: &DbPool,
+    notification_cfg: &NotificationSection,
+    now: DateTime<Utc>,
+) -> Result<u64, AppError> {
+    if !clocks_track_due(db).await? {
+        return Ok(0);
+    }
+    let mut conn = db.acquire().await.map_err(AppError::internal)?;
+    let untracked: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT ticket_ref FROM service_sla_clock WHERE target_attribute IS NULL LIMIT $1",
+    )
+    .bind(DUE_BATCH)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    for ticket_id in untracked {
+        refresh_next_due(&mut conn, ticket_id).await?;
+    }
+
+    let due: Vec<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT ticket_ref, next_due_kind FROM service_sla_clock \
+          WHERE state = 'running' AND next_due_at <= $1 \
+          ORDER BY next_due_at LIMIT $2",
+    )
+    .bind(now)
+    .bind(DUE_BATCH)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    drop(conn);
+
+    let mut acted = 0u64;
+    for (ticket_id, kind) in due {
+        let fired = if kind.as_deref() == Some(DUE_WARNING) {
+            crate::sla::warn_one(db, notification_cfg, ticket_id).await?
+        } else {
+            crate::sla::breach_one(db, notification_cfg, ticket_id).await?
+        };
+        if fired {
+            acted += 1;
+        }
+        // Whether or not it fired (it may have been resolved meanwhile), the
+        // clock moves on to its next moment, so it is not picked up again.
+        let mut conn = db.acquire().await.map_err(AppError::internal)?;
+        refresh_next_due(&mut conn, ticket_id).await?;
+    }
+    Ok(acted)
+}
+
+#[cfg(test)]
+mod sla_clock_due {
+    use super::*;
+    use chrono::{Duration, TimeZone};
+
+    fn at(hour: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 10, 19, hour, 0, 0)
+            .single()
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn sla_clock_due_warns_first_then_breaches() {
+        let created = at(8);
+        let due = Some(at(18));
+        assert_eq!(
+            next_due(created, due, Some(80.0), false, false, true, true),
+            Some((at(16), DUE_WARNING))
+        );
+        assert_eq!(
+            next_due(created, due, Some(80.0), true, false, true, true),
+            Some((at(18), DUE_BREACH))
+        );
+        assert_eq!(
+            next_due(created, due, None, false, false, true, true),
+            Some((at(18), DUE_BREACH))
+        );
+    }
+
+    #[test]
+    fn sla_clock_due_waits_for_nothing_when_paused_breached_or_closed() {
+        let created = at(8);
+        let due = Some(at(18));
+        assert_eq!(
+            next_due(created, due, Some(80.0), false, false, false, true),
+            None
+        );
+        assert_eq!(
+            next_due(created, due, Some(80.0), true, true, true, true),
+            None
+        );
+        assert_eq!(
+            next_due(created, due, Some(80.0), false, false, true, false),
+            None
+        );
+        assert_eq!(
+            next_due(created, None, Some(80.0), false, false, true, true),
+            None
+        );
+    }
+
+    #[test]
+    fn sla_clock_due_pause_starts_at_the_status_change() {
+        let clock_changed = at(9);
+        let now = at(12);
+        // The sweep ran at noon; the ticket went to waiting at 10.
+        assert_eq!(transition_time(at(10), clock_changed, now), at(10));
+        // Never before the clock's own last change, never in the future.
+        assert_eq!(transition_time(at(8), clock_changed, now), clock_changed);
+        assert_eq!(
+            transition_time(now + Duration::minutes(5), clock_changed, now),
+            now
+        );
+    }
 }
 
 // ── Escalation chain (assignee -> queue lead -> manager) ──────────────────
