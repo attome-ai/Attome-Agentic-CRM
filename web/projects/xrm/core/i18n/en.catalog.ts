@@ -1823,6 +1823,27 @@ export const xrmEn = {
       ads: 'Advertising',
     },
   },
+  // ── G5-T2: the case composer ──
+  composer: {
+    title: 'Reply',
+    channel: 'Send as',
+    channels: {
+      email: 'Email to the customer',
+      note: 'Internal note',
+    },
+    to: 'To',
+    subject: 'Subject',
+    noteTitle: 'Note title (optional)',
+    noteDefaultTitle: 'Note from the workspace',
+    body: 'Message',
+    bodyHint: 'Write a reply — type / and a name to insert a reply template',
+    templates: 'Reply templates',
+    send: 'Send',
+    sending: 'Sending…',
+    sent: 'Email sent.',
+    saved: 'Note added to the record.',
+    failed: 'It could not be sent. Try again.',
+  },
   // ── G11-T2: suggested articles ──
   articleSuggest: {
     title: 'Suggested articles',

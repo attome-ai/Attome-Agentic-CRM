@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ApiError, TranslatePipe } from '@attome/base';
 import { SlaBadgeComponent } from '@attome/xrm/service';
 import { ArticleSuggestComponent, caseQuery } from './article-suggest.component';
+import { ComposerComponent } from './composer/composer.component';
 
 import {
   ConversationSummary,
@@ -28,7 +29,7 @@ const STORE = 'attome-service-workspace';
 @Component({
   selector: 'attome-service-workspace',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, SlaBadgeComponent, ArticleSuggestComponent],
+  imports: [TranslatePipe, RouterLink, SlaBadgeComponent, ArticleSuggestComponent, ComposerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../styles/admin-page.css', './workspace.component.css'],
   templateUrl: './workspace.component.html',

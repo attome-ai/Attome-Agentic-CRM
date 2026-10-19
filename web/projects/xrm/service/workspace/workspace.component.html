@@ -38,6 +38,9 @@
           <span>{{ 'serviceWorkspace.note' | translate }}</span>
           <textarea rows="4" data-testid="ws-draft" [value]="tab.draft" (input)="setDraft(tab.key, $any($event.target).value)"></textarea>
         </label>
+        <!-- G5-T2: reply by email or add a note, with reply templates. -->
+        <xrm-service-composer [entity]="tab.entity" [recordId]="tab.recordId"
+                              [defaultTo]="field(record, 'requester_email') || field(record, 'email')" />
         <a class="btn-secondary" [routerLink]="['/xrm', tab.entity, tab.recordId]">{{ 'serviceWorkspace.openRecord' | translate }}</a>
       } @else {
         <p class="state-msg">{{ 'serviceWorkspace.loading' | translate }}</p>
