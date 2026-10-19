@@ -303,7 +303,8 @@ pub async fn act(
             "value: this code is not one this scan action takes".into(),
         ));
     }
-    let mut hits = find_scanned(state, ctx, value, Some(&action.entity_logicalname)).await?;
+    let mut hits =
+        find_scanned(state, ctx, value, Some(action.entity_logicalname.as_str())).await?;
     if let Some(attribute) = action.match_attribute.as_deref().filter(|a| !a.is_empty()) {
         hits.retain(|hit| hit.attribute == attribute);
     }
