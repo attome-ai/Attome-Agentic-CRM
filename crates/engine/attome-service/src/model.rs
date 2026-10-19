@@ -45,6 +45,10 @@ impl EngineModel for ServiceModel {
             "service_catalog",
             "service_category",
             "service_offering_version",
+            // G3-T2: cart orders.
+            "service_request_item",
+            "service_fulfilment_task",
+            "service_order_guide",
         ]
     }
 
@@ -55,5 +59,6 @@ impl EngineModel for ServiceModel {
             .merge(crate::clock::routes())
             .merge(crate::timeline::routes())
             .merge(crate::queue::routes())
+            .merge(crate::order::routes())
     }
 }

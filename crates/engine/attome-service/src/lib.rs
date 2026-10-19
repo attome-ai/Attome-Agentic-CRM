@@ -13,6 +13,8 @@ mod intake;
 pub mod model;
 pub mod offering;
 pub mod oncall;
+/// G3-T2: cart orders.
+pub mod order;
 pub mod portal;
 pub mod queue;
 pub mod routing;
@@ -35,6 +37,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = convert::openapi_fragment();
     doc.merge(sla::openapi_fragment());
     doc.merge(offering::openapi_fragment());
+    doc.merge(order::openapi_fragment());
     doc.merge(clock::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(queue::openapi_fragment());

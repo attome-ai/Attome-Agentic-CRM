@@ -1811,6 +1811,11 @@ async fn dispatch_platform_job(
             // G7-T1: the case steps of ticket merges (messages, notes,
             // documents and links to the survivor; the number as an alias).
             let merged = attome_service::case_merge::sweep_case_merges(&db).await?;
+            // G3-T2: order items move on as their approvals and tasks do.
+            let orders = attome_service::order::advance_orders(&db).await?;
+            if orders > 0 {
+                tracing::info!(orders, "ticket SLA sweep: order items moved on");
+            }
             if reconciled > 0 || warned > 0 || breached > 0 || escalated > 0 || merged > 0 {
                 tracing::info!(
                     reconciled,

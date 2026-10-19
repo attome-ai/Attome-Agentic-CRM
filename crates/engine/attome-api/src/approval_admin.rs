@@ -137,6 +137,8 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     attome_project::timesheet::ACTION_TIMESHEET_DECIDE,
     // K5-T1: publishing a page in a space that requires approval.
     attome_content::versions::ACTION_CONTENT_PUBLISH,
+    // G3-T2: an order item waiting for its approval.
+    attome_service::order::ACTION_SERVICE_ORDER_ITEM,
 ];
 
 /// Whether [`execute_approved`] has a dispatch arm for `action_type`.
@@ -591,6 +593,18 @@ async fn dispatch_approved(
             )
             .await?;
             serde_json::json!({ "user_id": payload.user_id, "reset": true })
+        }
+        attome_service::order::ACTION_SERVICE_ORDER_ITEM => {
+            // G3-T2: the approved item starts its fulfilment tasks.
+            #[derive(serde::Deserialize)]
+            struct OrderItemPayload {
+                item_id: Uuid,
+            }
+            let payload: OrderItemPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let status =
+                attome_service::order::start_fulfilment(&state.base.db, payload.item_id).await?;
+            serde_json::json!({ "item_id": payload.item_id, "status": status })
         }
         attome_content::versions::ACTION_CONTENT_PUBLISH => {
             // `approver_id` publishes: the approval is what lets the draft

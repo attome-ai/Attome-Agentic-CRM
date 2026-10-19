@@ -305,6 +305,10 @@ fn production_map() -> EntityModuleMap {
         "service_catalog",
         "service_category",
         "service_offering_version",
+        // G3-T2: cart orders.
+        "service_request_item",
+        "service_fulfilment_task",
+        "service_order_guide",
     ] {
         map.claim(entity, owner("attome-service", MODULE_SERVICE));
     }

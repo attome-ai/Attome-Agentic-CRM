@@ -108,6 +108,8 @@
         { "logicalname": "fulfilment", "display_name": "Fulfilment (ticket | task | project | workflow:<def>)", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "category_ref", "display_name": "Category (Catalog)", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_category" },
         { "logicalname": "current_version", "display_name": "Published Version", "field_type": "number", "is_sortable": true },
+        { "logicalname": "requires_approval", "display_name": "Order Items Need Approval", "field_type": "bool", "is_filterable": true },
+        { "logicalname": "fulfilment_plan", "display_name": "Fulfilment Plan (JSON)", "field_type": "text" },
         { "logicalname": "is_public", "display_name": "Public (self-service portal)", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "is_active", "display_name": "Active", "field_type": "bool", "is_sortable": true, "is_filterable": true }
       ]
@@ -235,6 +237,44 @@
         { "logicalname": "snapshot", "display_name": "Snapshot (JSON)", "field_type": "text" },
         { "logicalname": "published_at", "display_name": "Published At", "field_type": "date", "is_sortable": true, "is_filterable": true }
       ]
+    },
+    {
+      "logicalname": "service_request_item",
+      "display_name": "Request Item",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "work_request_ref", "display_name": "Request", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_work_request" },
+        { "logicalname": "offering_ref", "display_name": "Offering", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_offering" },
+        { "logicalname": "quantity", "display_name": "Quantity", "field_type": "number" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["awaiting_approval", "rejected", "fulfilling", "fulfilled"], "multi": false } },
+        { "logicalname": "answers", "display_name": "Answers (JSON)", "field_type": "text" },
+        { "logicalname": "approval_request_id", "display_name": "Approval Request", "field_type": "text" },
+        { "logicalname": "fulfilment_mode", "display_name": "Fulfilment Mode", "field_type": "choice", "is_filterable": true, "options": { "choices": ["sequential", "parallel"], "multi": false } }
+      ]
+    },
+    {
+      "logicalname": "service_fulfilment_task",
+      "display_name": "Fulfilment Task",
+      "primary_name_attribute": "title",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "item_ref", "display_name": "Request Item", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_request_item" },
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sequence", "display_name": "Order", "field_type": "number", "is_sortable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["pending", "open", "done", "cancelled"], "multi": false } },
+        { "logicalname": "assignee_id", "display_name": "Assignee", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" }
+      ]
+    },
+    {
+      "logicalname": "service_order_guide",
+      "display_name": "Order Guide",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "questions", "display_name": "Questions (JSON)", "field_type": "text" },
+        { "logicalname": "offering_ids", "display_name": "Offerings (JSON)", "field_type": "text" }
+      ]
     }
   ],
   "queries": [
@@ -264,7 +304,10 @@
     { "entity": "service_conversion_map", "name": "Active Conversion Maps", "sql": "SELECT id FROM service_conversion_map WHERE is_active = true", "required_privilege": "service_conversion_map.read" },
     { "entity": "service_catalog", "name": "Active Service Catalogs", "sql": "SELECT id FROM service_catalog WHERE is_active = true", "required_privilege": "service_catalog.read" },
     { "entity": "service_category", "name": "Active Service Categories", "sql": "SELECT id FROM service_category WHERE is_active = true", "required_privilege": "service_category.read" },
-    { "entity": "service_offering_version", "name": "Active Offering Versions", "sql": "SELECT id FROM service_offering_version WHERE is_active = true", "required_privilege": "service_offering_version.read" }
+    { "entity": "service_offering_version", "name": "Active Offering Versions", "sql": "SELECT id FROM service_offering_version WHERE is_active = true", "required_privilege": "service_offering_version.read" },
+    { "entity": "service_request_item", "name": "Active Request Items", "sql": "SELECT id FROM service_request_item WHERE is_active = true", "required_privilege": "service_request_item.read" },
+    { "entity": "service_fulfilment_task", "name": "Active Fulfilment Tasks", "sql": "SELECT id FROM service_fulfilment_task WHERE is_active = true", "required_privilege": "service_fulfilment_task.read" },
+    { "entity": "service_order_guide", "name": "Active Order Guides", "sql": "SELECT id FROM service_order_guide WHERE is_active = true", "required_privilege": "service_order_guide.read" }
   ],
   "views": [
     { "entity": "service_work_request", "name": "Active Work Requests", "query": { "entity": "service_work_request", "name": "Active Work Requests" }, "is_default": true },
@@ -287,7 +330,10 @@
     { "entity": "service_conversion_map", "name": "Active Conversion Maps", "query": { "entity": "service_conversion_map", "name": "Active Conversion Maps" }, "is_default": true },
     { "entity": "service_catalog", "name": "Active Service Catalogs", "query": { "entity": "service_catalog", "name": "Active Service Catalogs" }, "is_default": true },
     { "entity": "service_category", "name": "Active Service Categories", "query": { "entity": "service_category", "name": "Active Service Categories" }, "is_default": true },
-    { "entity": "service_offering_version", "name": "Active Offering Versions", "query": { "entity": "service_offering_version", "name": "Active Offering Versions" }, "is_default": true }
+    { "entity": "service_offering_version", "name": "Active Offering Versions", "query": { "entity": "service_offering_version", "name": "Active Offering Versions" }, "is_default": true },
+    { "entity": "service_request_item", "name": "Active Request Items", "query": { "entity": "service_request_item", "name": "Active Request Items" }, "is_default": true },
+    { "entity": "service_fulfilment_task", "name": "Active Fulfilment Tasks", "query": { "entity": "service_fulfilment_task", "name": "Active Fulfilment Tasks" }, "is_default": true },
+    { "entity": "service_order_guide", "name": "Active Order Guides", "query": { "entity": "service_order_guide", "name": "Active Order Guides" }, "is_default": true }
   ],
   "state_models": [
     {
