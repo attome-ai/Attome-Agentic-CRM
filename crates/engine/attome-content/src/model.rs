@@ -89,6 +89,8 @@ pub struct ContentSpace {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    /// K5-T1: a publish in this space waits for approval.
+    pub require_approval: bool,
     pub row_version: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -98,6 +100,9 @@ pub struct ContentSpace {
 pub struct CreateSpaceBody {
     pub name: String,
     pub description: Option<String>,
+    /// K5-T1: a publish in this space waits for approval.
+    #[serde(default)]
+    pub require_approval: bool,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -107,6 +112,9 @@ pub struct UpdateSpaceBody {
     /// `Some(nonempty)` sets it — same convention as `UpdatePageBody`'s
     /// `seo_title`/`seo_description`.
     pub description: Option<String>,
+    /// K5-T1: `None` leaves it unchanged.
+    #[serde(default)]
+    pub require_approval: Option<bool>,
 }
 
 /// A reusable block-content starting point for new pages — selecting one at

@@ -23,7 +23,8 @@ use axum::{
 use serde_json::Value;
 use uuid::Uuid;
 
-const SPACE_COLUMNS: &str = "id, name, description, row_version, created_at, updated_at";
+const SPACE_COLUMNS: &str =
+    "id, name, description, require_approval, row_version, created_at, updated_at";
 
 /// Same `If-Match: "<row_version>"` contract as `content_admin::
 /// expected_row_version` — reimplemented here rather than shared across the
@@ -99,8 +100,9 @@ async fn create_space(
     // the deployment's automatic layer, what an unrecorded write stamps.
     let owner_layer = state.base.config.metadata.changesets.auto_layer;
     let sql = format!(
-        "INSERT INTO content_space (name, description, created_by, updated_by, owner_layer) \
-         VALUES ($1, $2, $3, $3, $4) RETURNING {SPACE_COLUMNS}"
+        "INSERT INTO content_space (name, description, created_by, updated_by, owner_layer, \
+                                    require_approval) \
+         VALUES ($1, $2, $3, $3, $4, $5) RETURNING {SPACE_COLUMNS}"
     );
     let row = sqlx::query_as::<_, ContentSpace>(&sql)
         .bind(name)
@@ -112,6 +114,7 @@ async fn create_space(
         )
         .bind(ctx.user_id)
         .bind(owner_layer.as_str())
+        .bind(body.require_approval)
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
@@ -210,6 +213,7 @@ async fn update_space(
             UPDATE content_space \
             SET name = COALESCE($2, name), \
                 description = CASE WHEN $3 = '' THEN NULL WHEN $3 IS NULL THEN description ELSE $3 END, \
+                require_approval = COALESCE($6, require_approval), \
                 row_version = row_version + 1, \
                 updated_at = NOW(), \
                 updated_by = $4 \
@@ -225,6 +229,7 @@ async fn update_space(
         .bind(description)
         .bind(ctx.user_id)
         .bind(row_version)
+        .bind(body.require_approval)
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {

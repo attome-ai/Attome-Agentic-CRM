@@ -87,9 +87,11 @@ pub async fn sweep_scheduled_transitions(state: &EngineState) -> Result<SweepSta
     let mut stats = SweepStats::default();
 
     let due_drafts: Vec<DueDraft> = sqlx::query_as(
-        "SELECT id, blocks_draft, row_version FROM content_page \
+        "SELECT id, blocks_draft, row_version FROM content_page p \
          WHERE is_deleted = FALSE AND status = 'draft' \
            AND publish_at IS NOT NULL AND publish_at <= NOW() \
+           AND NOT EXISTS (SELECT 1 FROM content_space s \
+                            WHERE s.id = p.content_space_id AND s.require_approval) \
          LIMIT $1",
     )
     .bind(SWEEP_BATCH_SIZE)
@@ -116,6 +118,10 @@ pub async fn sweep_scheduled_transitions(state: &EngineState) -> Result<SweepSta
         // any future status flip back through this same predicate would
         // silently re-fire a publish the editor never asked for a second
         // time.
+        // K5-T1: the publish and its version commit together. A space that
+        // requires approval is left out above: its publishes go through
+        // approval, never the clock.
+        let mut tx = attome_db::tx::begin(&state.base.db).await?;
         let published: Option<(Uuid,)> = sqlx::query_as(
             "UPDATE content_page \
              SET blocks_published = blocks_draft, status = 'published', published_at = NOW(), \
@@ -127,9 +133,14 @@ pub async fn sweep_scheduled_transitions(state: &EngineState) -> Result<SweepSta
         .bind(draft.id)
         .bind(SCHEDULER_ACTOR_ID)
         .bind(draft.row_version)
-        .fetch_optional(&state.base.db)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(AppError::internal)?;
+        if published.is_some() {
+            crate::versions::record_version_in_tx(&mut tx, draft.id, SCHEDULER_ACTOR_ID, None)
+                .await?;
+        }
+        tx.commit().await.map_err(AppError::internal)?;
 
         if published.is_some() {
             stats.published += 1;

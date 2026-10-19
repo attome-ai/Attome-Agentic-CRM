@@ -115,6 +115,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Page versions (K5-T1): every publish of a content page (by hand, by its schedule, or approved)
+  keeps a numbered version (migration 0126). `GET /api/v1/admin/content/pages/{id}/versions`,
+  `.../versions/{number}`, `.../versions/compare?from=&to=` (title, SEO and each block added,
+  removed, changed or moved) and `POST .../versions/{number}/restore` (the old version becomes the
+  draft and is published as a new version naming it). A space with `require_approval` sends every
+  publish and restore through the approval engine (`content.page_publish`); scheduled publishing does
+  not apply in such a space.
 - Document templates in the template language (K3-T1): document generation renders a template with
   Z13 (`{{ total | currency('SAR') }}`, `hijri`, `date`, `number`, `{% if %}`, `{% for line in
   invoice_line limit 100 %}` over related records, `{% dir %}`) in the record's own `language` or the
@@ -1591,6 +1598,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `POST /api/v1/admin/content/pages/{id}/publish` (K5-T1): in a space with `require_approval` it
+  answers 202 with `status: "pending_approval"`, `published_at: null` and `approval_request_id`;
+  every publish result also carries `version_number`.
 - Document templates (K3-T1): a docgen template is compiled before it renders, so `{% endif %}`
   must become `{% end %}`, and a field the entity does not have is refused at render (422 naming the
   line and column) instead of rendering empty. A field the user may not read still renders empty.

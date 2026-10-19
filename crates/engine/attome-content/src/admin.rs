@@ -608,33 +608,29 @@ async fn move_page(
 
 // ── Publish ─────────────────────────────────────────────────────────────────
 
+/// A publish's outcome: published (with its version), or waiting for
+/// approval in a space that requires it (K5-T1).
 #[derive(Debug, Serialize, ToSchema)]
-struct PublishResult {
-    id: Uuid,
-    status: String,
-    published_at: chrono::DateTime<chrono::Utc>,
+pub struct PublishResult {
+    pub id: Uuid,
+    /// `published`, or `pending_approval`.
+    pub status: String,
+    pub published_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// The version this publish recorded.
+    pub version_number: Option<i32>,
+    /// The approval request a publish waits for.
+    pub approval_request_id: Option<Uuid>,
 }
 
-#[utoipa::path(
-    post,
-    path = "/api/v1/admin/content/pages/{id}/publish",
-    tag = "admin-content",
-    params(("id" = Uuid, Path)),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Activated)])))),
-    responses(
-        (status = 200, description = "Success", body = PublishResult),
-        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks the required privilege, or Content Management is not licensed", body = ErrorResponse),
-        (status = 404, description = "Page not found", body = ErrorResponse),
-        (status = 422, description = "The current draft fails block validation", body = ErrorResponse),
-    ),
-    security(("session_cookie" = []), ("api_key" = [])),
-)]
-async fn publish_page(
-    State(state): State<EngineState>,
-    ctx: Authorized<Admin>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<PublishResult>, AppError> {
+/// Publishes a page's draft as `actor` and records it as the page's next
+/// version (K5-T1), with its audit event, in one transaction. The caller has
+/// already decided the publish may happen (directly, or approved).
+pub async fn do_publish_page(
+    state: &EngineState,
+    id: Uuid,
+    actor: Uuid,
+    restored_from: Option<i32>,
+) -> Result<PublishResult, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 
     let draft: SqlxJson<Vec<Block>> = sqlx::query_scalar(
@@ -659,31 +655,105 @@ async fn publish_page(
          RETURNING id, status, published_at",
     )
     .bind(id)
-    .bind(ctx.user_id)
+    .bind(actor)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
 
+    let version_number =
+        crate::versions::record_version_in_tx(&mut tx, id, actor, restored_from).await?;
+
     attome_audit::security::write_security_event(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         attome_audit::security::SecurityEvent::new(
             attome_audit::security::MandatoryCategory::Configuration,
             attome_audit::AuditOperation::Activated,
-            ctx.user_id,
+            actor,
             "content_page",
             Some(row.0),
         )
-        .named("content_page.publish"),
+        .named("content_page.publish")
+        .comment(format!("version {version_number}")),
     )
     .await?;
 
     tx.commit().await.map_err(AppError::internal)?;
-    Ok(Json(PublishResult {
+    Ok(PublishResult {
         id: row.0,
         status: row.1,
-        published_at: row.2,
-    }))
+        published_at: Some(row.2),
+        version_number: Some(version_number),
+        approval_request_id: None,
+    })
+}
+
+/// Publishes now (200), or, in a space with `require_approval`, submits the
+/// publish for approval (202 with the request's id): K5-T1, through Z10's
+/// approval engine (`crate::versions::ACTION_CONTENT_PUBLISH`).
+pub async fn publish_or_submit(
+    state: &EngineState,
+    id: Uuid,
+    actor: Uuid,
+    restored_from: Option<i32>,
+) -> Result<(StatusCode, Json<PublishResult>), AppError> {
+    if crate::versions::space_requires_approval(&state.base.db, id).await? {
+        let payload = serde_json::to_value(crate::versions::PublishPayload {
+            page_id: id,
+            restored_from,
+        })
+        .map_err(AppError::internal)?;
+        let request = attome_audit::approval::gate_required(
+            state,
+            crate::versions::ACTION_CONTENT_PUBLISH,
+            payload,
+            actor,
+            true,
+        )
+        .await?
+        .ok_or_else(|| AppError::internal("a required page-publish approval was not opened"))?;
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(PublishResult {
+                id,
+                status: "pending_approval".to_owned(),
+                published_at: None,
+                version_number: None,
+                approval_request_id: Some(request.id),
+            }),
+        ));
+    }
+    let published = do_publish_page(state, id, actor, restored_from).await?;
+    Ok((StatusCode::OK, Json(published)))
+}
+
+/// Publishes a page's draft (K5-T1: as a new numbered version).
+///
+/// The draft's blocks are checked again and become the published content; the
+/// publish is kept as the page's next version. In a space that requires
+/// approval the publish waits for it instead (202 with the request's id).
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/content/pages/{id}/publish",
+    tag = "admin-content",
+    params(("id" = Uuid, Path, description = "The page's id")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Activated)])))),
+    responses(
+        (status = 200, description = "Published as a new version", body = PublishResult),
+        (status = 202, description = "The publish waits for approval", body = PublishResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege, or Content Management is not licensed", body = ErrorResponse),
+        (status = 404, description = "Page not found", body = ErrorResponse),
+        (status = 422, description = "The current draft fails block validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn publish_page(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<(StatusCode, Json<PublishResult>), AppError> {
+    publish_or_submit(&state, id, ctx.user_id, None).await
 }
 
 // ── Scheduled publishing ────────────────────────────────────────────────────
@@ -1069,6 +1139,7 @@ pub fn routes() -> Router<EngineState> {
             patch(set_review_by),
         )
         .route("/api/v1/admin/content/pages/{id}/stats", get(page_stats))
+        .merge(crate::versions::routes())
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1090,5 +1161,7 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::versions::openapi_fragment());
+    doc
 }

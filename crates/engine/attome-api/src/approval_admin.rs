@@ -135,6 +135,8 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     crate::duplicates_admin::ACTION_MDM_AUTO_MERGE,
     attome_project::change_request::ACTION_CHANGE_REQUEST_DECIDE,
     attome_project::timesheet::ACTION_TIMESHEET_DECIDE,
+    // K5-T1: publishing a page in a space that requires approval.
+    attome_content::versions::ACTION_CONTENT_PUBLISH,
 ];
 
 /// Whether [`execute_approved`] has a dispatch arm for `action_type`.
@@ -589,6 +591,20 @@ async fn dispatch_approved(
             )
             .await?;
             serde_json::json!({ "user_id": payload.user_id, "reset": true })
+        }
+        attome_content::versions::ACTION_CONTENT_PUBLISH => {
+            // `approver_id` publishes: the approval is what lets the draft
+            // go live, so the version names who allowed it.
+            let payload: attome_content::versions::PublishPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let published = attome_content::admin::do_publish_page(
+                state,
+                payload.page_id,
+                approver_id,
+                payload.restored_from,
+            )
+            .await?;
+            serde_json::to_value(&published).map_err(AppError::internal)?
         }
         attome_compliance::retention_admin::ACTION_RETENTION_APPROVE => {
             #[derive(serde::Deserialize)]

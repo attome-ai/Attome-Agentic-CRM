@@ -35,6 +35,8 @@ pub mod model;
 pub mod scheduling;
 pub mod space_admin;
 pub mod template_admin;
+/// K5-T1: page versions, compare, restore and approval per space.
+pub mod versions;
 
 /// D-351 — this crate's advisory-lock namespace (`"attome-content/…"` keys),
 /// registered in `crates/server/tests/advisory_lock_namespaces.rs`.

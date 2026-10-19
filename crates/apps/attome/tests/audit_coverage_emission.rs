@@ -4075,6 +4075,23 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/admin/content/pages/{id}/versions/{number}/restore" => {
+            // K5-T1: publish once so version 1 exists, then restore it.
+            let (id, _) = content_page(fx).await;
+            admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/content/pages/{id}/publish"),
+                None,
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/content/pages/{id}/versions/1/restore"),
+                t,
+                None,
+            )
+        }
         "PUT /api/v1/admin/content/pages/{id}/schedule" => {
             let (id, row_version) = content_page(fx).await;
             with_if_match(
