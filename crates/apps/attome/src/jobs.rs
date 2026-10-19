@@ -2607,6 +2607,8 @@ const DEDUP_KEY_FLEET_POLL: &str = "fleet-poll";
 const DEDUP_KEY_SECRET_AGE_REMINDER: &str = "secret-age-reminder";
 /// D15-T3: the calendar sync (a registered job type).
 const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
+/// D15-T2: the personal mail capture (a registered job type).
+const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
 /// J8-T1: the Google reviews read (a registered job type).
 const DEDUP_KEY_SOCIAL_REVIEWS_SYNC: &str = "social-reviews-sync";
 
@@ -2623,6 +2625,9 @@ pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calen
 /// J6-T3: a call's recording to a document on the call, then to
 /// transcription (payload `{"call_id"}`).
 pub const VOICE_RECORDING: attome_jobs::JobType = attome_jobs::JobType::new("voice_recording", 1);
+
+/// D15-T2: emails in people's own mailboxes captured onto matching records.
+pub const MAIL_CAPTURE: attome_jobs::JobType = attome_jobs::JobType::new("mail_capture", 1);
 
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
@@ -2641,6 +2646,18 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MAIL_CAPTURE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let summary = crate::mail_capture::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(?summary, "mail capture: run complete");
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -2817,6 +2834,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_SECRET_AGE_REMINDER
         }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
+        EngineJob::Registered(job) if job.name == MAIL_CAPTURE.name => DEDUP_KEY_MAIL_CAPTURE,
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
         }
@@ -3222,6 +3240,19 @@ pub fn spawn_calendar_sync_scheduler(db: DbPool, interval: std::time::Duration) 
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_CALENDAR_SYNC, "calendar sync");
+}
+
+/// D15-T2: every five minutes, personal mail onto matching records.
+pub fn spawn_mail_capture_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(MAIL_CAPTURE.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "mail capture: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_MAIL_CAPTURE, "mail capture");
 }
 
 /// J8-T1: every 15 minutes, new Google reviews.

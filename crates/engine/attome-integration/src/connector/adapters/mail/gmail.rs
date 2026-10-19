@@ -129,6 +129,17 @@ pub fn parse_message(body: &str) -> Option<MailMessage> {
         .cloned()
         .unwrap_or_default();
     let h = |name: &str| header(&headers, name).map(str::to_owned);
+    let labels: Vec<&str> = v
+        .get("labelIds")
+        .and_then(Value::as_array)
+        .map(|l| l.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    if labels
+        .iter()
+        .any(|l| matches!(*l, "DRAFT" | "SPAM" | "TRASH" | "CHAT"))
+    {
+        return None;
+    }
     let mut message = MailMessage {
         provider: "gmail",
         message_id: h("Message-ID").as_deref().and_then(bare_id),
@@ -154,6 +165,9 @@ pub fn parse_message(body: &str) -> Option<MailMessage> {
         auto_submitted: h("Auto-Submitted"),
         precedence: h("Precedence"),
         list_id: h("List-Id"),
+        private: h("Sensitivity").is_some_and(|v| {
+            v.eq_ignore_ascii_case("private") || v.eq_ignore_ascii_case("company-confidential")
+        }),
         ..MailMessage::default()
     };
     walk(payload, &id, &mut message);
@@ -257,6 +271,18 @@ pub(super) async fn pull(
     cursor: Option<&str>,
 ) -> Result<(Vec<MailMessage>, Option<String>), AppError> {
     let token = access_token(cfg, system, credential).await?;
+    read(&token, cursor, true).await
+}
+
+/// Reads the messages added since `cursor` (a history id) with `token`:
+/// the inbox only, or (`inbox_only` false, D15-T2) everything but drafts,
+/// spam and trash, sent mail included.
+pub async fn read(
+    token: &str,
+    cursor: Option<&str>,
+    inbox_only: bool,
+) -> Result<(Vec<MailMessage>, Option<String>), AppError> {
+    let token = token.to_owned();
     let client = client()?;
     let refused = |what: &str, status: u16| {
         AppError::Validation(format!("Gmail refused the {what} ({status})"))
@@ -269,7 +295,8 @@ pub(super) async fn pull(
         let mut page: Option<String> = None;
         loop {
             let mut url = format!(
-                "{API}/history?historyTypes=messageAdded&labelId=INBOX&maxResults=100&startHistoryId={}",
+                "{API}/history?historyTypes=messageAdded{}&maxResults=100&startHistoryId={}",
+                if inbox_only { "&labelId=INBOX" } else { "" },
                 cursor.unwrap_or_default()
             );
             if let Some(p) = &page {
@@ -314,7 +341,14 @@ pub(super) async fn pull(
         let (status, body) = get_json(
             &client,
             &token,
-            &format!("{API}/messages?labelIds=INBOX&maxResults={FIRST_PULL}"),
+            &format!(
+                "{API}/messages?{}&maxResults={FIRST_PULL}",
+                if inbox_only {
+                    "labelIds=INBOX"
+                } else {
+                    "q=in%3Ainbox%20OR%20in%3Asent"
+                }
+            ),
         )
         .await?;
         if !(200..300).contains(&status) {
@@ -399,6 +433,11 @@ mod tests {
         assert_eq!(m.attachments[0].reference, "gmail:18a1/ANGj");
         assert_eq!(m.date.as_deref(), Some("2025-10-19T08:00:00+00:00"));
         assert_eq!(m.auto_submitted.as_deref(), Some("no"));
+        let draft = body.replace(
+            r#""threadId":"t9""#,
+            r#""threadId":"t9","labelIds":["DRAFT"]"#,
+        );
+        assert_eq!(parse_message(&draft), None, "drafts are not read");
     }
 
     #[test]

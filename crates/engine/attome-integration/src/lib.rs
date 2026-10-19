@@ -14,6 +14,8 @@
 
 pub mod admin;
 pub mod connector;
+/// D15-T2: which personal emails are captured, onto which addresses.
+pub mod mail_capture;
 pub mod credential;
 mod crypto;
 pub mod guard;

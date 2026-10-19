@@ -17,7 +17,7 @@ use crate::system::IntegrationSystem;
 const GRAPH: &str = "https://graph.microsoft.com/v1.0";
 const TIMEOUT: Duration = Duration::from_secs(30);
 const SELECT: &str = "subject,from,toRecipients,ccRecipients,receivedDateTime,internetMessageId,\
-                      body,hasAttachments,conversationId";
+                      body,hasAttachments,conversationId,sensitivity";
 
 fn address(v: &Value) -> Option<MailAddress> {
     let e = v.get("emailAddress")?;
@@ -78,6 +78,16 @@ pub fn parse_page(body: &str) -> Option<(Vec<MailMessage>, Option<String>, Optio
                     .map(str::to_owned),
                 text: if is_html { None } else { content.clone() },
                 html: if is_html { content } else { None },
+                private: m
+                    .get("sensitivity")
+                    .and_then(Value::as_str)
+                    .is_some_and(|v| {
+                        v.eq_ignore_ascii_case("private") || v.eq_ignore_ascii_case("confidential")
+                    }),
+                has_attachments: m
+                    .get("hasAttachments")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
                 ..MailMessage::default()
             })
         })
@@ -166,19 +176,34 @@ pub(super) async fn pull(
 ) -> Result<(Vec<MailMessage>, Option<String>), AppError> {
     let mailbox = required(cfg, system, "mailbox")?;
     let token = app_token(cfg, system, secret).await?;
+    let path = format!(
+        "users/{}",
+        url::form_urlencoded::byte_serialize(mailbox.as_bytes()).collect::<String>()
+    );
+    read(&token, &path, "inbox", cursor).await
+}
+
+/// Reads one folder (`inbox`, `sentitems`) of a mailbox from `cursor` with
+/// `token`: `mailbox_path` is `me` for the person the token belongs to
+/// (D15-T2), or `users/{address}` for an app reading a shared mailbox.
+pub async fn read(
+    token: &str,
+    mailbox_path: &str,
+    folder: &str,
+    cursor: Option<&str>,
+) -> Result<(Vec<MailMessage>, Option<String>), AppError> {
     let client = client()?;
     let mut url = match cursor.filter(|c| cursor_ok(c)) {
         Some(link) => link.to_owned(),
-        None => format!(
-            "{GRAPH}/users/{}/mailFolders/inbox/messages/delta?$select={SELECT}",
-            url::form_urlencoded::byte_serialize(mailbox.as_bytes()).collect::<String>()
-        ),
+        None => {
+            format!("{GRAPH}/{mailbox_path}/mailFolders/{folder}/messages/delta?$select={SELECT}")
+        }
     };
     let mut out: Vec<MailMessage> = Vec::new();
     loop {
         let res = client
             .get(&url)
-            .bearer_auth(&token)
+            .bearer_auth(token)
             .header(
                 "Prefer",
                 "odata.maxpagesize=50, outlook.body-content-type=\"text\"",
@@ -199,16 +224,17 @@ pub(super) async fn pull(
             if message.id.is_empty() {
                 continue;
             }
-            let attachments_url = format!(
-                "{GRAPH}/users/{}/messages/{}/attachments?$select=id,name,contentType,size",
-                url::form_urlencoded::byte_serialize(mailbox.as_bytes()).collect::<String>(),
-                url::form_urlencoded::byte_serialize(message.id.as_bytes()).collect::<String>()
-            );
-            if let Ok(res) = client.get(attachments_url).bearer_auth(&token).send().await
-                && res.status().is_success()
-            {
-                message.attachments =
-                    parse_attachments(&message.id, &res.text().await.unwrap_or_default());
+            if message.has_attachments {
+                let attachments_url = format!(
+                    "{GRAPH}/{mailbox_path}/messages/{}/attachments?$select=id,name,contentType,size",
+                    url::form_urlencoded::byte_serialize(message.id.as_bytes()).collect::<String>()
+                );
+                if let Ok(res) = client.get(attachments_url).bearer_auth(token).send().await
+                    && res.status().is_success()
+                {
+                    message.attachments =
+                        parse_attachments(&message.id, &res.text().await.unwrap_or_default());
+                }
             }
             out.push(message);
         }
@@ -248,6 +274,14 @@ mod tests {
         assert_eq!(m.to[0].name, None, "a name equal to the address is dropped");
         assert_eq!(m.text.as_deref(), Some("نحتاج عرضًا"));
         assert_eq!(m.thread_hint.as_deref(), Some("conv1"));
+        assert!(m.has_attachments);
+        assert!(!m.private);
+        let private = PAGE.replace(
+            r#""hasAttachments":true"#,
+            r#""hasAttachments":false,"sensitivity":"private""#,
+        );
+        let (p, _, _) = parse_page(&private).unwrap();
+        assert!(p[0].private && !p[0].has_attachments);
         assert_eq!(next, None);
         assert!(delta.unwrap().contains("deltatoken=abc"));
         assert!(cursor_ok("https://graph.microsoft.com/v1.0/x"));

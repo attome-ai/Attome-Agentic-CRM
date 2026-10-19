@@ -116,6 +116,10 @@ pub fn parse_message(uid: u32, raw: &[u8]) -> Option<MailMessage> {
         auto_submitted: raw_header("Auto-Submitted"),
         precedence: raw_header("Precedence"),
         list_id: raw_header("List-Id"),
+        private: raw_header("Sensitivity").is_some_and(|v| {
+            v.eq_ignore_ascii_case("private") || v.eq_ignore_ascii_case("company-confidential")
+        }),
+        has_attachments: false,
         attachments,
     })
 }

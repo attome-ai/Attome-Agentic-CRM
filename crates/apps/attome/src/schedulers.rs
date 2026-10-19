@@ -108,6 +108,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // D15-T2: personal mail onto matching records, every five minutes.
+    crate::jobs::spawn_mail_capture_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // J8-T1: new Google reviews, every 15 minutes.
     crate::jobs::spawn_social_reviews_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // D15-T3: meetings and people's own calendars, every five minutes.

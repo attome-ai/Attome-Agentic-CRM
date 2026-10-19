@@ -654,6 +654,9 @@ pub(super) struct ChildSource {
     /// A date column preferred over `created_at` as the entry's time, when the
     /// entity has it (a communication's `sent_at`).
     time_column: Option<&'static str>,
+    /// D15-T2: a link table that also places a row on other records
+    /// (`communication_link`: one captured email, every matching record).
+    link_table: Option<&'static str>,
 }
 
 /// `activity` is listed even where it is not yet provisioned (U2): a
@@ -664,12 +667,14 @@ const CHILD_SOURCES: &[ChildSource] = &[
         entity: "communication",
         detail_columns: &["subject", "channel", "direction", "status"],
         time_column: Some("sent_at"),
+        link_table: Some("communication_link"),
     },
     ChildSource {
         kind: TimelineEntryKind::Note,
         entity: "note",
         detail_columns: &["title", "note_text"],
         time_column: None,
+        link_table: None,
     },
     ChildSource {
         kind: TimelineEntryKind::Activity,
@@ -685,6 +690,7 @@ const CHILD_SOURCES: &[ChildSource] = &[
             "duration_minutes",
         ],
         time_column: None,
+        link_table: None,
     },
 ];
 
@@ -872,12 +878,22 @@ async fn fetch_child_source(
     let keyset = keyset_sql(cursor, source.kind, &occ, "t.id", 4, 5);
     push_keyset_binds(&mut binds, cursor, &keyset)?;
     let table = quote_ident(source.entity);
+    // The row's own record, or (D15-T2) a record it is linked to; record
+    // security on the row applies either way.
+    let placed = match source.link_table {
+        Some(link) => format!(
+            "((t.entity_name = $1 AND t.record_id = $2) OR t.id IN \
+              (SELECT l.communication_id FROM {} l WHERE l.entity_name = $1 AND l.record_id::text = $2))",
+            quote_ident(link)
+        ),
+        None => "t.entity_name = $1 AND t.record_id = $2".to_owned(),
+    };
     let sql = format!(
         "SELECT jsonb_build_object('id', t.id, \
                 'micros', (EXTRACT(EPOCH FROM {occ}) * 1000000)::bigint, \
                 'created_by', t.created_by, 'detail', {detail}) \
          FROM {table} t \
-         WHERE t.entity_name = $1 AND t.record_id = $2 AND {occ} IS NOT NULL {live} {keyset} {{rls}} \
+         WHERE {placed} AND {occ} IS NOT NULL {live} {keyset} {{rls}} \
          ORDER BY {occ} DESC, t.id DESC LIMIT $3",
         keyset = keyset.as_ref().map_or("", |k| k.0.as_str()),
     );

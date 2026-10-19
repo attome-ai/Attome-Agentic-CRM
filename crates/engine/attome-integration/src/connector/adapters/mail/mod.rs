@@ -77,6 +77,13 @@ pub struct MailMessage {
     pub precedence: Option<String>,
     pub list_id: Option<String>,
     pub attachments: Vec<MailAttachment>,
+    /// Marked private or confidential by the sender (Graph's sensitivity,
+    /// the `Sensitivity` header): D15-T2 does not capture it.
+    pub private: bool,
+    /// Whether the provider says it has attachments (Graph), so the list is
+    /// fetched only then.
+    #[serde(skip)]
+    pub has_attachments: bool,
 }
 
 /// A message id without its angle brackets. Pure.

@@ -456,6 +456,24 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             || json!("UTC"),
         ),
         SettingDescriptor::new(
+            "mail_capture.enabled",
+            "Whether emails in your connected mailbox with known contacts and \
+             leads are captured onto their records (D15-T2).",
+            || json!({"type": "boolean"}),
+            PERSONAL,
+            false,
+            || json!(true),
+        ),
+        SettingDescriptor::new(
+            "mail_capture.excluded_domains",
+            "Domains whose addresses are never captured, typically your \
+             organization's own, comma separated (D15-T2).",
+            || json!({"type": "string", "maxLength": 2000}),
+            PERSONAL,
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "voice.agent_number",
             "Your own phone number (E.164) or PBX extension: a call placed \
              from Attome rings it first, then the customer (J6-T1).",

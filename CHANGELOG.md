@@ -124,6 +124,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Email capture (D15-T2): emails in a connected Microsoft 365 or Gmail mailbox that involve known
+  contacts or leads are captured once each and appear on the timelines of every matching contact,
+  lead and open opportunity of their accounts. Private, automatic and bulk mail is skipped, as are
+  addresses at excluded domains (`mail_capture.excluded_domains`). People can turn capture off
+  (`mail_capture.enabled`). Migration 0147.
 - Mailbox readers (J2-T1): a `mailbox` integration system reads IMAP (over TLS), Microsoft 365
   (Graph delta) or Gmail (history) mailboxes incrementally, each message once, through the
   connector's `pull`. Two new Rust dependencies, `async-imap` and `mail-parser`, both pure Rust.
