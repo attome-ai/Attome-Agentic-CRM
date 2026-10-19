@@ -21,7 +21,8 @@ use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
     extract::{ConnectInfo, Query, State},
-    http::HeaderMap,
+    http::{HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde::Deserialize;
@@ -176,14 +177,165 @@ async fn vote_on_page(
     Ok(Json(VoteAck { recorded: true }))
 }
 
+// ── K5-T3: headless delivery ─────────────────────────────────────────────────
+
+#[derive(Deserialize, IntoParams)]
+struct DeliveryQuery {
+    /// The content space's id.
+    space: Uuid,
+    /// The page's URL path in that space, e.g. `/pricing`.
+    path: String,
+}
+
+/// One published page for a headless site (K5-T3).
+#[derive(Debug, serde::Serialize, ToSchema)]
+pub(crate) struct DeliveredPage {
+    space_id: Uuid,
+    path: String,
+    /// The published version served (0 for a page published before versions
+    /// were kept).
+    version: i32,
+    title: String,
+    seo_title: Option<String>,
+    seo_description: Option<String>,
+    published_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[schema(value_type = Vec<Object>)]
+    blocks: serde_json::Value,
+}
+
+#[derive(sqlx::FromRow)]
+struct DeliveryRow {
+    page_id: Uuid,
+    version: i32,
+    title: String,
+    blocks: serde_json::Value,
+    seo_title: Option<String>,
+    seo_description: Option<String>,
+    published_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// The ETag of one published version of one page. Pure.
+fn delivery_etag(page_id: Uuid, version: i32) -> String {
+    format!("\"{page_id}.{version}\"")
+}
+
+/// Whether an `If-None-Match` value names `etag`. Pure.
+fn etag_held(if_none_match: Option<&str>, etag: &str) -> bool {
+    if_none_match.is_some_and(|value| {
+        value
+            .split(',')
+            .any(|tag| tag.trim() == "*" || tag.trim().trim_start_matches("W/") == etag)
+    })
+}
+
+/// A published page as JSON for a headless site (K5-T3).
+///
+/// The page's latest published version (title, SEO text and blocks), frozen
+/// when it was published, with an ETag naming the page and version: a client
+/// that sends it back in `If-None-Match` gets 304 until the page is published
+/// again. No sign-in; the same 404 for a missing, unpublished or unlicensed
+/// page.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/delivery",
+    tag = "content",
+    params(DeliveryQuery),
+    responses(
+        (status = 200, description = "The page's published version", body = DeliveredPage),
+        (status = 304, description = "The client already holds this version"),
+        (status = 404, description = "No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed)", body = ErrorResponse),
+    ),
+)]
+async fn deliver_page(
+    State(state): State<EngineState>,
+    Query(q): Query<DeliveryQuery>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let row: DeliveryRow = sqlx::query_as(
+        "SELECT p.id AS page_id, COALESCE(v.version_number, 0) AS version, \
+                COALESCE(v.title, p.title) AS title, \
+                COALESCE(v.blocks, p.blocks_published, '[]'::jsonb) AS blocks, \
+                CASE WHEN v.version_number IS NULL THEN p.seo_title ELSE v.seo_title END AS seo_title, \
+                CASE WHEN v.version_number IS NULL THEN p.seo_description ELSE v.seo_description END \
+                    AS seo_description, \
+                COALESCE(v.published_at, p.published_at) AS published_at \
+           FROM content_page p \
+           LEFT JOIN LATERAL ( \
+               SELECT version_number, title, blocks, seo_title, seo_description, published_at \
+                 FROM content_page_version WHERE page_id = p.id \
+                ORDER BY version_number DESC LIMIT 1 \
+           ) v ON true \
+          WHERE p.content_space_id = $1 AND p.url_path = $2 \
+            AND p.status = 'published' AND p.is_deleted = FALSE",
+    )
+    .bind(q.space)
+    .bind(&q.path)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+
+    let etag = delivery_etag(row.page_id, row.version);
+    let etag_value = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
+    let held = etag_held(
+        headers
+            .get(axum::http::header::IF_NONE_MATCH)
+            .and_then(|v| v.to_str().ok()),
+        &etag,
+    );
+    if held {
+        return Ok((
+            StatusCode::NOT_MODIFIED,
+            [(axum::http::header::ETAG, etag_value)],
+        )
+            .into_response());
+    }
+    Ok((
+        [(axum::http::header::ETAG, etag_value)],
+        Json(DeliveredPage {
+            space_id: q.space,
+            path: q.path,
+            version: row.version,
+            title: row.title,
+            seo_title: row.seo_title,
+            seo_description: row.seo_description,
+            published_at: row.published_at,
+            blocks: row.blocks,
+        }),
+    )
+        .into_response())
+}
+
+#[cfg(test)]
+mod delivery_tests {
+    use super::*;
+
+    #[test]
+    fn the_etag_names_the_page_and_version_and_revalidates() {
+        let page = Uuid::nil();
+        let etag = delivery_etag(page, 3);
+        assert_eq!(etag, format!("\"{page}.3\""));
+        assert!(etag_held(Some(&etag), &etag));
+        assert!(etag_held(Some(&format!("W/{etag}")), &etag));
+        assert!(etag_held(Some(&format!("\"x\", {etag}")), &etag));
+        assert!(etag_held(Some("*"), &etag));
+        assert!(!etag_held(Some(&delivery_etag(page, 2)), &etag));
+        assert!(!etag_held(None, &etag));
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/content/view", get(view_page))
         .route("/api/v1/content/vote", post(vote_on_page))
+        .route("/api/v1/content/delivery", get(deliver_page))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(view_page, vote_on_page))]
+#[openapi(paths(view_page, vote_on_page, deliver_page))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

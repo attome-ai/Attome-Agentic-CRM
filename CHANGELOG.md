@@ -119,6 +119,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Headless delivery (K5-T3): `GET /api/v1/content/delivery?space=&path=` serves a published page's
+  latest version (title, SEO text, blocks) as JSON without signing in, with an ETag naming the page and
+  version so a client revalidates with `If-None-Match` and gets 304 until the next publish.
 - Guided tours (B14-T1): a `tour` metadata kind (title, app route, roles, whether it starts by itself,
   and steps with a CSS selector and English/Arabic text, edited like any other kind and by agents as
   `model.tour.*`). `GET /api/v1/model/tours` gives a signed-in person the published tours for their
