@@ -120,4 +120,15 @@ export const en = {
     failed: 'That did not work. Check what you entered and try again.',
     tooManyAttempts: 'Too many attempts. Wait a few minutes and try again.',
   },
+  // C4-T2: the mention picker in text editors.
+  mentionPicker: {
+    label: 'Mention a person, team or record',
+    searching: 'Searching…',
+    none: 'No matches',
+    kind: {
+      user: 'Person',
+      team: 'Team',
+      record: 'Record',
+    },
+  },
 };

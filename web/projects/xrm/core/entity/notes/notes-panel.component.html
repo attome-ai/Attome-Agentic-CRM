@@ -120,8 +120,10 @@
                   class="xnp-form-textarea"
                   [(ngModel)]="formNoteText" [ngModelOptions]="{ standalone: true }"
                   [placeholder]="'notes.textPlaceholder' | translate"
-                  (keydown.escape)="cancelForm(); $event.stopPropagation()"
+                  (keydown.escape)="onContentEscape($event)"
                   rows="6"></textarea>
+                <!-- C4-T2: @ names a person, team or record. -->
+                <base-mention-picker [target]="contentInput" [search]="mentionSearch" />
               </div>
 
               <!-- Attachments Section -->
@@ -528,6 +530,7 @@
                   [(ngModel)]="replyText" [ngModelOptions]="{ standalone: true }"
                   [placeholder]="'notes.replyPlaceholder' | translate"
                   (keydown)="onReplyKeydown($event)"></textarea>
+                <base-mention-picker [target]="replyTextarea" [search]="mentionSearch" />
 
                 <button
                   type="button"

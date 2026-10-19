@@ -1,11 +1,14 @@
 import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef,
-  ElementRef, OnInit, computed, effect, inject, input, signal, untracked, viewChild,
+  ElementRef, Injector, OnInit, computed, effect, inject, input, signal, untracked, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiError, AuthService, TranslatePipe } from '@attome/base';
+import {
+  ApiError, ApiService, AuthService, MentionCandidate, MentionPickerComponent, MentionSearch, TranslatePipe,
+} from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
@@ -87,7 +90,7 @@ const EXTENSION_ICONS: Record<string, string> = {
   selector: 'xrm-notes-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent, MentionPickerComponent],
   styleUrls: ['./notes-panel.component.css'],
   templateUrl: './notes-panel.component.html',
 })
@@ -101,6 +104,70 @@ export class NotesPanelComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+
+  /**
+   * C4-T2: who and what `@` can name in a note or reply — people, teams and
+   * (from global search) records. A source the caller may not read adds
+   * nothing rather than failing the others.
+   */
+  readonly mentionSearch: MentionSearch = (query: string) => {
+    const term = query.trim();
+    const none = of([] as MentionCandidate[]);
+    const people: Observable<MentionCandidate[]> = this.entityService
+      .lookupSearch('user_account', term, 'user_name').pipe(
+        map(page => page.data.slice(0, 5).map(r => ({
+          kind: 'user' as const,
+          id: r.id,
+          label: String(r.data['user_name'] || r.data['email'] || r.id),
+          detail: r.data['email'] ? String(r.data['email']) : undefined,
+        }))),
+        catchError(() => none),
+      );
+    const teams: Observable<MentionCandidate[]> = this.entityService
+      .lookupSearch('team', term, 'name').pipe(
+        map(page => page.data.slice(0, 3).map(r => ({
+          kind: 'team' as const,
+          id: r.id,
+          label: String(r.data['name'] || r.id),
+        }))),
+        catchError(() => none),
+      );
+    const api = this.api;
+    const records: Observable<MentionCandidate[]> = term.length < 2 || !api
+      ? none
+      : api.get<{ items: { entity_logicalname: string; record_id: string; title?: string | null }[] }>(
+          '/api/v1/search', { q: term, page_size: '5' },
+        ).pipe(
+          map(res => res.items.map(h => ({
+            kind: 'record' as const,
+            id: h.record_id,
+            entity: h.entity_logicalname,
+            label: h.title || h.record_id,
+            detail: h.entity_logicalname,
+          }))),
+          catchError(() => none),
+        );
+    return forkJoin([people, teams, records]).pipe(map(([p, t, r]) => [...p, ...t, ...r]));
+  };
+
+  /** Resolved on first use, so a host without an HTTP client still renders. */
+  private get api(): ApiService | null {
+    return this.injector.get(ApiService, null);
+  }
+
+  /**
+   * C4-T1: tells the people and teams a saved text names. Best effort: the
+   * note is saved either way, and the server skips anyone who may not read
+   * the record.
+   */
+  private notifyMentions(text: string): void {
+    if (!text.includes('@[')) return;
+    const path = `/api/v1/${encodeURIComponent(this.entityName())}/${encodeURIComponent(this.recordId())}/mentions`;
+    this.api?.post(path, { text }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      error: () => undefined,
+    });
+  }
 
   readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
   readonly contentInput = viewChild<ElementRef<HTMLTextAreaElement>>('contentInput');
@@ -456,6 +523,7 @@ export class NotesPanelComponent implements OnInit {
 
     this.entityService.create('note', createPayload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res => {
+        this.notifyMentions(text);
         this.formNoteTitle = '';
         this.formNoteText = '';
         this.pendingFiles.set([]);
@@ -571,7 +639,16 @@ export class NotesPanelComponent implements OnInit {
     this.replyPendingFiles.update(files => files.filter((_, i) => i !== index));
   }
 
+  /** Escape in the note text: closes an open mention list first. */
+  onContentEscape(event: KeyboardEvent): void {
+    event.stopPropagation();
+    if ((event.target as HTMLElement | null)?.getAttribute('aria-expanded') === 'true') return;
+    this.cancelForm();
+  }
+
   onReplyKeydown(event: KeyboardEvent): void {
+    // C4-T2: while the mention list is open, Enter picks from it.
+    if ((event.target as HTMLElement | null)?.getAttribute('aria-expanded') === 'true') return;
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendReply();
@@ -625,6 +702,7 @@ export class NotesPanelComponent implements OnInit {
 
     this.entityService.update('note', activeNote.id, replyPatch, activeNote.row_version ?? 0).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
+        this.notifyMentions(text);
         this.replyText = '';
         this.replyPendingFiles.set([]);
         this.sendingReply.set(false);
