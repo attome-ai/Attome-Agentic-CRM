@@ -198,6 +198,7 @@ async fn an_unknown_job_type_is_dead_lettered_not_dropped() {
         name: "from_a_newer_node".to_owned(),
         version: 1,
         payload: serde_json::json!({}),
+        next: None,
     };
     attome_jobs::enqueue_on_pool(&pool, AppJob::Registered(job))
         .await

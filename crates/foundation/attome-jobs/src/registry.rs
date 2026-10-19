@@ -79,6 +79,10 @@ pub struct RegisteredJob {
     pub name: String,
     pub version: u16,
     pub payload: serde_json::Value,
+    /// Z7-T5: what follows this job once it succeeds (a chained job, a
+    /// fan-out group); see [`crate::chain`]. Omitted when nothing does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next: Option<crate::chain::Continuation>,
 }
 
 impl RegisteredJob {
@@ -247,6 +251,7 @@ impl<C> JobRegistry<C> {
             name: job_type.name.to_owned(),
             version: job_type.version,
             payload,
+            next: None,
         })
     }
 
@@ -331,6 +336,7 @@ mod tests {
             name: "missing".to_owned(),
             version: 1,
             payload: serde_json::Value::Null,
+            next: None,
         };
         let err = registry.run((), job).await.expect_err("unknown type");
         assert!(err.to_string().starts_with("unknown_job_type"), "{err}");
@@ -362,6 +368,7 @@ mod tests {
             name: "versioned".to_owned(),
             version: 3,
             payload: serde_json::Value::Null,
+            next: None,
         };
         let err = registry.run((), newer).await.expect_err("newer version");
         assert!(err.to_string().starts_with("newer_job_version"), "{err}");
@@ -369,6 +376,7 @@ mod tests {
             name: "versioned".to_owned(),
             version: 1,
             payload: serde_json::Value::Null,
+            next: None,
         };
         registry.run((), older).await.expect("older version runs");
     }

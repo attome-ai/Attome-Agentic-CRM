@@ -756,6 +756,8 @@ async fn dispatch_platform_job(
         }
         EngineJob::PruneApalisJobHistory => {
             prune_apalis_job_history(&db, &config).await?;
+            // Z7-T5: chain steps and finished fan-out groups past 30 days.
+            attome_jobs::chain::prune(&db, 30).await?;
             // M3-T4: the same daily prune clears old workflow step payloads.
             attome_workflow::retention::prune_payloads(
                 &attome_state,
@@ -1810,11 +1812,14 @@ async fn dispatch_platform_job(
         }
         // Z7-T1 — a run-time registered type: its handler, by name. An
         // unknown name fails with `unknown_job_type` and dead-letters at the
-        // row's budget.
+        // row's budget. Z7-T5: then what follows it (a chained job, a
+        // fan-out's count), at most once per step.
         EngineJob::Registered(job) => {
+            let next = job.next.clone();
             attome_core::jobs::JOB_TYPES
                 .run((*attome_state).clone(), job)
-                .await?
+                .await?;
+            attome_jobs::chain::after_success(&db, next.as_ref(), EngineJob::Registered).await?;
         }
     }
     Ok(())

@@ -118,6 +118,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `merged_over` (the attributes others changed; `merged_hidden` counts those the caller cannot read).
   An overlap, or a version the record's change history cannot account for, is the usual 409. Change
   events of generic updates now carry the row version they wrote (migration 0121).
+- Job chains and fan-out (Z7-T5): a registered job can name the job to run after it
+  (`RegisteredJob::then`), and `attome_jobs::chain::fan_out` runs several jobs in parallel and a final
+  one once all have succeeded. Each follow-up is enqueued at most once even when a job is retried
+  (`job_chain_step`, `job_group`, migration 0122).
 - Job types registered at run time (Z7-T1): `attome_jobs::JobRegistry` maps a job name to its
   declaration (`JobType`: payload version, lane, priority, attempts, per-node concurrency cap) and
   handler, and `EngineJob::Registered` carries `{name, version, payload}`, so an engine adds a job

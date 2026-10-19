@@ -712,6 +712,7 @@ dependencies = [
  "attome-search",
  "attome-security",
  "attome-server",
+ "attome-testkit",
  "attome-types",
  "axum",
  "bytes",
