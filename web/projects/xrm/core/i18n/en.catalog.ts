@@ -484,6 +484,21 @@ export const xrmEn = {
     provider: { teams: 'Microsoft Teams', meet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi' },
     where: 'Where',
   },
+  // J6-T2: the browser softphone.
+  softphone: {
+    title: 'Phone',
+    number: 'Number to call',
+    call: 'Call',
+    accept: 'Answer',
+    reject: 'Decline',
+    hangUp: 'Hang up',
+    openRecord: 'Open the caller\'s record',
+    openARecord: 'Open a record to call about it.',
+    state: {
+      off: 'Phone off', ready: 'Ready', incoming: 'Incoming call', calling: 'Calling…',
+      in_call: 'On a call', error: 'The phone could not start',
+    },
+  },
   // B18-T9: offline conflicts and refused changes.
   offline: {
     conflict: {

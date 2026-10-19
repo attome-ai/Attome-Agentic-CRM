@@ -8,6 +8,13 @@
 //! **Events** are Twilio's form posts: `CallSid`, `CallStatus`, `Direction`,
 //! `From`, `To`, `CallDuration`, and `RecordingUrl` when a recording is
 //! ready.
+//!
+//! **In the browser** (J6-T2) agents use Twilio's Voice JavaScript SDK with
+//! an access token minted here ([`access_token`]): a JWT signed with an API
+//! key's secret, granting the agent's identity incoming calls and outgoing
+//! calls through the TwiML app. The credential is then a JSON object,
+//! `{"auth_token", "api_key_secret"}`; a plain string is the auth token
+//! alone ([`Secrets::parse`]).
 
 use attome_core::EngineState;
 use attome_types::AppError;
@@ -16,6 +23,79 @@ use super::{CallEvent, CallState, CallbackUrls, config, credential, setting};
 use crate::system::IntegrationSystem;
 
 const API: &str = "https://api.twilio.com/2010-04-01";
+
+/// The Twilio secrets in a system's credential.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Secrets {
+    pub auth_token: String,
+    pub api_key_secret: Option<String>,
+}
+
+impl Secrets {
+    /// A JSON object `{"auth_token", "api_key_secret"}`, or the auth token
+    /// alone. Pure.
+    pub fn parse(raw: &str) -> Self {
+        match serde_json::from_str::<serde_json::Value>(raw) {
+            Ok(v) if v.is_object() => {
+                let get = |k: &str| {
+                    v.get(k)
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|s| !s.is_empty())
+                        .map(str::to_owned)
+                };
+                Self {
+                    auth_token: get("auth_token").unwrap_or_default(),
+                    api_key_secret: get("api_key_secret"),
+                }
+            }
+            _ => Self {
+                auth_token: raw.to_owned(),
+                api_key_secret: None,
+            },
+        }
+    }
+}
+
+/// A Twilio access token for the Voice SDK: `identity` may receive calls
+/// and place them through `twiml_app_sid`, for `ttl_secs` from `now`. Pure.
+pub fn access_token(
+    account_sid: &str,
+    api_key_sid: &str,
+    api_key_secret: &str,
+    twiml_app_sid: &str,
+    identity: &str,
+    now: i64,
+    ttl_secs: i64,
+) -> Option<String> {
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use hmac::{Hmac, Mac};
+    let header = serde_json::json!({ "typ": "JWT", "alg": "HS256", "cty": "twilio-fpa;v=1" });
+    let payload = serde_json::json!({
+        "jti": format!("{api_key_sid}-{now}"),
+        "iss": api_key_sid,
+        "sub": account_sid,
+        "iat": now,
+        "nbf": now,
+        "exp": now + ttl_secs,
+        "grants": {
+            "identity": identity,
+            "voice": {
+                "incoming": { "allow": true },
+                "outgoing": { "application_sid": twiml_app_sid },
+            },
+        },
+    });
+    let signing_input = format!(
+        "{}.{}",
+        URL_SAFE_NO_PAD.encode(header.to_string()),
+        URL_SAFE_NO_PAD.encode(payload.to_string())
+    );
+    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(api_key_secret.as_bytes()).ok()?;
+    mac.update(signing_input.as_bytes());
+    let signature = URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
+    Some(format!("{signing_input}.{signature}"))
+}
 
 /// Reads a Twilio call status callback. Pure.
 pub fn parse_event(body: &[u8]) -> Option<CallEvent> {
@@ -76,8 +156,14 @@ fn xml(text: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// TwiML that dials `number` from `caller_id`, reporting the dialled leg to
-/// `events` and recording it when `record`. Pure.
+/// A browser agent's identity for the Voice SDK. Pure.
+pub fn client_identity(user: uuid::Uuid) -> String {
+    format!("user_{}", user.simple())
+}
+
+/// TwiML that dials `number` (or a browser agent, `client:<identity>`) from
+/// `caller_id`, reporting the dialled leg to `events` and recording it when
+/// `record`. Pure.
 pub fn dial_twiml(caller_id: &str, number: &str, events: &str, record: bool) -> String {
     let record = if record {
         format!(
@@ -87,13 +173,17 @@ pub fn dial_twiml(caller_id: &str, number: &str, events: &str, record: bool) -> 
     } else {
         String::new()
     };
+    let (noun, target) = match number.strip_prefix("client:") {
+        Some(identity) => ("Client", identity),
+        None => ("Number", number),
+    };
     format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Dial callerId=\"{}\"{record}>\
-         <Number statusCallbackEvent=\"initiated ringing answered completed\" statusCallback=\"{}\">{}</Number>\
+         <{noun} statusCallbackEvent=\"initiated ringing answered completed\" statusCallback=\"{}\">{}</{noun}>\
          </Dial></Response>",
         xml(caller_id),
         xml(events),
-        xml(number)
+        xml(target)
     )
 }
 
@@ -140,7 +230,7 @@ pub(super) async fn place_call(
     let from = setting(&cfg, "from_number").ok_or_else(|| {
         AppError::Validation(format!("{}: config has no from_number", system.name))
     })?;
-    let token = credential(state, system).await?;
+    let token = Secrets::parse(&credential(state, system).await?).auth_token;
     let client = reqwest::Client::builder()
         .timeout(super::TIMEOUT)
         .build()
@@ -215,6 +305,12 @@ mod tests {
             "the URL is escaped"
         );
         assert!(!dial_twiml("+1", "+2", "u", false).contains("record="));
+        let to_browser = dial_twiml("+1", "client:user_ab12", "u", false);
+        assert!(to_browser.contains(">user_ab12</Client>"));
+        assert_eq!(
+            client_identity(uuid::Uuid::nil()),
+            "user_00000000000000000000000000000000"
+        );
         assert!(unavailable_twiml().contains("<Hangup/>"));
 
         let urls = CallbackUrls {
@@ -229,5 +325,54 @@ mod tests {
             Some("CA9".into())
         );
         assert_eq!(created_sid(400, r#"{"code":21211}"#), None);
+    }
+
+    #[test]
+    fn voice_adapters_twilio_browser_tokens() {
+        use base64::Engine;
+        use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        assert_eq!(
+            Secrets::parse(r#"{"auth_token":"at","api_key_secret":"ks"}"#),
+            Secrets {
+                auth_token: "at".into(),
+                api_key_secret: Some("ks".into())
+            }
+        );
+        assert_eq!(
+            Secrets::parse("plain-token"),
+            Secrets {
+                auth_token: "plain-token".into(),
+                api_key_secret: None
+            }
+        );
+
+        let token = access_token(
+            "AC1",
+            "SK1",
+            "secret",
+            "AP1",
+            "user_42",
+            1_700_000_000,
+            3600,
+        )
+        .unwrap();
+        let parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 3);
+        let header: serde_json::Value =
+            serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts[0]).unwrap()).unwrap();
+        assert_eq!(header["cty"], "twilio-fpa;v=1");
+        let payload: serde_json::Value =
+            serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts[1]).unwrap()).unwrap();
+        assert_eq!(payload["iss"], "SK1");
+        assert_eq!(payload["sub"], "AC1");
+        assert_eq!(payload["exp"], 1_700_003_600);
+        assert_eq!(payload["grants"]["identity"], "user_42");
+        assert_eq!(
+            payload["grants"]["voice"]["outgoing"]["application_sid"],
+            "AP1"
+        );
+        let mut mac = <hmac::Hmac<sha2::Sha256> as hmac::Mac>::new_from_slice(b"secret").unwrap();
+        hmac::Mac::update(&mut mac, format!("{}.{}", parts[0], parts[1]).as_bytes());
+        assert!(hmac::Mac::verify_slice(mac, &URL_SAFE_NO_PAD.decode(parts[2]).unwrap()).is_ok());
     }
 }

@@ -452,6 +452,21 @@ export const xrmAr = {
     provider: { teams: 'Microsoft Teams', meet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi' },
     where: 'المكان',
   },
+  // J6-T2: الهاتف في المتصفح.
+  softphone: {
+    title: 'الهاتف',
+    number: 'الرقم المطلوب',
+    call: 'اتصال',
+    accept: 'رد',
+    reject: 'رفض',
+    hangUp: 'إنهاء المكالمة',
+    openRecord: 'فتح سجل المتصل',
+    openARecord: 'افتح سجلًا للاتصال بشأنه.',
+    state: {
+      off: 'الهاتف متوقف', ready: 'جاهز', incoming: 'مكالمة واردة', calling: 'جارٍ الاتصال…',
+      in_call: 'في مكالمة', error: 'تعذّر تشغيل الهاتف',
+    },
+  },
   // B18-T9: offline conflicts and refused changes.
   offline: {
     conflict: {

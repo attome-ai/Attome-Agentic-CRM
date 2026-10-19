@@ -15,6 +15,7 @@ import type { OmniSelection } from '@attome/xrm/search/omni';
 import { AppSwitcherComponent } from '../app-switcher/app-switcher.component';
 import { ChangesetIndicatorComponent } from '../changeset-indicator/changeset-indicator.component';
 import { CopilotLauncherComponent } from '../copilot-launcher/copilot-launcher.component';
+import { SoftphoneLauncherComponent } from '../softphone-launcher/softphone-launcher.component';
 import { FavouritesComponent } from '../favourites/favourites.component';
 import { FavouriteItem, FavouritesService } from '../favourites/favourites.service';
 import { PersonalSettingsService } from '../settings/personal-settings.service';
@@ -112,7 +113,7 @@ const PALETTE_RECORDS = 8;
   imports: [
     RouterOutlet, FormsModule, TranslatePipe,
     ShellSidebarComponent, NotificationBellComponent, ProfileMenuComponent, AppSwitcherComponent,
-    CopilotLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
+    CopilotLauncherComponent, SoftphoneLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
     StatusBannerComponent, FirstRunPromptComponent, TourOverlayComponent,
   ],
   host: {

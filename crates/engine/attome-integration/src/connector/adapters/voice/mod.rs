@@ -212,7 +212,7 @@ pub async fn fetch_recording(
     let (user, password) = match provider.as_str() {
         "twilio" => (
             setting(&cfg, "account_sid").unwrap_or_default().to_owned(),
-            secret,
+            twilio::Secrets::parse(&secret).auth_token,
         ),
         _ => {
             let (u, p) = secret.split_once(':').unwrap_or((secret.as_str(), ""));

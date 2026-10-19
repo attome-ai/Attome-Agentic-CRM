@@ -215,7 +215,7 @@ fn is_voice_callback_path(path: &str) -> bool {
     };
     match rest.split('/').collect::<Vec<_>>().as_slice() {
         ["twiml" | "events", token] => !token.is_empty(),
-        ["twilio", key, "inbound"] | ["pbx", key, "events"] => !key.is_empty(),
+        ["twilio", key, "inbound" | "client"] | ["pbx", key, "events"] => !key.is_empty(),
         _ => false,
     }
 }
@@ -438,6 +438,11 @@ mod tests {
         ));
         assert!(is_bypass("/api/v1/voice/pbx/key-1234567890abcdef/events"));
         assert!(!is_bypass("/api/v1/voice/calls"));
+        assert!(is_bypass(
+            "/api/v1/voice/twilio/key-1234567890abcdef/client"
+        ));
+        assert!(!is_bypass("/api/v1/voice/softphone"));
+        assert!(!is_bypass("/api/v1/voice/lookup"));
         assert!(!is_bypass("/api/v1/voice/events/a/b"));
         assert!(is_bypass("/api/v1/booking/intro-call"));
         assert!(is_bypass("/api/v1/booking/manage/abc.def"));

@@ -608,6 +608,10 @@ pub struct PlaceCall {
     pub record_id: Uuid,
     /// Which voice system; the first active one when left out.
     pub system_id: Option<Uuid>,
+    /// `phone` (the default: ring your own phone, then the number) or
+    /// `browser` (J6-T2: the softphone dials, through the TwiML app, with
+    /// the returned `call_id` as its `CallRef`).
+    pub mode: Option<String>,
 }
 
 /// A placed call.
@@ -642,9 +646,20 @@ async fn post_call(
     let to =
         voice::e164(&req.to).ok_or_else(|| AppError::Validation("to: an E.164 number".into()))?;
     let user = ctx.user_id;
-    let agent = agent_number(&state, user).ok_or_else(|| {
-        AppError::Validation("set your phone number or extension (voice.agent_number) first".into())
-    })?;
+    let browser = match req.mode.as_deref().unwrap_or("phone") {
+        "phone" => false,
+        "browser" => true,
+        _ => return Err(AppError::Validation("mode: phone or browser".into())),
+    };
+    let agent = if browser {
+        format!("client:{}", twilio::client_identity(user))
+    } else {
+        agent_number(&state, user).ok_or_else(|| {
+            AppError::Validation(
+                "set your phone number or extension (voice.agent_number) first".into(),
+            )
+        })?
+    };
     let system = match req.system_id {
         Some(id) => attome_integration::system::load(&state.base.db, id)
             .await?
@@ -681,6 +696,17 @@ async fn post_call(
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    if browser {
+        // The softphone places it: `POST /voice/twilio/{key}/client` dials
+        // this row's number when Twilio asks.
+        return Ok((
+            StatusCode::CREATED,
+            Json(PlacedCall {
+                call_id: call,
+                activity_id: activity,
+            }),
+        ));
+    }
     let placed = match callback_urls(&state, call) {
         Ok(urls) => voice::place_call(&state, &system, &agent, &to, &urls).await,
         Err(error) => Err(error),
@@ -715,7 +741,224 @@ async fn post_call(
     }
 }
 
+// ── Staff: the softphone (J6-T2) ────────────────────────────────────────────
+
+/// What the browser softphone needs.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SoftphoneConfig {
+    /// Whether a browser softphone is set up (a Twilio system with an API
+    /// key, a TwiML app and the SDK's address).
+    pub available: bool,
+    pub identity: Option<String>,
+    /// A Voice SDK access token, valid for an hour.
+    pub token: Option<String>,
+    /// Where the provider's SDK is loaded from (an administrator's setting).
+    pub sdk_url: Option<String>,
+    pub expires_in: i64,
+}
+
+const SOFTPHONE_TTL_SECS: i64 = 3600;
+
+/// The softphone's settings and an access token for the caller.
+#[utoipa::path(
+    get,
+    path = "/api/v1/voice/softphone",
+    tag = "omnichannel",
+    responses(
+        (status = 200, description = "Settings; `available` false when no softphone is set up", body = SoftphoneConfig),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_softphone(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+) -> Result<Json<SoftphoneConfig>, AppError> {
+    let none = SoftphoneConfig {
+        available: false,
+        identity: None,
+        token: None,
+        sdk_url: None,
+        expires_in: 0,
+    };
+    if licensed(&state).is_err() || ctx.require("activity", "create").is_err() {
+        return Ok(Json(none));
+    }
+    for system in voice::systems(&state).await? {
+        if voice::provider(&system).as_deref() != Some("twilio") {
+            continue;
+        }
+        let cfg = voice::config(&system);
+        let (Some(account), Some(key), Some(app), Some(sdk)) = (
+            voice::setting(&cfg, "account_sid"),
+            voice::setting(&cfg, "api_key_sid"),
+            voice::setting(&cfg, "twiml_app_sid"),
+            voice::setting(&cfg, "sdk_url").filter(|u| u.starts_with("https://")),
+        ) else {
+            continue;
+        };
+        let secrets = twilio::Secrets::parse(&voice::credential(&state, &system).await?);
+        let Some(key_secret) = secrets.api_key_secret else {
+            continue;
+        };
+        let identity = twilio::client_identity(ctx.user_id);
+        let token = twilio::access_token(
+            account,
+            key,
+            &key_secret,
+            app,
+            &identity,
+            Utc::now().timestamp(),
+            SOFTPHONE_TTL_SECS,
+        )
+        .ok_or_else(|| AppError::internal("softphone token could not be signed"))?;
+        return Ok(Json(SoftphoneConfig {
+            available: true,
+            identity: Some(identity),
+            token: Some(token),
+            sdk_url: Some(sdk.to_owned()),
+            expires_in: SOFTPHONE_TTL_SECS,
+        }));
+    }
+    Ok(Json(none))
+}
+
+/// A screen pop: the record a caller's number belongs to.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ScreenPop {
+    pub entity: String,
+    pub id: Uuid,
+    pub name: Option<String>,
+}
+
+/// The number to look up.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct LookupQuery {
+    /// E.164.
+    pub number: String,
+}
+
+/// The contact, lead or account a number belongs to, when the caller may
+/// see it.
+#[utoipa::path(
+    get,
+    path = "/api/v1/voice/lookup",
+    tag = "omnichannel",
+    params(LookupQuery),
+    responses(
+        (status = 200, description = "The record", body = ScreenPop),
+        (status = 404, description = "No record the caller may see has this number", body = ErrorResponse),
+        (status = 422, description = "Not an E.164 number", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_lookup(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    axum::extract::Query(query): axum::extract::Query<LookupQuery>,
+) -> Result<Json<ScreenPop>, AppError> {
+    licensed(&state)?;
+    let number = voice::e164(&query.number)
+        .ok_or_else(|| AppError::Validation("number: an E.164 number".into()))?;
+    let (entity, id) = crate::sms_inbound::find_sender(&state, &number)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    // Read as the caller: a record they may not see is not popped.
+    let record = attome_records::entity_crud::read_record(&state, &ctx, &entity, id)
+        .await
+        .map_err(|_| AppError::NotFound)?;
+    let primary = state
+        .entities
+        .load()
+        .get(&entity)
+        .and_then(|m| m.primary_name_attribute.clone());
+    let name = primary.and_then(|p| {
+        record
+            .data()
+            .get(&p)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    });
+    Ok(Json(ScreenPop { entity, id, name }))
+}
+
 // ── Public: the providers' callbacks ────────────────────────────────────────
+
+/// Twilio asks what to do with a call placed from the browser softphone:
+/// dial the number of the call the softphone created (`CallRef`), never a
+/// number the browser sends.
+#[utoipa::path(
+    post,
+    path = "/api/v1/voice/twilio/{key}/client",
+    tag = "omnichannel",
+    params(("key" = String, Path, description = "The voice system's inbound key")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "TwiML that dials the call's number", body = String, content_type = "text/xml"),
+        (status = 404, description = "Not licensed, no system has this key, or not this agent's call", body = ErrorResponse),
+    ),
+)]
+async fn post_twilio_client(
+    State(state): State<EngineState>,
+    Path(key): Path<String>,
+    body: Bytes,
+) -> Result<Response, AppError> {
+    licensed(&state)?;
+    let system = voice::system_by_key(&state, &key)
+        .await?
+        .filter(|s| voice::provider(s).as_deref() == Some("twilio"))
+        .ok_or(AppError::NotFound)?;
+    let form: Vec<(String, String)> = url::form_urlencoded::parse(&body)
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect();
+    let get = |k: &str| {
+        form.iter()
+            .find(|(name, _)| name == k)
+            .map(|(_, v)| v.clone())
+    };
+    let call_id = get("CallRef")
+        .and_then(|r| Uuid::parse_str(&r).ok())
+        .ok_or(AppError::NotFound)?;
+    let call = load_call(&state, call_id).await?;
+    let agent: Option<String> =
+        sqlx::query_scalar("SELECT from_number FROM voice_call WHERE id = $1")
+            .bind(call.id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    // Only the agent who created the call may place it, and only once.
+    if call.system_id != system.id
+        || agent.is_none()
+        || agent != get("From")
+        || call.state != "placing"
+    {
+        return Err(AppError::NotFound);
+    }
+    if let Some(sid) = get("CallSid") {
+        sqlx::query("UPDATE voice_call SET provider_call_id = $2, updated_at = now() WHERE id = $1 AND provider_call_id IS NULL")
+            .bind(call.id)
+            .bind(sid)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    let cfg = voice::config(&system);
+    let (Some(number), Some(caller_id)) = (
+        call.to_number.as_deref(),
+        voice::setting(&cfg, "from_number"),
+    ) else {
+        return Ok(twiml(twilio::unavailable_twiml()));
+    };
+    let urls = callback_urls(&state, call.id)?;
+    let record = cfg.get("record").and_then(Value::as_bool).unwrap_or(false);
+    Ok(twiml(twilio::dial_twiml(
+        caller_id,
+        number,
+        &urls.events,
+        record,
+    )))
+}
 
 /// Twilio fetches what to do when the caller answers: dial the customer.
 #[utoipa::path(
@@ -814,7 +1057,15 @@ async fn post_twilio_inbound(
     let call = open_inbound(&state, &system, &event).await?;
     apply_event(&state, call, &event).await?;
     let cfg = voice::config(&system);
-    let Some(forward) = voice::setting(&cfg, "forward_to").and_then(voice::e164) else {
+    // J6-T2: `client:<identity>` rings a browser softphone instead.
+    let forward = voice::setting(&cfg, "forward_to").and_then(|f| {
+        if f.starts_with("client:user_") {
+            Some(f.to_owned())
+        } else {
+            voice::e164(f)
+        }
+    });
+    let Some(forward) = forward else {
         return Ok(twiml(twilio::unavailable_twiml()));
     };
     let urls = callback_urls(&state, call)?;
@@ -873,6 +1124,12 @@ async fn post_pbx_events(
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/voice/calls", post(post_call))
+        .route("/api/v1/voice/softphone", axum::routing::get(get_softphone))
+        .route("/api/v1/voice/lookup", axum::routing::get(get_lookup))
+        .route(
+            "/api/v1/voice/twilio/{key}/client",
+            post(post_twilio_client),
+        )
         .route("/api/v1/voice/twiml/{token}", post(post_twiml))
         .route("/api/v1/voice/events/{token}", post(post_events))
         .route(
@@ -885,9 +1142,12 @@ pub fn routes() -> Router<EngineState> {
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(
     post_call,
+    get_softphone,
+    get_lookup,
     post_twiml,
     post_events,
     post_twilio_inbound,
+    post_twilio_client,
     post_pbx_events
 ))]
 struct ApiDocFragment;

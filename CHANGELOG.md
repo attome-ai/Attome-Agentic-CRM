@@ -124,6 +124,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Browser softphone (J6-T2): with a Twilio voice system that has an API key, a TwiML app and the
+  SDK's address, agents take and place calls in the browser. An incoming call pops the caller's
+  record. `tel:` links on a record call through the softphone (or ring the agent's own phone when
+  there is no softphone). New routes: `GET /api/v1/voice/softphone` and `GET /api/v1/voice/lookup`,
+  plus `POST /api/v1/voice/twilio/{key}/client` for the TwiML app. `POST /api/v1/voice/calls` takes
+  `mode`.
 - Call recordings and outcomes (J6-T3): when a call ends, whoever placed it is asked for its
   outcome in the app. Its recording is fetched from the provider (only from Twilio's API host or the
   PBX's own address), stored as a document on the call through the upload pipeline and virus scan,
