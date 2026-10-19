@@ -43,6 +43,10 @@ struct RenderOptions {
     margin_right_in: f64,
     #[serde(rename = "printBackground")]
     print_background: bool,
+    /// K3-T2: the archival profile (`PDF/A-2b`) the sidecar converts the
+    /// render to; absent for an ordinary PDF.
+    #[serde(rename = "pdfA", skip_serializing_if = "Option::is_none")]
+    pdf_a: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -60,6 +64,19 @@ pub async fn render_pdf(
     html: &str,
     page_size: &str,
     margin_mm: Option<f64>,
+) -> Result<Vec<u8>, AppError> {
+    render_pdf_as(config, html, page_size, margin_mm, None).await
+}
+
+/// [`render_pdf`] with an archival profile (K3-T2): `Some("PDF/A-2b")` asks
+/// the sidecar for a PDF/A-2b document. The sidecar must support it; one
+/// that does not answers an ordinary PDF.
+pub async fn render_pdf_as(
+    config: &attome_config::DocgenSection,
+    html: &str,
+    page_size: &str,
+    margin_mm: Option<f64>,
+    pdf_a: Option<&str>,
 ) -> Result<Vec<u8>, AppError> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(config.request_timeout_secs))
@@ -79,6 +96,7 @@ pub async fn render_pdf(
             margin_left_in: margin_in,
             margin_right_in: margin_in,
             print_background: true,
+            pdf_a: pdf_a.map(str::to_owned),
         },
     };
 

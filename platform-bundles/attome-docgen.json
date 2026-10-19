@@ -14,9 +14,10 @@
       "attributes": [
         { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "entity", "display_name": "Target Entity", "field_type": "text", "is_required": true, "is_filterable": true },
-        { "logicalname": "format", "display_name": "Format", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["pdf"], "multi": false } },
+        { "logicalname": "format", "display_name": "Format", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["pdf", "docx"], "multi": false } },
         { "logicalname": "body", "display_name": "Body", "field_type": "text", "is_required": true },
         { "logicalname": "stylesheet", "display_name": "Stylesheet", "field_type": "text" },
+        { "logicalname": "pdf_profile", "display_name": "PDF Profile", "field_type": "choice", "is_filterable": true, "options": { "choices": ["standard", "pdfa_2b"], "multi": false } },
         { "logicalname": "page_size", "display_name": "Page Size", "field_type": "choice", "is_filterable": true, "options": { "choices": ["A4", "Letter"], "multi": false } },
         { "logicalname": "margin_mm", "display_name": "Margin (mm)", "field_type": "number" },
         { "logicalname": "attach_to_field", "display_name": "Attach To Field", "field_type": "text", "is_filterable": true },

@@ -289,6 +289,18 @@ pub fn batch_ids(ids: &[Uuid]) -> Result<Vec<Uuid>, AppError> {
     Ok(unique)
 }
 
+/// The formats a template renders to (K3-T2).
+pub const SUPPORTED_FORMATS: [&str; 2] = ["pdf", "docx"];
+
+/// A render's file extension and MIME type.
+fn file_kind(format: &str) -> (&'static str, &'static str) {
+    if format == "docx" {
+        ("docx", crate::docx::DOCX_MIME)
+    } else {
+        ("pdf", "application/pdf")
+    }
+}
+
 /// The template's target entity and format as `ctx` sees it, refusing what
 /// cannot be rendered. Shared by the single and the batch route.
 async fn render_target(
@@ -310,9 +322,9 @@ async fn render_target(
         .and_then(Value::as_str)
         .unwrap_or("pdf")
         .to_string();
-    if format != "pdf" {
+    if !SUPPORTED_FORMATS.contains(&format.as_str()) {
         return Err(AppError::Validation(format!(
-            "unsupported document format '{format}' — Phase 1 renders pdf only"
+            "unsupported document format '{format}': pdf or docx"
         )));
     }
     Ok((entity, format))
@@ -678,18 +690,27 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
 
     mark_running(&state.base.db, render_id).await?;
 
-    let bytes = match crate::render_client::render_pdf(
-        &state.base.config.docgen,
-        &full_html,
-        page_size,
-        margin_mm,
-    )
-    .await
-    {
-        Ok(b) => b,
-        Err(e) => {
-            mark_failed(state, render_id, &format!("render failed: {e}")).await?;
-            return Ok(());
+    // K3-T2: a DOCX is built here from the same merged HTML; a PDF comes
+    // from the sidecar, as PDF/A-2b when the template asks for it.
+    let bytes = if render.format == "docx" {
+        crate::docx::docx_from_html(&merged_body, &template_name)
+    } else {
+        let pdf_a = (template.get("pdf_profile").and_then(Value::as_str) == Some("pdfa_2b"))
+            .then_some("PDF/A-2b");
+        match crate::render_client::render_pdf_as(
+            &state.base.config.docgen,
+            &full_html,
+            page_size,
+            margin_mm,
+            pdf_a,
+        )
+        .await
+        {
+            Ok(b) => b,
+            Err(e) => {
+                mark_failed(state, render_id, &format!("render failed: {e}")).await?;
+                return Ok(());
+            }
         }
     };
 
@@ -698,7 +719,11 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
     let checksum = hex::encode(hasher.finalize());
     let size_bytes = bytes.len() as i64;
 
-    let object_key = format!("docgen-renders/{}/{render_id}.pdf", render.template_ref);
+    let (extension, _) = file_kind(&render.format);
+    let object_key = format!(
+        "docgen-renders/{}/{render_id}.{extension}",
+        render.template_ref
+    );
     let path = ObjectPath::parse(&object_key)
         .map_err(|e| AppError::internal(format!("invalid docgen render object key: {e}")))?;
     if let Err(e) = state.base.storage.store().put(&path, bytes.into()).await {
@@ -908,8 +933,21 @@ pub(crate) async fn try_attach_generated_file(
     // copy leaves no session row and no field value behind; a failed write
     // after it removes the copy again (below).
     let session_id = Uuid::now_v7();
-    let (filename, field_key) =
-        attached_file_key(entity, record_id, field, session_id, template_name);
+    // K3-T2: the render's own key says what it is.
+    let format = if object_key.ends_with(".docx") {
+        "docx"
+    } else {
+        "pdf"
+    };
+    let (extension, content_type) = file_kind(format);
+    let (filename, field_key) = attached_file_key_as(
+        entity,
+        record_id,
+        field,
+        session_id,
+        template_name,
+        extension,
+    );
     let src = ObjectPath::parse(object_key)
         .map_err(|e| AppError::internal(format!("invalid docgen render object key: {e}")))?;
     let dest = ObjectPath::parse(&field_key)
@@ -937,7 +975,7 @@ pub(crate) async fn try_attach_generated_file(
                 owner: attome_document::files::FileOwner::Staff(requested_by),
                 object_key: &field_key,
                 filename: &filename,
-                content_type: "application/pdf",
+                content_type,
                 size_bytes,
                 checksum_sha256: checksum,
             },
@@ -976,6 +1014,7 @@ pub(crate) async fn try_attach_generated_file(
 /// The filename and object key an attached render is stored under: the
 /// field's canonical upload key (`attome_document::files::final_key`), never the
 /// render's own `docgen-renders/...` key. Returns `(filename, key)`.
+#[cfg(test)]
 fn attached_file_key(
     entity: &str,
     record_id: Uuid,
@@ -983,7 +1022,19 @@ fn attached_file_key(
     session_id: Uuid,
     template_name: &str,
 ) -> (String, String) {
-    let filename = format!("{template_name}.pdf");
+    attached_file_key_as(entity, record_id, field, session_id, template_name, "pdf")
+}
+
+/// [`attached_file_key`] for a render of any format (K3-T2).
+fn attached_file_key_as(
+    entity: &str,
+    record_id: Uuid,
+    field: &str,
+    session_id: Uuid,
+    template_name: &str,
+    extension: &str,
+) -> (String, String) {
+    let filename = format!("{template_name}.{extension}");
     let key = attome_document::files::final_key(entity, record_id, field, session_id, &filename);
     (filename, key)
 }

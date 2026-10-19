@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:6f14190a37d068eea1b2d07b4011bc1180ff641c07e277bdf32b8f3088b21254",
+  "checksum": "sha256:6a6714dfd3d1804ab37dbad5e8b19c30bcf739736a642abd9bc83d14114d91dd",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-docgen.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -88,7 +88,8 @@
           "logicalname": "format",
           "options": {
             "choices": [
-              "pdf"
+              "pdf",
+              "docx"
             ],
             "multi": false
           }
@@ -105,6 +106,30 @@
     {
       "args": {
         "definition": {
+          "display_name": "PDF Profile",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "pdf_profile",
+          "options": {
+            "choices": [
+              "standard",
+              "pdfa_2b"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "docgen_template",
+        "field": "pdf_profile"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "display_name": "Margin (mm)",
           "field_type": "number",
           "logicalname": "margin_mm"
@@ -112,7 +137,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 6,
+      "seq": 7,
       "target": {
         "entity": "docgen_template",
         "field": "margin_mm"
@@ -131,7 +156,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "entity": "docgen_template",
         "field": "name"
@@ -155,7 +180,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "entity": "docgen_template",
         "field": "page_size"
@@ -171,7 +196,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "docgen_template",
         "field": "stylesheet"
@@ -188,7 +213,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "docgen_template",
         "field": "version"
@@ -206,7 +231,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "entity": "docgen_template",
         "query": "Active Templates"
@@ -226,7 +251,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "entity": "docgen_template",
         "view": "Active Templates"

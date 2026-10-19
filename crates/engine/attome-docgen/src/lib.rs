@@ -44,6 +44,8 @@
 pub mod auth;
 /// K3-T1: document templates render through the one template language.
 pub mod document_render;
+/// K3-T2: DOCX output.
+pub mod docx;
 pub mod generate;
 pub mod merge;
 pub mod model;
