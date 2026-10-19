@@ -417,18 +417,20 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
         .unwrap_or("document")
         .to_string();
 
-    // The security-critical step: builds the merge context under `security`
-    // (requested_by's freshly-resolved permissions), which is what makes a
-    // hidden field render empty — see crate::merge's doc comment.
-    let merge_ctx = match crate::merge::build_context(
+    // The security-critical step: builds the template's values under
+    // `security` (requested_by's freshly-resolved permissions), which is what
+    // makes a hidden field render empty and limits related lists to rows the
+    // user may read — see crate::merge's and crate::document_render's docs.
+    let input = match crate::document_render::build_input(
         state,
         &security,
         &render.entity_logicalname,
         render.record_id,
+        body,
     )
     .await
     {
-        Ok(ctx) => ctx,
+        Ok(input) => input,
         Err(AppError::NotFound) => {
             mark_failed(state, render_id, "source record not found or not visible").await?;
             return Ok(());
@@ -444,7 +446,13 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
         }
     };
 
-    let merged_body = match crate::merge::render_template(body, &merge_ctx) {
+    // K3-T1: the one template language, in the record's language when it
+    // has one, else the deployment's.
+    let locale = input
+        .language
+        .clone()
+        .unwrap_or_else(|| state.deployment_locale());
+    let merged_body = match crate::document_render::render_document(body, input, &locale) {
         Ok(html) => html,
         Err(e) => {
             mark_failed(state, render_id, &format!("template render failed: {e}")).await?;

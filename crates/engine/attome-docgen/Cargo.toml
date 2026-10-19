@@ -27,10 +27,12 @@ attome-server.workspace   = true
 attome-storage.workspace  = true
 attome-types.workspace    = true
 axum.workspace            = true
+base64.workspace          = true
 chrono.workspace          = true
 futures-util.workspace    = true
 hex.workspace             = true
 object_store.workspace    = true
+qrcode.workspace          = true
 regex.workspace           = true
 reqwest                   = { workspace = true, features = ["stream"] }
 serde.workspace           = true

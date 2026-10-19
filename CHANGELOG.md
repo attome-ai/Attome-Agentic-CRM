@@ -115,6 +115,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Document templates in the template language (K3-T1): document generation renders a template with
+  Z13 (`{{ total | currency('SAR') }}`, `hijri`, `date`, `number`, `{% if %}`, `{% for line in
+  invoice_line limit 100 %}` over related records, `{% dir %}`) in the record's own `language` or the
+  deployment's, before PDF conversion. Related lists hold only the child records and fields the
+  requesting user may read. `{{ zatca_qr }}` is the ZATCA simplified-invoice QR (an SVG `data:` URI
+  for `<img src>`) from `billing.seller_name`, `billing.seller_vat_number` and the record's
+  `grand_total` and `vat_total`.
 - Retention rules (R3-T1): `GET`/`POST /api/v1/admin/retention/rules` and `PUT`/`DELETE
   /api/v1/admin/retention/rules/{id}` (administrators, Configuration audit events) keep rules per
   entity and category: a filter condition, the date the period starts from (`created_at`,
@@ -1584,6 +1591,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- Document templates (K3-T1): a docgen template is compiled before it renders, so `{% endif %}`
+  must become `{% end %}`, and a field the entity does not have is refused at render (422 naming the
+  line and column) instead of rendering empty. A field the user may not read still renders empty.
 - `GET /api/v1/{entity}/bulk/{id}?include_items=true` reports its items in the standard batch shape
   (Z14-T6, `attome_types::BatchResult`): each item is `{index, ok?, problem?}`, where `ok` is
   `{record_id, attempts}` for an applied item and `problem` is `{code, message, detail?}` for one that

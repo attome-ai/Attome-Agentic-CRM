@@ -51,7 +51,7 @@ use uuid::Uuid;
 /// before the field exists; this reads the attribute's *storage* type, so a
 /// formula field evaluates as its result type, `rich_text` as text and
 /// `image` (a file) not at all.
-fn rules_type_of(attr: &AttrInfo) -> Option<Type> {
+pub fn rules_type_of(attr: &AttrInfo) -> Option<Type> {
     attome_core::formula::attr_rules_type(attr)
 }
 

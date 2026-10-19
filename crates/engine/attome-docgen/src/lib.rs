@@ -1,8 +1,11 @@
 //! `attome-docgen` — M57 Phase 1 (Document Generation,
 //! `document/module-master-plans/M57-document-generation.md`,
 //! `document/decisions/foundation/D-463.md`). Turns a record into a
-//! rendered PDF from an admin-authored HTML template with `{{ field }}`
-//! merge tags and `{% if expr %}...{% endif %}` conditional sections.
+//! rendered PDF from an admin-authored HTML template written in the one
+//! template language (Z13, `attome_html::tmpl`; K3-T1): `{{ field | filter }}`
+//! with region formats, `{% if %}`, `{% for %}` over related records and
+//! `{% dir %}` — see [`document_render`]. (`merge::render_template`, the
+//! Phase 1 merge-tag renderer, is no longer used by the worker.)
 //!
 //! **Layering and isolation (the load-bearing property of this crate):**
 //! rendering never happens in-process. `render_client` POSTs the merged,
@@ -39,6 +42,8 @@
 //! reasoning `report_run` documents for itself — system-written
 //! execution history, never admin-authored metadata.
 pub mod auth;
+/// K3-T1: document templates render through the one template language.
+pub mod document_render;
 pub mod generate;
 pub mod merge;
 pub mod model;
