@@ -20,7 +20,7 @@
     "test:base": "ng test base --watch=false",
     "test:xrm": "ng test xrm --watch=false",
     "test:sdk": "ng test sdk --watch=false",
-    "test:embed": "node --test scripts/webchat-embed.test.mjs",
+    "test:embed": "node --test scripts/webchat-embed.test.mjs scripts/cobrowse-embed.test.mjs",
     "start": "ng serve --port 4199 --host 127.0.0.1 --poll 500",
     "start:prod": "ng serve --configuration production --port 4199 --poll 500",
     "build": "ng build",
