@@ -57366,6 +57366,157 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/jobs/{id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Z7-T4: a chunked batch job's progress, for the person who started it or\nan administrator.",
+        "operationId": "batch_progress",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The batch job's status and progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchJobProgress"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such batch job, or not one the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/jobs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Z7-T4: asks a running batch job to stop after its current chunk. What\nit already did stays done; a finished or cancelled job answers 409.",
+        "operationId": "cancel_batch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The job stops after its current chunk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchJobProgress"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such batch job, or not one the caller started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The job has already finished or been cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/limits/me": {
       "get": {
         "tags": [
@@ -86891,6 +87042,63 @@
           }
         },
         "additionalProperties": false
+      },
+      "BatchJobProgress": {
+        "type": "object",
+        "description": "Z7-T4: a chunked batch job's progress, as `GET /api/v1/jobs/{id}` shows it.",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "done",
+          "cancel_requested",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "cancel_requested": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "done": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Items done so far."
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`running`, `finished` or `cancelled`."
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Items in all, when the job knows."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "BatchOutcome": {
         "type": "object",
@@ -135575,6 +135783,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -135627,6 +135836,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

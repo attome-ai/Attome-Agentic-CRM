@@ -10349,6 +10349,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Z7-T4: a chunked batch job's progress, for the person who started it or
+         *     an administrator.
+         */
+        get: operations["batch_progress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Z7-T4: asks a running batch job to stop after its current chunk. What
+         *     it already did stays done; a finished or cancelled job answers 409.
+         */
+        post: operations["cancel_batch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/limits/me": {
         parameters: {
             query?: never;
@@ -16335,6 +16375,31 @@ export interface components {
             id: string;
             /** Format: int64 */
             row_version: number;
+        };
+        /** @description Z7-T4: a chunked batch job's progress, as `GET /api/v1/jobs/{id}` shows it. */
+        BatchJobProgress: {
+            cancel_requested: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: int64
+             * @description Items done so far.
+             */
+            done: number;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description `running`, `finished` or `cancelled`. */
+            status: string;
+            /**
+             * Format: int64
+             * @description Items in all, when the job knows.
+             */
+            total?: number | null;
+            /** Format: date-time */
+            updated_at: string;
         };
         /** @description One request's outcome in a batch. */
         BatchOutcome: {
@@ -70369,6 +70434,95 @@ export interface operations {
             };
             /** @description The replay-protection store is unavailable; retry later */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    batch_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The batch job's status and progress */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchJobProgress"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such batch job, or not one the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_batch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job stops after its current chunk */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchJobProgress"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such batch job, or not one the caller started */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The job has already finished or been cancelled */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
