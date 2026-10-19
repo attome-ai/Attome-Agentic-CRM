@@ -63,9 +63,20 @@ impl AppConfig {
     }
 
     /// Z1-T8: every secret this node was configured with, by name and key
-    /// id, never a value; empty unless loaded by `from_file`.
+    /// id, never a value; empty unless loaded by `from_file` or set by
+    /// [`Self::with_document_views`].
     pub fn secret_inventory(&self) -> &[crate::secret_inventory::SecretState] {
         &self.secret_inventory
+    }
+
+    /// The views read from the configuration document itself: its
+    /// fingerprint view (Z1-T7) and its secret inventory (Z1-T8). `from_file`
+    /// sets them; a configuration built from a JSON document in code (a
+    /// test's) sets them with this, so it reports what a loaded one would.
+    pub fn with_document_views(mut self, document: &serde_json::Value) -> Self {
+        self.fingerprint_view = crate::fingerprint::view_of(document);
+        self.secret_inventory = crate::secret_inventory::inventory_of(document);
+        self
     }
 
     /// Z1-T7: the SHA-256 hex of [`Self::fingerprint_view`].
@@ -206,8 +217,7 @@ impl AppConfig {
         config.unresolved_placeholders = unresolved;
         config.ignored_keys = ignored_keys;
         config.literal_paths = literals;
-        config.fingerprint_view = crate::fingerprint::view_of(&document);
-        config.secret_inventory = crate::secret_inventory::inventory_of(&document);
+        let config = config.with_document_views(&document);
         // BCF-5 (D-615) — the profile decides, not APP_ENV: a production node
         // must never boot on a literal "${VAR}", whatever APP_ENV says. The
         // gate above already covers the non-debug case; this closes the

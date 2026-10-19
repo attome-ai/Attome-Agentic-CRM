@@ -109,10 +109,12 @@ pub fn test_config() -> AppConfig {
         integration_key = "6a".repeat(32),
         issuer = ISSUER,
     );
-    attome_testkit::with_test_database(
-        serde_json::from_str(&json).expect("the test configuration deserializes"),
-        true,
-    )
+    // Through the document, like a configuration loaded from a file, so the
+    // secret inventory and fingerprint view are filled (Z1-T15).
+    let document: Value = serde_json::from_str(&json).expect("the test configuration parses");
+    let config: AppConfig =
+        serde_json::from_value(document.clone()).expect("the test configuration deserializes");
+    attome_testkit::with_test_database(config.with_document_views(&document), true)
 }
 
 /// A session cookie for `user_id`, signed with the test secret.
