@@ -189,6 +189,7 @@ proptest      = "1"
 rand          = "0.8"
 regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
+ring          = "0.17"
 rsa           = "0.9"
 k256          = { version = "0.13", features = ["pem"] }
 qrcode        = { version = "0.14", default-features = false, features = ["svg"] }

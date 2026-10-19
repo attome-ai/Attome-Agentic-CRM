@@ -1126,6 +1126,19 @@ async fn send_channel(
     let subject = payload.subject.unwrap_or("");
     match channel {
         "in_app" => send_in_app(&state.base.db, payload).await,
+        // J12-T1: to every address the recipient registered.
+        "push" => {
+            crate::push::send_to_user(
+                state,
+                payload.recipient_user_ref,
+                &crate::push::PushMessage {
+                    title: subject.to_owned(),
+                    body: payload.body_text.to_owned(),
+                    route: payload.route.map(str::to_owned),
+                },
+            )
+            .await
+        }
         "email" => {
             send_email(
                 &state.base.db,

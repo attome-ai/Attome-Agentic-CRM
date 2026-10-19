@@ -8,6 +8,8 @@ pub mod follows;
 pub mod model;
 pub mod poller;
 pub mod preferences;
+/// J12-T1: Web Push, APNs and FCM.
+pub mod push;
 pub mod recipient;
 pub mod reminders;
 pub mod seed;
