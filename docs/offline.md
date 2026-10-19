@@ -97,6 +97,16 @@ record access, validation, rules, duplicate rules, autonumbers and audit.
   device's later changes to that record wait (`depends_on_failed`).
 - Sending the same change twice applies it once.
 
+**Status changes offline.** The profile carries each entity's active state
+model: its status field, initial status and allowed moves with their guards.
+Offline, the app offers only the moves allowed from the record's current
+status. It holds back a move that needs an approval until the device is
+online, because only the server can start an approval. A move is queued as an
+ordinary status edit. When it is pushed, the server checks the move and its
+guard again, and any emails, integrations or workflows the move triggers run
+after the change is saved, exactly as for a move made online. Until the
+on-device rule evaluator ships, guards are checked by the server on push.
+
 ## Not in this release: the on-device helper
 
 An optional assistant that runs on the device is planned but not part of this

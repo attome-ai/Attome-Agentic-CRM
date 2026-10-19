@@ -14,12 +14,22 @@
 //! - business rules that apply to the caller, as their condition tree and the
 //!   policies that bind the caller, in the rule API's wire shape.
 //!
+//! - the entity's active state model (B18-T13): its state field, initial
+//!   state and live transitions with their guard source, so a device offers
+//!   only the moves the model allows and checks their guards before queuing
+//!   one. A transition taken offline is an ordinary update of the state
+//!   field; the push runs it through the same mutation path, which checks the
+//!   transition and its guard again and fires the entity's triggers after
+//!   the commit. A transition that needs an approval is listed but marked, as
+//!   only the server can start the approval.
+//!
 //! `bundle_version` is a SHA-256 over all of that, so a device refetches only
 //! when it changed. No profile (or the pack not installed) is 404.
 
 use std::collections::HashSet;
 
 use attome_core::business_rules::{AppliesTo, ConditionTree, PolicyDef, RuleAudience};
+use attome_core::state_registry::StateModelEntry;
 use attome_core::{EngineState, FieldType};
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, SelfService};
@@ -63,6 +73,60 @@ pub struct OfflineEntity {
     pub attributes: Vec<OfflineAttribute>,
     pub rules: Vec<OfflineRule>,
     pub business_rules: Vec<OfflineBusinessRule>,
+    /// B18-T13: the entity's active state model, if it has one.
+    pub state_model: Option<OfflineStateModel>,
+}
+
+/// An entity's state model, as a device needs it.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct OfflineStateModel {
+    pub name: String,
+    pub state_field: String,
+    pub initial_state: String,
+    /// Live transitions, in display order.
+    pub transitions: Vec<OfflineTransition>,
+}
+
+/// One allowed move.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct OfflineTransition {
+    pub from_state: String,
+    pub to_state: String,
+    pub name: String,
+    /// The guard's source in `language`; none when the move is unguarded.
+    pub guard_expression: Option<String>,
+    pub language: String,
+    /// The privilege the move needs; the server checks it on push.
+    pub required_privilege: Option<String>,
+    /// Needs an approval: only the server can start it, so a device sends
+    /// it only when online.
+    pub requires_approval: bool,
+}
+
+/// The device's view of a state model: none when the entity has no model,
+/// or its model is switched off. Pure.
+pub fn offline_state_model(entry: Option<&StateModelEntry>) -> Option<OfflineStateModel> {
+    let entry = entry?;
+    let model = entry.model.as_ref().filter(|m| m.is_active)?;
+    let mut transitions: Vec<_> = entry.transitions.iter().collect();
+    transitions.sort_by_key(|t| t.display_order);
+    Some(OfflineStateModel {
+        name: model.name.clone(),
+        state_field: model.state_field.clone(),
+        initial_state: model.initial_state.clone(),
+        transitions: transitions
+            .into_iter()
+            .map(|t| OfflineTransition {
+                from_state: t.from_state.clone(),
+                to_state: t.to_state.clone(),
+                name: t.name.clone(),
+                guard_expression: t.guard_expression.clone().filter(|g| !g.trim().is_empty()),
+                language: RULE_LANGUAGE.to_owned(),
+                required_privilege: t.required_privilege.clone(),
+                requires_approval: t.requires_approval(),
+            })
+            .collect(),
+    })
 }
 
 /// An attribute the device may hold; never a sensitive one.
@@ -181,6 +245,7 @@ fn offline_entity(
         })
         .collect();
 
+    let state_model = offline_state_model(state.state_models.load().get(&entity));
     let rules_snapshot = state.rules.load();
     let (rules, business_rules) = match rules_snapshot.get(&entity) {
         None => (Vec::new(), Vec::new()),
@@ -245,6 +310,7 @@ fn offline_entity(
         attributes,
         rules,
         business_rules,
+        state_model,
     })
 }
 
@@ -356,10 +422,86 @@ mod tests {
             attributes: Vec::new(),
             rules: Vec::new(),
             business_rules: Vec::new(),
+            state_model: None,
         };
         let a = bundle_version(&[entity("account")]);
         assert_eq!(a.len(), 64);
         assert_eq!(a, bundle_version(&[entity("account")]));
         assert_ne!(a, bundle_version(&[entity("contact")]));
+    }
+
+    fn transition(from: &str, to: &str, order: i32) -> attome_core::state_registry::TransitionDef {
+        attome_core::state_registry::TransitionDef {
+            id: Uuid::nil(),
+            model_ref: Uuid::nil(),
+            from_state: from.into(),
+            to_state: to.into(),
+            name: format!("{from}->{to}"),
+            required_privilege: None,
+            guard_expression: None,
+            entry_actions: Vec::new(),
+            exit_actions: Vec::new(),
+            display_order: order,
+            row_version: 1,
+            approval_plan: None,
+            pending_state: None,
+            on_reject_state: None,
+        }
+    }
+
+    #[test]
+    fn offline_profile_state_model_lists_live_transitions() {
+        let model = attome_core::state_registry::StateModelDef {
+            id: Uuid::nil(),
+            entity_logicalname: "activity".into(),
+            name: "Activity Lifecycle".into(),
+            state_field: "status".into(),
+            initial_state: "open".into(),
+            is_active: true,
+            row_version: 1,
+        };
+        let mut guarded = transition("open", "completed", 0);
+        guarded.guard_expression = Some("subject != ''".into());
+        let mut blank = transition("open", "cancelled", 1);
+        blank.guard_expression = Some("  ".into());
+        let entry = StateModelEntry {
+            model: Some(model.clone()),
+            transitions: vec![transition("completed", "open", 2), blank, guarded],
+        };
+        let offline = offline_state_model(Some(&entry)).unwrap();
+        assert_eq!(offline.state_field, "status");
+        assert_eq!(offline.initial_state, "open");
+        assert_eq!(
+            offline
+                .transitions
+                .iter()
+                .map(|t| (t.from_state.as_str(), t.to_state.as_str()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("open", "completed"),
+                ("open", "cancelled"),
+                ("completed", "open")
+            ]
+        );
+        assert_eq!(
+            offline.transitions[0].guard_expression.as_deref(),
+            Some("subject != ''")
+        );
+        assert_eq!(
+            offline.transitions[1].guard_expression, None,
+            "a blank guard is none"
+        );
+        assert_eq!(offline.transitions[0].language, "v1");
+        assert!(!offline.transitions[0].requires_approval);
+
+        let off = StateModelEntry {
+            model: Some(attome_core::state_registry::StateModelDef {
+                is_active: false,
+                ..model
+            }),
+            transitions: Vec::new(),
+        };
+        assert_eq!(offline_state_model(Some(&off)), None);
+        assert_eq!(offline_state_model(None), None);
     }
 }

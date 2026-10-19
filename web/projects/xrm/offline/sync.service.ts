@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '@attome/base';
 import { OFFLINE_STORE, OfflineQueueService, QueuedOp } from './offline-queue.service';
+import { OfflineProfileBundle, PROFILE_KEY } from './state-machine';
 
 /** Most operations one push sends (the server's limit). */
 export const PUSH_BATCH = 100;
@@ -53,7 +54,9 @@ export function expired(lastSyncAt: number | null, maxDaysOffline: number | null
  * says it is done. A network failure waits and tries again — 2 s, doubling to
  * 5 minutes — with the same operations and ids; nothing is ever reordered. A
  * device that has not synced within its profile's `max_days_offline` wipes
- * everything it holds.
+ * everything it holds. After the pull it refreshes the offline profile
+ * (B18-T13: the state models a device follows offline, and that limit),
+ * keeping it only when its `bundle_version` changed.
  */
 @Injectable({ providedIn: 'root' })
 export class SyncService {
@@ -112,6 +115,7 @@ export class SyncService {
       }
       await this.pushAll();
       await this.pullAll();
+      await this.refreshProfile();
       await this.store.put('meta', 'lastSyncAt', now);
       this.backoff = 0;
       this.lastError.set(null);
@@ -147,6 +151,20 @@ export class SyncService {
         await this.queue.remove(seq);
       }
     }
+  }
+
+  /** The offline profile, kept when it changed; none (404) or a failure keeps the last one. */
+  private async refreshProfile(): Promise<void> {
+    let profile: OfflineProfileBundle;
+    try {
+      profile = await firstValueFrom(this.api.get<OfflineProfileBundle>('/api/v1/offline/profile'));
+    } catch {
+      return;
+    }
+    const kept = await this.store.get<OfflineProfileBundle>('meta', PROFILE_KEY);
+    if (kept?.bundle_version === profile.bundle_version) return;
+    await this.store.put('meta', PROFILE_KEY, profile);
+    await this.store.put('meta', 'maxDaysOffline', profile.max_days_offline ?? null);
   }
 
   private async pullAll(): Promise<void> {

@@ -487,6 +487,7 @@ mod tests {
             attributes: Vec::new(),
             rules: Vec::new(),
             business_rules: Vec::new(),
+            state_model: None,
         }
     }
 

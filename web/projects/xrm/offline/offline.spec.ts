@@ -8,7 +8,7 @@ import { SyncService, expired, nextBackoff } from './sync.service';
 
 describe('offline', () => {
   let backend: MemoryBackend;
-  let api: { post: ReturnType<typeof vi.fn> };
+  let api: { post: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
 
   function setup() {
     TestBed.resetTestingModule();
@@ -27,7 +27,10 @@ describe('offline', () => {
 
   beforeEach(() => {
     backend = new MemoryBackend();
-    api = { post: vi.fn() };
+    api = {
+      post: vi.fn(),
+      get: vi.fn(() => of({ bundle_version: 'v1', max_days_offline: 30, entities: [] })),
+    };
   });
 
   afterEach(() => {
@@ -84,6 +87,9 @@ describe('offline', () => {
     expect(pushes[1][1].ops[0].client_op_id).toBe(op.client_op_id);
     expect(pushes[1][1].ops[0].seq).toBeUndefined();
     expect(await queue.size()).toBe(0);
+    // B18-T13: the profile came along, with its offline limit.
+    expect(api.get).toHaveBeenCalledWith('/api/v1/offline/profile');
+    expect(await TestBed.inject(OFFLINE_STORE).get('meta', 'maxDaysOffline')).toBe(30);
   });
 
   it('expired device wipes', async () => {
