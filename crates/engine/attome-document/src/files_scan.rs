@@ -1011,9 +1011,185 @@ async fn reject_scan_deadline_sessions(state: &EngineState) -> Result<(), AppErr
     Ok(())
 }
 
+// ── K2-T2: the weekly rescan of recent files ────────────────────────────────
+
+/// Files promoted this many days ago or less are scanned again.
+pub const RESCAN_WINDOW_DAYS: i64 = 30;
+/// A file rescanned less than this many days ago waits for next week.
+const RESCAN_EVERY_DAYS: i64 = 6;
+/// Files one run rescans; the next run picks up after the last.
+const RESCAN_BATCH: i64 = 200;
+
+/// What one rescan run did.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct RescanStats {
+    pub scanned: u32,
+    pub infected: u32,
+    /// The stored file was gone (deleted with its record, or tidied up).
+    pub missing: u32,
+}
+
+/// Where an infected file goes when a rescan finds it: under the quarantine
+/// prefix, so no download path serves it. Pure.
+pub fn rescan_quarantine_key(final_key: &str) -> String {
+    format!("{}rescan/{final_key}", crate::files::QUARANTINE_PREFIX)
+}
+
+type RescanRow = (
+    Uuid,
+    String,
+    Uuid,
+    String,
+    Option<Uuid>,
+    Option<Uuid>,
+    String,
+    String,
+    String,
+);
+
+/// Marks a session's file as rescanned now.
+async fn mark_rescanned(state: &EngineState, session_id: Uuid) -> Result<(), AppError> {
+    sqlx::query("UPDATE upload_session SET rescanned_at = NOW() WHERE id = $1")
+        .bind(session_id)
+        .execute(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// K2-T2: scans again, with today's signatures, every clean file promoted in
+/// the last [`RESCAN_WINDOW_DAYS`] days that was not rescanned this week, up
+/// to [`RESCAN_BATCH`] a run. A file now found infected is moved under the
+/// quarantine prefix (no download serves it), its session becomes
+/// `rejected` with an audit event, and the uploader and administrators are
+/// told, as for a first-scan hit. Without a configured scanner nothing runs
+/// (the files already passed one scan); a scanner error stops the run and the
+/// job retries.
+pub async fn rescan_recent(state: &EngineState) -> Result<RescanStats, AppError> {
+    let mut stats = RescanStats::default();
+    let clamd_address = state.base.config.storage.clamd_address.trim().to_owned();
+    if clamd_address.is_empty() {
+        tracing::info!("upload rescan: no scanner configured; skipped");
+        return Ok(stats);
+    }
+    let max_bytes = state.base.config.storage.max_upload_size_bytes;
+    let rows: Vec<RescanRow> = sqlx::query_as(
+        "SELECT id, entity_logicalname, record_id, field_logicalname, owner_user_ref,
+                owner_portal_user_ref, final_key, declared_filename, declared_content_type
+           FROM upload_session
+          WHERE status = 'clean' AND is_deleted = false AND final_key IS NOT NULL
+            AND updated_at > NOW() - make_interval(days => $1::int)
+            AND (rescanned_at IS NULL OR rescanned_at < NOW() - make_interval(days => $2::int))
+          ORDER BY updated_at
+          LIMIT $3",
+    )
+    .bind(RESCAN_WINDOW_DAYS as i32)
+    .bind(RESCAN_EVERY_DAYS as i32)
+    .bind(RESCAN_BATCH)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    for (
+        session_id,
+        entity_logicalname,
+        record_id,
+        field_logicalname,
+        owner_user_ref,
+        owner_portal_user_ref,
+        final_key,
+        declared_filename,
+        declared_content_type,
+    ) in rows
+    {
+        let Ok(owner) = FileOwner::from_columns(owner_user_ref, owner_portal_user_ref) else {
+            tracing::error!(%session_id, "upload rescan: a session with both or neither owner; skipped");
+            mark_rescanned(state, session_id).await?;
+            continue;
+        };
+        let path = ObjectPath::parse(&final_key)
+            .map_err(|e| AppError::internal(format!("invalid stored file key: {e}")))?;
+        let stream = match state.base.storage.store().get(&path).await {
+            Ok(object) => object.into_stream(),
+            Err(object_store::Error::NotFound { .. }) => {
+                stats.missing += 1;
+                mark_rescanned(state, session_id).await?;
+                continue;
+            }
+            Err(e) => return Err(AppError::internal(e)),
+        };
+        stats.scanned += 1;
+        match clamav_instream_scan(&clamd_address, max_bytes, stream).await? {
+            ClamOutcome::Result(ClamResult::Positive(signature)) => {
+                stats.infected += 1;
+                let quarantine = rescan_quarantine_key(&final_key);
+                let quarantine_path = ObjectPath::parse(&quarantine)
+                    .map_err(|e| AppError::internal(format!("invalid quarantine key: {e}")))?;
+                let store = state.base.storage.store();
+                store
+                    .copy(&path, &quarantine_path)
+                    .await
+                    .map_err(AppError::internal)?;
+                store.delete(&path).await.map_err(AppError::internal)?;
+                let claimed = ClaimedSession {
+                    entity_logicalname,
+                    record_id,
+                    field_logicalname,
+                    owner,
+                    quarantine_key: quarantine,
+                    declared_filename,
+                    declared_content_type,
+                    declared_checksum_sha256: None,
+                };
+                let mut tx = attome_db::tx::begin(&state.base.db).await?;
+                sqlx::query(
+                    "UPDATE upload_session
+                        SET status = 'rejected', reject_reason = 'rejected',
+                            rescanned_at = NOW(), updated_at = NOW(),
+                            row_version = row_version + 1
+                      WHERE id = $1",
+                )
+                .bind(session_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(AppError::internal)?;
+                write_scan_audit_event(
+                    state,
+                    &mut tx,
+                    &claimed,
+                    &format!("rescan result: malware signature: {signature}; file quarantined"),
+                )
+                .await?;
+                attome_db::tx::commit(tx).await?;
+                tracing::warn!(
+                    %session_id,
+                    entity = %claimed.entity_logicalname,
+                    record_id = %claimed.record_id,
+                    "upload rescan: malware found in a stored file; it is quarantined"
+                );
+                notify_infected(state, &claimed, &signature).await;
+            }
+            ClamOutcome::Result(ClamResult::Clean) | ClamOutcome::TooLarge => {
+                mark_rescanned(state, session_id).await?;
+            }
+        }
+    }
+    Ok(stats)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scan_hold_rescan_quarantines_under_the_prefix() {
+        let key = rescan_quarantine_key("core_contact/0190/photo/0191/face.png");
+        assert_eq!(
+            key,
+            "_quarantine/rescan/core_contact/0190/photo/0191/face.png"
+        );
+        assert!(ObjectPath::parse(&key).is_ok());
+    }
 
     /// K2-T1: the EICAR test file's clamd answer is malware, a clean answer is
     /// clean, and anything else keeps the file pending (the job retries).

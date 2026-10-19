@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Weekly rescan (K2-T2): every file promoted in the last 30 days is scanned again once a week with
+  the scanner's current signatures (the `UploadRescanSweep` job, 200 files a run, migration 0127). A
+  file now found infected moves under the quarantine prefix so nothing serves it, its upload is marked
+  rejected with an audit event, and the uploader and administrators are told.
 - Malware in an upload (K2-T1): when the virus scanner finds malware, the uploader (a staff user) is
   told their file was blocked and every administrator gets the file, record, field and signature;
   the file stays quarantined and is never served, as before. An unclear scanner answer keeps the

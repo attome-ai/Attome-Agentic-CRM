@@ -90,6 +90,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(7 * 86_400),
     );
+    // K2-T2: files from the last 30 days scanned again once a week.
+    crate::jobs::spawn_upload_rescan_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(7 * 86_400),
+    );
     // AA13-T9: the monthly SLO report (hourly check) and the fast-burn check.
     crate::jobs::spawn_slo_monthly_report_scheduler(
         db.clone(),

@@ -1031,6 +1031,18 @@ async fn dispatch_platform_job(
                 tracing::info!(tuned, "storage tuning: daily pass done");
             }
         }
+        // K2-T2: recent files scanned again with today's signatures.
+        EngineJob::UploadRescanSweep => {
+            let stats = attome_document::files_scan::rescan_recent(&attome_state).await?;
+            if stats.scanned > 0 || stats.infected > 0 || stats.missing > 0 {
+                tracing::info!(
+                    scanned = stats.scanned,
+                    infected = stats.infected,
+                    missing = stats.missing,
+                    "upload rescan: run complete"
+                );
+            }
+        }
         // Q16-T2: the weekly audit chain verification.
         EngineJob::AuditChainVerify => {
             let store = if config.audit.external_anchoring_enabled {
@@ -2483,6 +2495,7 @@ const DEDUP_KEY_SALES_LEAVER_SWEEP: &str = "sales-leaver-sweep";
 const DEDUP_KEY_AI_FOLLOWUP_SCAN: &str = "ai-followup-scan";
 const DEDUP_KEY_TABLE_HEALTH_SAMPLE: &str = "table-health-sample";
 const DEDUP_KEY_AUDIT_CHAIN_VERIFY: &str = "audit-chain-verify";
+const DEDUP_KEY_UPLOAD_RESCAN_SWEEP: &str = "upload-rescan-sweep";
 const DEDUP_KEY_SLO_MONTHLY_REPORT: &str = "slo-monthly-report";
 const DEDUP_KEY_SLO_BURN_CHECK: &str = "slo-burn-check";
 const DEDUP_KEY_PERF_REGRESSION_CHECK: &str = "perf-regression-check";
@@ -2632,6 +2645,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::AiFollowupScan => DEDUP_KEY_AI_FOLLOWUP_SCAN,
         EngineJob::TableHealthSample => DEDUP_KEY_TABLE_HEALTH_SAMPLE,
         EngineJob::AuditChainVerify => DEDUP_KEY_AUDIT_CHAIN_VERIFY,
+        EngineJob::UploadRescanSweep => DEDUP_KEY_UPLOAD_RESCAN_SWEEP,
         EngineJob::SloMonthlyReport => DEDUP_KEY_SLO_MONTHLY_REPORT,
         EngineJob::SloBurnCheck => DEDUP_KEY_SLO_BURN_CHECK,
         EngineJob::PerfRegressionCheck => DEDUP_KEY_PERF_REGRESSION_CHECK,
@@ -2979,6 +2993,17 @@ pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration
 }
 
 /// Y2-T8: daily, the table-health sample.
+/// K2-T2: recent uploads rescanned, weekly.
+pub fn spawn_upload_rescan_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::UploadRescanSweep,
+        DEDUP_KEY_UPLOAD_RESCAN_SWEEP,
+        "upload rescan",
+    );
+}
+
 /// Q16-T2: the audit chain verification, weekly.
 pub fn spawn_audit_chain_verify_scheduler(db: DbPool, interval: std::time::Duration) {
     spawn_dedup_scheduler(
