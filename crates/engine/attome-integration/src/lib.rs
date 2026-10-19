@@ -18,6 +18,8 @@ pub mod credential;
 mod crypto;
 pub mod guard;
 pub mod model;
+/// J4-T1: SMS sending and delivery receipts.
+pub mod sms;
 pub mod system;
 pub mod webhook;
 
@@ -34,5 +36,6 @@ pub use model::IntegrationModel;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(webhook::openapi_fragment());
+    doc.merge(sms::openapi_fragment());
     doc
 }

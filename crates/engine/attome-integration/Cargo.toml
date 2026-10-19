@@ -38,6 +38,7 @@ sqlx.workspace            = true
 tokio.workspace           = true
 tracing.workspace         = true
 utoipa.workspace          = true
+url.workspace             = true
 uuid.workspace            = true
 
 [dev-dependencies]

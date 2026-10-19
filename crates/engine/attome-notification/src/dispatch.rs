@@ -1126,6 +1126,15 @@ async fn send_channel(
     let subject = payload.subject.unwrap_or("");
     match channel {
         "in_app" => send_in_app(&state.base.db, payload).await,
+        // J4-T1: to the recipient's phone, through the SMS provider.
+        "sms" => {
+            attome_integration::sms::send_to_user(
+                state,
+                payload.recipient_user_ref,
+                payload.body_text,
+            )
+            .await
+        }
         // J12-T1: to every address the recipient registered.
         "push" => {
             crate::push::send_to_user(

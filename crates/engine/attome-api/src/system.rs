@@ -331,6 +331,8 @@ impl EngineSystem {
             .merge(attome_compliance::consent_admin::public_routes())
             // D16-T1: email open and click tracking, public by path shape.
             .merge(attome_notification::tracking::public_routes())
+            // J4-T1: SMS delivery receipts (the token is the authority).
+            .merge(attome_integration::sms::public_routes())
             // D-486 — M55 moved to `attome-document`. `files::routes()` stays
             // mounted HERE, ungated, because it serves
             // `/api/v1/{entity}/{id}/files/{field}/…` for a `file`-typed
