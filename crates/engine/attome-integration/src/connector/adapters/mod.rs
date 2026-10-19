@@ -12,4 +12,6 @@ pub mod social;
 pub mod user_mail_sync;
 /// J7-T1: Teams, Google Meet, Zoom and Jitsi meetings.
 pub mod video;
+/// J6-T1: Twilio Voice and an Asterisk PBX.
+pub mod voice;
 pub mod webchat;

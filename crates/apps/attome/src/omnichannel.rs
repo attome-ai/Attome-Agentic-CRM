@@ -1335,6 +1335,8 @@ pub fn routes() -> Router<EngineState> {
         .merge(crate::sms_inbound::routes())
         // J8-T1: Meta's webhooks and the social reply route.
         .merge(crate::social::routes())
+        // J6-T1: calls and the voice providers' callbacks.
+        .merge(crate::voice::routes())
         // D20-T2: public booking links ride the same public bundle; their
         // OpenAPI is tagged `sales` in `openapi.rs`.
         .merge(crate::booking::routes())
@@ -1349,5 +1351,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(crate::cobrowse::openapi());
     doc.merge(crate::sms_inbound::openapi());
     doc.merge(crate::social::openapi());
+    doc.merge(crate::voice::openapi());
     doc
 }

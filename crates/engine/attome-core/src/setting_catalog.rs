@@ -456,6 +456,15 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             || json!("UTC"),
         ),
         SettingDescriptor::new(
+            "voice.agent_number",
+            "Your own phone number (E.164) or PBX extension: a call placed \
+             from Attome rings it first, then the customer (J6-T1).",
+            || json!({"type": "string", "maxLength": 40}),
+            PERSONAL,
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "scan.record_location",
             "Whether a scan action records where the device was, when the \
              device sends it (B16-T8). Off: the location is dropped.",

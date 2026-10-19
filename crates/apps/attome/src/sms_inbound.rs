@@ -45,7 +45,10 @@ const PHONE_FIELDS: &[&str] = &[
 
 /// The sender's record: the first person entity with a phone field holding
 /// the same digits.
-async fn find_sender(state: &EngineState, e164: &str) -> Result<Option<(String, Uuid)>, AppError> {
+pub(crate) async fn find_sender(
+    state: &EngineState,
+    e164: &str,
+) -> Result<Option<(String, Uuid)>, AppError> {
     let digits: String = e164.chars().filter(char::is_ascii_digit).collect();
     for entity in PEOPLE {
         let fields: Vec<String> = {

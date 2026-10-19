@@ -206,6 +206,20 @@ fn is_sms_receipt_path(path: &str) -> bool {
     })
 }
 
+/// J6-T1: the voice providers' callbacks: `/api/v1/voice/twiml/{token}`,
+/// `/api/v1/voice/events/{token}`, `/api/v1/voice/twilio/{key}/inbound` and
+/// `/api/v1/voice/pbx/{key}/events`, nothing else (not `/api/v1/voice/calls`).
+fn is_voice_callback_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/v1/voice/") else {
+        return false;
+    };
+    match rest.split('/').collect::<Vec<_>>().as_slice() {
+        ["twiml" | "events", token] => !token.is_empty(),
+        ["twilio", key, "inbound"] | ["pbx", key, "events"] => !key.is_empty(),
+        _ => false,
+    }
+}
+
 /// D20-T2: `/api/v1/booking/{slug}` and the manage link's
 /// `/api/v1/booking/manage/{token}[/cancel|/reschedule]`, nothing else.
 fn is_booking_path(path: &str) -> bool {
@@ -274,6 +288,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_email_tracking_path(path)
         || is_sms_receipt_path(path)
         || is_booking_path(path)
+        || is_voice_callback_path(path)
 }
 
 /// Paths that skip authn/authz (they are in `EXACT_BYPASS_PATHS` above) but
@@ -416,6 +431,14 @@ mod tests {
         assert!(is_bypass("/api/v1/social/meta/key-1234567890abcdef"));
         assert!(!is_bypass("/api/v1/social/meta/a/b"));
         assert!(!is_bypass("/api/v1/social/replies"));
+        assert!(is_bypass("/api/v1/voice/twiml/abc.def"));
+        assert!(is_bypass("/api/v1/voice/events/abc.def"));
+        assert!(is_bypass(
+            "/api/v1/voice/twilio/key-1234567890abcdef/inbound"
+        ));
+        assert!(is_bypass("/api/v1/voice/pbx/key-1234567890abcdef/events"));
+        assert!(!is_bypass("/api/v1/voice/calls"));
+        assert!(!is_bypass("/api/v1/voice/events/a/b"));
         assert!(is_bypass("/api/v1/booking/intro-call"));
         assert!(is_bypass("/api/v1/booking/manage/abc.def"));
         assert!(is_bypass("/api/v1/booking/manage/abc.def/cancel"));

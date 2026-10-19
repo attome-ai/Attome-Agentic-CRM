@@ -108,6 +108,11 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/sms/receipts/{token}", "portal_status"),
     // J4-T2: inbound texts from the provider.
     ("POST", "/api/v1/sms/inbound/{key}", "webchat"),
+    // J6-T1: the voice providers' callbacks.
+    ("POST", "/api/v1/voice/twiml/{token}", "webchat"),
+    ("POST", "/api/v1/voice/events/{token}", "webchat"),
+    ("POST", "/api/v1/voice/twilio/{key}/inbound", "webchat"),
+    ("POST", "/api/v1/voice/pbx/{key}/events", "webchat"),
     // J8-T1: Meta's subscription check and events.
     ("GET", "/api/v1/social/meta/{key}", "portal_status"),
     ("POST", "/api/v1/social/meta/{key}", "webchat"),

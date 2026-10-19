@@ -35,6 +35,8 @@ pub mod observability;
 pub mod omnichannel;
 /// J8-T1: social channels in and replies out.
 pub mod social;
+/// J6-T1: calls out and in.
+pub mod voice;
 /// D20-T2: public booking links.
 pub mod booking;
 /// J4-T2: inbound texts and STOP opt-outs.

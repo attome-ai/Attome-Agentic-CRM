@@ -124,6 +124,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calls (J6-T1): with a Twilio Voice or Asterisk voice system, `POST /api/v1/voice/calls` rings the
+  caller's own phone (personal setting `voice.agent_number`) and then the customer, logging a phone
+  call on the record. Calls to the Twilio number or reported by the PBX open a phone call on the
+  matching contact. Ringing, answer, hang-up and the recording link update the call as they happen;
+  a missed call is noted. Migration 0146.
 - Social channels (J8-T1): Messenger messages, Instagram messages and comments, and Facebook page
   comments arrive through Meta's signed webhook (`/api/v1/social/meta/{key}`). New Google Business
   Profile reviews are read every 15 minutes. Each one becomes an inbound communication (new
