@@ -1135,6 +1135,192 @@ async fn poll_webchat_messages(
     }))
 }
 
+// ── J3-T1: live delivery ────────────────────────────────────────────────────
+
+/// How often a live stream looks for new messages.
+const STREAM_TICK: std::time::Duration = std::time::Duration::from_secs(2);
+/// How long one stream stays open before the widget reconnects.
+const STREAM_LIFETIME: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+/// The stream's keep-alive comment interval.
+const STREAM_KEEPALIVE: std::time::Duration = std::time::Duration::from_secs(20);
+
+/// The widget's session behind a bearer, checked exactly as the poll checks
+/// it (same timing on every miss), and counted against the same per-session
+/// rate limit. `NotFound` for every failure, as the poll answers.
+async fn authenticate_visitor(
+    state: &EngineState,
+    token: &str,
+) -> Result<(Uuid, SessionTokenRow), AppError> {
+    let active = state.modules.load();
+    let licensed = active.require(MODULE_OMNICHANNEL).is_ok();
+    drop(active);
+    if !licensed {
+        return Err(AppError::NotFound);
+    }
+    let ring = state.base.pepper_ring();
+    let Some((public_id, secret)) = attome_service::token::parse_bearer(token) else {
+        attome_service::token::verify(token, None, &ring).await?;
+        return Err(AppError::NotFound);
+    };
+    let Some(row) = load_session_token(&state.base.db, public_id).await? else {
+        attome_service::token::verify(secret, None, &ring).await?;
+        return Err(AppError::NotFound);
+    };
+    if !attome_service::token::verify(secret, Some(&row.secret_hash), &ring).await? {
+        return Err(AppError::NotFound);
+    }
+    let session_key = format!("omnichannel:rl:webchat:poll:{public_id}");
+    let outcome = attome_cache::rate_limit::check(
+        &state.base.redis_coordination,
+        &session_key,
+        SESSION_RATE_LIMIT_PER_MINUTE,
+    )
+    .await?;
+    if !outcome.allowed {
+        return Err(AppError::TooManyRequests {
+            retry_after_secs: None,
+        });
+    }
+    Ok((public_id, row))
+}
+
+/// One stream's position.
+struct ChatStream {
+    state: EngineState,
+    public_id: Uuid,
+    since: Option<DateTime<Utc>>,
+    handed_off: bool,
+    deadline: tokio::time::Instant,
+}
+
+/// The newest time among `messages`, else `since`. Pure.
+fn advance(since: Option<DateTime<Utc>>, messages: &[ChatMessageOut]) -> Option<DateTime<Utc>> {
+    messages.iter().map(|m| m.created_at).max().max(since)
+}
+
+/// The web chat's messages as they arrive (J3-T1).
+///
+/// Server-Sent Events: a `messages` event (`{messages, handed_off}`, the
+/// poll's shape) whenever messages newer than `since` arrive or the
+/// conversation is handed to a person, checked every 2 seconds. The stream
+/// ends after 10 minutes and the widget reconnects with the last
+/// `created_at` it saw; a widget that cannot hold a stream keeps polling.
+/// Opening it counts as one poll against the session's rate limit.
+#[utoipa::path(
+    get,
+    path = "/api/v1/omnichannel/webchat/stream",
+    tag = "omnichannel",
+    params(PollQuery),
+    responses(
+        (status = 200, description = "Server-Sent Events: `messages` with `{messages, handed_off}`", content_type = "text/event-stream"),
+        (status = 404, description = "Not licensed, or an unrecognized session token — identical response for both", body = ErrorResponse),
+        (status = 429, description = "Too many polls or streams from this session", body = ErrorResponse),
+    ),
+)]
+async fn webchat_stream(
+    State(state): State<EngineState>,
+    Query(q): Query<PollQuery>,
+) -> Result<
+    axum::response::sse::Sse<
+        impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+    >,
+    AppError,
+> {
+    let (public_id, row) = authenticate_visitor(&state, &q.token).await?;
+    touch_last_seen(&state.base.db, public_id).await?;
+    let start = ChatStream {
+        state,
+        public_id,
+        since: q.since,
+        handed_off: row.handed_off_at.is_some(),
+        deadline: tokio::time::Instant::now() + STREAM_LIFETIME,
+    };
+    let first = true;
+    let stream = futures_util::stream::unfold((start, first), |(mut live, first)| async move {
+        loop {
+            // The first look is at once; then every tick.
+            if !first {
+                let wake = (tokio::time::Instant::now() + STREAM_TICK).min(live.deadline);
+                tokio::time::sleep_until(wake).await;
+            }
+            if tokio::time::Instant::now() >= live.deadline {
+                return None;
+            }
+            // The anchor moves to the work request at hand-off: re-read it.
+            let row = match load_session_token(&live.state.base.db, live.public_id).await {
+                Ok(Some(row)) => row,
+                Ok(None) => return None,
+                Err(error) => {
+                    tracing::warn!(%error, "web chat stream: session read failed");
+                    return None;
+                }
+            };
+            let (entity_name, record_id) = thread_anchor(&row);
+            let messages =
+                match fetch_messages(&live.state.base.db, entity_name, record_id, live.since).await
+                {
+                    Ok(messages) => messages,
+                    Err(error) => {
+                        tracing::warn!(%error, "web chat stream: message read failed");
+                        return None;
+                    }
+                };
+            let handed_off = row.handed_off_at.is_some();
+            if messages.is_empty() && handed_off == live.handed_off {
+                if first {
+                    return Some((
+                        Ok(axum::response::sse::Event::default()
+                            .event("ready")
+                            .data("{}")),
+                        (live, false),
+                    ));
+                }
+                continue;
+            }
+            live.since = advance(live.since, &messages);
+            live.handed_off = handed_off;
+            let event = axum::response::sse::Event::default()
+                .event("messages")
+                .json_data(PollResponse {
+                    messages,
+                    handed_off,
+                })
+                .unwrap_or_else(|_| axum::response::sse::Event::default().event("error"));
+            let _ = touch_last_seen(&live.state.base.db, live.public_id).await;
+            return Some((Ok(event), (live, false)));
+        }
+    });
+    Ok(axum::response::sse::Sse::new(stream).keep_alive(
+        axum::response::sse::KeepAlive::new()
+            .interval(STREAM_KEEPALIVE)
+            .text("keep-alive"),
+    ))
+}
+
+#[cfg(test)]
+mod webchat_stream_tests {
+    use super::*;
+
+    fn message(at: DateTime<Utc>) -> ChatMessageOut {
+        ChatMessageOut {
+            direction: "outbound".into(),
+            body: "hello".into(),
+            created_at: at,
+            citations: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_stream_moves_past_the_newest_message_it_sent() {
+        let t1 = Utc::now();
+        let t2 = t1 + chrono::Duration::seconds(5);
+        assert_eq!(advance(None, &[]), None);
+        assert_eq!(advance(Some(t1), &[]), Some(t1));
+        assert_eq!(advance(None, &[message(t2), message(t1)]), Some(t2));
+        assert_eq!(advance(Some(t2), &[message(t1)]), Some(t2));
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/omnichannel/webchat/message", post(send_message))
@@ -1142,10 +1328,11 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/omnichannel/webchat/poll",
             get(poll_webchat_messages),
         )
+        .route("/api/v1/omnichannel/webchat/stream", get(webchat_stream))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(send_message, poll_webchat_messages))]
+#[openapi(paths(send_message, poll_webchat_messages, webchat_stream))]
 struct ApiDocFragment;
 
 pub fn openapi() -> utoipa::openapi::OpenApi {

@@ -112,6 +112,8 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("GET", "/api/v1/shared-files/{token}", "portal_status"),
     ("POST", "/api/v1/shared-files/{token}", "password_reset"),
     ("GET", "/api/v1/omnichannel/webchat/poll", "webchat"),
+    // J3-T1: the same widget, as a live stream.
+    ("GET", "/api/v1/omnichannel/webchat/stream", "webchat"),
 ];
 pub(crate) const DEFAULT_CATEGORY: &str = "api";
 
@@ -787,6 +789,10 @@ mod tests {
         );
         assert_eq!(
             category_for("GET", "/api/v1/omnichannel/webchat/poll"),
+            "webchat"
+        );
+        assert_eq!(
+            category_for("GET", "/api/v1/omnichannel/webchat/stream"),
             "webchat"
         );
         // The admin metrics surface (`xrm_server::omnichannel_metrics`)
