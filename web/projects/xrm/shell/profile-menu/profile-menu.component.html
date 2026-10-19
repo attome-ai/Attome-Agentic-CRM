@@ -18,6 +18,12 @@
       <i class="las la-clipboard-check" aria-hidden="true"></i>
       {{ 'shell.myApprovals' | translate }}
     </a>
+    <!-- M12-T4 — long work this person started. -->
+    <a class="pp-link" routerLink="/xrm/me/background-work" (click)="isOpen.set(false)"
+       data-testid="profile-background-work">
+      <i class="las la-tasks" aria-hidden="true"></i>
+      {{ 'shell.myBackgroundWork' | translate }}
+    </a>
     <!-- B11-T2 — the user's own settings. -->
     <a class="pp-link" routerLink="/xrm/me/settings" (click)="isOpen.set(false)"
        data-testid="profile-settings">

@@ -221,6 +221,53 @@ pub async fn progress(
     }))
 }
 
+/// M12-T4: the batches `user` started, newest first, one page at a time,
+/// with how many there are in all.
+pub async fn list_started_by(
+    pool: &attome_db::DbPool,
+    user: Uuid,
+    limit: i64,
+    offset: i64,
+) -> Result<(Vec<BatchProgress>, i64), sqlx::Error> {
+    let rows: Vec<BatchRow> = sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.batch",
+        "SELECT id, name, status, done, total, cancel_requested, started_by, \
+                created_at, updated_at, finished_at \
+         FROM job_batch WHERE started_by = $1 \
+         ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3"
+    ))
+    .bind(user)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+    let total: i64 = sqlx::query_scalar(attome_db::tagged_sql!(
+        "jobs.batch",
+        "SELECT count(*) FROM job_batch WHERE started_by = $1"
+    ))
+    .bind(user)
+    .fetch_one(pool)
+    .await?;
+    Ok((rows.into_iter().map(BatchProgress::from).collect(), total))
+}
+
+impl From<BatchRow> for BatchProgress {
+    fn from(row: BatchRow) -> Self {
+        BatchProgress {
+            id: row.id,
+            name: row.name,
+            status: BatchStatus::parse(&row.status),
+            done: row.done,
+            total: row.total,
+            cancel_requested: row.cancel_requested,
+            started_by: row.started_by,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            finished_at: row.finished_at,
+        }
+    }
+}
+
 #[derive(sqlx::FromRow)]
 struct BatchRow {
     id: Uuid,

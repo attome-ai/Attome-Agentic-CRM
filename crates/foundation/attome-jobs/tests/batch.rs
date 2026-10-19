@@ -164,3 +164,36 @@ async fn a_cancelled_batch_stops_between_chunks() {
             .is_none()
     );
 }
+
+/// M12-T4: a person's own batches, newest first, with how many in all; never
+/// someone else's.
+#[tokio::test]
+async fn list_started_by_shows_only_the_starters_batches_newest_first() {
+    let pool = skip_if_no_db!(test_pool().await);
+    let (me, other) = (Uuid::now_v7(), Uuid::now_v7());
+    let mut conn = pool.acquire().await.expect("connection");
+    let first = batch::start(&mut conn, "test.mine_first", Some(5), Some(me))
+        .await
+        .expect("start");
+    let second = batch::start(&mut conn, "test.mine_second", None, Some(me))
+        .await
+        .expect("start");
+    batch::start(&mut conn, "test.theirs", None, Some(other))
+        .await
+        .expect("start");
+    drop(conn);
+
+    let (page, total) = batch::list_started_by(&pool, me, 10, 0)
+        .await
+        .expect("list");
+    assert_eq!(total, 2);
+    let ids: Vec<Uuid> = page.iter().map(|b| b.id).collect();
+    assert_eq!(ids, vec![second, first], "newest first");
+    assert!(page.iter().all(|b| b.started_by == Some(me)));
+
+    let (one, total) = batch::list_started_by(&pool, me, 1, 1)
+        .await
+        .expect("second page");
+    assert_eq!((one.len(), total), (1, 2));
+    assert_eq!(one[0].id, first);
+}
