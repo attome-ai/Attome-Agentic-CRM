@@ -172,6 +172,51 @@ impl ExecuteQueryRequest {
         request
     }
 
+    /// B18-T5: the request an offline pull runs, through the same execution
+    /// path as any list (privilege gate, record scope, field security,
+    /// read-only pool): one stored query, or the entity's default view when
+    /// `query_id` is `None`; a keyset page from `after_id`; no total.
+    /// `changed_since` keeps the rows changed at or after it (the query must
+    /// return `modified_at`); `by_modified` pages by `(modified_at, id)`
+    /// instead of `id`. `ids_only` returns just the `id` column.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_offline_pull(
+        entity: String,
+        query_id: Option<Uuid>,
+        changed_since: Option<chrono::DateTime<chrono::Utc>>,
+        by_modified: bool,
+        page_size: i64,
+        after_id: Option<Uuid>,
+        ids_only: bool,
+    ) -> Self {
+        let filters = changed_since
+            .map(|since| {
+                vec![Filter {
+                    field: "modified_at".to_owned(),
+                    op: "gte".to_owned(),
+                    value: Some(Value::String(since.to_rfc3339())),
+                }]
+            })
+            .unwrap_or_default();
+        let mut request = Self::for_published_widget(
+            query_id.unwrap_or_else(Uuid::nil),
+            None,
+            page_size,
+            filters,
+        );
+        if query_id.is_none() {
+            request.query_id = None;
+            request.entity = Some(entity);
+        }
+        if by_modified {
+            request.order_by = "modified_at".to_owned();
+        }
+        request.after_id = after_id;
+        request.select = ids_only.then(|| vec!["id".to_owned()]);
+        request.force_cursor = true;
+        request
+    }
+
     /// Dashboard 10/10 Phase 2.3 — an editor's draft preview of a widget: its
     /// live view (preferred, as the viewer always rendered it) or query, never
     /// pinned. `None` when the widget names neither.

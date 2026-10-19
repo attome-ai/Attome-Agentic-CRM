@@ -1440,12 +1440,16 @@ dependencies = [
 name = "attome-offline"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-core",
+ "attome-db",
  "attome-modules",
+ "attome-records",
  "attome-security",
  "attome-server",
  "attome-types",
  "axum",
+ "chrono",
  "hex",
  "serde",
  "serde_json",
