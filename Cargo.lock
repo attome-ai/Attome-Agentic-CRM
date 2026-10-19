@@ -1413,8 +1413,17 @@ version = "0.1.0"
 dependencies = [
  "attome-core",
  "attome-modules",
+ "attome-security",
+ "attome-server",
+ "attome-types",
  "axum",
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
