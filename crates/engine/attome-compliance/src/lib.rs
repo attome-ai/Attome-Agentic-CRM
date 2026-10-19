@@ -54,6 +54,8 @@ pub mod governance_admin;
 pub mod legal_hold_admin;
 pub mod legal_matter_admin;
 pub mod model;
+/// E26-T1: the public preference page behind a signed link.
+pub mod preference_centre;
 pub mod retention;
 pub mod retention_admin;
 /// R3-T1: retention rules per entity and their disposition proposals.

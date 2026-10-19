@@ -5043,6 +5043,32 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 })),
             )
         }
+        "POST /api/v1/consents/preference-links" => request(
+            "POST",
+            "/api/v1/consents/preference-links",
+            t,
+            Some(json!({"subject_entity": "contact", "subject_id": Uuid::now_v7()})),
+        ),
+        "POST /api/v1/consents/preferences" => {
+            // E26-T1: a link for a contact, then a change through it.
+            let key = uniq_purpose_key(fx).await;
+            let link = admin(
+                fx,
+                "POST",
+                "/api/v1/consents/preference-links",
+                Some(json!({"subject_entity": "contact", "subject_id": Uuid::now_v7()})),
+            )
+            .await;
+            request(
+                "POST",
+                "/api/v1/consents/preferences",
+                None,
+                Some(json!({
+                    "token": link["token"],
+                    "changes": [{"purpose_key": key, "channel": "email", "grant": true}],
+                })),
+            )
+        }
         "POST /api/v1/consents/withdraw" => {
             let key = uniq_purpose_key(fx).await;
             request(

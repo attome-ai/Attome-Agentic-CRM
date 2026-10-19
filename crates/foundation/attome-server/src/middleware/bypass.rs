@@ -84,6 +84,8 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // is read back, so there is nothing here for an anonymous caller to
     // enumerate (unlike `/api/v1/content/view`'s "identical 404" concern).
     "/api/v1/consents/capture",
+    // E26-T1: the preference page; its signed link is the authority.
+    "/api/v1/consents/preferences",
     // Omnichannel web chat widget (M53 Phase 1, D-474): public, anonymous
     // message-send and reply-poll routes. Same "own manual license check,
     // uniform response regardless of the reason for a miss" discipline as
@@ -347,6 +349,8 @@ mod tests {
     fn consent_capture_is_bypassed_but_the_withdraw_and_generic_entity_surface_are_not() {
         assert!(is_bypass("/api/v1/consents/capture"));
         assert!(is_csrf_exempt("/api/v1/consents/capture"));
+        assert!(is_bypass("/api/v1/consents/preferences"));
+        assert!(!is_bypass("/api/v1/consents/preference-links"));
         // Regression guard: the public capture route must never accidentally
         // sweep the authenticated withdraw endpoint or the generic
         // /api/v1/xrm_audit_consent entity CRUD route into bypass with it.

@@ -315,7 +315,10 @@ async fn capture_consent(
 /// rate-limit stack in `system.rs`, same as every other admin bundle in
 /// this crate.
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/consents/withdraw", post(withdraw_consent))
+    Router::new()
+        .route("/api/v1/consents/withdraw", post(withdraw_consent))
+        // E26-T1: preference links, under the same authenticated stack.
+        .merge(crate::preference_centre::routes())
 }
 
 /// The one public route — merged directly (like `content_public::routes()`
@@ -323,7 +326,10 @@ pub fn routes() -> Router<EngineState> {
 /// Its path must also be added to
 /// `attome_server::middleware::bypass::EXACT_BYPASS_PATHS`.
 pub fn public_routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/consents/capture", post(capture_consent))
+    Router::new()
+        .route("/api/v1/consents/capture", post(capture_consent))
+        // E26-T1: the preference page, through its signed link.
+        .merge(crate::preference_centre::public_routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -336,5 +342,7 @@ pub fn public_routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::preference_centre::openapi_fragment());
+    doc
 }
