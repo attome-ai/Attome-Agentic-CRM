@@ -91,7 +91,8 @@ async fn audit(
         )
         .comment(comment),
     )
-    .await
+    .await?;
+    Ok(())
 }
 
 /// `POST /api/v1/cobrowse/sessions`.
