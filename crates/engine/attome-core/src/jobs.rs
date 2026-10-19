@@ -823,6 +823,10 @@ pub enum EngineJob {
     /// handler re-reads the page and writes through the entity engine as the
     /// page's knowledge author. Idempotent; one record, so never `is_batch`.
     ContentArticleIndex { page_id: Uuid },
+    /// N22-T2 — transcribes a recording (`attome_document`) through the
+    /// speech endpoint into `recording_transcript` and `document_text`
+    /// (`attome_document::transcribe::process`). Pure pointer; idempotent.
+    TranscribeRecording { document_id: Uuid },
     /// M36 Phase 1 (Predictive Intelligence, D-473) — trains one
     /// `prediction_model`: extracts a labeled feature set from ticket/SLA
     /// history (bounded sample size), fits the model (`spawn_blocking` —
@@ -1070,6 +1074,7 @@ impl EngineJob {
             | Self::ResourceUtilizationSweep
             | Self::DocgenRender { .. }
             | Self::ContentArticleIndex { .. }
+            | Self::TranscribeRecording { .. }
             | Self::PredictTrainModel { .. }
             | Self::PredictScoringSweep
             | Self::PredictOutcomeFillSweep
@@ -1211,6 +1216,7 @@ impl EngineJob {
             EngineJob::CatalogUsageRollup => "CatalogUsageRollup",
             EngineJob::DocgenRender { .. } => "DocgenRender",
             EngineJob::ContentArticleIndex { .. } => "ContentArticleIndex",
+            EngineJob::TranscribeRecording { .. } => "TranscribeRecording",
             EngineJob::PredictTrainModel { .. } => "PredictTrainModel",
             EngineJob::PredictScoringSweep => "PredictScoringSweep",
             EngineJob::PredictOutcomeFillSweep => "PredictOutcomeFillSweep",
@@ -1264,6 +1270,7 @@ impl EngineJob {
             | Self::LegalMatterRelease { .. }
             | Self::DocgenRender { .. }
             | Self::ContentArticleIndex { .. }
+            | Self::TranscribeRecording { .. }
             | Self::PredictTrainModel { .. } => JobPriority::High,
 
             // Low — periodic maintenance/sweep work with no observer.
@@ -1535,6 +1542,7 @@ impl EngineJob {
             | Self::ReportRun { .. }
             | Self::DocgenRender { .. }
             | Self::ContentArticleIndex { .. }
+            | Self::TranscribeRecording { .. }
             | Self::PredictTrainModel { .. } => 10,
             // Decided by its registered type in the `Job` impl below; 5 when
             // the type is not registered on the producing node.
@@ -1790,6 +1798,13 @@ mod tests {
     fn document_text_extract_round_trips() {
         assert_round_trips(EngineJob::DocumentTextExtract {
             session_id: Uuid::now_v7(),
+        });
+    }
+
+    #[test]
+    fn transcribe_recording_round_trips() {
+        assert_round_trips(EngineJob::TranscribeRecording {
+            document_id: Uuid::now_v7(),
         });
     }
 

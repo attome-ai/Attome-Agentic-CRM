@@ -698,6 +698,12 @@ async fn dispatch_platform_job(
             if chat > 0 {
                 tracing::info!(purged = chat, "chat retention: expired messages removed");
             }
+            // N22-T2: transcripts whose recording no document names any more.
+            let transcripts =
+                attome_document::transcribe::prune_orphans(&attome_state.base.db).await?;
+            if transcripts > 0 {
+                tracing::info!(transcripts, "recording transcripts: orphans removed");
+            }
             // Y12-T8: renamed attributes' old names past their alias period.
             let aliases = attome_metadata::provision::field_change::prune_expired_aliases(
                 &attome_state.base.db,
@@ -765,6 +771,10 @@ async fn dispatch_platform_job(
         // K1-T4 — see this variant's doc comment.
         EngineJob::DocumentTextExtract { session_id } => {
             attome_document::text_extract::process(&attome_state, session_id).await?;
+        }
+        // N22-T2 — see this variant's doc comment.
+        EngineJob::TranscribeRecording { document_id } => {
+            attome_document::transcribe::process(&attome_state, document_id).await?;
         }
         EngineJob::PruneExpiredUploadSessions => {
             attome_document::files_scan::prune_expired_sessions(&attome_state).await?;

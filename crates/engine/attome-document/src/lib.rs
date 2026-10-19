@@ -48,6 +48,8 @@ pub mod files_scan;
 pub mod share;
 /// K1-T4: document text for global search.
 pub mod text_extract;
+/// N22-T2: recording transcripts.
+pub mod transcribe;
 
 pub use engine::DocumentModel;
 
@@ -69,5 +71,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ));
     doc.merge(core(share::openapi_fragment()));
     doc.merge(core(checkout::openapi_fragment()));
+    doc.merge(core(transcribe::openapi_fragment()));
     doc
 }

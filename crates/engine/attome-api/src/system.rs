@@ -344,6 +344,8 @@ impl EngineSystem {
             .merge(attome_document::share::routes())
             // K1-T2: check-out and check-in of a record's file.
             .merge(attome_document::checkout::routes())
+            // N22-T2: a recording's transcript, and asking for one.
+            .merge(attome_document::transcribe::routes())
             // M52 Phase 1 (D-465) — outbound compose/reply. No
             // `strict_authz` layer: authorization is per-record via
             // `RecordScoped<Update>` + `require_record_access`, same posture
