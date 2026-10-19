@@ -1340,6 +1340,8 @@ pub fn routes() -> Router<EngineState> {
         // D20-T2: public booking links ride the same public bundle; their
         // OpenAPI is tagged `sales` in `openapi.rs`.
         .merge(crate::booking::routes())
+        // D9-T3: quote acceptance by guest link (tagged `sales` too).
+        .merge(crate::quote_accept::routes())
 }
 
 #[derive(utoipa::OpenApi)]

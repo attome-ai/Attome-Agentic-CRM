@@ -467,6 +467,20 @@ export const xrmAr = {
       in_call: 'في مكالمة', error: 'تعذّر تشغيل الهاتف',
     },
   },
+  // D9-T3: صفحة عرض السعر العامة.
+  quoteAccept: {
+    title: 'عرض السعر',
+    otherLanguage: 'English',
+    loading: 'جارٍ تحميل عرض السعر…',
+    invalidLink: 'رابط عرض السعر غير صالح أو انتهت صلاحيته أو تغيّر العرض. اطلب رابطًا جديدًا.',
+    item: 'البند', quantity: 'الكمية', unitPrice: 'سعر الوحدة', lineTotal: 'المبلغ',
+    subtotal: 'المجموع الفرعي', discount: 'الخصم', vat: 'ضريبة القيمة المضافة (تقديرية)', total: 'الإجمالي',
+    paymentTerms: 'شروط الدفع',
+    yourName: 'اسمك', note: 'ملاحظة (اختياري)',
+    accept: 'قبول العرض', reject: 'رفض',
+    failed: 'لم ينجح ذلك. حاول مرة أخرى.',
+    status: { sent: 'بانتظار قرارك', accepted: 'مقبول', rejected: 'مرفوض', expired: 'منتهي' },
+  },
   // B18-T9: offline conflicts and refused changes.
   offline: {
     conflict: {

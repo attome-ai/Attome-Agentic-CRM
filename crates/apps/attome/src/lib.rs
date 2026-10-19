@@ -33,6 +33,8 @@ pub mod dev_access_seed;
 pub mod jobs;
 pub mod observability;
 pub mod omnichannel;
+/// D9-T3: quote acceptance by guest link.
+pub mod quote_accept;
 /// D15-T2: personal emails captured onto matching records.
 pub mod mail_capture;
 /// J8-T1: social channels in and replies out.

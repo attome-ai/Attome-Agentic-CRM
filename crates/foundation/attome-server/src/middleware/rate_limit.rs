@@ -114,6 +114,13 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/voice/twilio/{key}/inbound", "webchat"),
     ("POST", "/api/v1/voice/twilio/{key}/client", "webchat"),
     ("POST", "/api/v1/voice/pbx/{key}/events", "webchat"),
+    // D9-T3: a quote's guest link (the decision adds a per-address budget).
+    ("GET", "/api/v1/quote-acceptance/{token}", "portal_status"),
+    (
+        "POST",
+        "/api/v1/quote-acceptance/{token}",
+        "consent_capture",
+    ),
     // J8-T1: Meta's subscription check and events.
     ("GET", "/api/v1/social/meta/{key}", "portal_status"),
     ("POST", "/api/v1/social/meta/{key}", "webchat"),

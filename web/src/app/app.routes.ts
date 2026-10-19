@@ -94,6 +94,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/pay/pay-page.component').then(m => m.PayPageComponent),
   },
   {
+    // D9-T3: a quote's guest link. Public, no session; ahead of the Content
+    // Management catch-all below.
+    path: 'quote/:token',
+    loadComponent: () => import('@attome/xrm/portal/quote-accept').then(m => m.QuoteAcceptComponent),
+  },
+  {
     // D20-T2: a booking page and the reschedule/cancel page its email links
     // to. Public, no session; ahead of the Content Management catch-all below.
     path: 'book/manage/:token',

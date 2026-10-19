@@ -1,0 +1,250 @@
+{
+  "author": "packs",
+  "checksum": "sha256:40c3e9904ddc816c78e8e1dfbefd168486e9b1a814c6822f09b3244d93c1e51f",
+  "closed_at": "2026-10-19T00:00:00Z",
+  "description": "Online quote acceptance (D9-T3): who accepted or rejected a quote through its guest link, when and with what note, and a rule that locks a decided quote.",
+  "format": "attome-changeset/v1",
+  "id": "01a14f3c-2d1e-7a44-8b6f-5c0e9d7a3b21",
+  "layer": "product",
+  "name": "sales-quote-acceptance",
+  "opened_at": "2026-10-19T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided By",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "accepted_by_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "quote",
+        "field": "accepted_by_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided At",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "decided_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "quote",
+        "field": "decided_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decision Note",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decision_note",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "quote",
+        "field": "decision_note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "status",
+            "op": "in",
+            "value": [
+              "accepted",
+              "rejected"
+            ]
+          },
+          "description": "Once the customer accepts or rejects a quote, its terms, amounts and the decision never change; a change is a new quote version.",
+          "display_name": "Decided quotes are locked",
+          "display_order": 0,
+          "entity_logicalname": "quote",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "quote_locked_after_decision",
+          "policies": [
+            {
+              "field": "name",
+              "type": "disabled"
+            },
+            {
+              "field": "quote_number",
+              "type": "disabled"
+            },
+            {
+              "field": "version",
+              "type": "disabled"
+            },
+            {
+              "field": "is_primary",
+              "type": "disabled"
+            },
+            {
+              "field": "currency",
+              "type": "disabled"
+            },
+            {
+              "field": "discount_percent",
+              "type": "disabled"
+            },
+            {
+              "field": "valid_from",
+              "type": "disabled"
+            },
+            {
+              "field": "expires_on",
+              "type": "disabled"
+            },
+            {
+              "field": "payment_terms",
+              "type": "disabled"
+            },
+            {
+              "field": "terms",
+              "type": "disabled"
+            },
+            {
+              "field": "account_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "opportunity_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "subtotal",
+              "type": "disabled"
+            },
+            {
+              "field": "discount_total",
+              "type": "disabled"
+            },
+            {
+              "field": "vat_estimate",
+              "type": "disabled"
+            },
+            {
+              "field": "grand_total",
+              "type": "disabled"
+            },
+            {
+              "field": "accepted_by_name",
+              "type": "disabled"
+            },
+            {
+              "field": "decided_at",
+              "type": "disabled"
+            },
+            {
+              "field": "decision_note",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "quote",
+        "rule": "quote_locked_after_decision"
+      }
+    },
+    {
+      "args": {
+        "display_name": "صاحب القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "quote.accepted_by_name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "quote.decided_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملاحظة القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "locale": "ar",
+        "object_key": "quote.decision_note",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 19,
+  "title": "Pack: sales quote acceptance"
+}

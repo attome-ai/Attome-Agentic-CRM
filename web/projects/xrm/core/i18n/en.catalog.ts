@@ -499,6 +499,20 @@ export const xrmEn = {
       in_call: 'On a call', error: 'The phone could not start',
     },
   },
+  // D9-T3: the public quote page.
+  quoteAccept: {
+    title: 'Your quote',
+    otherLanguage: 'العربية',
+    loading: 'Loading the quote…',
+    invalidLink: 'This quote link is not valid, has expired, or the quote has changed. Ask for a new link.',
+    item: 'Item', quantity: 'Qty', unitPrice: 'Unit price', lineTotal: 'Amount',
+    subtotal: 'Subtotal', discount: 'Discount', vat: 'VAT (estimate)', total: 'Total',
+    paymentTerms: 'Payment terms',
+    yourName: 'Your name', note: 'Note (optional)',
+    accept: 'Accept the quote', reject: 'Decline',
+    failed: 'That did not work. Please try again.',
+    status: { sent: 'Awaiting your decision', accepted: 'Accepted', rejected: 'Declined', expired: 'Expired' },
+  },
   // B18-T9: offline conflicts and refused changes.
   offline: {
     conflict: {

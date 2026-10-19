@@ -124,6 +124,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Online quote acceptance (D9-T3): a sent quote's guest link
+  (`POST /api/v1/sales/quotes/{id}/guest-link`) opens `/quote/{token}`, where the customer reviews
+  the quote and accepts or rejects it with their name. The link is bound to the quote's version and
+  expires (30 days by default, never after the quote does). A decided quote is locked by the sales
+  pack's new `quote_locked_after_decision` rule (pack changeset 0019).
 - Email capture (D15-T2): emails in a connected Microsoft 365 or Gmail mailbox that involve known
   contacts or leads are captured once each and appear on the timelines of every matching contact,
   lead and open opportunity of their accounts. Private, automatic and bulk mail is skipped, as are

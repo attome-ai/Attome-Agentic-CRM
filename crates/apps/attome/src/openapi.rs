@@ -161,6 +161,11 @@ fn build() -> utoipa::openapi::OpenApi {
         crate::booking::openapi(),
         "sales",
     ));
+    // D9-T3: quote acceptance by guest link.
+    doc.merge(attome_server::openapi::tag_module(
+        crate::quote_accept::openapi(),
+        "sales",
+    ));
     doc.merge(attome_server::openapi::tag_module(
         <SelfDoc as utoipa::OpenApi>::openapi(),
         "core",

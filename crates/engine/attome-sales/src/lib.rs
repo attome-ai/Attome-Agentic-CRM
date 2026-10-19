@@ -29,6 +29,8 @@ pub mod orgchart;
 pub mod owner_change;
 pub mod price_resolution;
 pub mod pricing;
+/// D9-T3: quote acceptance by guest link.
+pub mod quote_accept;
 pub mod quote_sync;
 pub mod schedules;
 pub mod scoring;

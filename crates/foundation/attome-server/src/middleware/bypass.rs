@@ -198,6 +198,8 @@ fn is_sms_receipt_path(path: &str) -> bool {
         "/api/v1/sms/inbound/",
         // J8-T1: Meta's subscription check and signed events.
         "/api/v1/social/meta/",
+        // D9-T3: a quote's guest link; the signed token is the authority.
+        "/api/v1/quote-acceptance/",
     ]
     .iter()
     .any(|prefix| {
@@ -431,6 +433,11 @@ mod tests {
         assert!(is_bypass("/api/v1/social/meta/key-1234567890abcdef"));
         assert!(!is_bypass("/api/v1/social/meta/a/b"));
         assert!(!is_bypass("/api/v1/social/replies"));
+        assert!(is_bypass("/api/v1/quote-acceptance/abc.def"));
+        assert!(!is_bypass("/api/v1/quote-acceptance/abc/def"));
+        assert!(!is_bypass(
+            "/api/v1/sales/quotes/0198f3a2-1111-7222-8333-444455556666/guest-link"
+        ));
         assert!(is_bypass("/api/v1/voice/twiml/abc.def"));
         assert!(is_bypass("/api/v1/voice/events/abc.def"));
         assert!(is_bypass(
