@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c0404abab5e582cc3764e7fb58c2939508ac258bdf91906ed12d56cd02b01b38",
+  "checksum": "sha256:87ed45ef35b7a30ac3d39ff6d85f901db09285761cb83a7a6a868a14a0e32de8",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-activity.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -167,6 +167,67 @@
     {
       "args": {
         "definition": {
+          "display_name": "Meeting Id",
+          "field_type": "text",
+          "logicalname": "meeting_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "activity",
+        "field": "meeting_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Meeting Provider",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "meeting_provider",
+          "options": {
+            "choices": [
+              "teams",
+              "meet",
+              "zoom",
+              "jitsi"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "activity",
+        "field": "meeting_provider"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Meeting Link",
+          "field_type": "text",
+          "logicalname": "meeting_url",
+          "options": {
+            "text_type": "url"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "activity",
+        "field": "meeting_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "display_name": "Priority",
           "field_type": "choice",
           "is_filterable": true,
@@ -184,7 +245,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 12,
       "target": {
         "entity": "activity",
         "field": "priority"
@@ -202,7 +263,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 13,
       "target": {
         "entity": "activity",
         "field": "record_id"
@@ -228,7 +289,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 11,
+      "seq": 14,
       "target": {
         "entity": "activity",
         "field": "status"
@@ -247,7 +308,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 12,
+      "seq": 15,
       "target": {
         "entity": "activity",
         "field": "subject"
@@ -260,12 +321,12 @@
           "entity_mappings": [],
           "name": "Active Activities",
           "required_privilege": "activity.read",
-          "sql": "SELECT id, subject, activity_type, status, priority, due_at, completed_at, direction, duration_minutes, description, entity_name, record_id, owner_ref, row_version, created_at, modified_at FROM activity WHERE is_active IS NOT FALSE"
+          "sql": "SELECT id, subject, activity_type, status, priority, due_at, completed_at, direction, duration_minutes, meeting_provider, meeting_id, meeting_url, description, entity_name, record_id, owner_ref, row_version, created_at, modified_at FROM activity WHERE is_active IS NOT FALSE"
         }
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 13,
+      "seq": 16,
       "target": {
         "entity": "activity",
         "query": "Active Activities"
@@ -285,7 +346,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 14,
+      "seq": 17,
       "target": {
         "entity": "activity",
         "view": "Active Activities"
@@ -302,7 +363,7 @@
       },
       "op": "upsert_state_model",
       "phase": "expand",
-      "seq": 15,
+      "seq": 18,
       "target": {
         "entity": "activity"
       }
@@ -318,7 +379,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 16,
+      "seq": 19,
       "target": {
         "entity": "activity",
         "transition": "cancelled->open"
@@ -335,7 +396,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 17,
+      "seq": 20,
       "target": {
         "entity": "activity",
         "transition": "completed->open"
@@ -352,7 +413,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 18,
+      "seq": 21,
       "target": {
         "entity": "activity",
         "transition": "open->cancelled"
@@ -369,7 +430,7 @@
       },
       "op": "upsert_state_transition",
       "phase": "expand",
-      "seq": 19,
+      "seq": 22,
       "target": {
         "entity": "activity",
         "transition": "open->completed"

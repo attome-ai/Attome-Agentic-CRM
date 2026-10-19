@@ -436,6 +436,8 @@ export const xrmAr = {
     logCall: 'تسجيل مكالمة', callSubject: 'مكالمة', outcome: 'النتيجة', minutes: 'الدقائق',
     notes: 'ملاحظات', nextStep: 'الخطوة التالية (تُنشئ مهمة)', nextDue: 'موعد الخطوة التالية',
     logSave: 'حفظ المكالمة', cancel: 'إلغاء',
+    videoMeeting: 'اجتماع مرئي', startsAt: 'يبدأ', provider: 'خدمة الاجتماع', join: 'انضمام',
+    providers: { teams: 'Microsoft Teams', meet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi' },
     outcomes: {
       connected: 'تم التواصل', no_answer: 'لا رد', left_message: 'تُركت رسالة',
       interested: 'مهتم', not_interested: 'غير مهتم', meeting_booked: 'حُجز اجتماع',

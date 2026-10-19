@@ -10,12 +10,30 @@
                data-testid="activities-type-call" />
         {{ 'activitiesPanel.phoneCall' | translate }}
       </label>
+      <label class="act-type-option">
+        <input type="radio" name="activityType" value="meeting" [(ngModel)]="newType"
+               data-testid="activities-type-meeting" />
+        {{ 'activitiesPanel.videoMeeting' | translate }}
+      </label>
     </div>
     <input class="act-input act-subject" name="subject" [(ngModel)]="newSubject" required
            [attr.aria-label]="'activitiesPanel.subject' | translate"
            [placeholder]="'activitiesPanel.subject' | translate" data-testid="activities-subject" />
     <input class="act-input" type="datetime-local" name="dueAt" [(ngModel)]="newDueAt"
-           [attr.aria-label]="'activitiesPanel.dueAt' | translate" data-testid="activities-due" />
+           [required]="newType === 'meeting'"
+           [attr.aria-label]="(newType === 'meeting' ? 'activitiesPanel.startsAt' : 'activitiesPanel.dueAt') | translate"
+           data-testid="activities-due" />
+    @if (newType === 'meeting') {
+      <select class="act-input" name="provider" [(ngModel)]="newProvider"
+              [attr.aria-label]="'activitiesPanel.provider' | translate" data-testid="activities-provider">
+        @for (p of providers; track p) {
+          <option [value]="p">{{ ('activitiesPanel.providers.' + p) | translate }}</option>
+        }
+      </select>
+      <input class="act-input act-minutes" type="number" min="5" name="meetingMinutes" [(ngModel)]="newMinutes"
+             [attr.aria-label]="'activitiesPanel.minutes' | translate"
+             [placeholder]="'activitiesPanel.minutes' | translate" data-testid="activities-meeting-minutes" />
+    }
     @if (newType === 'phone_call') {
       <select class="act-input" name="direction" [(ngModel)]="newDirection"
               [attr.aria-label]="'activitiesPanel.direction' | translate" data-testid="activities-direction">
@@ -23,7 +41,7 @@
         <option value="inbound">{{ 'activitiesPanel.inbound' | translate }}</option>
       </select>
     }
-    <button type="submit" class="act-btn act-btn-primary" [disabled]="saving() || !newSubject.trim()"
+    <button type="submit" class="act-btn act-btn-primary" [disabled]="!canAdd()"
             data-testid="activities-add">
       <i class="las la-plus" aria-hidden="true"></i>
       {{ (saving() ? 'activitiesPanel.adding' : 'activitiesPanel.add') | translate }}
@@ -92,7 +110,7 @@
         <li class="act-row" [class.act-overdue]="overdue(row)" [class.act-closed]="row.status !== 'open'"
             data-testid="activities-row">
           <span class="act-kind">
-            {{ (row.activity_type === 'phone_call' ? 'activitiesPanel.phoneCall' : 'activitiesPanel.task') | translate }}
+            {{ kindKey(row.activity_type) | translate }}
           </span>
           <span class="act-subject-text">{{ row.subject }}</span>
           <span class="act-due">
@@ -108,6 +126,13 @@
           </span>
           <span class="act-status">{{ ('activitiesPanel.status.' + row.status) | translate }}</span>
           <span class="act-actions">
+            @if (joinUrl(row); as url) {
+              <a class="act-btn act-btn-primary" [href]="url" target="_blank" rel="noopener noreferrer"
+                 data-testid="activities-join">
+                <i class="las la-file-video" aria-hidden="true"></i>
+                {{ 'activitiesPanel.join' | translate }}
+              </a>
+            }
             @if (row.status === 'open') {
               <button type="button" class="act-btn" [disabled]="busyId() !== null" (click)="complete(row)"
                       data-testid="activities-complete">

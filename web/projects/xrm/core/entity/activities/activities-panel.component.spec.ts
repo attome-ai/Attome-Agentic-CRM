@@ -3,6 +3,7 @@ import { LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntityService } from '../services/entity.service';
+import { VideoMeetingService } from './video-meeting';
 import {
   ActivitiesPanelComponent, ActivityRow, CallLog, callBody, isOverdue, nextStepBody, sortActivities,
 } from './activities-panel.component';
@@ -82,6 +83,7 @@ describe('ActivitiesPanelComponent', () => {
       imports: [ActivitiesPanelComponent],
       providers: [
         { provide: EntityService, useValue: svc },
+        { provide: VideoMeetingService, useValue: { create: vi.fn() } },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

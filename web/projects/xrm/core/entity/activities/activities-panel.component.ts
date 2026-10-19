@@ -4,11 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { concatMap, of } from 'rxjs';
 import { LangService, TranslatePipe } from '@attome/base';
 import { EntityService } from '../services/entity.service';
+import {
+  DEFAULT_MEETING_MINUTES, MEETING_PROVIDERS, MeetingProvider, VideoMeetingService, canJoin, meetingFields,
+  meetingRequest, safeJoinUrl,
+} from './video-meeting';
 
 /** `platform-bundles/attome-api-activity.json` — basic-units U2, D-600. */
 export const ACTIVITY_ENTITY = 'activity';
 
-export type ActivityType = 'task' | 'phone_call';
+export type ActivityType = 'task' | 'phone_call' | 'meeting';
 export type ActivityStatus = 'open' | 'completed' | 'cancelled';
 
 export interface ActivityRow {
@@ -20,6 +24,10 @@ export interface ActivityRow {
   completed_at: string | null;
   direction: string | null;
   row_version: number;
+  /** J7-T2: a video meeting's link and provider. */
+  meeting_url?: string | null;
+  meeting_provider?: string | null;
+  duration_minutes?: number | null;
 }
 
 /**
@@ -116,6 +124,7 @@ export class ActivitiesPanelComponent {
   readonly recordId = input.required<string>();
 
   private readonly entityService = inject(EntityService);
+  private readonly meetings = inject(VideoMeetingService);
   private readonly lang = inject(LangService);
 
   readonly loading = signal(true);
@@ -129,6 +138,10 @@ export class ActivitiesPanelComponent {
   newSubject = '';
   newDueAt = '';
   newDirection: 'inbound' | 'outbound' = 'outbound';
+  /** J7-T2: the video meeting's provider and length. */
+  readonly providers = MEETING_PROVIDERS;
+  newProvider: MeetingProvider = 'teams';
+  newMinutes: number | null = DEFAULT_MEETING_MINUTES;
 
   /** D14-T2: the quick call log. */
   readonly logOpen = signal(false);
@@ -163,12 +176,16 @@ export class ActivitiesPanelComponent {
           return {
             id: item.id,
             subject: String(raw['subject'] ?? ''),
-            activity_type: (raw['activity_type'] === 'phone_call' ? 'phone_call' : 'task') as ActivityType,
+            activity_type: (raw['activity_type'] === 'phone_call' || raw['activity_type'] === 'meeting'
+              ? raw['activity_type'] : 'task') as ActivityType,
             status: (text('status') ?? 'open') as ActivityStatus,
             due_at: text('due_at'),
             completed_at: text('completed_at'),
             direction: text('direction'),
             row_version: item.row_version,
+            meeting_url: text('meeting_url'),
+            meeting_provider: text('meeting_provider'),
+            duration_minutes: raw['duration_minutes'] == null ? null : Number(raw['duration_minutes']),
           };
         }));
         this.loading.set(false);
@@ -249,6 +266,22 @@ export class ActivitiesPanelComponent {
     return isOverdue(row);
   }
 
+  /** J7-T2: the join link, while the meeting can be joined. */
+  joinUrl(row: ActivityRow): string | null {
+    return canJoin(row) ? safeJoinUrl(row.meeting_url) : null;
+  }
+
+  /** The label key of an activity's kind. */
+  kindKey(type: ActivityType): string {
+    return type === 'phone_call' ? 'activitiesPanel.phoneCall'
+      : type === 'meeting' ? 'activitiesPanel.videoMeeting' : 'activitiesPanel.task';
+  }
+
+  /** Whether the add form can be sent. */
+  canAdd(): boolean {
+    return !this.saving() && !!this.newSubject.trim() && (this.newType !== 'meeting' || !!this.newDueAt);
+  }
+
   add(): void {
     const subject = this.newSubject.trim();
     if (!subject || this.saving()) return;
@@ -264,9 +297,20 @@ export class ActivitiesPanelComponent {
     }
     if (this.newType === 'phone_call') body['direction'] = this.newDirection;
 
+    let create = this.entityService.create(ACTIVITY_ENTITY, body);
+    if (this.newType === 'meeting') {
+      // J7-T2: the online meeting first, so the activity carries its link.
+      const minutes = this.newMinutes && this.newMinutes > 0 ? this.newMinutes : DEFAULT_MEETING_MINUTES;
+      const request = meetingRequest(this.newProvider, subject, this.newDueAt, minutes);
+      if (!request) return;
+      create = this.meetings.create(request).pipe(
+        concatMap(meeting => this.entityService.create(ACTIVITY_ENTITY, { ...body, ...meetingFields(meeting, minutes) })),
+      );
+    }
+
     this.saving.set(true);
     this.errorMessage.set(null);
-    this.entityService.create(ACTIVITY_ENTITY, body).subscribe({
+    create.subscribe({
       next: () => {
         this.saving.set(false);
         this.newSubject = '';

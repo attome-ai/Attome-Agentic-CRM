@@ -468,6 +468,8 @@ export const xrmEn = {
     logCall: 'Log a call', callSubject: 'Call', outcome: 'Outcome', minutes: 'Minutes',
     notes: 'Notes', nextStep: 'Next step (creates a task)', nextDue: 'Next step due',
     logSave: 'Save call', cancel: 'Cancel',
+    videoMeeting: 'Video meeting', startsAt: 'Starts', provider: 'Meeting service', join: 'Join',
+    providers: { teams: 'Microsoft Teams', meet: 'Google Meet', zoom: 'Zoom', jitsi: 'Jitsi' },
     outcomes: {
       connected: 'Connected', no_answer: 'No answer', left_message: 'Left a message',
       interested: 'Interested', not_interested: 'Not interested', meeting_booked: 'Meeting booked',

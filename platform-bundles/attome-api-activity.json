@@ -22,6 +22,9 @@
         { "logicalname": "priority", "display_name": "Priority", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "normal", "high"], "multi": false } },
         { "logicalname": "direction", "display_name": "Direction", "field_type": "choice", "is_filterable": true, "options": { "choices": ["inbound", "outbound"], "multi": false } },
         { "logicalname": "duration_minutes", "display_name": "Duration (minutes)", "field_type": "number" },
+        { "logicalname": "meeting_id", "display_name": "Meeting Id", "field_type": "text" },
+        { "logicalname": "meeting_provider", "display_name": "Meeting Provider", "field_type": "choice", "is_filterable": true, "options": { "choices": ["teams", "meet", "zoom", "jitsi"], "multi": false } },
+        { "logicalname": "meeting_url", "display_name": "Meeting Link", "field_type": "text", "options": { "text_type": "url" } },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "completed", "cancelled"], "multi": false } }
       ]
     }
@@ -30,7 +33,7 @@
     {
       "entity": "activity",
       "name": "Active Activities",
-      "sql": "SELECT id, subject, activity_type, status, priority, due_at, completed_at, direction, duration_minutes, description, entity_name, record_id, owner_ref, row_version, created_at, modified_at FROM activity WHERE is_active IS NOT FALSE",
+      "sql": "SELECT id, subject, activity_type, status, priority, due_at, completed_at, direction, duration_minutes, meeting_provider, meeting_id, meeting_url, description, entity_name, record_id, owner_ref, row_version, created_at, modified_at FROM activity WHERE is_active IS NOT FALSE",
       "required_privilege": "activity.read"
     }
   ],
