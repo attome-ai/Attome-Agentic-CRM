@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:67e84f418c43b9cae0a018fd15e0e2e5d9ef6e2657051c541edf71530867d5d3",
+  "checksum": "sha256:8d9dca55f17d9d007740718142d5411306905a7cf051a199ed4710915d3bd185",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-document.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -129,6 +129,36 @@
     {
       "args": {
         "definition": {
+          "display_name": "Document Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "document_type",
+          "options": {
+            "choices": [
+              "contract",
+              "invoice",
+              "identity",
+              "correspondence",
+              "policy",
+              "report",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "attome_document",
+        "field": "document_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "entity": "attome_document",
           "entity_mappings": [],
           "name": "Active Documents",
@@ -138,7 +168,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "entity": "attome_document",
         "query": "Active Documents"
@@ -156,7 +186,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "attome_document",
         "query": "Inactive Documents"
@@ -176,7 +206,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "attome_document",
         "view": "Active Documents"
@@ -196,7 +226,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "entity": "attome_document",
         "view": "Inactive Documents"

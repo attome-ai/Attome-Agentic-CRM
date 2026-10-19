@@ -1186,6 +1186,14 @@ pub(crate) async fn sync_file_field_documents(
             if current_keys.contains(key) {
                 continue;
             }
+            // K1-T3: a held document stays, even when the field that
+            // mirrored it no longer names its file.
+            if attome_core::legal_hold::record_is_held(&mut **tx, FILE_MIRROR_ENTITY, *doc_id)
+                .await?
+                .is_some()
+            {
+                continue;
+            }
             sqlx::query(attome_db::tagged_sql!(
                 "entity.mutations",
                 "UPDATE attome_document SET is_active = false, modified_by = $1, \

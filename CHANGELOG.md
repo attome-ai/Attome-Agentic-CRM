@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Legal holds block every delete (K1-T3): a record under an active hold (on it, or on its whole
+  entity) now refuses an ordinary delete into the recycle bin with 409, not only a hard delete, on
+  every path (single, bulk, agent, portal, merge); a held document also survives its file field
+  changing. Documents gain a `document_type` (contract, invoice, identity, correspondence, policy,
+  report, other), so a retention rule can target one type.
 - Weekly rescan (K2-T2): every file promoted in the last 30 days is scanned again once a week with
   the scanner's current signatures (the `UploadRescanSweep` job, 200 files a run, migration 0127). A
   file now found infected moves under the quarantine prefix so nothing serves it, its upload is marked

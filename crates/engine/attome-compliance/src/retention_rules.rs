@@ -700,6 +700,27 @@ mod retention_rules_tests {
         assert!(validate_rule(&body("purge", None, vec![]), &append_only).is_err());
     }
 
+    /// K1-T3: a document type maps to a retention policy as a rule on
+    /// documents whose condition names the type.
+    #[test]
+    fn retention_rules_target_a_document_type() {
+        let attrs = vec![attr("name", 0), attr("document_type", 7)];
+        let target = RuleTarget {
+            is_append_only: false,
+            attrs: &attrs,
+        };
+        let condition: Filter = serde_json::from_value(
+            serde_json::json!({"field": "document_type", "op": "eq", "value": "contract"}),
+        )
+        .unwrap_or_else(|_| panic!("a filter"));
+        let mut rule = body("archive", None, vec![condition.clone()]);
+        rule.entity = "attome_document".into();
+        assert!(validate_rule(&rule, &target).is_ok());
+        let (sql, binds) = condition_sql(&[condition], &attrs).unwrap_or_else(|e| panic!("{e}"));
+        assert!(sql.contains("document_type"), "{sql}");
+        assert_eq!(binds, ["contract"]);
+    }
+
     #[test]
     fn retention_rules_condition_compiles_with_bound_values() {
         let attrs = vec![attr("status", 0)];

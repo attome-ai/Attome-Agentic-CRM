@@ -3869,6 +3869,10 @@ pub async fn delete_one(
 
 /// [`delete_one`] with an optional `modified_by` (`None` for a portal user,
 /// D-579). Writes the bin's ledger row in the same transaction (A18-T2).
+///
+/// K1-T3: a record under an active legal hold (one naming it, or a hold on
+/// its whole entity) is refused with 409 on every delete path that comes
+/// here, not only on the hard delete: a held document stays where it is.
 pub async fn delete_one_as(
     tx: &mut Transaction<'_, Postgres>,
     target_entity_name: &str,
@@ -3878,6 +3882,12 @@ pub async fn delete_one_as(
     expected_row_version: Option<i64>,
     origin: &DeleteOrigin,
 ) -> Result<MutationResult, AppError> {
+    if attome_core::legal_hold::record_is_held(&mut **tx, target_entity_name, record_id)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::Conflict("record is under an active legal hold"));
+    }
     require_delete_reason(tx, target_entity_name, origin).await?;
     let policy = apply_dependents_on_delete(
         tx,

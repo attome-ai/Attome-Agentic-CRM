@@ -1947,3 +1947,62 @@ async fn an_unadmitted_entity_is_refused_darkly_over_mcp() {
     assert!(is_error, "a security entity is never admitted: {payload}");
     assert_eq!(payload["error"], "unknown or unavailable", "{payload}");
 }
+
+/// K1-T3: a record under an active legal hold cannot be deleted, not even
+/// into the recycle bin; once the hold is released it can.
+#[tokio::test]
+async fn a_record_under_a_legal_hold_cannot_be_deleted() {
+    let (system, db) = skip_if_no_db!(test_system().await);
+    let (user_id, cookie) = seed_admin(&db).await;
+    let app = full_app(system);
+
+    let (status, created) = post(
+        &app,
+        "/api/v1/note",
+        &cookie,
+        json!({ "title": "held", "note_text": "kept for a matter",
+                "entity_name": "user_account", "record_id": user_id.to_string() }),
+    )
+    .await;
+    assert!(status.is_success(), "{created}");
+    let note_id: Uuid = created["id"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .expect("note id");
+
+    let hold_id: Uuid = sqlx::query_scalar(
+        "INSERT INTO legal_hold (entity_logicalname, record_id, matter_reference, placed_by) \
+         VALUES ('note', $1, 'k1-t3-matter', $2) RETURNING id",
+    )
+    .bind(note_id)
+    .bind(user_id)
+    .fetch_one(&db)
+    .await
+    .expect("place a hold");
+
+    let delete = |app: axum::Router| async move {
+        app.oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(format!("/api/v1/note/{note_id}"))
+                .header("cookie", cookie_for_delete(user_id))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("delete")
+        .status()
+    };
+    assert_eq!(delete(app.clone()).await, StatusCode::CONFLICT);
+
+    sqlx::query("UPDATE legal_hold SET released_at = now() WHERE id = $1")
+        .bind(hold_id)
+        .execute(&db)
+        .await
+        .expect("release the hold");
+    assert!(delete(app).await.is_success());
+}
+
+fn cookie_for_delete(user_id: Uuid) -> String {
+    session_cookie(user_id)
+}

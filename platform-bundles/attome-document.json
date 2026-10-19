@@ -17,7 +17,8 @@
         { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true },
         { "logicalname": "folder", "display_name": "Folder", "field_type": "text", "is_required": true },
         { "logicalname": "file", "display_name": "File", "field_type": "file" },
-        { "logicalname": "source_field", "display_name": "Source Field", "field_type": "text" }
+        { "logicalname": "source_field", "display_name": "Source Field", "field_type": "text" },
+        { "logicalname": "document_type", "display_name": "Document Type", "field_type": "choice", "is_filterable": true, "is_sortable": true, "options": { "choices": ["contract", "invoice", "identity", "correspondence", "policy", "report", "other"], "multi": false } }
       ]
     }
   ],
