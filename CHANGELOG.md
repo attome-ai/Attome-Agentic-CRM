@@ -124,6 +124,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Batch document generation (K3-T3): `POST /api/v1/docgen/templates/{id}/render-batch` renders a
+  template for up to 500 records, one render job each (attached to its record when the template names
+  a field), and `GET /api/v1/docgen/batches/{batch_id}` counts them pending, running, completed,
+  failed and attached (migration 0129).
 - Page audiences and preview links (K5-T2): a content page is `public` or `internal`
   (`PUT /api/v1/admin/content/pages/{id}/audience`, migration 0128). The public view and delivery
   routes answer an internal page with the same 404 as a missing one; signed-in people read it at

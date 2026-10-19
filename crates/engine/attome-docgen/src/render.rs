@@ -171,30 +171,9 @@ async fn render_document(
     // is refused until the ceiling is carried through.
     ctx.refuse_if_capped()?;
     // Same record-level+field-security projection the generic
-    // `GET /api/v1/docgen_template/{id}` applies — a caller who cannot
-    // see this template cannot render it either. Also enforces
-    // `is_active = true` (the generic read predicate), so a disabled
-    // template 404s here exactly like it would through generic CRUD.
-    let record =
-        attome_records::entity_crud::read_record(&state, &ctx, TEMPLATE_ENTITY, template_id)
-            .await?;
-    let data = record.data();
-    let entity = data
-        .get("entity")
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| AppError::Validation("template has no target entity configured".into()))?
-        .to_string();
-    let format = data
-        .get("format")
-        .and_then(Value::as_str)
-        .unwrap_or("pdf")
-        .to_string();
-    if format != "pdf" {
-        return Err(AppError::Validation(format!(
-            "unsupported document format '{format}' — Phase 1 renders pdf only"
-        )));
-    }
+    // `GET /api/v1/docgen_template/{id}` applies — a caller who cannot see
+    // this template cannot render it either (`render_target`).
+    let (entity, format) = render_target(&state, &ctx, template_id).await?;
 
     let render_id = create_render(
         &state,
@@ -273,6 +252,213 @@ async fn render_status(
     }))
 }
 
+// ── K3-T3: batches ──────────────────────────────────────────────────────────
+
+/// Most records one batch renders.
+pub const MAX_BATCH: usize = 500;
+
+/// `POST /api/v1/docgen/templates/{id}/render-batch`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct RenderBatchBody {
+    /// The records to render, 1 to 500; a repeated id renders once.
+    pub record_ids: Vec<Uuid>,
+}
+
+/// A batch's progress.
+#[derive(Debug, Default, Serialize, ToSchema, sqlx::FromRow)]
+pub struct RenderBatchStatus {
+    pub batch_id: Uuid,
+    pub total: i64,
+    pub pending: i64,
+    pub running: i64,
+    pub completed: i64,
+    pub failed: i64,
+    /// Completed renders attached to their record.
+    pub attached: i64,
+}
+
+/// The ids to render: in order, each once. Pure.
+pub fn batch_ids(ids: &[Uuid]) -> Result<Vec<Uuid>, AppError> {
+    let mut seen = std::collections::HashSet::new();
+    let unique: Vec<Uuid> = ids.iter().copied().filter(|id| seen.insert(*id)).collect();
+    if unique.is_empty() || unique.len() > MAX_BATCH {
+        return Err(AppError::Validation(format!(
+            "record_ids holds 1 to {MAX_BATCH} records"
+        )));
+    }
+    Ok(unique)
+}
+
+/// The template's target entity and format as `ctx` sees it, refusing what
+/// cannot be rendered. Shared by the single and the batch route.
+async fn render_target(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    template_id: Uuid,
+) -> Result<(String, String), AppError> {
+    let record =
+        attome_records::entity_crud::read_record(state, ctx, TEMPLATE_ENTITY, template_id).await?;
+    let data = record.data();
+    let entity = data
+        .get("entity")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| AppError::Validation("template has no target entity configured".into()))?
+        .to_string();
+    let format = data
+        .get("format")
+        .and_then(Value::as_str)
+        .unwrap_or("pdf")
+        .to_string();
+    if format != "pdf" {
+        return Err(AppError::Validation(format!(
+            "unsupported document format '{format}' — Phase 1 renders pdf only"
+        )));
+    }
+    Ok((entity, format))
+}
+
+/// Renders one template for many records (K3-T3).
+///
+/// One render per record, each its own job, so one failing record does not
+/// stop the others and each retries on its own; each renders as the caller,
+/// sees only what the caller may see, and is attached to its record when the
+/// template names an `attach_to_field`. Answers the batch id;
+/// `GET /api/v1/docgen/batches/{id}` shows its progress.
+#[utoipa::path(
+    post,
+    path = "/api/v1/docgen/templates/{id}/render-batch",
+    tag = "docgen",
+    params(("id" = Uuid, Path, description = "The template's id")),
+    request_body = RenderBatchBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("EngineJob::DocgenRender"),
+        "the route only enqueues renders; each job writes its entity and export events in its completion transaction",
+    )))),
+    responses(
+        (status = 202, description = "The renders are queued", body = RenderBatchStatus),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such template", body = ErrorResponse),
+        (status = 422, description = "No records, more than 500, or a template that cannot render", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn render_batch(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<DocgenTemplateRead>>,
+    Path(template_id): Path<Uuid>,
+    Json(body): Json<RenderBatchBody>,
+) -> Result<(StatusCode, Json<RenderBatchStatus>), AppError> {
+    ctx.refuse_if_capped()?;
+    let ids = batch_ids(&body.record_ids)?;
+    let (entity, format) = render_target(&state, &ctx, template_id).await?;
+    let batch_id = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let render_ids: Vec<Uuid> = sqlx::query_scalar(
+        "INSERT INTO docgen_render \
+            (id, template_ref, entity_logicalname, record_id, status, format, requested_by, \
+             requested_at, batch_id) \
+         SELECT uuidv7(), $1, $2, r, 'pending', $3, $4, NOW(), $5 FROM unnest($6::uuid[]) AS r \
+         RETURNING id",
+    )
+    .bind(template_id)
+    .bind(&entity)
+    .bind(&format)
+    .bind(ctx.user_id)
+    .bind(batch_id)
+    .bind(&ids)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    for render_id in &render_ids {
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            attome_core::jobs::EngineJob::DocgenRender {
+                render_id: *render_id,
+            },
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
+    attome_db::tx::commit(tx).await?;
+    let total = i64::try_from(render_ids.len()).unwrap_or(i64::MAX);
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(RenderBatchStatus {
+            batch_id,
+            total,
+            pending: total,
+            ..RenderBatchStatus::default()
+        }),
+    ))
+}
+
+/// A render batch's progress (K3-T3).
+///
+/// How many of its renders are pending, running, completed (and attached)
+/// or failed. The person who started it and administrators see it; anyone
+/// else gets 404.
+#[utoipa::path(
+    get,
+    path = "/api/v1/docgen/batches/{batch_id}",
+    tag = "docgen",
+    params(("batch_id" = Uuid, Path, description = "The batch's id")),
+    responses(
+        (status = 200, description = "The batch's progress", body = RenderBatchStatus),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such batch, or not one the caller started", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn batch_status(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<DocgenTemplateRead>>,
+    Path(batch_id): Path<Uuid>,
+) -> Result<Json<RenderBatchStatus>, AppError> {
+    let status: RenderBatchStatus = sqlx::query_as(
+        "SELECT $1::uuid AS batch_id, count(*) AS total, \
+                count(*) FILTER (WHERE status = 'pending') AS pending, \
+                count(*) FILTER (WHERE status = 'running') AS running, \
+                count(*) FILTER (WHERE status = 'completed') AS completed, \
+                count(*) FILTER (WHERE status = 'failed') AS failed, \
+                count(*) FILTER (WHERE status = 'completed' AND attached) AS attached \
+           FROM docgen_render \
+          WHERE batch_id = $1 AND is_deleted = false AND (requested_by = $2 OR $3)",
+    )
+    .bind(batch_id)
+    .bind(ctx.user_id)
+    .bind(ctx.is_admin)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if status.total == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(Json(status))
+}
+
+#[cfg(test)]
+mod batch_tests {
+    use super::*;
+
+    #[test]
+    fn a_batch_renders_each_record_once_and_at_most_500() {
+        let a = Uuid::now_v7();
+        let b = Uuid::now_v7();
+        assert_eq!(batch_ids(&[a, b, a]).unwrap_or_default(), vec![a, b]);
+        assert!(batch_ids(&[]).is_err());
+        let many: Vec<Uuid> = (0..=MAX_BATCH).map(|_| Uuid::now_v7()).collect();
+        assert!(batch_ids(&many).is_err());
+        assert_eq!(
+            batch_ids(&many[..MAX_BATCH]).map(|v| v.len()).unwrap_or(0),
+            MAX_BATCH
+        );
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -280,12 +466,17 @@ pub fn routes() -> Router<EngineState> {
             post(render_document),
         )
         .route("/api/v1/docgen/renders/{render_id}", get(render_status))
+        .route(
+            "/api/v1/docgen/templates/{id}/render-batch",
+            post(render_batch),
+        )
+        .route("/api/v1/docgen/batches/{batch_id}", get(batch_status))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document, merged in `lib.rs::openapi()`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(render_document, render_status))]
+#[openapi(paths(render_document, render_status, render_batch, batch_status))]
 #[derive(Debug)]
 pub struct ApiDocFragment;
 
