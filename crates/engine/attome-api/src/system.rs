@@ -329,6 +329,8 @@ impl EngineSystem {
             // (pre-existing, not something this change introduces — see
             // `attome_compliance`'s own crate doc comment).
             .merge(attome_compliance::consent_admin::public_routes())
+            // D16-T1: email open and click tracking, public by path shape.
+            .merge(attome_notification::tracking::public_routes())
             // D-486 — M55 moved to `attome-document`. `files::routes()` stays
             // mounted HERE, ungated, because it serves
             // `/api/v1/{entity}/{id}/files/{field}/…` for a `file`-typed

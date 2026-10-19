@@ -174,6 +174,17 @@ fn is_payment_link_path(path: &str) -> bool {
 /// literal `requests`, nothing after. The handler
 /// (`attome_api::service_public::submit_request`) checks the offering takes
 /// anonymous requests, rate-limits and asks for the challenge.
+/// D16-T1: `/api/v1/track/open/{token}` and `/api/v1/track/click/{token}`,
+/// one segment each, nothing deeper.
+fn is_email_tracking_path(path: &str) -> bool {
+    ["/api/v1/track/open/", "/api/v1/track/click/"]
+        .iter()
+        .any(|prefix| {
+            path.strip_prefix(prefix)
+                .is_some_and(|token| !token.is_empty() && !token.contains('/'))
+        })
+}
+
 fn is_service_intake_path(path: &str) -> bool {
     let Some(rest) = path.strip_prefix("/api/v1/service-portal/offerings/") else {
         return false;
@@ -226,6 +237,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_billing_gateway_webhook_path(path)
         || is_payment_link_path(path)
         || is_service_intake_path(path)
+        || is_email_tracking_path(path)
 }
 
 /// Paths that skip authn/authz (they are in `EXACT_BYPASS_PATHS` above) but
@@ -353,6 +365,10 @@ mod tests {
         assert!(is_csrf_exempt("/api/v1/consents/capture"));
         assert!(is_bypass("/api/v1/consents/preferences"));
         assert!(is_bypass("/api/v1/consents/confirm"));
+        assert!(is_bypass("/api/v1/track/open/abc.gif"));
+        assert!(is_bypass("/api/v1/track/click/abc"));
+        assert!(!is_bypass("/api/v1/track/click/abc/more"));
+        assert!(!is_bypass("/api/v1/track/click/"));
         assert!(!is_bypass("/api/v1/consents/preference-links"));
         // Regression guard: the public capture route must never accidentally
         // sweep the authenticated withdraw endpoint or the generic

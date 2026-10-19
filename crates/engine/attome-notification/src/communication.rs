@@ -404,11 +404,28 @@ pub async fn write_communication(
             )
             .await?;
 
+            // D16-T1: tracked links and the open pixel, when tracking is on
+            // and the person the record is about has not opted out.
+            let html_body = if crate::tracking::enabled(state)
+                && !crate::tracking::opted_out(&mut tx, entity_name, record_id).await?
+            {
+                crate::tracking::signing_secret(state).map(|secret| {
+                    crate::tracking::tracked_html(
+                        body,
+                        &state.base.config.frontend_url(),
+                        communication_id,
+                        now.timestamp(),
+                        |claim| crate::tracking::sign(&secret, claim),
+                    )
+                })
+            } else {
+                None
+            };
             let job = EngineJob::SendEmail(Box::new(EmailMessage {
                 to: to.clone(),
                 subject: subject.to_string(),
                 text_body: body.to_string(),
-                html_body: None,
+                html_body,
                 delivery_id: None,
                 from_override: None,
                 message_id: message_id.clone(),

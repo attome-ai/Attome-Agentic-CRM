@@ -383,6 +383,16 @@ fn core_settings() -> Vec<SettingDescriptor> {
             || json!(""),
         ),
         SettingDescriptor::new(
+            "email.tracking.enabled",
+            "Whether outgoing record email carries tracked links and an open \
+             pixel (D16-T1). A contact, lead or account who withdrew the \
+             email_tracking consent purpose is never tracked.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
             "compliance.double_opt_in_countries",
             "Countries (ISO 3166 alpha-2 codes) where a marketing consent \
              captured from a public form counts only once the person confirms \

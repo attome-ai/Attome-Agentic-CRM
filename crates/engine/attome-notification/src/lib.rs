@@ -12,6 +12,8 @@ pub mod recipient;
 pub mod reminders;
 pub mod seed;
 pub mod service;
+/// D16-T1: email open and click tracking.
+pub mod tracking;
 
 pub use engine::NotificationModel;
 pub use model::{Notification, NotificationType};
@@ -34,5 +36,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 6;
 /// P-api-contract Phase 1 — this crate's slice of the workspace OpenAPI
 /// document, merged in by `attome_api::openapi_document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    engine::openapi_fragment()
+    let mut doc = engine::openapi_fragment();
+    doc.merge(tracking::openapi_fragment());
+    doc
 }

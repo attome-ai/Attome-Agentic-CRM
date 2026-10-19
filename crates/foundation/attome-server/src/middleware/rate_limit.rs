@@ -101,6 +101,9 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("GET", "/api/v1/consents/preferences", "consent_capture"),
     ("POST", "/api/v1/consents/preferences", "consent_capture"),
     ("GET", "/api/v1/consents/confirm", "consent_capture"),
+    // D16-T1: anonymous, token-carrying like the portal status.
+    ("GET", "/api/v1/track/open/{token}", "portal_status"),
+    ("GET", "/api/v1/track/click/{token}", "portal_status"),
     ("POST", "/api/v1/consents/confirm", "consent_capture"),
     // Omnichannel web chat widget (M53 Phase 1, D-474): anonymous, bearer-
     // token-scoped, same token/enumeration-resistance reasoning as

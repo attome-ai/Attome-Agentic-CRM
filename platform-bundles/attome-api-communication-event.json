@@ -13,7 +13,7 @@
       "is_append_only": true,
       "attributes": [
         { "logicalname": "communication_id", "display_name": "Communication", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "communication" },
-        { "logicalname": "event_type", "display_name": "Event", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["queued", "sent", "delivered", "bounced", "opened", "failed", "suppressed"], "multi": false } },
+        { "logicalname": "event_type", "display_name": "Event", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["queued", "sent", "delivered", "bounced", "opened", "clicked", "failed", "suppressed"], "multi": false } },
         { "logicalname": "detail", "display_name": "Detail", "field_type": "text" },
         { "logicalname": "occurred_at", "display_name": "Occurred At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "provider_message_id", "display_name": "Provider Message Id", "field_type": "text", "is_filterable": true }
