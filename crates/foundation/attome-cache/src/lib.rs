@@ -39,6 +39,8 @@
 //! every node seeing the same value, and does no existing crate already own
 //! both the concept and a place to put it?
 
+/// Z3-T9: this node's cache numbers and the purge.
+pub mod admin;
 /// Z3-T5 — what a cached value depends on, for change-feed invalidation.
 pub mod depends;
 pub mod local;

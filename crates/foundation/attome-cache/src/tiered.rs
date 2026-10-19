@@ -42,6 +42,11 @@
 //! [`get_or_load_depending`](TieredCache::get_or_load_depending) is recorded under the
 //! entities and records it was computed from ([`Dependency`]); the change-feed bus
 //! (`attome_core::cache_invalidation`) drops it on every node when one of them is written.
+//!
+//! Observability (Z3-T9): every read counts `cache_requests_total{cache, tier, result}`
+//! (`tier` = `l1`, `redis` or `source`; `result` = `hit`, `miss` or `error`), an entry pushed
+//! out by the capacity counts `cache_evictions_total{cache}`, and the cache registers with
+//! [`crate::admin`], which lists its numbers on this node and purges it.
 
 use std::collections::hash_map::RandomState;
 use std::future::Future;
@@ -54,6 +59,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use crate::Store;
+use crate::admin::{Counters, Handle};
 use crate::depends::{DepIndex, Dependency, InvalidateDeps};
 use crate::spec::{CacheSensitivity, CacheSpec, FailureMode, Partition};
 
@@ -194,6 +200,31 @@ pub struct TieredCache<V: Clone + Send + Sync + 'static> {
     last_degraded_warning: Mutex<Option<Instant>>,
     /// Z3-T5: this node's dependency -> keys index.
     deps: Mutex<DepIndex>,
+    /// Z3-T9: this node's hits, misses and evictions.
+    counters: std::sync::Arc<Counters>,
+}
+
+/// Z3-T9: counts one read at `tier` with `result`.
+fn count_request(cache: &'static str, tier: &'static str, result: &'static str) {
+    metrics::counter!("cache_requests_total", "cache" => cache, "tier" => tier, "result" => result)
+        .increment(1);
+}
+
+/// Z3-T9: an L1 builder that counts the entries the capacity (or quota)
+/// pushes out, and allows purging by predicate.
+fn l1_builder<V: Clone + Send + Sync + 'static>(
+    spec: &'static CacheSpec,
+    counters: &std::sync::Arc<Counters>,
+) -> moka::future::CacheBuilder<String, V, moka::future::Cache<String, V>> {
+    let counters = std::sync::Arc::clone(counters);
+    moka::future::Cache::builder()
+        .support_invalidation_closures()
+        .eviction_listener(move |_key, _value, cause| {
+            if cause == moka::notification::RemovalCause::Size {
+                Counters::add(&counters.evictions);
+                metrics::counter!("cache_evictions_total", "cache" => spec.name).increment(1);
+            }
+        })
 }
 
 impl<V: Clone + Send + Sync + 'static> std::fmt::Debug for TieredCache<V> {
@@ -234,14 +265,15 @@ where
             )));
         }
         crate::spec::register(spec);
-        let l1 = moka::future::Cache::builder()
+        let counters = std::sync::Arc::new(Counters::default());
+        let l1 = l1_builder(spec, &counters)
             .max_capacity(spec.l1_capacity)
             .expire_after(JitterExpiry {
                 ttl: spec.ttl,
                 jitter_pct: spec.jitter_pct,
             })
             .build();
-        Ok(Self {
+        let cache = Self {
             spec,
             l1,
             store,
@@ -249,7 +281,23 @@ where
             warm_loader: None,
             last_degraded_warning: Mutex::new(None),
             deps: Mutex::new(DepIndex::default()),
-        })
+            counters,
+        };
+        cache.register_admin();
+        Ok(cache)
+    }
+
+    /// Z3-T9: (re)registers this cache's admin handle under its name.
+    fn register_admin(&self) {
+        crate::admin::register(
+            self.spec.name,
+            std::sync::Arc::new(Handle {
+                spec: self.spec,
+                l1: self.l1.clone(),
+                counters: std::sync::Arc::clone(&self.counters),
+                store: self.shared_store().cloned(),
+            }),
+        );
     }
 
     /// Z3-T7: the loader [`warm_now`](Self::warm_now) fills the L1 from.
@@ -262,7 +310,7 @@ where
     /// `bytes` in all, instead of by `l1_capacity` entries. Entries already
     /// held are dropped.
     pub fn with_quota(mut self, bytes: u64) -> Self {
-        self.l1 = moka::future::Cache::builder()
+        self.l1 = l1_builder(self.spec, &self.counters)
             .max_capacity(bytes)
             .weigher(|key: &String, value: &V| {
                 let size = key.len() + serde_json::to_vec(value).map_or(0, |b| b.len());
@@ -273,6 +321,7 @@ where
                 jitter_pct: self.spec.jitter_pct,
             })
             .build();
+        self.register_admin();
         self
     }
 
@@ -367,6 +416,13 @@ where
     where
         F: Future<Output = Result<V, AppError>>,
     {
+        if let Some(value) = self.l1.get(&key).await {
+            Counters::add(&self.counters.hits);
+            count_request(self.spec.name, "l1", "hit");
+            return Ok(value);
+        }
+        Counters::add(&self.counters.misses);
+        count_request(self.spec.name, "l1", "miss");
         self.l1
             .try_get_with(key.clone(), self.load(&key, loader))
             .await
@@ -378,11 +434,13 @@ where
         F: Future<Output = Result<V, AppError>>,
     {
         let Some(store) = self.shared_store() else {
+            count_request(self.spec.name, "source", "miss");
             return loader.await;
         };
         let sealer = self.sealer_for(store);
         match bounded(crate::timeouts::REQUEST_PATH, store.get(key)).await {
             Ok(Some(stored)) => {
+                count_request(self.spec.name, "redis", "hit");
                 let text = match sealer {
                     Some(sealer) => sealer.open(&stored).map_err(|error| {
                         tracing::warn!(cache = self.spec.name, %error, "sealed cache entry does not open; reloading");
@@ -399,15 +457,20 @@ where
                     }
                 }
             }
-            Ok(None) => {}
+            Ok(None) => count_request(self.spec.name, "redis", "miss"),
             Err(error) => match self.spec.failure {
-                FailureMode::FailClosed => return Err(AppError::Overloaded("cache")),
+                FailureMode::FailClosed => {
+                    count_request(self.spec.name, "redis", "error");
+                    return Err(AppError::Overloaded("cache"));
+                }
                 FailureMode::FallBackToSource => {
+                    count_request(self.spec.name, "redis", "error");
                     self.warn_degraded(&error);
                     return loader.await;
                 }
             },
         }
+        count_request(self.spec.name, "source", "miss");
         let value = loader.await?;
         if let Ok(text) = serde_json::to_string(&value) {
             let stored = match sealer {
