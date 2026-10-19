@@ -83,6 +83,7 @@ fn request(title: &str, requester_id: Uuid) -> CreateWorkRequestFromOfferingRequ
         description: None,
         request_type: "it_request".to_owned(),
         requester_id,
+        channel: None,
     }
 }
 
@@ -114,6 +115,7 @@ async fn creating_from_an_offering_inherits_its_defaults_and_issues_a_verifiable
             description: Some("Starting Monday".to_owned()),
             request_type: "it_request".to_owned(),
             requester_id,
+            channel: None,
         },
         &test_ring(),
     )

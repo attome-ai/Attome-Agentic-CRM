@@ -80,6 +80,10 @@ pub struct CreateWorkRequestFromOfferingRequest {
     /// caller's choice, made explicit, same reasoning as `convert.rs`'s
     /// `project_id`/`organization_id` fields.
     pub requester_id: Uuid,
+    /// G2-T1: the `channel` choice the request came through (`portal` for
+    /// an anonymous web form); unset leaves it empty.
+    #[serde(default)]
+    pub channel: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -155,6 +159,7 @@ pub async fn create_work_request_from_offering(
     record.insert("offering_id".into(), Value::String(offering.id.to_string()));
     record.insert("priority".into(), Value::String(effective.priority.clone()));
     put_opt(&mut record, "queue_ref", effective.queue_ref.clone());
+    put_opt(&mut record, "channel", body.channel.clone());
     put_opt(
         &mut record,
         "sla_policy_id",

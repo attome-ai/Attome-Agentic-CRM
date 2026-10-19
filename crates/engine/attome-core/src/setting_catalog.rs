@@ -34,7 +34,52 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(billing_settings());
     all.extend(records_settings());
     all.extend(limit_settings());
+    all.extend(service_settings());
     all
+}
+
+/// G2-T1: anonymous requests from a public web form. Both settings must be
+/// set before any offering takes one: the offerings that accept them, and
+/// the service account they are filed as (it needs
+/// `service_work_request.create`). Off until then.
+fn service_settings() -> Vec<SettingDescriptor> {
+    const DEPLOYMENT: &[SettingScope] = &[SettingScope::Deployment];
+    vec![
+        SettingDescriptor::new(
+            "service.anonymous_intake.offerings",
+            "Ids of the public service offerings that accept anonymous requests \
+             from a web form (POST /api/v1/service-portal/offerings/{id}/requests). \
+             Empty: none do.",
+            || {
+                json!({
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                    }
+                })
+            },
+            DEPLOYMENT,
+            false,
+            || json!([]),
+        ),
+        SettingDescriptor::new(
+            "service.anonymous_intake.user",
+            "The service account anonymous requests are filed as and by. It needs \
+             service_work_request.create; never a person's account. Empty: no \
+             anonymous requests.",
+            || {
+                json!({
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})?$"
+                })
+            },
+            DEPLOYMENT,
+            false,
+            || json!(""),
+        ),
+    ]
 }
 
 /// AA9-T3: the limits an operator may change at run time (the

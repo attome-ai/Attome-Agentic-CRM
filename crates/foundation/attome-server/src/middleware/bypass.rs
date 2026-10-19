@@ -155,6 +155,22 @@ fn is_payment_link_path(path: &str) -> bool {
     !token.is_empty() && matches!(tail, None | Some("checkout")) && no_trailing_segment
 }
 
+/// G2-T1: an anonymous request on a public service offering,
+/// `/api/v1/service-portal/offerings/{id}/requests`: one id segment, the
+/// literal `requests`, nothing after. The handler
+/// (`attome_api::service_public::submit_request`) checks the offering takes
+/// anonymous requests, rate-limits and asks for the challenge.
+fn is_service_intake_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/v1/service-portal/offerings/") else {
+        return false;
+    };
+    let mut segments = rest.split('/');
+    let id = segments.next().unwrap_or("");
+    let is_requests = segments.next() == Some("requests");
+    let no_trailing_segment = segments.next().is_none();
+    !id.is_empty() && is_requests && no_trailing_segment
+}
+
 /// The only public route families with intentionally dynamic child segments.
 /// Every entry ends in `/`, so `starts_with` cannot match a sibling such as
 /// `/api/v1/auth/oidc-admin`. (The integrations webhook USED to be a third
@@ -195,6 +211,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_integrations_webhook_path(path)
         || is_billing_gateway_webhook_path(path)
         || is_payment_link_path(path)
+        || is_service_intake_path(path)
 }
 
 /// Paths that skip authn/authz (they are in `EXACT_BYPASS_PATHS` above) but
@@ -277,6 +294,16 @@ mod tests {
     fn service_portal_routes_are_bypassed_but_the_catalog_admin_surface_is_not() {
         assert!(is_bypass("/api/v1/service-portal/offerings"));
         assert!(is_bypass("/api/v1/service-portal/status"));
+        // G2-T1: one offering's anonymous requests, and nothing beside it.
+        let intake =
+            "/api/v1/service-portal/offerings/8f14e45f-ceea-4d5b-8f5e-4c4b4c4b4c4b/requests";
+        assert!(is_bypass(intake));
+        assert!(is_csrf_exempt(intake));
+        assert!(!is_bypass(&format!("{intake}/x")));
+        assert!(!is_bypass(
+            "/api/v1/service-portal/offerings/8f14e45f-ceea-4d5b-8f5e-4c4b4c4b4c4b"
+        ));
+        assert!(!is_bypass("/api/v1/service-portal/offerings//requests"));
         assert!(is_csrf_exempt("/api/v1/service-portal/offerings"));
         assert!(is_csrf_exempt("/api/v1/service-portal/status"));
         // Regression guard: the public portal routes must never accidentally

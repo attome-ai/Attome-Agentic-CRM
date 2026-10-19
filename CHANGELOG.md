@@ -115,6 +115,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Anonymous service requests (G2-T1): `POST /api/v1/service-portal/offerings/{id}/requests` files a
+  request on a public offering from a web form without signing in, off by default: the offering must
+  be in `service.anonymous_intake.offerings` and `service.anonymous_intake.user` must name the service
+  account requests are filed as. Five requests a minute per address and sixty per offering; the
+  deployment's challenge (proof-of-work or CAPTCHA) when one is configured. The answer is the status
+  token for `GET /api/v1/service-portal/status`. `/embed/service-intake.js` puts the form on another
+  site in a shadow root (Arabic or English, solves proof-of-work); that site's origin goes in
+  `cors.allowed_origins`.
 - Page versions (K5-T1): every publish of a content page (by hand, by its schedule, or approved)
   keeps a numbered version (migration 0126). `GET /api/v1/admin/content/pages/{id}/versions`,
   `.../versions/{number}`, `.../versions/compare?from=&to=` (title, SEO and each block added,
