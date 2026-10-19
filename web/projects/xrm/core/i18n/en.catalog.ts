@@ -271,6 +271,10 @@ export const xrmEn = {
     inConfig: 'Set in the configuration file; takes effect after a restart.',
     none: 'No limits to show.',
   },
+  tour: {
+    next: 'Next', back: 'Back', done: 'Done', skip: 'Skip the tour',
+    stepOf: 'Step {step} of {total}', replay: 'Show this page\'s tour',
+  },
   firstRun: {
     title: 'Set up Attome for your country',
     intro: 'Pick the country this deployment serves. Attome installs its region preset (currency, VAT rates, identity document formats, business week and public holidays) and sets the default language, time zone and calendar. People can still choose their own language and calendar.',

@@ -24,6 +24,11 @@
       <i class="las la-cog" aria-hidden="true"></i>
       {{ 'shell.mySettings' | translate }}
     </a>
+    <!-- B14-T1 — this page's guided tour, again. -->
+    <button type="button" class="pp-link" (click)="replayTour()" data-testid="profile-replay-tour">
+      <i class="las la-question-circle" aria-hidden="true"></i>
+      {{ 'tour.replay' | translate }}
+    </button>
     <!-- U5 (D-602) — the user's own notification preferences. -->
     <a class="pp-link" routerLink="/xrm/me/notifications" (click)="isOpen.set(false)"
        data-testid="profile-notification-settings">

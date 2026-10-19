@@ -1,9 +1,10 @@
 import {
   ChangeDetectionStrategy, Component, effect, ElementRef, inject, signal, viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
-  AuthService, Lang, LangService, ThemeMode, ThemeService, TranslatePipe, UserPreferencesService,
+  AuthService, Lang, LangService, ThemeMode, ThemeService, TourService, TranslatePipe,
+  UserPreferencesService,
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '@attome/xrm/core/entity';
@@ -47,6 +48,8 @@ export class ProfileMenuComponent {
   private readonly userPrefs     = inject(UserPreferencesService);
   private readonly dialog        = inject(DialogService);
   private readonly personal      = inject(PersonalSettingsService);
+  private readonly tours         = inject(TourService);
+  private readonly router        = inject(Router);
 
   readonly isOpen = signal(false);
   readonly profilePanelRef = viewChild<ElementRef<HTMLElement>>('profilePanel');
@@ -58,6 +61,12 @@ export class ProfileMenuComponent {
   readonly languages = this.langService.languages;
 
   private lastTimezoneFetchFor: string | null = null;
+
+  /** B14-T1: shows this page's guided tour again. */
+  replayTour(): void {
+    this.isOpen.set(false);
+    void this.tours.replayFor(this.router.url).catch(() => undefined);
+  }
 
   constructor() {
     // Fetches the current user's own record once per login (`auth.userId()`

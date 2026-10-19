@@ -40,7 +40,7 @@
               "model.prompt_override.describe", "model.prompt_override.edit", "model.prompt_override.list",
               "model.record_type.describe", "model.record_type.edit", "model.record_type.list",
               "model.relationship.describe", "model.reply_template.describe", "model.reply_template.edit",
-              "model.reply_template.list", "model.rule.describe", "model.state_model.describe", "ops.slo_health",
+              "model.reply_template.list", "model.rule.describe", "model.state_model.describe", "model.tour.describe", "model.tour.edit", "model.tour.list", "ops.slo_health",
               "query.execute", "query.plan", "record.ai_field", "record.assign", "record.bulk.delete",
               "record.bulk.preview", "record.bulk.status", "record.bulk.update", "record.classify", "record.create",
               "record.delete", "record.deleted", "record.get", "record.restore", "record.schema", "record.summarize",

@@ -10,6 +10,7 @@ pub mod option_set;
 pub mod prompt_override;
 pub mod record_type;
 pub mod reply_template;
+pub mod tour;
 
 pub use agent::{AGENT, AgentKind};
 pub use environment_variable::{ENVIRONMENT_VARIABLE, EnvironmentVariableKind};
@@ -20,3 +21,4 @@ pub use option_set::{OPTION_SET, OptionSetKind};
 pub use prompt_override::{PROMPT_OVERRIDE, PromptOverrideKind};
 pub use record_type::{RECORD_TYPE, RecordTypeKind};
 pub use reply_template::{REPLY_TEMPLATE, ReplyTemplateKind};
+pub use tour::{TOUR, TourKind};

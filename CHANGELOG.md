@@ -115,6 +115,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Guided tours (B14-T1): a `tour` metadata kind (title, app route, roles, whether it starts by itself,
+  and steps with a CSS selector and English/Arabic text, edited like any other kind and by agents as
+  `model.tour.*`). `GET /api/v1/model/tours` gives a signed-in person the published tours for their
+  roles. The web app starts a route's tour once per person (remembered in the personal setting
+  `core.tours_seen`), highlights each step's element with a bubble in the page language, and offers
+  "Show this page's tour" in the profile menu.
 - Documentation site (AC9-T1): `node scripts/docs-build.mjs` builds static HTML from `docs/` in
   English and Arabic (right to left, `docs/ar/`, untranslated pages marked) with an API reference
   generated from `openapi.json`, one folder per version. No dependencies beyond Node.

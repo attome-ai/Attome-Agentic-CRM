@@ -470,6 +470,22 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             || json!(false),
         ),
         SettingDescriptor::new(
+            "core.tours_seen",
+            "B14-T1: the guided tours this person has finished or skipped, by tour \
+             id, so a tour that starts by itself does so once. Replaying a tour \
+             does not change it.",
+            || {
+                json!({
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": { "type": "string", "maxLength": 64 }
+                })
+            },
+            PERSONAL,
+            false,
+            || json!([]),
+        ),
+        SettingDescriptor::new(
             "core.simple_mode",
             "Simple mode (AK6-T2): hide advanced actions such as duplicating, sharing \
              and changesets, for people who only need the everyday ones.",

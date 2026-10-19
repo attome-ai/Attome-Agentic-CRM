@@ -93,3 +93,9 @@ export { consumeReturnUrl, isSafeReturnUrl } from './lib/return-url';
 export type { ColorScheme, ColorPalette, ThemeMode } from './lib/theme.service';
 export type { Lang }                                 from './lib/lang.service';
 export type { Translation }                          from '@jsverse/transloco';
+
+// B14-T1: guided tours (the overlay that shows them lives in @attome/xrm/shell).
+export { TourService }                                from './lib/tours/tour.service';
+export type { ActiveTour }                            from './lib/tours/tour.service';
+export { TOURS_SEEN_SETTING, autoTour, localText, routeMatches, tourFor } from './lib/tours/tour';
+export type { LocalText, Tour, TourPlacement, TourStep } from './lib/tours/tour';

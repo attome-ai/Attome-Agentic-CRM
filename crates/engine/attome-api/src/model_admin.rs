@@ -1622,6 +1622,90 @@ async fn import_files(
     Ok(Json(ImportResponse { drafts }))
 }
 
+/// One guided tour as a signed-in person receives it (B14-T1).
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct TourView {
+    id: String,
+    name: String,
+    /// `{ "en": .., "ar": .. }`.
+    #[schema(value_type = Object)]
+    title: Value,
+    /// The app path prefix the tour belongs to.
+    route: String,
+    /// Starts by itself the first time the person opens `route`.
+    auto_start: bool,
+    /// `[{ selector, title?, text, placement? }]`.
+    #[schema(value_type = Vec<Object>)]
+    steps: Value,
+}
+
+/// The published tours a caller with `roles` sees: those naming no role, or
+/// one of `roles`; an administrator sees every tour. Sorted by route, then
+/// name. Pure.
+fn tours_for(tours: &[Value], roles: &[Uuid], is_admin: bool) -> Vec<TourView> {
+    let mut out: Vec<TourView> = tours
+        .iter()
+        .filter(|tour| {
+            let named: Vec<Uuid> = tour["roles"]
+                .as_array()
+                .map(|rs| {
+                    rs.iter()
+                        .filter_map(|r| r.as_str().and_then(|s| Uuid::parse_str(s).ok()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            is_admin || named.is_empty() || named.iter().any(|r| roles.contains(r))
+        })
+        .filter_map(|tour| {
+            Some(TourView {
+                id: tour["id"].as_str()?.to_owned(),
+                name: tour["name"].as_str().unwrap_or_default().to_owned(),
+                title: tour["title"].clone(),
+                route: tour["route"].as_str()?.to_owned(),
+                auto_start: tour["auto_start"].as_bool().unwrap_or(false),
+                steps: tour["steps"].clone(),
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| a.route.cmp(&b.route).then_with(|| a.name.cmp(&b.name)));
+    out
+}
+
+/// The guided tours this caller may see (B14-T1).
+///
+/// Every published tour that names none of the roles or one the caller holds
+/// (an administrator sees all), with its steps in English and Arabic. The web
+/// app starts a tour by itself once per person on its route, and offers it
+/// again on request.
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/tours",
+    tag = "model",
+    responses(
+        (status = 200, description = "The tours this caller sees", body = PaginatedResponse<TourView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn tours(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+) -> Result<Json<PaginatedResponse<TourView>>, AppError> {
+    if cooked().snapshot().version == 0 {
+        refresh_cooked(&state).await?;
+    }
+    let registry = cooked();
+    let all: Vec<Value> = registry
+        .hashes("tour")
+        .into_iter()
+        .filter_map(|(key, _)| registry.get::<Value>("tour", &key).map(|v| (*v).clone()))
+        .collect();
+    let roles = ctx.role_ids.clone().unwrap_or_default();
+    let items = tours_for(&all, &roles, ctx.is_admin);
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/model/kinds", get(list_kinds))
@@ -1658,6 +1742,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/model/{kind}/{id}/publish", post(publish))
         .route("/api/v1/model/forms/{id}/plan", get(form_plan))
+        .route("/api/v1/model/tours", get(tours))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1681,7 +1766,8 @@ pub fn routes() -> Router<EngineState> {
         blueprint_apply,
         blueprint_rollback,
         menu,
-        form_plan
+        form_plan,
+        tours
     ),
     components(schemas(
         KindView,
@@ -1720,6 +1806,29 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod menu_tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn tours_are_filtered_by_role_and_sorted_by_route() {
+        let sales = Uuid::now_v7();
+        let support = Uuid::now_v7();
+        let tour = |id: &str, route: &str, roles: Vec<Uuid>| {
+            json!({
+                "id": id, "name": id, "route": route, "roles": roles, "auto_start": true,
+                "title": { "en": id }, "steps": [{ "selector": "#x", "text": { "en": "x" } }]
+            })
+        };
+        let all = vec![
+            tour("deals", "/xrm/entity/opportunity", vec![sales]),
+            tour("home", "/xrm", vec![]),
+            tour("cases", "/xrm/entity/service_ticket", vec![support]),
+        ];
+        let ids = |views: Vec<TourView>| views.into_iter().map(|v| v.id).collect::<Vec<_>>();
+        assert_eq!(ids(tours_for(&all, &[sales], false)), ["home", "deals"]);
+        assert_eq!(ids(tours_for(&all, &[], false)), ["home"]);
+        assert_eq!(ids(tours_for(&all, &[], true)), ["home", "deals", "cases"]);
+        let no_route = json!({ "id": "x", "steps": [] });
+        assert!(tours_for(&[no_route], &[], true).is_empty());
+    }
 
     #[test]
     fn menu_item_paths_name_each_item_by_group() {

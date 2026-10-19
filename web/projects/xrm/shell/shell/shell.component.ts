@@ -23,6 +23,7 @@ import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 import { ShellSidebarComponent } from '../shell-sidebar/shell-sidebar.component';
 import { StatusBannerComponent } from '../status-banner/status-banner.component';
 import { FirstRunPromptComponent } from '../first-run-prompt/first-run-prompt.component';
+import { TourOverlayComponent } from '../tour-overlay/tour-overlay.component';
 import { PaletteUses, entityMatchesPrefix, isQuestion, parsePaletteQuery, rankByUse } from '../command-palette/palette';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ const PALETTE_RECORDS = 8;
     RouterOutlet, FormsModule, TranslatePipe,
     ShellSidebarComponent, NotificationBellComponent, ProfileMenuComponent, AppSwitcherComponent,
     CopilotLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
-    StatusBannerComponent, FirstRunPromptComponent,
+    StatusBannerComponent, FirstRunPromptComponent, TourOverlayComponent,
   ],
   host: {
     '(window:keydown)': 'onKeydown($event)',
