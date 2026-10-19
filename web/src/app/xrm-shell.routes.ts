@@ -599,6 +599,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/entity').then(m => m.RecycleBinComponent),
           },
           {
+            // C3-T2: posts and changes to the records the person follows.
+            path: 'feed',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/feed').then(m => m.FeedComponent),
+          },
+          {
             // C2-T2: the records the signed-in person follows.
             path: 'following',
             canActivate: [authGuard],

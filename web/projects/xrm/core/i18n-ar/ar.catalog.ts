@@ -1746,6 +1746,34 @@ export const xrmAr = {
       ads: 'الإعلانات',
     },
   },
+  // ── C3-T2 — آخر المستجدات ──
+  feed: {
+    title: 'آخر المستجدات',
+    composeLabel: 'شارك تحديثًا',
+    composePlaceholder: 'ما الذي ينبغي أن يعرفه زملاؤك؟',
+    post: 'نشر',
+    posting: 'جاري النشر…',
+    postFailed: 'تعذّر نشر مشاركتك. حاول مرة أخرى.',
+    postForbidden: 'لا يُسمح لك بالنشر هنا.',
+    filterLabel: 'عرض',
+    filter: {
+      all: 'الكل',
+      posts: 'المشاركات',
+      records: 'السجلات التي تتابعها',
+    },
+    you: 'أنت',
+    colleague: 'أحد الزملاء',
+    event: {
+      create: 'أُنشئ',
+      update: 'حُدّث',
+      delete: 'حُذف',
+      restore: 'استُعيد',
+    },
+    empty: 'لا شيء هنا بعد. تابع سجلات أو انشر تحديثًا.',
+    loading: 'جاري التحميل…',
+    loadFailed: 'تعذّر تحميل آخر المستجدات.',
+    more: 'عرض الأقدم',
+  },
   // ── C2-T2 — متابعة سجل ──
   follow: {
     follow: 'متابعة',

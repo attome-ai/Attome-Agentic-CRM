@@ -1823,6 +1823,34 @@ export const xrmEn = {
       ads: 'Advertising',
     },
   },
+  // ── C3-T2: the feed ──
+  feed: {
+    title: 'Feed',
+    composeLabel: 'Share an update',
+    composePlaceholder: 'What should your colleagues know?',
+    post: 'Post',
+    posting: 'Posting…',
+    postFailed: 'Your post could not be shared. Try again.',
+    postForbidden: 'You are not allowed to post here.',
+    filterLabel: 'Show',
+    filter: {
+      all: 'Everything',
+      posts: 'Posts',
+      records: 'Records you follow',
+    },
+    you: 'You',
+    colleague: 'A colleague',
+    event: {
+      create: 'Created',
+      update: 'Updated',
+      delete: 'Deleted',
+      restore: 'Restored',
+    },
+    empty: 'Nothing here yet. Follow records or post an update.',
+    loading: 'Loading…',
+    loadFailed: 'The feed could not be loaded.',
+    more: 'Show older',
+  },
   // ── C2-T2: following a record ──
   follow: {
     follow: 'Follow',
