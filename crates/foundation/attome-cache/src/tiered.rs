@@ -37,6 +37,11 @@
 //! [`with_quota`](TieredCache::with_quota) bounds its L1 by the serialized size of its
 //! entries instead of their count, so an engine's or an extension's partition cannot grow
 //! past its share of memory.
+//!
+//! Dependencies (Z3-T5): a value read through
+//! [`get_or_load_depending`](TieredCache::get_or_load_depending) is recorded under the
+//! entities and records it was computed from ([`Dependency`]); the change-feed bus
+//! (`attome_core::cache_invalidation`) drops it on every node when one of them is written.
 
 use std::collections::hash_map::RandomState;
 use std::future::Future;
@@ -49,6 +54,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use crate::Store;
+use crate::depends::{DepIndex, Dependency, InvalidateDeps};
 use crate::spec::{CacheSensitivity, CacheSpec, FailureMode, Partition};
 
 /// `ttl` plus or minus up to `jitter_pct` percent, from `seed`.
@@ -186,6 +192,8 @@ pub struct TieredCache<V: Clone + Send + Sync + 'static> {
     sealer: Option<std::sync::Arc<dyn ValueSealer>>,
     warm_loader: Option<WarmLoader<V>>,
     last_degraded_warning: Mutex<Option<Instant>>,
+    /// Z3-T5: this node's dependency -> keys index.
+    deps: Mutex<DepIndex>,
 }
 
 impl<V: Clone + Send + Sync + 'static> std::fmt::Debug for TieredCache<V> {
@@ -240,6 +248,7 @@ where
             sealer,
             warm_loader: None,
             last_degraded_warning: Mutex::new(None),
+            deps: Mutex::new(DepIndex::default()),
         })
     }
 
@@ -441,6 +450,63 @@ where
         self.l1.invalidate(&self.spec.key(id)).await;
     }
 
+    /// Z3-T5: the value for `id` (as [`get_or_load`](Self::get_or_load), or
+    /// [`get_or_load_for`](Self::get_or_load_for) with `reader`), recorded
+    /// under `depends_on` so the change-feed bus drops it on this node when
+    /// one of them is written. The key is recorded before the value loads
+    /// and the value is kept only if no dependency was written meanwhile.
+    pub async fn get_or_load_depending<F>(
+        &self,
+        reader: Option<&str>,
+        id: &str,
+        depends_on: &[Dependency],
+        loader: F,
+    ) -> Result<V, AppError>
+    where
+        F: Future<Output = Result<V, AppError>>,
+    {
+        let key = match reader {
+            Some(reader) => self.reader_key(reader, id)?,
+            None if self.spec.partition == Partition::Shared => self.spec.key(id),
+            None => {
+                return Err(AppError::internal(format!(
+                    "cache {} is partitioned {:?}; a reader is required",
+                    self.spec.name, self.spec.partition
+                )));
+            }
+        };
+        let limit = usize::try_from(self.spec.l1_capacity)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(2);
+        let recorded = self.index().record(&key, depends_on, limit);
+        if !recorded {
+            self.l1.invalidate_all();
+        }
+        let value = self.fetch(key.clone(), loader).await?;
+        let current = self.index().still_recorded(&key, depends_on);
+        if !current {
+            self.drop_key(&key).await;
+        }
+        Ok(value)
+    }
+
+    fn index(&self) -> std::sync::MutexGuard<'_, DepIndex> {
+        self.deps
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Drops `key` from the L1 and the shared store; a store failure is
+    /// the degraded warning, the entry then lives its TTL there.
+    async fn drop_key(&self, key: &str) {
+        self.l1.invalidate(key).await;
+        if let Some(store) = self.shared_store()
+            && let Err(error) = bounded(crate::timeouts::BACKGROUND, store.del(key)).await
+        {
+            self.warn_degraded(&error);
+        }
+    }
+
     /// Z3-T4: drops one reader's `id` from this node and the shared store.
     pub async fn invalidate_for(&self, reader: &str, id: &str) -> Result<(), AppError> {
         let key = self.reader_key(reader, id)?;
@@ -467,6 +533,35 @@ where
             } else {
                 0
             }
+        })
+    }
+}
+
+impl<V> InvalidateDeps for TieredCache<V>
+where
+    V: Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
+{
+    fn cache_name(&self) -> &'static str {
+        self.spec.name
+    }
+
+    fn invalidate_dependency<'a>(
+        &'a self,
+        dependency: &'a Dependency,
+    ) -> std::pin::Pin<Box<dyn Future<Output = usize> + Send + 'a>> {
+        Box::pin(async move {
+            let keys = self.index().take(dependency);
+            for key in &keys {
+                self.drop_key(key).await;
+            }
+            keys.len()
+        })
+    }
+
+    fn flush_local(&self) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send + '_>> {
+        Box::pin(async move {
+            self.index().clear();
+            self.l1.invalidate_all();
         })
     }
 }

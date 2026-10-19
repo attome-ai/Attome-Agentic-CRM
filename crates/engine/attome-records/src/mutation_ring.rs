@@ -359,6 +359,8 @@ impl<'a> MutationRing<'a> {
         };
 
         attome_db::tx::commit(tx).await?;
+        // Z3-T5: every node's cache invalidation bus reads the feed now.
+        attome_core::cache_invalidation::ring_after_commit(&self.state.base.redis);
 
         if entity_name == attome_audit::AUDIT_CONFIG_ENTITY {
             // The config row's own `entity_name`/`field_name` columns name

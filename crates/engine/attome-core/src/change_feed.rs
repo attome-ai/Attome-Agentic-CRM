@@ -365,6 +365,91 @@ pub async fn read_batch(
         .collect())
 }
 
+/// Z3-T5: a position before every event a transaction still open could
+/// commit, and after every event already finished. A reader that starts here
+/// misses nothing written from now on and reads nothing older.
+pub async fn horizon(conn: &mut PgConnection) -> Result<CursorPosition, AppError> {
+    let xmin: i64 =
+        sqlx::query_scalar("SELECT pg_snapshot_xmin(pg_current_snapshot())::text::bigint")
+            .fetch_one(conn)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(CursorPosition {
+        last_commit_xid: xmin - 1,
+        last_id: None,
+    })
+}
+
+/// Z3-T5: up to `limit` finished events after `position`, oldest first, and
+/// the position after the last of them (`position` itself when none).
+///
+/// The same visibility gate as [`read_batch`]
+/// (`commit_xid < pg_snapshot_xmin(pg_current_snapshot())`), but the
+/// position is the caller's, held in memory, not a stored consumer cursor;
+/// and it is exact within one transaction's events (`(commit_xid, id)`), so
+/// a batch that ends inside one transaction resumes at the next event.
+pub async fn read_after(
+    conn: &mut PgConnection,
+    position: CursorPosition,
+    limit: i64,
+) -> Result<(Vec<ChangeEvent>, CursorPosition), AppError> {
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(
+        Uuid,
+        String,
+        Uuid,
+        String,
+        Option<String>,
+        chrono::DateTime<chrono::Utc>,
+        Vec<String>,
+        i64,
+    )> = sqlx::query_as(
+        "SELECT id, entity_logicalname, record_id, operation, event_name, created_at, \
+                changed_attributes, commit_xid::text::bigint \
+         FROM entity_change_event \
+         WHERE (commit_xid > $1::text::xid8 \
+                OR (commit_xid = $1::text::xid8 AND id > $2)) \
+           AND commit_xid < pg_snapshot_xmin(pg_current_snapshot()) \
+         ORDER BY commit_xid, id \
+         LIMIT $3",
+    )
+    .bind(position.last_commit_xid.to_string())
+    .bind(position.last_id.unwrap_or(Uuid::nil()))
+    .bind(limit)
+    .fetch_all(conn)
+    .await
+    .map_err(AppError::internal)?;
+
+    let next = rows.last().map_or(position, |row| CursorPosition {
+        last_commit_xid: row.7,
+        last_id: Some(row.0),
+    });
+    let events = rows
+        .into_iter()
+        .map(
+            |(
+                id,
+                entity_logicalname,
+                record_id,
+                operation,
+                event_name,
+                created_at,
+                changed_attributes,
+                _,
+            )| ChangeEvent {
+                id,
+                entity_logicalname,
+                record_id,
+                operation,
+                event_name,
+                created_at,
+                changed_attributes,
+            },
+        )
+        .collect();
+    Ok((events, next))
+}
+
 /// Advances `consumer`'s cursor past `event`.
 ///
 /// Call this AFTER the batch's work is durable, and never in the same

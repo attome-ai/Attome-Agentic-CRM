@@ -1665,6 +1665,14 @@ impl EngineSystemBuilder {
             snapshot_catchup_interval,
         );
 
+        // Z3-T5: the dependency-aware caches follow the change feed on every
+        // node, once a second and at once on a record write's doorbell.
+        attome_core::cache_invalidation::bus().spawn(
+            state.base.db.clone(),
+            Some(&subscriber),
+            attome_core::cache_invalidation::POLL_INTERVAL,
+        );
+
         // P1.15 §4(d): bounded like the pre-warm above (guidelines §14.4's
         // 10s startup budget) — an unreachable Redis at boot fails startup
         // loudly instead of hanging it indefinitely. Every channel above
@@ -1682,6 +1690,7 @@ impl EngineSystemBuilder {
             attome_core::STATE_MODEL_VERSION_CHANNEL,
             attome_core::RELATIONSHIP_VERSION_CHANNEL,
             attome_core::RULE_VERSION_CHANNEL,
+            attome_core::cache_invalidation::CACHE_INVALIDATE_CHANNEL,
         ] {
             tokio::time::timeout(Duration::from_secs(10), subscriber.subscribe(channel)).await??;
         }

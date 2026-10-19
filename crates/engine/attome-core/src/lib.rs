@@ -63,6 +63,8 @@ pub mod audit_signing;
 /// lock precedence; `compile_condition` (one attome-rules program, typed
 /// parameters) and `validate_rule`.
 pub mod business_rules;
+/// Z3-T5 — cross-node cache invalidation from the change feed.
+pub mod cache_invalidation;
 /// Z3-T3 — how a cache must keep an entity's fields.
 pub mod cache_sensitivity;
 /// D-517 — the single `calendar` loader: strict parsing into a

@@ -108,6 +108,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   its age, and never a value. Each start records them in `secret_inventory` (migration 0120). A daily
   job tells administrators about a secret older than `security.secret_max_age_days` (default 365,
   `0` off), at most once every 30 days per secret.
+- Change-feed cache invalidation (Z3-T5): a `TieredCache` value read with `get_or_load_depending` is
+  recorded under the entities and records it came from, and every node drops it within about a second
+  of a write to one of them, by reading the entity change feed (no Redis needed); a record write also
+  rings `attome-cache:invalidate` so nodes read at once.
 - Job types registered at run time (Z7-T1): `attome_jobs::JobRegistry` maps a job name to its
   declaration (`JobType`: payload version, lane, priority, attempts, per-node concurrency cap) and
   handler, and `EngineJob::Registered` carries `{name, version, payload}`, so an engine adds a job
