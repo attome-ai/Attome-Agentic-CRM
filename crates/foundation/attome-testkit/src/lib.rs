@@ -40,6 +40,11 @@ use std::sync::OnceLock;
 #[cfg(feature = "query-counter")]
 pub mod query_counter;
 
+/// Z7-T7: running a registered job at once and moving schedule time
+/// (feature `jobs`).
+#[cfg(feature = "jobs")]
+pub mod jobs;
+
 use sqlx::Connection;
 use sqlx::postgres::{PgConnection, PgPoolOptions};
 use uuid::Uuid;

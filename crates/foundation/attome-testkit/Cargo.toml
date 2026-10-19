@@ -12,6 +12,10 @@ publish.workspace      = true
 
 [dependencies]
 attome-config   = { workspace = true, optional = true }
+attome-jobs     = { workspace = true, optional = true }
+attome-types    = { workspace = true, optional = true }
+chrono          = { workspace = true, optional = true }
+serde           = { workspace = true, optional = true }
 sqlx.workspace  = true
 tokio.workspace = true
 tracing            = { workspace = true, optional = true }
@@ -26,6 +30,8 @@ query-counter = ["dep:tracing", "dep:tracing-subscriber"]
 # `point_config_at`, for tests that build an `AppConfig`; optional so the
 # crates below attome-config can use this crate without a cycle.
 app-config = ["dep:attome-config"]
+# Z7-T7: `jobs`, run a registered job at once and move schedule time.
+jobs = ["dep:attome-jobs", "dep:attome-types", "dep:chrono", "dep:serde"]
 
 [lints]
 workspace = true

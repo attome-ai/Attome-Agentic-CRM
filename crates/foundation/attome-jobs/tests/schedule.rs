@@ -250,13 +250,37 @@ async fn a_one_off_runs_once_and_a_future_cron_waits() {
     assert_eq!(row.0, "cron 0 0 1 1 * UTC");
     assert!(row.1 > chrono::Utc::now());
 
-    // Once due, it runs, and moves to the next 1 January.
-    force_due(&pool, &cron_name).await;
-    assert!(
-        tick_at(&pool, &cron_name, &cron, TestJob::Sweep)
-            .await
-            .expect("due tick")
-    );
+    // Once due, it runs, and moves to the next 1 January. Z7-T7: the time is
+    // moved with a fake clock, not forced in SQL, and nobody sleeps.
+    let clock = attome_types::clock::FakeClock::new(chrono::Utc::now());
+    let past_new_year = row.1 - chrono::Utc::now() + chrono::Duration::minutes(1);
+    let due = attome_testkit::jobs::advance(
+        &pool,
+        &clock,
+        past_new_year,
+        &[(cron_name.as_str(), &cron, TestJob::Sweep)],
+    )
+    .await
+    .expect("advance");
+    assert_eq!(due, vec![cron_name.clone()]);
+
+    // ...and its job's handler runs at once, with no worker.
+    let registry: attome_jobs::JobRegistry<std::sync::Arc<std::sync::atomic::AtomicUsize>> =
+        attome_jobs::JobRegistry::new();
+    registry
+        .register(
+            attome_jobs::JobType::new("sweep", 1),
+            |runs: std::sync::Arc<std::sync::atomic::AtomicUsize>, _job| async move {
+                runs.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok(())
+            },
+        )
+        .expect("register");
+    let runs = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    attome_testkit::jobs::run_now(&registry, std::sync::Arc::clone(&runs), "sweep", &())
+        .await
+        .expect("run now");
+    assert_eq!(runs.load(std::sync::atomic::Ordering::SeqCst), 1);
     let next: chrono::DateTime<chrono::Utc> =
         sqlx::query_scalar("SELECT next_due_at FROM job_schedule WHERE name = $1")
             .bind(&cron_name)

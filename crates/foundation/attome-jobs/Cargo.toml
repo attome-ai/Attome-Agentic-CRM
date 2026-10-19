@@ -27,7 +27,7 @@ tracing-opentelemetry.workspace = true
 uuid.workspace                  = true
 
 [dev-dependencies]
-attome-testkit.workspace = true
+attome-testkit = { workspace = true, features = ["jobs"] }
 
 [lints]
 workspace = true

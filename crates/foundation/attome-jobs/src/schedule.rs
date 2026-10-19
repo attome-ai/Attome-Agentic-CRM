@@ -372,17 +372,30 @@ fn never() -> DateTime<Utc> {
 /// job runs once and the schedule moves on. A schedule whose description
 /// changed restarts at its new first slot. One short transaction, as
 /// [`tick`].
-#[expect(
-    clippy::disallowed_methods,
-    reason = "attome-jobs' whole public surface is `sqlx::Error`, as `tick`"
-)]
 pub async fn tick_at<J: crate::Job>(
     pool: &attome_db::DbPool,
     name: &str,
     schedule: &Schedule,
     job: J,
 ) -> Result<bool, sqlx::Error> {
-    let now = Utc::now();
+    tick_at_clock(pool, name, schedule, job, &attome_types::clock::SystemClock).await
+}
+
+/// Z7-T7: [`tick_at`] at `clock`'s time, so a test moves a schedule's time
+/// with a `FakeClock` instead of sleeping (the Z15-T5 `_at` pattern: the time
+/// is bound into the SQL, never the database's `now()`).
+#[expect(
+    clippy::disallowed_methods,
+    reason = "attome-jobs' whole public surface is `sqlx::Error`, as `tick`"
+)]
+pub async fn tick_at_clock<J: crate::Job>(
+    pool: &attome_db::DbPool,
+    name: &str,
+    schedule: &Schedule,
+    job: J,
+    clock: &dyn attome_types::clock::Clock,
+) -> Result<bool, sqlx::Error> {
+    let now = clock.now();
     let description = schedule.describe();
     let first = schedule.first_due(now).unwrap_or_else(never);
     let mut tx = pool.begin().await?;
@@ -405,10 +418,11 @@ pub async fn tick_at<J: crate::Job>(
     let due: Option<DateTime<Utc>> = sqlx::query_scalar(attome_db::tagged_sql!(
         "jobs.schedule",
         "SELECT next_due_at FROM job_schedule \
-         WHERE name = $1 AND next_due_at <= now() \
+         WHERE name = $1 AND next_due_at <= $2 \
          FOR UPDATE SKIP LOCKED"
     ))
     .bind(name)
+    .bind(now)
     .fetch_optional(&mut *tx)
     .await?;
     let Some(due) = due else {
@@ -419,12 +433,13 @@ pub async fn tick_at<J: crate::Job>(
     sqlx::query(attome_db::tagged_sql!(
         "jobs.schedule",
         "UPDATE job_schedule \
-         SET next_due_at = $2, last_enqueued_at = now(), \
+         SET next_due_at = $2, last_enqueued_at = $3, \
              row_version = row_version + 1, updated_at = now() \
          WHERE name = $1"
     ))
     .bind(name)
     .bind(next)
+    .bind(now)
     .execute(&mut *tx)
     .await?;
     crate::enqueue_in_tx_dedup(&mut tx, job, name).await?;
