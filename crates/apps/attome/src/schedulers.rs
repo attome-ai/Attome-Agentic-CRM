@@ -108,6 +108,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // D15-T3: meetings and people's own calendars, every five minutes.
+    crate::jobs::spawn_calendar_sync_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // AA14-T8: p95 regressions since the last upgrade, daily.
     crate::jobs::spawn_perf_regression_scheduler(
         db.clone(),

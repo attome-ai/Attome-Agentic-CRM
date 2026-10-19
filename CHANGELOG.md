@@ -124,6 +124,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendar sync (D15-T3): meeting activities a person owns sync both ways with the Microsoft 365
+  or Google calendar they connected (D15-T1), every five minutes (the `calendar_sync` job,
+  migration 0144). When both sides changed, the later edit wins and the other side's values are
+  kept in `calendar_sync_conflict`; an event deleted in the calendar cancels the meeting.
+- Video meetings on activities (J7-T2): a "Video meeting" activity creates a Teams, Meet, Zoom or
+  Jitsi meeting and shows a Join button from 15 minutes before it starts.
 - Offline use (B17-T4, B18-T4, B18-T5, B18-T12): `POST /api/v1/devices`, `GET /api/v1/devices/me/{id}`
   and `POST .../wiped` for the app; `GET /api/v1/offline/profile` (metadata and rules, never a
   sensitive attribute), `POST /api/v1/offline/pull` (records through the profile's stored query,

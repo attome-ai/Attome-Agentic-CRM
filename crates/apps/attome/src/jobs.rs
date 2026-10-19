@@ -2605,12 +2605,18 @@ const DEDUP_KEY_AUDIT_V1_CUTOVER_CHECKPOINT: &str = "audit-v1-cutover-checkpoint
 const DEDUP_KEY_FLEET_POLL: &str = "fleet-poll";
 /// Z1-T8: the daily secret age reminder (a registered job type).
 const DEDUP_KEY_SECRET_AGE_REMINDER: &str = "secret-age-reminder";
+/// D15-T3: the calendar sync (a registered job type).
+const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
 
 /// Z1-T8: reminds administrators of secrets older than
 /// `security.secret_max_age_days`. A registered type (Z7-T1), not an
 /// `EngineJob` variant.
 pub const SECRET_AGE_REMINDER: attome_jobs::JobType =
     attome_jobs::JobType::new("secret_age_reminder", 1);
+
+/// D15-T3: two-way sync of meetings with people's own calendars. A
+/// registered type, like the reminder above.
+pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calendar_sync", 1);
 
 /// Z7-T1/Z1-T8: registers this binary's run-time job types, once per
 /// process. The worker calls it before it runs jobs and each scheduler that
@@ -2625,6 +2631,18 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CALENDAR_SYNC,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let summary = attome_integration::connector::adapters::calendar_sync::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(?summary, "calendar sync: run complete");
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -2760,6 +2778,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == SECRET_AGE_REMINDER.name => {
             DEDUP_KEY_SECRET_AGE_REMINDER
         }
+        EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
         _ => return None,
     })
 }
@@ -3149,6 +3168,19 @@ pub fn spawn_secret_age_reminder_scheduler(db: DbPool, interval: std::time::Dura
         DEDUP_KEY_SECRET_AGE_REMINDER,
         "secret age reminder",
     );
+}
+
+/// D15-T3: every five minutes, meetings and people's calendars in step.
+pub fn spawn_calendar_sync_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(CALENDAR_SYNC.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "calendar sync: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_CALENDAR_SYNC, "calendar sync");
 }
 
 /// AA9-T7: daily, the warning about limits near their value.

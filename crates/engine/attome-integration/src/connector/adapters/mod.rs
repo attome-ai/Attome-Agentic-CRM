@@ -1,3 +1,5 @@
+/// D15-T3: two-way calendar sync of meetings.
+pub mod calendar_sync;
 pub mod mailbox;
 pub mod rest;
 /// J4-T1: SMS segments, senders and the provider codecs.
