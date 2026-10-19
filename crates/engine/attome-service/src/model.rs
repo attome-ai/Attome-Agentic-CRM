@@ -39,6 +39,8 @@ impl EngineModel for ServiceModel {
             "service_work_queue_member",
             // G8-T1: escalation rule sets.
             "service_escalation_rule",
+            // G2-T3: conversion maps.
+            "service_conversion_map",
         ]
     }
 

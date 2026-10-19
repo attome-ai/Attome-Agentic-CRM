@@ -245,6 +245,11 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          full boot) does not — this DB-focused harness has no equivalent seed",
     ),
     (
+        "POST /api/v1/work-request/{id}/convert",
+        "same gap as convert-to-ticket, plus a service_conversion_map, also a seeded \
+         platform-bundle entity this harness does not provision",
+    ),
+    (
         "POST /api/v1/work-request/{id}/convert-to-task",
         "same gap as convert-to-ticket, plus project_work_item is also a \
          seeded platform-bundle entity this harness does not provision",

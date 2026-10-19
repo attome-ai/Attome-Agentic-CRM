@@ -102,6 +102,11 @@ pub struct CreateWorkRequestFromOfferingResponse {
     /// submission can be added to one instead. Empty when the caller may not
     /// read work requests.
     pub open_requests: Vec<crate::intake::OpenRequest>,
+    /// G2-T3: the records the request became at once, through the
+    /// offering's direct-creation conversion maps; empty when it has none
+    /// (or the conversion could not be made, which leaves the request to
+    /// convert by hand).
+    pub converted: Vec<crate::convert::ConvertedRecord>,
 }
 
 /// The actual creation — loads the offering, evaluates routing, mints a
@@ -277,12 +282,35 @@ pub async fn create_work_request_from_offering(
         );
     }
 
+    // G2-T3: an offering with direct-creation maps converts the request at
+    // once, in its own transaction after the request is filed.
+    let direct = crate::convert::maps_for_direct_creation(db, offering_id).await?;
+    let converted = if direct.is_empty() {
+        Vec::new()
+    } else {
+        match crate::convert::convert_with_maps(state, ctx, work_request_id, &direct, &Map::new())
+            .await
+        {
+            Ok(records) => records,
+            Err(error) => {
+                tracing::warn!(%work_request_id, %offering_id, ?error, "work request: direct creation failed; left to convert by hand");
+                Vec::new()
+            }
+        }
+    };
+    let status = if converted.is_empty() {
+        "new"
+    } else {
+        "converted"
+    };
+
     Ok(CreateWorkRequestFromOfferingResponse {
         work_request_id,
-        status: "new".to_owned(),
+        status: status.to_owned(),
         portal_token: issued.bearer,
         reference,
         open_requests,
+        converted,
     })
 }
 

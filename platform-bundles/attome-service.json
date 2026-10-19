@@ -28,7 +28,8 @@
         { "logicalname": "portal_secret_hash", "display_name": "Portal Access Secret Hash", "field_type": "text", "is_sensitive": true },
         { "logicalname": "work_queue_ref", "display_name": "Work Queue", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_work_queue" },
         { "logicalname": "reference", "display_name": "Reference", "field_type": "text", "is_sortable": true, "is_filterable": true },
-        { "logicalname": "category", "display_name": "Category", "field_type": "text", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "category", "display_name": "Category", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "converted_records", "display_name": "Converted Records (JSON)", "field_type": "text" }
       ]
     },
     {
@@ -186,6 +187,19 @@
         { "logicalname": "condition", "display_name": "Condition", "field_type": "text" },
         { "logicalname": "steps", "display_name": "Steps (JSON)", "field_type": "text", "is_required": true }
       ]
+    },
+    {
+      "logicalname": "service_conversion_map",
+      "display_name": "Conversion Map",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "target_entity", "display_name": "Target Entity", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "field_map", "display_name": "Field Map (JSON)", "field_type": "text" },
+        { "logicalname": "offering_ref", "display_name": "Offering", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_offering" },
+        { "logicalname": "direct_create", "display_name": "Create At Once", "field_type": "bool", "is_filterable": true }
+      ]
     }
   ],
   "queries": [
@@ -211,7 +225,8 @@
     { "entity": "service_work_queue", "name": "Queue Depth (Open, Unassigned Items Per Queue)", "sql": "SELECT work_queue_ref AS queue_ref, COUNT(*) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND assignee_id IS NULL AND status NOT IN ('resolved', 'closed') GROUP BY work_queue_ref", "required_privilege": "service_work_queue.read", "is_report": true },
     { "entity": "service_work_queue", "name": "Queue Average Wait, Minutes (Currently Unassigned Items)", "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (NOW() - created_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND assignee_id IS NULL AND status NOT IN ('resolved', 'closed') GROUP BY work_queue_ref", "required_privilege": "service_work_queue.read", "is_report": true },
     { "entity": "service_ticket", "name": "Queue Claim-To-Resolve, Minutes (Last 30 Days)", "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (resolved_at - claimed_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND status IN ('resolved', 'closed') AND resolved_at IS NOT NULL AND claimed_at IS NOT NULL AND resolved_at >= NOW() - INTERVAL '30 days'", "required_privilege": "service_ticket.read", "is_report": true },
-    { "entity": "service_escalation_rule", "name": "Active Escalation Rules", "sql": "SELECT id FROM service_escalation_rule WHERE is_active = true", "required_privilege": "service_escalation_rule.read" }
+    { "entity": "service_escalation_rule", "name": "Active Escalation Rules", "sql": "SELECT id FROM service_escalation_rule WHERE is_active = true", "required_privilege": "service_escalation_rule.read" },
+    { "entity": "service_conversion_map", "name": "Active Conversion Maps", "sql": "SELECT id FROM service_conversion_map WHERE is_active = true", "required_privilege": "service_conversion_map.read" }
   ],
   "views": [
     { "entity": "service_work_request", "name": "Active Work Requests", "query": { "entity": "service_work_request", "name": "Active Work Requests" }, "is_default": true },
@@ -230,7 +245,8 @@
     { "entity": "service_work_queue", "name": "Inactive Work Queues", "query": { "entity": "service_work_queue", "name": "Inactive Work Queues" }, "is_default": false },
     { "entity": "service_work_queue_member", "name": "Active Work Queue Members", "query": { "entity": "service_work_queue_member", "name": "Active Work Queue Members" }, "is_default": true },
     { "entity": "service_work_queue_member", "name": "Inactive Work Queue Members", "query": { "entity": "service_work_queue_member", "name": "Inactive Work Queue Members" }, "is_default": false },
-    { "entity": "service_escalation_rule", "name": "Active Escalation Rules", "query": { "entity": "service_escalation_rule", "name": "Active Escalation Rules" }, "is_default": true }
+    { "entity": "service_escalation_rule", "name": "Active Escalation Rules", "query": { "entity": "service_escalation_rule", "name": "Active Escalation Rules" }, "is_default": true },
+    { "entity": "service_conversion_map", "name": "Active Conversion Maps", "query": { "entity": "service_conversion_map", "name": "Active Conversion Maps" }, "is_default": true }
   ],
   "state_models": [
     {
