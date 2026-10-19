@@ -126,8 +126,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ### Added
 - Offline use (B17-T4, B18-T4, B18-T5, B18-T12): `POST /api/v1/devices`, `GET /api/v1/devices/me/{id}`
   and `POST .../wiped` for the app; `GET /api/v1/offline/profile` (metadata and rules, never a
-  sensitive attribute) and `POST /api/v1/offline/pull` (records through the profile's stored query,
-  with removals); `GET /api/v1/admin/devices` with each device's sync state,
+  sensitive attribute), `POST /api/v1/offline/pull` (records through the profile's stored query,
+  with removals) and `POST /api/v1/offline/push` (queued changes, once each, merged per field); `GET /api/v1/admin/devices` with each device's sync state,
   `POST /api/v1/admin/devices/{id}/wipe` and `POST .../offline-refresh`. See
   [docs/offline.md](docs/offline.md).
 - Scanning (B16-T5, B16-T8, B16-T13): `GET /api/v1/scan/find` finds the records a scanned value

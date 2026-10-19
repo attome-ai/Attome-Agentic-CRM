@@ -80,9 +80,22 @@ error.
 
 ## Changes made offline
 
-Sending changes made offline back to the server (`POST /api/v1/offline/push`,
-with per-field merging when two people changed the same record) is not
-available yet. Until it is, offline data is for reading.
+The app queues what the person changes offline and sends it back in order
+(`POST /api/v1/offline/push`, up to 100 changes at a time). Each change goes
+through the same path as an edit made online: the person's privileges and
+record access, validation, rules, duplicate rules, autonumbers and audit.
+
+- A **new record** keeps the id the device gave it; its autonumber is
+  assigned when it reaches the server.
+- An **edit** made against an older version is merged field by field: if
+  every field the person changed still holds the value they started from,
+  the change applies (`merged`). If someone else changed one of those
+  fields, it is a **conflict**: nothing is applied, and the app gets the
+  server's values for the clashing fields so the person can choose.
+- A change the server refuses (no privilege, a validation or duplicate rule)
+  comes back `rejected` with the reason and a link to the record; the
+  device's later changes to that record wait (`depends_on_failed`).
+- Sending the same change twice applies it once.
 
 ## Not in this release: the on-device helper
 
