@@ -248,6 +248,52 @@ pub(super) async fn place_call(
         .ok_or_else(|| AppError::Validation(format!("Twilio refused the call ({status})")))
 }
 
+/// TwiML that plays a recording and hangs up. Pure.
+pub fn voicemail_twiml(recording_url: &str) -> String {
+    format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Play>{}</Play><Hangup/></Response>",
+        xml(recording_url)
+    )
+}
+
+/// D21-T6: redirects a live call to play `recording_url` and hang up.
+pub(super) async fn play_and_hang_up(
+    state: &EngineState,
+    system: &IntegrationSystem,
+    call_sid: &str,
+    recording_url: &str,
+) -> Result<(), AppError> {
+    let cfg = config(system);
+    let sid = setting(&cfg, "account_sid")
+        .filter(|s| s.chars().all(|c| c.is_ascii_alphanumeric()))
+        .ok_or_else(|| {
+            AppError::Validation(format!("{}: config has no account_sid", system.name))
+        })?;
+    if !call_sid.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(AppError::Validation("not a Twilio call".into()));
+    }
+    let token = Secrets::parse(&credential(state, system).await?).auth_token;
+    let client = reqwest::Client::builder()
+        .timeout(super::TIMEOUT)
+        .build()
+        .map_err(AppError::internal)?;
+    let res = client
+        .post(format!("{API}/Accounts/{sid}/Calls/{call_sid}.json"))
+        .basic_auth(sid, Some(token))
+        .form(&[("Twiml", voicemail_twiml(recording_url))])
+        .send()
+        .await
+        .map_err(AppError::internal)?;
+    let status = res.status().as_u16();
+    if (200..300).contains(&status) {
+        Ok(())
+    } else {
+        Err(AppError::Validation(format!(
+            "Twilio refused the voicemail drop ({status})"
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,6 +358,8 @@ mod tests {
             "user_00000000000000000000000000000000"
         );
         assert!(unavailable_twiml().contains("<Hangup/>"));
+        let vm = voicemail_twiml("https://x/vm.mp3?a=1&b=2");
+        assert!(vm.contains("<Play>https://x/vm.mp3?a=1&amp;b=2</Play><Hangup/>"));
 
         let urls = CallbackUrls {
             events: "https://x/e".into(),

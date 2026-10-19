@@ -265,11 +265,14 @@ pub async fn place_call(
     system: &IntegrationSystem,
     agent: &str,
     to: &str,
+    caller_id: Option<&str>,
     urls: &CallbackUrls,
 ) -> Result<String, AppError> {
     match provider(system).as_deref() {
+        // Twilio's customer leg takes its caller id from the call's row,
+        // when the TwiML step dials it.
         Some("twilio") => twilio::place_call(state, system, agent, urls).await,
-        Some("asterisk") => asterisk::place_call(state, system, agent, to).await,
+        Some("asterisk") => asterisk::place_call(state, system, agent, to, caller_id).await,
         _ => Err(AppError::Validation(format!(
             "{}: not a voice system",
             system.name
@@ -277,9 +280,272 @@ pub async fn place_call(
     }
 }
 
+// ── Calls (J6-T1, the public API the dialer uses, D21-T6) ───────────────────
+
+const LINK_DOMAIN: &str = "attome-voice";
+
+/// The numbers a system owns: its `from_number` and the `numbers` list in
+/// its config, as E.164, each once. Pure.
+pub fn owned_numbers(config: &Value) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let listed = config
+        .get("numbers")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str);
+    for raw in setting(config, "from_number").into_iter().chain(listed) {
+        if let Some(n) = e164(raw)
+            && !out.contains(&n)
+        {
+            out.push(n);
+        }
+    }
+    out
+}
+
+/// The person's own number or extension (personal setting
+/// `voice.agent_number`).
+pub fn agent_number(state: &EngineState, user: Uuid) -> Option<String> {
+    let settings = state.settings.load();
+    attome_core::setting_registry()
+        .get("voice.agent_number")
+        .map(|d| settings.resolve(d, Some(user), None).0)
+        .and_then(|v| v.as_str().map(str::trim).map(str::to_owned))
+        .filter(|v| !v.is_empty())
+}
+
+fn link_secret(state: &EngineState) -> Result<String, AppError> {
+    state
+        .base
+        .secrets
+        .load()
+        .jwt_secret
+        .active()
+        .map(str::to_owned)
+        .ok_or_else(|| AppError::internal("auth.jwt_secret has no active key configured"))
+}
+
+/// The provider's URLs for one call, signed for a day.
+pub fn callback_urls(state: &EngineState, call: Uuid) -> Result<CallbackUrls, AppError> {
+    let expires = (chrono::Utc::now() + chrono::Duration::days(1)).timestamp();
+    let token = attome_auth::signed_link::sign(
+        &link_secret(state)?,
+        LINK_DOMAIN,
+        &call.to_string(),
+        expires,
+    )
+    .ok_or_else(|| AppError::internal("voice callback could not be signed"))?;
+    let base = state.base.config.frontend_url();
+    let base = base.trim_end_matches('/');
+    Ok(CallbackUrls {
+        events: format!("{base}/api/v1/voice/events/{token}"),
+        twiml: format!("{base}/api/v1/voice/twiml/{token}"),
+    })
+}
+
+/// The call a callback token names.
+pub fn call_of(state: &EngineState, token: &str) -> Result<Uuid, AppError> {
+    attome_auth::signed_link::verify(
+        &link_secret(state)?,
+        LINK_DOMAIN,
+        token,
+        chrono::Utc::now().timestamp(),
+    )
+    .and_then(|s| Uuid::parse_str(&s).ok())
+    .ok_or(AppError::NotFound)
+}
+
+/// A call started from Attome.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, utoipa::ToSchema)]
+pub struct StartedCall {
+    pub call_id: Uuid,
+    pub activity_id: Uuid,
+}
+
+async fn cancel_activity(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    user: Uuid,
+    activity: Uuid,
+) -> Result<(), AppError> {
+    let version: Option<i64> = sqlx::query_scalar(
+        "SELECT row_version FROM activity WHERE id = $1 AND is_active IS NOT FALSE",
+    )
+    .bind(activity)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some(version) = version {
+        attome_records::entity_crud::update_record_for(
+            state,
+            ctx,
+            user,
+            "activity",
+            activity,
+            version,
+            serde_json::json!({ "status": "cancelled" }),
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// Starts a call from `user` to `to` about a record: logs a `phone_call`
+/// activity on it as the user, keeps the `voice_call` row, and has the
+/// provider ring the user's own phone and then the number (`browser`
+/// false), or leaves dialling to the browser softphone (`browser` true).
+/// `caller_id`, when given, is what the customer sees; it must be one the
+/// system owns. A failed start cancels the activity and marks the call
+/// failed. The caller holds no transaction: the provider is called with
+/// none open.
+#[allow(clippy::too_many_arguments)]
+pub async fn start_call(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    system: &IntegrationSystem,
+    to: &str,
+    caller_id: Option<&str>,
+    about: (&str, Uuid),
+    browser: bool,
+) -> Result<StartedCall, AppError> {
+    use attome_security::SecurityContextExt;
+    ctx.require("activity", "create")?;
+    let user = ctx.user_id;
+    let to = e164(to).ok_or_else(|| AppError::Validation("to: an E.164 number".into()))?;
+    let caller_id = match caller_id {
+        Some(c) => {
+            let c =
+                e164(c).ok_or_else(|| AppError::Validation("caller_id: an E.164 number".into()))?;
+            if !owned_numbers(&config(system)).contains(&c) {
+                return Err(AppError::Validation(
+                    "caller_id: not a number this system owns".into(),
+                ));
+            }
+            Some(c)
+        }
+        None => None,
+    };
+    let agent = if browser {
+        format!("client:{}", twilio::client_identity(user))
+    } else {
+        agent_number(state, user).ok_or_else(|| {
+            AppError::Validation(
+                "set your phone number or extension (voice.agent_number) first".into(),
+            )
+        })?
+    };
+    let (activity, _) = attome_records::entity_crud::create_record_for(
+        state,
+        ctx,
+        user,
+        "activity",
+        serde_json::json!({
+            "subject": format!("Call to {to}"),
+            "activity_type": "phone_call",
+            "direction": "outbound",
+            "due_at": chrono::Utc::now().to_rfc3339(),
+            "entity_name": about.0,
+            "record_id": about.1.to_string(),
+        }),
+    )
+    .await?;
+    let call = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO voice_call (id, system_id, user_id, activity_id, direction, from_number, to_number, caller_id) \
+         VALUES ($1, $2, $3, $4, 'outbound', $5, $6, $7)",
+    )
+    .bind(call)
+    .bind(system.id)
+    .bind(user)
+    .bind(activity)
+    .bind(&agent)
+    .bind(&to)
+    .bind(caller_id.as_deref())
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let started = StartedCall {
+        call_id: call,
+        activity_id: activity,
+    };
+    if browser {
+        return Ok(started);
+    }
+    let placed = match callback_urls(state, call) {
+        Ok(urls) => place_call(state, system, &agent, &to, caller_id.as_deref(), &urls).await,
+        Err(error) => Err(error),
+    };
+    match placed {
+        Ok(provider_id) => {
+            sqlx::query(
+                "UPDATE voice_call SET provider_call_id = $2, updated_at = now() WHERE id = $1",
+            )
+            .bind(call)
+            .bind(provider_id)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            Ok(started)
+        }
+        Err(error) => {
+            sqlx::query(
+                "UPDATE voice_call SET state = 'failed', activity_done = true, updated_at = now() WHERE id = $1",
+            )
+            .bind(call)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            cancel_activity(state, ctx, user, activity).await?;
+            Err(error)
+        }
+    }
+}
+
+/// Plays a recorded message into a call in progress and hangs up
+/// (voicemail drop). Twilio only: Attome opens no audio stream, it tells
+/// the provider which recording to play.
+pub async fn drop_voicemail(
+    state: &EngineState,
+    system: &IntegrationSystem,
+    call: Uuid,
+    recording_url: &str,
+) -> Result<(), AppError> {
+    if !recording_url.starts_with("https://") {
+        return Err(AppError::Validation("recording: an https address".into()));
+    }
+    let (provider_call_id, call_system): (Option<String>, Uuid) =
+        sqlx::query_as("SELECT provider_call_id, system_id FROM voice_call WHERE id = $1")
+            .bind(call)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+            .ok_or(AppError::NotFound)?;
+    if call_system != system.id {
+        return Err(AppError::NotFound);
+    }
+    let sid = provider_call_id.ok_or_else(|| AppError::Conflict("the call has not started yet"))?;
+    match provider(system).as_deref() {
+        Some("twilio") => twilio::play_and_hang_up(state, system, &sid, recording_url).await,
+        _ => Err(AppError::Validation(
+            "voicemail drop needs a Twilio voice system".into(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn voice_adapters_list_owned_numbers() {
+        let cfg = serde_json::json!({
+            "from_number": "+966 11 000 0000",
+            "numbers": ["+971 4 000 0000", "+966110000000", "not a number"],
+        });
+        assert_eq!(owned_numbers(&cfg), vec!["+966110000000", "+97140000000"]);
+        assert!(owned_numbers(&Value::Null).is_empty());
+    }
 
     #[test]
     fn voice_adapters_normalise_numbers() {

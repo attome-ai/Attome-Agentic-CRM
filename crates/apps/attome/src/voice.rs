@@ -27,10 +27,9 @@
 //! once the scan passes, and sent to N22 transcription: the
 //! `voice_recording` job, retried until the scan has finished.
 
-use attome_auth::signed_link;
 use attome_core::EngineState;
 use attome_integration::connector::adapters::voice::{
-    self, CallEvent, CallState, CallbackUrls, asterisk, twilio,
+    self, CallEvent, CallState, asterisk, call_of, callback_urls, twilio,
 };
 use attome_integration::system::IntegrationSystem;
 use attome_modules::MODULE_OMNICHANNEL;
@@ -45,13 +44,11 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use utoipa::ToSchema;
 use uuid::Uuid;
-
-const LINK_DOMAIN: &str = "attome-voice";
 
 fn licensed(state: &EngineState) -> Result<(), AppError> {
     state
@@ -61,48 +58,8 @@ fn licensed(state: &EngineState) -> Result<(), AppError> {
         .map_err(|_| AppError::NotFound)
 }
 
-fn secret(state: &EngineState) -> Result<String, AppError> {
-    state
-        .base
-        .secrets
-        .load()
-        .jwt_secret
-        .active()
-        .map(str::to_owned)
-        .ok_or_else(|| AppError::internal("auth.jwt_secret has no active key configured"))
-}
-
-/// The provider's URLs for one call, signed for a day.
-fn callback_urls(state: &EngineState, call: Uuid) -> Result<CallbackUrls, AppError> {
-    let expires = (Utc::now() + Duration::days(1)).timestamp();
-    let token = signed_link::sign(&secret(state)?, LINK_DOMAIN, &call.to_string(), expires)
-        .ok_or_else(|| AppError::internal("voice callback could not be signed"))?;
-    let base = state.base.config.frontend_url();
-    let base = base.trim_end_matches('/');
-    Ok(CallbackUrls {
-        events: format!("{base}/api/v1/voice/events/{token}"),
-        twiml: format!("{base}/api/v1/voice/twiml/{token}"),
-    })
-}
-
-fn call_of(state: &EngineState, token: &str) -> Result<Uuid, AppError> {
-    signed_link::verify(&secret(state)?, LINK_DOMAIN, token, Utc::now().timestamp())
-        .and_then(|s| Uuid::parse_str(&s).ok())
-        .ok_or(AppError::NotFound)
-}
-
 fn twiml(body: String) -> Response {
     ([(header::CONTENT_TYPE, "text/xml; charset=utf-8")], body).into_response()
-}
-
-/// The person's own number or extension (personal setting `voice.agent_number`).
-fn agent_number(state: &EngineState, user: Uuid) -> Option<String> {
-    let settings = state.settings.load();
-    attome_core::setting_registry()
-        .get("voice.agent_number")
-        .map(|d| settings.resolve(d, Some(user), None).0)
-        .and_then(|v| v.as_str().map(str::trim).map(str::to_owned))
-        .filter(|v| !v.is_empty())
 }
 
 #[derive(sqlx::FromRow)]
@@ -129,6 +86,17 @@ async fn load_call(state: &EngineState, id: Uuid) -> Result<CallRow, AppError> {
     .await
     .map_err(AppError::internal)?
     .ok_or(AppError::NotFound)
+}
+
+/// The caller id chosen for a call (D21-T6), if any.
+async fn caller_id_of(state: &EngineState, call: Uuid) -> Result<Option<String>, AppError> {
+    let chosen: Option<Option<String>> =
+        sqlx::query_scalar("SELECT caller_id FROM voice_call WHERE id = $1")
+            .bind(call)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(chosen.flatten())
 }
 
 /// Where the state machine may go: never back from an end.
@@ -643,22 +611,10 @@ async fn post_call(
 ) -> Result<(StatusCode, Json<PlacedCall>), AppError> {
     licensed(&state)?;
     ctx.require("activity", "create")?;
-    let to =
-        voice::e164(&req.to).ok_or_else(|| AppError::Validation("to: an E.164 number".into()))?;
-    let user = ctx.user_id;
     let browser = match req.mode.as_deref().unwrap_or("phone") {
         "phone" => false,
         "browser" => true,
         _ => return Err(AppError::Validation("mode: phone or browser".into())),
-    };
-    let agent = if browser {
-        format!("client:{}", twilio::client_identity(user))
-    } else {
-        agent_number(&state, user).ok_or_else(|| {
-            AppError::Validation(
-                "set your phone number or extension (voice.agent_number) first".into(),
-            )
-        })?
     };
     let system = match req.system_id {
         Some(id) => attome_integration::system::load(&state.base.db, id)
@@ -667,78 +623,23 @@ async fn post_call(
         None => voice::systems(&state).await?.into_iter().next(),
     }
     .ok_or(AppError::NotFound)?;
-    let (activity, _) = attome_records::entity_crud::create_record_for(
+    let started = voice::start_call(
         &state,
         &ctx,
-        user,
-        "activity",
-        json!({
-            "subject": format!("Call to {to}"),
-            "activity_type": "phone_call",
-            "direction": "outbound",
-            "due_at": Utc::now().to_rfc3339(),
-            "entity_name": req.entity_name,
-            "record_id": req.record_id.to_string(),
-        }),
+        &system,
+        &req.to,
+        None,
+        (&req.entity_name, req.record_id),
+        browser,
     )
     .await?;
-    let call = Uuid::now_v7();
-    sqlx::query(
-        "INSERT INTO voice_call (id, system_id, user_id, activity_id, direction, from_number, to_number) \
-         VALUES ($1, $2, $3, $4, 'outbound', $5, $6)",
-    )
-    .bind(call)
-    .bind(system.id)
-    .bind(user)
-    .bind(activity)
-    .bind(&agent)
-    .bind(&to)
-    .execute(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
-    if browser {
-        // The softphone places it: `POST /voice/twilio/{key}/client` dials
-        // this row's number when Twilio asks.
-        return Ok((
-            StatusCode::CREATED,
-            Json(PlacedCall {
-                call_id: call,
-                activity_id: activity,
-            }),
-        ));
-    }
-    let placed = match callback_urls(&state, call) {
-        Ok(urls) => voice::place_call(&state, &system, &agent, &to, &urls).await,
-        Err(error) => Err(error),
-    };
-    match placed {
-        Ok(provider_id) => {
-            sqlx::query(
-                "UPDATE voice_call SET provider_call_id = $2, updated_at = now() WHERE id = $1",
-            )
-            .bind(call)
-            .bind(provider_id)
-            .execute(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-            Ok((
-                StatusCode::CREATED,
-                Json(PlacedCall {
-                    call_id: call,
-                    activity_id: activity,
-                }),
-            ))
-        }
-        Err(error) => {
-            sqlx::query("UPDATE voice_call SET state = 'failed', activity_done = true, updated_at = now() WHERE id = $1")
-                .bind(call)
-                .execute(&state.base.db)
-                .await
-                .map_err(AppError::internal)?;
-            update_activity(&state, user, activity, json!({ "status": "cancelled" })).await?;
-            Err(error)
-        }
-    }
+    Ok((
+        StatusCode::CREATED,
+        Json(PlacedCall {
+            call_id: started.call_id,
+            activity_id: started.activity_id,
+        }),
+    ))
 }
 
 // ── Staff: the softphone (J6-T2) ────────────────────────────────────────────
@@ -944,9 +845,10 @@ async fn post_twilio_client(
             .map_err(AppError::internal)?;
     }
     let cfg = voice::config(&system);
+    let chosen = caller_id_of(&state, call.id).await?;
     let (Some(number), Some(caller_id)) = (
         call.to_number.as_deref(),
-        voice::setting(&cfg, "from_number"),
+        chosen.as_deref().or(voice::setting(&cfg, "from_number")),
     ) else {
         return Ok(twiml(twilio::unavailable_twiml()));
     };
@@ -986,9 +888,10 @@ async fn post_twiml(
         .await?
         .ok_or(AppError::NotFound)?;
     let cfg = voice::config(&system);
+    let chosen = caller_id_of(&state, call.id).await?;
     let (Some(number), Some(caller_id)) = (
         call.to_number.as_deref(),
-        voice::setting(&cfg, "from_number"),
+        chosen.as_deref().or(voice::setting(&cfg, "from_number")),
     ) else {
         return Ok(twiml(twilio::unavailable_twiml()));
     };

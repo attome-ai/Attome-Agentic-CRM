@@ -35,9 +35,14 @@ serde.workspace          = true
 serde_json.workspace     = true
 sha2.workspace           = true
 sqlx.workspace           = true
+tokio.workspace          = true
 tracing.workspace        = true
 utoipa.workspace         = true
 uuid.workspace           = true
+
+[features]
+# D21-T6: FakeTelephony for other crates' tests.
+test-support = []
 
 [dev-dependencies]
 serde_json.workspace = true

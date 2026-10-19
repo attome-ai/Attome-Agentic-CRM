@@ -124,6 +124,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Dialer calls through J6 (D21-T6): `POST /api/v1/sales/call-lists/{id}/dial` rings the agent's
+  phone and then the customer through the voice system. The customer sees the caller ID the
+  caller ID rules choose for their country, and only ever a number the system owns.
+  `POST /api/v1/sales/call-lists/{id}/voicemail` drops a recorded message into the agent's call when
+  the list allows voicemail (Twilio). Migration 0148 records the chosen caller ID on the call.
 - Online quote acceptance (D9-T3): a sent quote's guest link
   (`POST /api/v1/sales/quotes/{id}/guest-link`) opens `/quote/{token}`, where the customer reviews
   the quote and accepts or rejects it with their name. The link is bound to the quote's version and

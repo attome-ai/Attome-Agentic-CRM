@@ -97,6 +97,7 @@ pub(super) async fn place_call(
     system: &IntegrationSystem,
     agent: &str,
     to: &str,
+    caller_id: Option<&str>,
 ) -> Result<String, AppError> {
     let cfg = config(system);
     let base = setting(&cfg, "base_url")
@@ -107,7 +108,7 @@ pub(super) async fn place_call(
         agent,
         to,
         setting(&cfg, "context").unwrap_or("from-internal"),
-        setting(&cfg, "from_number").unwrap_or_default(),
+        caller_id.unwrap_or(setting(&cfg, "from_number").unwrap_or_default()),
     )
     .ok_or_else(|| AppError::Validation("agent and number: digits only".into()))?;
     let secret = credential(state, system).await?;
