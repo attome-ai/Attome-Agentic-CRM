@@ -306,6 +306,7 @@ async fn list_versions(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages/{id}/versions/{number}",
+    operation_id = "get_content_page_version",
     tag = "admin-content",
     params(
         ("id" = Uuid, Path, description = "The page's id"),
@@ -374,6 +375,7 @@ async fn compare_versions(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/content/pages/{id}/versions/{number}/restore",
+    operation_id = "restore_content_page_version",
     tag = "admin-content",
     params(
         ("id" = Uuid, Path, description = "The page's id"),

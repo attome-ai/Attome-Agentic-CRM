@@ -397,6 +397,7 @@ pub(crate) async fn delete_for_disposition(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/retention/rules",
+    operation_id = "list_retention_rules",
     tag = "admin",
     responses(
         (status = 200, description = "Every retention rule", body = PaginatedResponse<RetentionRule>),
@@ -442,6 +443,7 @@ fn checked_body(state: &EngineState, body: &RetentionRuleBody) -> Result<String,
 #[utoipa::path(
     post,
     path = "/api/v1/admin/retention/rules",
+    operation_id = "create_retention_rule",
     tag = "admin",
     request_body = RetentionRuleBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create)])))),
@@ -504,6 +506,7 @@ async fn create_rule(
 #[utoipa::path(
     put,
     path = "/api/v1/admin/retention/rules/{id}",
+    operation_id = "update_retention_rule",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The rule's id")),
     request_body = RetentionRuleBody,
@@ -582,6 +585,7 @@ async fn update_rule(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/retention/rules/{id}",
+    operation_id = "delete_retention_rule",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The rule's id")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::HardDelete)])))),
