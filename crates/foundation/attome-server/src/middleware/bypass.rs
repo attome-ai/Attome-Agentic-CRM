@@ -193,12 +193,17 @@ fn is_email_tracking_path(path: &str) -> bool {
 
 /// J4-T1: `/api/v1/sms/receipts/{token}`, one segment, nothing deeper.
 fn is_sms_receipt_path(path: &str) -> bool {
-    ["/api/v1/sms/receipts/", "/api/v1/sms/inbound/"]
-        .iter()
-        .any(|prefix| {
-            path.strip_prefix(prefix)
-                .is_some_and(|token| !token.is_empty() && !token.contains('/'))
-        })
+    [
+        "/api/v1/sms/receipts/",
+        "/api/v1/sms/inbound/",
+        // J8-T1: Meta's subscription check and signed events.
+        "/api/v1/social/meta/",
+    ]
+    .iter()
+    .any(|prefix| {
+        path.strip_prefix(prefix)
+            .is_some_and(|token| !token.is_empty() && !token.contains('/'))
+    })
 }
 
 /// D20-T2: `/api/v1/booking/{slug}` and the manage link's
@@ -408,6 +413,9 @@ mod tests {
         assert!(!is_bypass("/api/v1/sms/receipts/"));
         assert!(is_bypass("/api/v1/sms/inbound/key-1234567890abcdef"));
         assert!(!is_bypass("/api/v1/sms/inbound/a/b"));
+        assert!(is_bypass("/api/v1/social/meta/key-1234567890abcdef"));
+        assert!(!is_bypass("/api/v1/social/meta/a/b"));
+        assert!(!is_bypass("/api/v1/social/replies"));
         assert!(is_bypass("/api/v1/booking/intro-call"));
         assert!(is_bypass("/api/v1/booking/manage/abc.def"));
         assert!(is_bypass("/api/v1/booking/manage/abc.def/cancel"));

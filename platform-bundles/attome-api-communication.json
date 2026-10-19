@@ -14,7 +14,7 @@
       "attributes": [
         { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true },
         { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true },
-        { "logicalname": "channel", "display_name": "Channel", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["email", "internal", "web_chat", "sms", "portal", "call", "meeting", "other"], "multi": false } },
+        { "logicalname": "channel", "display_name": "Channel", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["email", "internal", "web_chat", "sms", "messenger", "instagram", "facebook", "google_review", "portal", "call", "meeting", "other"], "multi": false } },
         { "logicalname": "direction", "display_name": "Direction", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["inbound", "outbound"], "multi": false } },
         { "logicalname": "subject", "display_name": "Subject", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "body", "display_name": "Body", "field_type": "text" },

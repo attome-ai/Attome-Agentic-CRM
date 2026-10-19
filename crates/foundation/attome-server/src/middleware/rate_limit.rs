@@ -108,6 +108,9 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/sms/receipts/{token}", "portal_status"),
     // J4-T2: inbound texts from the provider.
     ("POST", "/api/v1/sms/inbound/{key}", "webchat"),
+    // J8-T1: Meta's subscription check and events.
+    ("GET", "/api/v1/social/meta/{key}", "portal_status"),
+    ("POST", "/api/v1/social/meta/{key}", "webchat"),
     // D20-T2: public booking links (the handler adds per-address and
     // per-page budgets on booking, and the challenge).
     ("GET", "/api/v1/booking/{slug}", "portal_status"),

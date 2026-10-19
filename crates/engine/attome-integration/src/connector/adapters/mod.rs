@@ -6,6 +6,8 @@ pub mod rest;
 pub mod sms;
 pub mod sms_twilio;
 pub mod sms_unifonic;
+/// J8-T1: Messenger, Instagram, Facebook comments and Google reviews.
+pub mod social;
 /// D15-T1: a person's own mailbox and calendar connection.
 pub mod user_mail_sync;
 /// J7-T1: Teams, Google Meet, Zoom and Jitsi meetings.

@@ -2607,6 +2607,8 @@ const DEDUP_KEY_FLEET_POLL: &str = "fleet-poll";
 const DEDUP_KEY_SECRET_AGE_REMINDER: &str = "secret-age-reminder";
 /// D15-T3: the calendar sync (a registered job type).
 const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
+/// J8-T1: the Google reviews read (a registered job type).
+const DEDUP_KEY_SOCIAL_REVIEWS_SYNC: &str = "social-reviews-sync";
 
 /// Z1-T8: reminds administrators of secrets older than
 /// `security.secret_max_age_days`. A registered type (Z7-T1), not an
@@ -2617,6 +2619,10 @@ pub const SECRET_AGE_REMINDER: attome_jobs::JobType =
 /// D15-T3: two-way sync of meetings with people's own calendars. A
 /// registered type, like the reminder above.
 pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calendar_sync", 1);
+
+/// J8-T1: new Google reviews become inbound communications.
+pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
+    attome_jobs::JobType::new("social_reviews_sync", 1);
 
 /// Z7-T1/Z1-T8: registers this binary's run-time job types, once per
 /// process. The worker calls it before it runs jobs and each scheduler that
@@ -2631,6 +2637,18 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SOCIAL_REVIEWS_SYNC,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let written = crate::social::sync_reviews(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(written, "social reviews sync: run complete");
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -2779,6 +2797,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_SECRET_AGE_REMINDER
         }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
+        EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
+            DEDUP_KEY_SOCIAL_REVIEWS_SYNC
+        }
         _ => return None,
     })
 }
@@ -3181,6 +3202,25 @@ pub fn spawn_calendar_sync_scheduler(db: DbPool, interval: std::time::Duration) 
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_CALENDAR_SYNC, "calendar sync");
+}
+
+/// J8-T1: every 15 minutes, new Google reviews.
+pub fn spawn_social_reviews_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(SOCIAL_REVIEWS_SYNC.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "social reviews sync: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_SOCIAL_REVIEWS_SYNC,
+        "social reviews sync",
+    );
 }
 
 /// AA9-T7: daily, the warning about limits near their value.

@@ -124,6 +124,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Social channels (J8-T1): Messenger messages, Instagram messages and comments, and Facebook page
+  comments arrive through Meta's signed webhook (`/api/v1/social/meta/{key}`). New Google Business
+  Profile reviews are read every 15 minutes. Each one becomes an inbound communication (new
+  channels `messenger`, `instagram`, `facebook` and `google_review`). Staff answer them with
+  `POST /api/v1/social/replies`, which sends through the provider and records the reply in the same
+  thread.
 - Booking links (D20-T2): a booking page (sales pack, `booking_page`) gives prospects a public
   link, `/book/{slug}`, listing the times someone on its team is free. Those times respect working
   hours, holidays and absences, Attome meetings, and the person's connected calendar. A booking goes
