@@ -39,6 +39,64 @@ pub struct Timer {
     pub payload: serde_json::Value,
 }
 
+/// M10-T4: a timer still waiting, as people see it: what (its kind), for
+/// which record, when, and from which flow run. Never its payload.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct PendingTimer {
+    pub id: Uuid,
+    pub kind: String,
+    pub target_entity: Option<String>,
+    pub target_id: Option<Uuid>,
+    pub run_id: Option<Uuid>,
+    pub due_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// The most pending timers one record lists.
+pub const MAX_RECORD_TIMERS: i64 = 200;
+
+/// M10-T4: a record's pending timers, soonest first.
+pub async fn pending_for_target(
+    db: &attome_db::DbPool,
+    entity: &str,
+    id: Uuid,
+) -> Result<Vec<PendingTimer>, AppError> {
+    sqlx::query_as(
+        "SELECT id, kind, target_entity, target_id, run_id, due_at, created_at FROM timer \
+         WHERE status = 'pending' AND target_entity = $1 AND target_id = $2 \
+         ORDER BY due_at, id LIMIT $3",
+    )
+    .bind(entity)
+    .bind(id)
+    .bind(MAX_RECORD_TIMERS)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// M10-T4: every pending timer, soonest first, a page at a time, with how
+/// many there are in all.
+pub async fn pending_page(
+    db: &attome_db::DbPool,
+    limit: i64,
+    offset: i64,
+) -> Result<(Vec<PendingTimer>, i64), AppError> {
+    let items: Vec<PendingTimer> = sqlx::query_as(
+        "SELECT id, kind, target_entity, target_id, run_id, due_at, created_at FROM timer \
+         WHERE status = 'pending' ORDER BY due_at, id LIMIT $1 OFFSET $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM timer WHERE status = 'pending'")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok((items, total))
+}
+
 /// Adds a timer in the caller's transaction.
 pub async fn schedule(conn: &mut sqlx::PgConnection, timer: &NewTimer) -> Result<Uuid, AppError> {
     if timer.kind.trim().is_empty() {
