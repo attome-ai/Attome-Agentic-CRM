@@ -297,6 +297,8 @@ fn production_map() -> EntityModuleMap {
         // baseline commit in an isolated worktree).
         "service_work_queue",
         "service_work_queue_member",
+        // G8-T1: escalation rule sets.
+        "service_escalation_rule",
     ] {
         map.claim(entity, owner("attome-service", MODULE_SERVICE));
     }

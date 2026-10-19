@@ -315,7 +315,7 @@ pub async fn find_matching_policy(
 /// `attome_rules::Type`; a nested object/array field is skipped, so a
 /// condition referencing one is rejected at compile time as `UnknownField`,
 /// same as referencing any other absent field.
-fn schema_and_context_for_payload(
+pub fn schema_and_context_for_payload(
     payload: &Value,
 ) -> (attome_rules::Schema, attome_rules::Context) {
     let mut schema = attome_rules::Schema::new();

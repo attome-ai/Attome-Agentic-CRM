@@ -7,6 +7,8 @@ pub mod cmdb_impact;
 pub mod cmdb_reconcile;
 pub mod convert;
 pub mod entitlement;
+/// G8-T1: escalation rule sets compiled into M10 timers.
+pub mod escalation;
 mod intake;
 pub mod model;
 pub mod offering;

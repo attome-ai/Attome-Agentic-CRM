@@ -1353,9 +1353,25 @@ async fn dispatch_platform_job(
         EngineJob::TimerFire { timer_id } => {
             let mut conn = db.acquire().await?;
             if let Some(timer) = attome_core::timer::load(&mut conn, timer_id).await? {
-                let error = format!("no action is registered for timer kind {:?}", timer.kind);
-                tracing::warn!(%timer_id, kind = %timer.kind, "timers: no action for this kind");
-                attome_core::timer::settle(&mut conn, timer_id, Some(&error)).await?;
+                drop(conn);
+                let outcome = if timer.kind == attome_service::escalation::TIMER_KIND {
+                    // G8-T1: one step of a service escalation rule.
+                    attome_service::escalation::fire(
+                        &db,
+                        &attome_state.base.config.notification,
+                        &timer,
+                    )
+                    .await
+                    .map_err(|e| e.to_string())
+                } else {
+                    tracing::warn!(%timer_id, kind = %timer.kind, "timers: no action for this kind");
+                    Err(format!(
+                        "no action is registered for timer kind {:?}",
+                        timer.kind
+                    ))
+                };
+                let mut conn = db.acquire().await?;
+                attome_core::timer::settle(&mut conn, timer_id, outcome.err().as_deref()).await?;
             }
         }
         // K6-T3: scheduled recrawls, hourly.

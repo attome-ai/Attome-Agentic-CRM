@@ -37,6 +37,8 @@ impl EngineModel for ServiceModel {
             // M84 Phase 1 (Queue Management, D-464).
             "service_work_queue",
             "service_work_queue_member",
+            // G8-T1: escalation rule sets.
+            "service_escalation_rule",
         ]
     }
 

@@ -1060,6 +1060,8 @@ pub async fn sweep_auto_pause(db: &DbPool) -> Result<u64, AppError> {
         let resolved_changed = reconcile_resolved_at(db, ticket_id).await?;
         // G9-T3: the supplier clock follows the ticket's hand-off.
         crate::supplier_sla::reconcile(db, ticket_id, Utc::now()).await?;
+        // G8-T1: the escalation rules it now matches, or no longer does.
+        crate::escalation::schedule_for_ticket(db, ticket_id).await?;
         // G10-T2: a newly resolved case uses its cases entitlement, once.
         if resolved_changed {
             crate::entitlement::on_ticket_resolved(db, ticket_id).await?;
@@ -1607,7 +1609,7 @@ async fn ticket_summary(db: &DbPool, ticket_id: Uuid) -> Result<(String, String)
     Ok(row.unwrap_or_else(|| ("?".to_string(), "(ticket)".to_string())))
 }
 
-async fn notify_recipients(
+pub(crate) async fn notify_recipients(
     db: &DbPool,
     notification_cfg: &NotificationSection,
     recipients: &[Uuid],
