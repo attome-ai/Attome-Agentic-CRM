@@ -1333,6 +1333,9 @@ pub fn routes() -> Router<EngineState> {
         .merge(crate::cobrowse::routes())
         // J4-T2: inbound texts ride the same bundle.
         .merge(crate::sms_inbound::routes())
+        // D20-T2: public booking links ride the same public bundle; their
+        // OpenAPI is tagged `sales` in `openapi.rs`.
+        .merge(crate::booking::routes())
 }
 
 #[derive(utoipa::OpenApi)]

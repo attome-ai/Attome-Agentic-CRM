@@ -124,6 +124,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Booking links (D20-T2): a booking page (sales pack, `booking_page`) gives prospects a public
+  link, `/book/{slug}`, listing the times someone on its team is free. Those times respect working
+  hours, holidays and absences, Attome meetings, and the person's connected calendar. A booking goes
+  round robin to a free member, becomes a meeting activity on the matching contact or lead (or a new
+  lead) and lands in their calendar. The prospect gets an email with a signed link to reschedule or
+  cancel. New public routes under `/api/v1/booking/`, migration 0145.
 - Calendar sync (D15-T3): meeting activities a person owns sync both ways with the Microsoft 365
   or Google calendar they connected (D15-T1), every five minutes (the `calendar_sync` job,
   migration 0144). When both sides changed, the later edit wins and the other side's values are

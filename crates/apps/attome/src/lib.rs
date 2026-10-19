@@ -33,6 +33,8 @@ pub mod dev_access_seed;
 pub mod jobs;
 pub mod observability;
 pub mod omnichannel;
+/// D20-T2: public booking links.
+pub mod booking;
 /// J4-T2: inbound texts and STOP opt-outs.
 pub mod sms_inbound;
 pub mod openapi;

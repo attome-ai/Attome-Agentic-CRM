@@ -156,6 +156,11 @@ fn build() -> utoipa::openapi::OpenApi {
         crate::omnichannel::openapi(),
         "omnichannel",
     ));
+    // D20-T2: the public booking routes, mounted with the omnichannel bundle.
+    doc.merge(attome_server::openapi::tag_module(
+        crate::booking::openapi(),
+        "sales",
+    ));
     doc.merge(attome_server::openapi::tag_module(
         <SelfDoc as utoipa::OpenApi>::openapi(),
         "core",

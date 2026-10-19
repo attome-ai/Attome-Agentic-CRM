@@ -201,6 +201,19 @@ fn is_sms_receipt_path(path: &str) -> bool {
         })
 }
 
+/// D20-T2: `/api/v1/booking/{slug}` and the manage link's
+/// `/api/v1/booking/manage/{token}[/cancel|/reschedule]`, nothing else.
+fn is_booking_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/v1/booking/") else {
+        return false;
+    };
+    match rest.split('/').collect::<Vec<_>>().as_slice() {
+        [slug] => !slug.is_empty(),
+        ["manage", token] | ["manage", token, "cancel" | "reschedule"] => !token.is_empty(),
+        _ => false,
+    }
+}
+
 fn is_service_intake_path(path: &str) -> bool {
     let Some(rest) = path.strip_prefix("/api/v1/service-portal/offerings/") else {
         return false;
@@ -255,6 +268,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_service_intake_path(path)
         || is_email_tracking_path(path)
         || is_sms_receipt_path(path)
+        || is_booking_path(path)
 }
 
 /// Paths that skip authn/authz (they are in `EXACT_BYPASS_PATHS` above) but
@@ -394,6 +408,13 @@ mod tests {
         assert!(!is_bypass("/api/v1/sms/receipts/"));
         assert!(is_bypass("/api/v1/sms/inbound/key-1234567890abcdef"));
         assert!(!is_bypass("/api/v1/sms/inbound/a/b"));
+        assert!(is_bypass("/api/v1/booking/intro-call"));
+        assert!(is_bypass("/api/v1/booking/manage/abc.def"));
+        assert!(is_bypass("/api/v1/booking/manage/abc.def/cancel"));
+        assert!(is_bypass("/api/v1/booking/manage/abc.def/reschedule"));
+        assert!(!is_bypass("/api/v1/booking/manage/abc.def/delete"));
+        assert!(!is_bypass("/api/v1/booking/"));
+        assert!(!is_bypass("/api/v1/booking/intro/extra"));
         assert!(!is_bypass("/api/v1/consents/preference-links"));
         // Regression guard: the public capture route must never accidentally
         // sweep the authenticated withdraw endpoint or the generic

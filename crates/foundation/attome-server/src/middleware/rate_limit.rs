@@ -108,6 +108,21 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/sms/receipts/{token}", "portal_status"),
     // J4-T2: inbound texts from the provider.
     ("POST", "/api/v1/sms/inbound/{key}", "webchat"),
+    // D20-T2: public booking links (the handler adds per-address and
+    // per-page budgets on booking, and the challenge).
+    ("GET", "/api/v1/booking/{slug}", "portal_status"),
+    ("POST", "/api/v1/booking/{slug}", "consent_capture"),
+    ("GET", "/api/v1/booking/manage/{token}", "portal_status"),
+    (
+        "POST",
+        "/api/v1/booking/manage/{token}/cancel",
+        "consent_capture",
+    ),
+    (
+        "POST",
+        "/api/v1/booking/manage/{token}/reschedule",
+        "consent_capture",
+    ),
     ("POST", "/api/v1/consents/confirm", "consent_capture"),
     // Omnichannel web chat widget (M53 Phase 1, D-474): anonymous, bearer-
     // token-scoped, same token/enumeration-resistance reasoning as

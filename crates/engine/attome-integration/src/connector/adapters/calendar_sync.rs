@@ -23,6 +23,9 @@
 //! Changes made in Attome go through the generic mutation path as the
 //! person (`update_record_for`), so privileges, the state model, audit and
 //! the record timeline apply exactly as for an edit in the app.
+//!
+//! [`busy`] (D20-T2) reads the person's busy times from the same
+//! connections, for booking links.
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
@@ -600,6 +603,99 @@ async fn keep_conflict(
     .map_err(AppError::internal)?;
     tracing::info!(activity = %row.id, %user, winner, "calendar sync: both sides changed; later writer kept");
     Ok(())
+}
+
+// ── D20-T2: busy times ──────────────────────────────────────────────────────
+
+const GRAPH_CALENDAR_VIEW: &str = "https://graph.microsoft.com/v1.0/me/calendarView";
+const GOOGLE_FREE_BUSY: &str = "https://www.googleapis.com/calendar/v3/freeBusy";
+
+/// The busy intervals in a Graph `calendarView` answer: events not shown as
+/// free and not cancelled. Pure.
+pub fn parse_busy_graph(body: &str) -> Option<Vec<(DateTime<Utc>, DateTime<Utc>)>> {
+    let v: Value = serde_json::from_str(body).ok()?;
+    let items = v.get("value")?.as_array()?;
+    Some(
+        items
+            .iter()
+            .filter(|e| e.get("isCancelled").and_then(Value::as_bool) != Some(true))
+            .filter(|e| e.get("showAs").and_then(Value::as_str) != Some("free"))
+            .filter_map(|e| Some((graph_time(e.get("start"))?, graph_time(e.get("end"))?)))
+            .collect(),
+    )
+}
+
+/// The busy intervals in a Google `freeBusy` answer for the primary
+/// calendar. Pure.
+pub fn parse_busy_google(body: &str) -> Option<Vec<(DateTime<Utc>, DateTime<Utc>)>> {
+    let v: Value = serde_json::from_str(body).ok()?;
+    let busy = v
+        .get("calendars")?
+        .get("primary")?
+        .get("busy")?
+        .as_array()?;
+    Some(
+        busy.iter()
+            .filter_map(|b| Some((rfc3339(b.get("start"))?, rfc3339(b.get("end"))?)))
+            .collect(),
+    )
+}
+
+/// What `user`'s connected calendars show as busy in `[from, to)`; empty
+/// with no connection. An unreadable calendar is an error, so a caller
+/// offering the person's time can treat them as unavailable rather than
+/// free.
+pub async fn busy(
+    state: &EngineState,
+    user: Uuid,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> Result<Vec<(DateTime<Utc>, DateTime<Utc>)>, AppError> {
+    let providers: Vec<String> =
+        sqlx::query_scalar("SELECT provider FROM user_mail_connection WHERE user_id = $1")
+            .bind(user)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let mut out = Vec::new();
+    for provider in providers.iter().filter_map(|p| Provider::parse(p)) {
+        let Some(token) = access_token(state, user, provider).await? else {
+            continue;
+        };
+        let (status, body) = match provider {
+            Provider::Microsoft => {
+                answer(
+                    request(provider, client().get(GRAPH_CALENDAR_VIEW), &token).query(&[
+                        ("startDateTime", from.to_rfc3339()),
+                        ("endDateTime", to.to_rfc3339()),
+                        ("$select", "start,end,showAs,isCancelled".to_owned()),
+                        ("$top", "500".to_owned()),
+                    ]),
+                )
+                .await?
+            }
+            Provider::Google => {
+                answer(
+                    request(provider, client().post(GOOGLE_FREE_BUSY), &token).json(&json!({
+                        "timeMin": from.to_rfc3339(),
+                        "timeMax": to.to_rfc3339(),
+                        "items": [{ "id": "primary" }],
+                    })),
+                )
+                .await?
+            }
+        };
+        let parsed = if (200..300).contains(&status) {
+            match provider {
+                Provider::Microsoft => parse_busy_graph(&body),
+                Provider::Google => parse_busy_google(&body),
+            }
+        } else {
+            None
+        };
+        out.extend(parsed.ok_or_else(|| refused(provider, status))?);
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

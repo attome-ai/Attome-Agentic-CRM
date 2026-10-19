@@ -7,6 +7,8 @@
 //! module.
 
 pub mod attainment;
+/// D20-T2: public booking links.
+pub mod booking;
 pub mod catalogue;
 pub mod competitor_drafts;
 pub mod competitor_mentions;
