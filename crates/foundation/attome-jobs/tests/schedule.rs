@@ -211,6 +211,61 @@ async fn two_schedules_do_not_interfere() {
     );
 }
 
+/// Z7-T2: a one-off runs once however often it is ticked, and a schedule
+/// whose next run is in the future is registered but not claimed.
+#[tokio::test]
+async fn a_one_off_runs_once_and_a_future_cron_waits() {
+    use attome_jobs::schedule::{Schedule, tick_at};
+    let pool = skip_if_no_db!(test_pool().await);
+    reset(&pool).await;
+
+    let once_name = schedule_name();
+    let once = Schedule::Once(chrono::Utc::now() - chrono::Duration::minutes(5));
+    assert!(
+        tick_at(&pool, &once_name, &once, TestJob::Sweep)
+            .await
+            .expect("tick")
+    );
+    make_row_terminal(&pool, &once_name).await;
+    assert!(
+        !tick_at(&pool, &once_name, &once, TestJob::Sweep)
+            .await
+            .expect("tick again")
+    );
+    assert_eq!(enqueued_rows(&pool, &once_name).await, 1);
+
+    let cron_name = schedule_name();
+    let cron = Schedule::cron("0 0 1 1 *", "UTC").expect("schedule");
+    assert!(
+        !tick_at(&pool, &cron_name, &cron, TestJob::Sweep)
+            .await
+            .expect("tick")
+    );
+    let row: (String, chrono::DateTime<chrono::Utc>) =
+        sqlx::query_as("SELECT schedule, next_due_at FROM job_schedule WHERE name = $1")
+            .bind(&cron_name)
+            .fetch_one(&pool)
+            .await
+            .expect("ledger row");
+    assert_eq!(row.0, "cron 0 0 1 1 * UTC");
+    assert!(row.1 > chrono::Utc::now());
+
+    // Once due, it runs, and moves to the next 1 January.
+    force_due(&pool, &cron_name).await;
+    assert!(
+        tick_at(&pool, &cron_name, &cron, TestJob::Sweep)
+            .await
+            .expect("due tick")
+    );
+    let next: chrono::DateTime<chrono::Utc> =
+        sqlx::query_scalar("SELECT next_due_at FROM job_schedule WHERE name = $1")
+            .bind(&cron_name)
+            .fetch_one(&pool)
+            .await
+            .expect("next");
+    assert_eq!(next.format("%m-%d %H:%M").to_string(), "01-01 00:00");
+}
+
 #[tokio::test]
 async fn mark_succeeded_stamps_the_last_success_age() {
     let pool = skip_if_no_db!(test_pool().await);

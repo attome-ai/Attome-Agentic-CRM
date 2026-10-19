@@ -110,6 +110,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Calendar schedules (Z7-T2): a scheduled job can run on a five-field cron expression, once at an
+  instant, on a Hijri day of each month or on every working day of a business calendar, each in a
+  chosen time zone (`attome_jobs::schedule::Schedule`, claimed by `schedule::tick_at` once per slot
+  across workers). A wall time skipped by a daylight-saving change runs one hour on; a repeated one
+  runs once. Migration 0123 adds `job_schedule.schedule`.
 - Secret inventory (Z1-T8): `GET /api/v1/admin/secrets` lists every secret the configuration holds by
   path, with the features that use it, its key ids, the active one, since when it has been active and
   its age, and never a value. Each start records them in `secret_inventory` (migration 0120). A daily
