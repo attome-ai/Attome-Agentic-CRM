@@ -144,6 +144,48 @@ impl SqlLeg for LexicalLeg {
     }
 }
 
+/// C10-T1 — the query's glossary synonyms, full-text, as one leg: a record
+/// that uses another name for what the query names. Scored a fifth below a
+/// literal lexical hit, so the word the person typed still ranks first.
+pub struct SynonymLeg {
+    /// Each alternative already normalized and stemmed like the query.
+    pub stemmed_alternatives: Vec<String>,
+}
+
+impl std::fmt::Debug for SynonymLeg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SynonymLeg").finish_non_exhaustive()
+    }
+}
+
+impl SqlLeg for SynonymLeg {
+    fn id(&self) -> &'static str {
+        "R3.synonym"
+    }
+    fn phase(&self) -> LegPhase {
+        LegPhase::Immediate
+    }
+    fn push_candidates(&self, qb: &mut QueryBuilder<'_, Postgres>) {
+        qb.push(
+            "SELECT t.record_id, t.entity_logicalname, \
+             (ts_rank_cd(t.tsv, q.query, 32) * 0.8)::real AS score \
+             FROM search_index t, (SELECT ",
+        );
+        for (i, alternative) in self.stemmed_alternatives.iter().enumerate() {
+            if i > 0 {
+                qb.push(" || ");
+            }
+            qb.push("plainto_tsquery('attome_search', ");
+            qb.push_bind(alternative.clone());
+            qb.push(")");
+        }
+        if self.stemmed_alternatives.is_empty() {
+            qb.push("plainto_tsquery('attome_search', '')");
+        }
+        qb.push(") AS q(query) WHERE t.tsv @@ q.query");
+    }
+}
+
 /// R5 — fuzzy / typo tolerance.
 ///
 /// **`title_norm` only, never the body.** Trigram similarity over a long body

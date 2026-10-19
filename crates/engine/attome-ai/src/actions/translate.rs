@@ -212,12 +212,19 @@ impl Action for TextTranslate {
                     "a language is a code such as ar or en".into(),
                 ));
             }
-            let glossary = glossary_for(
-                text,
-                to,
-                &state.base.config.inference.translation.glossary,
-                &args.glossary,
-            );
+            // C10-T1: the business glossary's translations, under the
+            // deployment's configured ones (which win where both name a term).
+            let mut deployment = attome_search::glossary::approved_terms(&state.base.db)
+                .await
+                .map(|terms| attome_search::glossary::translations(&terms))
+                .unwrap_or_default();
+            for (term, renderings) in &state.base.config.inference.translation.glossary {
+                deployment
+                    .entry(term.clone())
+                    .or_default()
+                    .extend(renderings.iter().map(|(k, v)| (k.clone(), v.clone())));
+            }
+            let glossary = glossary_for(text, to, &deployment, &args.glossary);
 
             let client = crate::inference_client::client_for(state, TEXT_TRANSLATE).await?;
             // D-435: the model-registry check, before the cache too, so a

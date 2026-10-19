@@ -517,6 +517,28 @@ async fn recall_for_turn(
     }
 }
 
+/// C10-T1: the glossary definitions of the terms `text` names, as one data
+/// segment; none when it names none or the glossary cannot be read.
+async fn glossary_segments(state: &EngineState, text: &str) -> Vec<crate::prompt::Segment> {
+    let terms = match attome_search::glossary::approved_terms(&state.base.db).await {
+        Ok(terms) => terms,
+        Err(error) => {
+            tracing::warn!(%error, "glossary context unavailable; the turn goes ahead without it");
+            return Vec::new();
+        }
+    };
+    let definitions = attome_search::glossary::definitions_in(text, &terms);
+    if definitions.is_empty() {
+        return Vec::new();
+    }
+    let body = definitions
+        .iter()
+        .map(|(term, definition)| format!("{term}: {definition}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    vec![crate::prompt::Segment::untrusted("glossary", body)]
+}
+
 /// The recalled memories, best first, until `max_chars` would be passed.
 fn within_budget(
     hits: &[attome_search::MemoryHit],
@@ -795,7 +817,9 @@ pub async fn run(
     // N17-T1: what this person's memories say about the question, recalled
     // once per turn. Memory is retrieved content (I-10): it reaches the
     // prompt only as untrusted segments, and recalling any taints the turn.
-    let recalled = recall_for_turn(state, &inputs.security, user_text).await;
+    let mut recalled = recall_for_turn(state, &inputs.security, user_text).await;
+    // C10-T1: the definitions of the glossary terms the question names.
+    recalled.extend(glossary_segments(state, user_text).await);
     if !recalled.is_empty() {
         tainted = true;
     }

@@ -79,7 +79,12 @@ fn statement_timeout_ms(route: &Route) -> i64 {
 /// Building them here, from the route, is what makes "the router selects among
 /// strategies" concrete — a leg set assembled anywhere else would be a second
 /// routing decision.
-fn legs_for(route: &Route, normalized: &str, stemmed: &str) -> Vec<Box<dyn SqlLeg>> {
+fn legs_for(
+    route: &Route,
+    normalized: &str,
+    stemmed: &str,
+    synonyms: &[String],
+) -> Vec<Box<dyn SqlLeg>> {
     match route {
         // An exact hit short-circuits ranking entirely: someone who pastes an
         // invoice number wants that invoice, not the best textual match.
@@ -105,21 +110,30 @@ fn legs_for(route: &Route, normalized: &str, stemmed: &str) -> Vec<Box<dyn SqlLe
             }),
         ],
         Route::Aggregation { .. } => Vec::new(),
-        Route::Hybrid => vec![
-            Box::new(ExactKeyLeg {
-                normalized_query: normalized.to_owned(),
-            }),
-            Box::new(PrefixLeg {
-                normalized_query: normalized.to_owned(),
-            }),
-            Box::new(LexicalLeg {
-                stemmed_query: stemmed.to_owned(),
-            }),
-            Box::new(FuzzyLeg {
-                normalized_query: normalized.to_owned(),
-                ..FuzzyLeg::default()
-            }),
-        ],
+        Route::Hybrid => {
+            let mut legs: Vec<Box<dyn SqlLeg>> = vec![
+                Box::new(ExactKeyLeg {
+                    normalized_query: normalized.to_owned(),
+                }),
+                Box::new(PrefixLeg {
+                    normalized_query: normalized.to_owned(),
+                }),
+                Box::new(LexicalLeg {
+                    stemmed_query: stemmed.to_owned(),
+                }),
+                Box::new(FuzzyLeg {
+                    normalized_query: normalized.to_owned(),
+                    ..FuzzyLeg::default()
+                }),
+            ];
+            // C10-T1: the glossary's other names for what the query names.
+            if !synonyms.is_empty() {
+                legs.push(Box::new(crate::legs::stage1::SynonymLeg {
+                    stemmed_alternatives: synonyms.to_vec(),
+                }));
+            }
+            legs
+        }
     }
 }
 
@@ -449,7 +463,20 @@ pub async fn execute_search(
         }),
     );
 
-    let owned_legs = legs_for(&route, &normalized, &stemmed);
+    // C10-T1: glossary synonyms widen a full search. A glossary that cannot
+    // be read widens nothing; the search itself goes ahead.
+    let synonyms: Vec<String> = match crate::glossary::approved_terms(&state.base.db).await {
+        Ok(terms) => crate::glossary::alternatives(text_for_pipeline, &terms)
+            .iter()
+            .map(|a| crate::project::index_text(a))
+            .filter(|a| !a.trim().is_empty())
+            .collect(),
+        Err(error) => {
+            tracing::warn!(?error, "search: glossary synonyms unavailable");
+            Vec::new()
+        }
+    };
+    let owned_legs = legs_for(&route, &normalized, &stemmed, &synonyms);
     let leg_refs: Vec<&dyn SqlLeg> = owned_legs.iter().map(|l| l.as_ref()).collect();
 
     // Which of the two equivalent visibility shapes to use (TODO-053). A

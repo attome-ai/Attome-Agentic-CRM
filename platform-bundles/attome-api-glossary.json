@@ -16,6 +16,7 @@
         { "logicalname": "definition", "display_name": "Definition", "field_type": "text", "is_required": true },
         { "logicalname": "domain_ref", "display_name": "Data Domain", "field_type": "text", "is_filterable": true },
         { "logicalname": "synonyms", "display_name": "Synonyms", "field_type": "text" },
+        { "logicalname": "translations", "display_name": "Translations (JSON, language to text)", "field_type": "text" },
         { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "approved", "deprecated"], "multi": false } },
         { "logicalname": "primary_entity_logicalname", "display_name": "Primary Entity", "field_type": "text", "is_sortable": true, "is_filterable": true },
         { "logicalname": "primary_attribute_logicalname", "display_name": "Primary Attribute", "field_type": "text", "is_filterable": true }
