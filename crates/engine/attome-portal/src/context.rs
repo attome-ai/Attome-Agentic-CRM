@@ -58,7 +58,7 @@ type FieldRow = (String, bool, bool, bool);
 const PORTAL_USER_ENTITY: &str = "webportal_user";
 
 /// One stored grant condition, not yet resolved for a user.
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct RawCondition {
     field: String,
     operator: i16,
@@ -66,7 +66,7 @@ struct RawCondition {
     value_ref: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 enum LookupTemplate {
     SelfOnly,
     /// The role's read grant on the target (its id and raw conditions), or
@@ -77,7 +77,7 @@ enum LookupTemplate {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct GrantTemplate {
     grant_id: Uuid,
     can_read: bool,
@@ -95,11 +95,15 @@ struct GrantTemplate {
 
 /// A role's grant on one entity with nothing user-specific applied: what the
 /// G-9 cache holds. `grant` is `None` when the role has no grant there.
-#[derive(Debug)]
+/// (De)serializable only because a `TieredCache` value must be; the portal
+/// cache keeps it in process memory, and a decoded copy has no snapshot, so
+/// it is never [`built_against`](Self::built_against) one.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct PlanTemplate {
     /// The metadata snapshot this was checked against. A `Weak` keeps the
     /// snapshot's address from being reused while this entry lives, so a
     /// pointer comparison is an exact "same snapshot" test.
+    #[serde(skip)]
     registry: Weak<EntityMetaRegistry>,
     role_id: Uuid,
     grant: Option<GrantTemplate>,

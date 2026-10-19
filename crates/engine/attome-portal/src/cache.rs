@@ -9,8 +9,9 @@
 //! **Source of truth:** PostgreSQL. Nothing here is written anywhere but
 //! process memory; a fresh node behaves identically, only slower.
 //!
-//! **What is cached** (two moka [`HotCache`]s, [`TTL_SECS`] each, at most
-//! [`CAPACITY`] entries each):
+//! **What is cached** (two declared [`TieredCache`]s, [`PORTALS_SPEC`] and
+//! [`PLANS_SPEC`] (Z3-T8), in process memory only, [`TTL_SECS`] each, at
+//! most [`CAPACITY`] entries each, listed in `/api/v1/admin/caches`):
 //! - `attome-portal:portal:{keyword}:{version}` → the live portal
 //!   ([`PortalDetail`]) and its [`AuthPolicy`] (CIDR list, record budget,
 //!   page-size cap, consent versions). Unknown, disabled and anonymous
@@ -37,7 +38,9 @@
 //! [`crate::admin`]). Each request reads it once ([`current_version`]) before
 //! any cached read, so every node misses on its next request after a write —
 //! no subscriber is needed, and a lost pub/sub message cannot leave a node
-//! stale. The token is random rather than a counter so that an evicted,
+//! stale. A portal entry also depends on the `webportal` entity, so a
+//! generic write of a portal record drops this node's entries through the
+//! change feed (Z3-T5). The token is random rather than a counter so that an evicted,
 //! expired or flushed key starts a version no earlier entry can carry
 //! (D-625's absence rule): absence means "cold", never "reuse".
 //!
@@ -56,12 +59,17 @@
 //! reads PostgreSQL. A missing version key is created on first read.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use attome_cache::{HotCache, Store, create_hot_cache, get_recorded};
+use attome_cache::Store;
+use attome_cache::depends::Dependency;
+use attome_cache::spec::{CacheSensitivity, CacheSpec, FailureMode, Partition};
+use attome_cache::tiered::TieredCache;
 use attome_core::{EngineState, EntityMetaRegistry};
 use attome_db::DbPool;
 use attome_types::AppError;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 use crate::context::PlanTemplate;
@@ -86,17 +94,88 @@ pub const CAPACITY: u64 = 10_000;
 /// PostgreSQL, so a slow Redis should give up sooner than a coordination call.
 const OP_TIMEOUT: Duration = Duration::from_millis(200);
 
+/// The metadata entity a portal entry is read from; a generic write of it
+/// drops this node's portal entries through the change feed (Z3-T5).
+const PORTAL_ENTITY: &str = "webportal";
+
+/// Z3-T8: the live portals by keyword and access version. Process memory
+/// only: the per-node shape this cache has always had, and the access
+/// version in the id already makes every node miss after an admin write.
+pub static PORTALS_SPEC: CacheSpec = CacheSpec {
+    name: "attome-portal:portal",
+    crate_name: "attome-portal",
+    purpose: "portal",
+    source_of_truth: "PostgreSQL webportal and webportal_auth_policy",
+    ttl: Duration::from_secs(TTL_SECS),
+    jitter_pct: 0,
+    l1_capacity: CAPACITY,
+    partition: Partition::Shared,
+    sensitivity: CacheSensitivity::LocalOnly,
+    failure: FailureMode::FallBackToSource,
+    invalidation: "the access version in the id, replaced by every portal-admin write; \
+                   a generic webportal write through the change feed; TTL_SECS",
+    cold_start: "empty; the first request per portal reads PostgreSQL",
+    warm_on_start: false,
+};
+
+/// Z3-T8: each role's plan template per entity and access version. Process
+/// memory only: a template is stamped with this node's metadata snapshot,
+/// which does not travel.
+pub static PLANS_SPEC: CacheSpec = CacheSpec {
+    name: "attome-portal:plan",
+    crate_name: "attome-portal",
+    purpose: "plan",
+    source_of_truth: "PostgreSQL webportal_grant, webportal_grant_condition, \
+                      webportal_grant_field and webportal_entity",
+    ttl: Duration::from_secs(TTL_SECS),
+    jitter_pct: 0,
+    l1_capacity: CAPACITY,
+    partition: Partition::Shared,
+    sensitivity: CacheSensitivity::LocalOnly,
+    failure: FailureMode::FallBackToSource,
+    invalidation: "the access version in the id, replaced by every portal-admin write; \
+                   a template built against an older metadata snapshot is rebuilt; TTL_SECS",
+    cold_start: "empty; the first request per role and entity reads PostgreSQL",
+    warm_on_start: false,
+};
+
 /// A live, enabled, non-anonymous portal and its auth policy.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PortalEntry {
     pub detail: PortalDetail,
     pub policy: AuthPolicy,
 }
 
-/// The per-node L1. One per portal router ([`crate::router::app`]).
+/// A cached value shared by reference, as the L1 has always held it. The
+/// cache never writes it anywhere (`LocalOnly`), so the (de)serialization a
+/// `TieredCache` value must offer is never used on the request path.
+#[derive(Debug)]
+struct Held<T>(Arc<T>);
+
+impl<T> Clone for Held<T> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+impl<T: Serialize> Serialize for Held<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Held<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        T::deserialize(deserializer).map(|value| Self(Arc::new(value)))
+    }
+}
+
+/// The per-node L1. One per portal router ([`crate::router::app`]). Each
+/// tier is `None` only if its declaration was refused at start, which
+/// [`tests::portal_spec_validates`] rules out; the cache is then bypassed.
 pub struct PortalCache {
-    portals: HotCache<Arc<PortalEntry>>,
-    plans: HotCache<Arc<PlanTemplate>>,
+    portals: Option<Arc<TieredCache<Held<PortalEntry>>>>,
+    plans: Option<TieredCache<Held<PlanTemplate>>>,
 }
 
 impl std::fmt::Debug for PortalCache {
@@ -105,21 +184,46 @@ impl std::fmt::Debug for PortalCache {
     }
 }
 
+fn declared<V>(spec: &'static CacheSpec) -> Option<TieredCache<V>>
+where
+    V: Clone + Send + Sync + Serialize + serde::de::DeserializeOwned + 'static,
+{
+    TieredCache::new(spec, None)
+        .map_err(|error| {
+            tracing::error!(cache = spec.name, %error, "portal cache refused; bypassing it");
+        })
+        .ok()
+}
+
 impl Default for PortalCache {
     fn default() -> Self {
+        let portals = declared(&PORTALS_SPEC).map(Arc::new);
+        if let Some(portals) = &portals {
+            attome_core::cache_invalidation::bus().register(Arc::clone(portals) as _);
+        }
         Self {
-            portals: create_hot_cache(CAPACITY, TTL_SECS),
-            plans: create_hot_cache(CAPACITY, TTL_SECS),
+            portals,
+            plans: declared(&PLANS_SPEC),
         }
     }
 }
 
-fn portal_key(keyword: &str, version: &str) -> String {
-    format!("attome-portal:portal:{keyword}:{version}")
+fn portal_id(keyword: &str, version: &str) -> String {
+    format!("{keyword}:{version}")
 }
 
-fn plan_key(portal_id: Uuid, role_id: Uuid, entity: &str, version: &str) -> String {
-    format!("attome-portal:plan:{portal_id}:{role_id}:{entity}:{version}")
+fn plan_id(portal_id: Uuid, role_id: Uuid, entity: &str, version: &str) -> String {
+    format!("{portal_id}:{role_id}:{entity}:{version}")
+}
+
+/// `hot_cache_lookups_total{cache, outcome}`, as before Z3-T8.
+fn record_lookup(cache: &'static str, loaded: &AtomicBool) {
+    metrics::counter!(
+        "hot_cache_lookups_total",
+        "cache" => cache,
+        "outcome" => if loaded.load(Ordering::Relaxed) { "miss" } else { "hit" },
+    )
+    .increment(1);
 }
 
 /// The live portal named by `keyword` (already lowercased) and its policy,
@@ -139,33 +243,44 @@ pub(crate) async fn load_portal_entry(
 impl PortalCache {
     /// The live portal named by `keyword` (already lowercased), or `None`.
     /// With a `version`, served from and written to the L1; without one,
-    /// PostgreSQL only.
+    /// PostgreSQL only. An unknown, disabled or anonymous keyword is never
+    /// cached (the load answers not-found, which the cache does not keep).
     pub(crate) async fn portal(
         &self,
         db: &DbPool,
         keyword: &str,
         version: Option<&str>,
     ) -> Result<Option<Arc<PortalEntry>>, AppError> {
-        let key = version.map(|v| portal_key(keyword, v));
-        if let Some(key) = &key
-            && let Some(hit) = get_recorded(&self.portals, key, "portal_entry").await
-        {
-            return Ok(Some(hit));
-        }
-        let Some(entry) = load_portal_entry(db, keyword).await?.map(Arc::new) else {
-            return Ok(None);
+        let (Some(version), Some(cache)) = (version, &self.portals) else {
+            return Ok(load_portal_entry(db, keyword).await?.map(Arc::new));
         };
-        if let Some(key) = key {
-            self.portals.insert(key, Arc::clone(&entry)).await;
+        let loaded = AtomicBool::new(false);
+        let found = cache
+            .get_or_load_depending(
+                None,
+                &portal_id(keyword, version),
+                &[Dependency::Entity(PORTAL_ENTITY.to_owned())],
+                async {
+                    loaded.store(true, Ordering::Relaxed);
+                    load_portal_entry(db, keyword)
+                        .await?
+                        .map(|entry| Held(Arc::new(entry)))
+                        .ok_or(AppError::NotFound)
+                },
+            )
+            .await;
+        record_lookup("portal_entry", &loaded);
+        match found {
+            Ok(entry) => Ok(Some(entry.0)),
+            Err(AppError::NotFound) => Ok(None),
+            Err(error) => Err(error),
         }
-        Ok(Some(entry))
     }
 
     /// The role's plan template for `entity`: from the L1 when `version` is
     /// known and the entry was built against `registry`, else built by `build`
-    /// (and cached when `version` is known). Misses fill without
-    /// `try_get_with`: the fill is a handful of primary-key reads and misses
-    /// follow only an admin write, a metadata change or the TTL.
+    /// (and cached when `version` is known). A template built against an
+    /// older snapshot is dropped and rebuilt.
     pub(crate) async fn plan<F>(
         &self,
         key: (Uuid, Uuid, &str),
@@ -176,21 +291,40 @@ impl PortalCache {
     where
         F: Future<Output = Result<PlanTemplate, AppError>>,
     {
+        let (Some(version), Some(cache)) = (version, &self.plans) else {
+            return Ok(Arc::new(build.await?));
+        };
         let (portal_id, role_id, entity) = key;
-        let key = version.map(|v| plan_key(portal_id, role_id, entity, v));
-        if let Some(key) = &key
-            && let Some(hit) = get_recorded(&self.plans, key, "portal_plan").await
-        {
-            if hit.built_against(registry) {
-                return Ok(hit);
+        let id = plan_id(portal_id, role_id, entity, version);
+        let mut build = Some(build);
+        let loaded = AtomicBool::new(false);
+        let fill = |build: &mut Option<F>| {
+            let build = build.take();
+            let loaded = &loaded;
+            async move {
+                loaded.store(true, Ordering::Relaxed);
+                match build {
+                    Some(build) => build.await.map(|template| Held(Arc::new(template))),
+                    None => Err(AppError::internal("portal plan template built twice")),
+                }
             }
-            self.plans.invalidate(key).await;
+        };
+        let hit = cache.get_or_load(&id, fill(&mut build)).await?;
+        record_lookup("portal_plan", &loaded);
+        if hit.0.built_against(registry) {
+            return Ok(hit.0);
         }
-        let template = Arc::new(build.await?);
-        if let Some(key) = key {
-            self.plans.insert(key, Arc::clone(&template)).await;
+        cache.invalidate_local(&id).await;
+        let fresh = cache.get_or_load(&id, fill(&mut build)).await?;
+        if fresh.0.built_against(registry) {
+            return Ok(fresh.0);
         }
-        Ok(template)
+        // Another request filled the id from an older snapshot meanwhile:
+        // build this one without caching it.
+        match build.take() {
+            Some(build) => Ok(Arc::new(build.await?)),
+            None => Ok(fresh.0),
+        }
     }
 }
 
@@ -306,13 +440,28 @@ mod tests {
     fn keys_carry_every_input_and_the_version() {
         let (p, r) = (Uuid::nil(), Uuid::max());
         assert_eq!(
-            portal_key("customers", "v1"),
+            PORTALS_SPEC.key(&portal_id("customers", "v1")),
             "attome-portal:portal:customers:v1"
         );
-        let k = plan_key(p, r, "case", "v2");
+        let k = PLANS_SPEC.key(&plan_id(p, r, "case", "v2"));
         assert!(k.starts_with("attome-portal:plan:"));
         assert!(k.contains(&p.to_string()) && k.contains(&r.to_string()));
         assert!(k.ends_with(":case:v2"));
-        assert_ne!(plan_key(p, r, "case", "v1"), plan_key(p, r, "case", "v2"));
+        assert_ne!(plan_id(p, r, "case", "v1"), plan_id(p, r, "case", "v2"));
+    }
+
+    #[test]
+    fn portal_spec_validates() {
+        assert_eq!(PORTALS_SPEC.validate(), Ok(()));
+        assert_eq!(PLANS_SPEC.validate(), Ok(()));
+        assert_eq!(PORTALS_SPEC.ttl, Duration::from_secs(TTL_SECS));
+        assert_eq!(PLANS_SPEC.l1_capacity, CAPACITY);
+        assert_eq!(
+            PORTALS_SPEC.partition,
+            Partition::Shared,
+            "no per-user data"
+        );
+        let cache = PortalCache::default();
+        assert!(cache.portals.is_some() && cache.plans.is_some());
     }
 }

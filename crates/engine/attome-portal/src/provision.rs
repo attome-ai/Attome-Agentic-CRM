@@ -122,7 +122,7 @@ impl PortalUserStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PortalDetail {
     pub id: Uuid,
     pub name: String,

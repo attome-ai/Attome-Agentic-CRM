@@ -110,6 +110,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The portal cache is two declared caches (Z3-T8), `attome-portal:portal` and `attome-portal:plan`,
+  listed in `/api/v1/admin/caches`. Same TTL, capacity and keys; a generic write of a portal record
+  now also drops its cached entry through the change feed.
 - Calendar schedules (Z7-T2): a scheduled job can run on a five-field cron expression, once at an
   instant, on a Hijri day of each month or on every working day of a business calendar, each in a
   chosen time zone (`attome_jobs::schedule::Schedule`, claimed by `schedule::tick_at` once per slot

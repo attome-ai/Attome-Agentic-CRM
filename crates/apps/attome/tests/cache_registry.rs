@@ -101,7 +101,8 @@ const DECLARED_CACHES: &[Declared] = &[
         "attome-portal:portal and attome-portal:plan",
         "PostgreSQL portal tables",
         "TTL_SECS",
-        "every portal-admin write replaces the Redis access version, so every node misses next",
+        "every portal-admin write replaces the Redis access version, so every node misses next; \
+         a webportal write drops portal entries through the change feed (Z3-T8: two TieredCaches)",
         "a Redis error or absent version bypasses the cache for that request",
         "empty; a missing version key is created on first read",
     ),
