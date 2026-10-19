@@ -198,7 +198,9 @@
     "_comment_hsts": "Strict-Transport-Security max-age in seconds. validate_production_profile requires at least 15552000 (180 days); 0 would omit the header. Kept in lockstep with deploy/frontend/nginx.conf's add_header.",
     "hsts_max_age_secs": 31536000,
     "_comment_hsts_include_subdomains": "Set true once EVERY subdomain of this deployment's origin is confirmed TLS-only. A browser caches this for the full max-age, so enabling it over a still-plain-http sibling subdomain makes that subdomain unreachable for up to a year with no server-side undo.",
-    "hsts_include_subdomains": false
+    "hsts_include_subdomains": false,
+    "_secret_max_age_comment": "Z1-T8: days a secret's active key may stay in use before administrators are reminded to rotate it (at most once per 30 days per secret); 0 turns the reminder off. GET /api/v1/admin/secrets lists every secret's age, never its value.",
+    "secret_max_age_days": 365
   },
   "cors": {
     "_comment": "Not boot-enforced by validate_production_profile (only app.public_frontend_url's own doc calls this out) — but an http origin here defeats every TLS control set elsewhere in this file. Set to the real https frontend origin(s).",

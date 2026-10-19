@@ -62,6 +62,12 @@ impl AppConfig {
         &self.fingerprint_view
     }
 
+    /// Z1-T8: every secret this node was configured with, by name and key
+    /// id, never a value; empty unless loaded by `from_file`.
+    pub fn secret_inventory(&self) -> &[crate::secret_inventory::SecretState] {
+        &self.secret_inventory
+    }
+
     /// Z1-T7: the SHA-256 hex of [`Self::fingerprint_view`].
     pub fn fingerprint(&self) -> String {
         crate::fingerprint::fingerprint_of(&self.fingerprint_view)
@@ -201,6 +207,7 @@ impl AppConfig {
         config.ignored_keys = ignored_keys;
         config.literal_paths = literals;
         config.fingerprint_view = crate::fingerprint::view_of(&document);
+        config.secret_inventory = crate::secret_inventory::inventory_of(&document);
         // BCF-5 (D-615) — the profile decides, not APP_ENV: a production node
         // must never boot on a literal "${VAR}", whatever APP_ENV says. The
         // gate above already covers the non-debug case; this closes the

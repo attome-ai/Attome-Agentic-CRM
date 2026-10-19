@@ -2574,6 +2574,13 @@
           "minimum": 0,
           "type": "integer"
         },
+        "secret_max_age_days": {
+          "default": 365,
+          "description": "Z1-T8: days a secret's active key may stay in use before\nadministrators are reminded (once a day at most, and then once every\n30 days per secret) to rotate it. `0` turns the reminder off; the\ninventory (`GET /api/v1/admin/secrets`) still shows every age.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
         "strict_privileged_authz": {
           "default": true,
           "description": "P-authz-revocation-epoch (D-116): always-on synchronous epoch\nre-check (fail-closed, `redis_coordination`, 300ms timeout) ahead of\nthe privileged/admin-gated route bundles (`admin`, `license_admin`,\n`s2s_admin`, `schema`, `sidebar`, plus xrm-security's own grant/revoke\nadmin routes) — a just-revoked admin cannot keep using a still-live\nL1 cache entry to perform further privileged operations for the rest\nof the ordinary 60s TTL. Default true; false is the emergency\nrollback to pre-epoch behavior for exactly those bundles (kill\nswitch — remove after one release of burn-in per the plan's rollout\nsection).",

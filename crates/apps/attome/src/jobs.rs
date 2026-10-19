@@ -2509,6 +2509,67 @@ const DEDUP_KEY_AUDIT_V1_CUTOVER_CHECKPOINT: &str = "audit-v1-cutover-checkpoint
 /// route uses (`attome_fleet::routes::deployments::FLEET_POLL_KEY`), so a manual
 /// sync and the schedule never queue two polls.
 const DEDUP_KEY_FLEET_POLL: &str = "fleet-poll";
+/// Z1-T8: the daily secret age reminder (a registered job type).
+const DEDUP_KEY_SECRET_AGE_REMINDER: &str = "secret-age-reminder";
+
+/// Z1-T8: reminds administrators of secrets older than
+/// `security.secret_max_age_days`. A registered type (Z7-T1), not an
+/// `EngineJob` variant.
+pub const SECRET_AGE_REMINDER: attome_jobs::JobType =
+    attome_jobs::JobType::new("secret_age_reminder", 1);
+
+/// Z7-T1/Z1-T8: registers this binary's run-time job types, once per
+/// process. The worker calls it before it runs jobs and each scheduler that
+/// builds one calls it first, so a node that only schedules or only works
+/// knows the types it needs.
+pub fn register_job_types() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SECRET_AGE_REMINDER,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                secret_age_reminder(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+    });
+}
+
+/// Z1-T8: one admin notification per secret past the age limit, each
+/// claimed first so it goes out at most once per 30 days whichever worker
+/// runs it.
+async fn secret_age_reminder(state: &EngineState) -> Result<(), attome_types::AppError> {
+    let config = &state.base.config;
+    let due = attome_compliance::secret_inventory::claim_due_reminders(
+        &state.base.db,
+        config.secret_inventory(),
+        config.security.secret_max_age_days,
+    )
+    .await?;
+    for secret in due {
+        tracing::warn!(secret = %secret.name, age_days = secret.age_days, "secret age reminder: administrators told");
+        attome_ai::quality_monitor::alert_admins(
+            &state.base.db,
+            &config.notification,
+            format!("Secret {} is {} days old", secret.name, secret.age_days),
+            format!(
+                "The active key of {} has been in use for {} days, more than the {} days \
+                 security.secret_max_age_days allows. It is used by: {}. Rotate it (for a key \
+                 ring, add a new key and make it active) and restart.",
+                secret.name,
+                secret.age_days,
+                config.security.secret_max_age_days,
+                secret.used_by.join(", ")
+            ),
+            "/xrm/admin/settings",
+        )
+        .await;
+    }
+    Ok(())
+}
 
 /// BJB-4d — the schedule-ledger name for a kind a `spawn_*_scheduler` below
 /// enqueues, so a successful run can stamp `job_schedule.last_succeeded_at`
@@ -2519,7 +2580,7 @@ const DEDUP_KEY_FLEET_POLL: &str = "fleet-poll";
 /// and the schedule cannot drift apart. `None` for every kind no scheduler
 /// enqueues (the handler still runs it; there is just no schedule to stamp).
 ///
-/// The 40 arms mirror the 40 `DEDUP_KEY_*` constants above one for one; the
+/// The 41 arms mirror the 41 `DEDUP_KEY_*` constants above one for one; the
 /// wildcard is not an omission but the "not scheduled" case, which is the
 /// majority of the contract.
 fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
@@ -2601,6 +2662,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::PredictScoringSweep => DEDUP_KEY_PREDICT_SCORING_SWEEP,
         EngineJob::PredictOutcomeFillSweep => DEDUP_KEY_PREDICT_OUTCOME_FILL_SWEEP,
         EngineJob::FleetPoll => DEDUP_KEY_FLEET_POLL,
+        EngineJob::Registered(job) if job.name == SECRET_AGE_REMINDER.name => {
+            DEDUP_KEY_SECRET_AGE_REMINDER
+        }
         _ => return None,
     })
 }
@@ -2959,6 +3023,25 @@ pub fn spawn_perf_regression_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::PerfRegressionCheck,
         DEDUP_KEY_PERF_REGRESSION_CHECK,
         "perf regression check",
+    );
+}
+
+/// Z1-T8: daily, the reminder about secrets past their age limit.
+pub fn spawn_secret_age_reminder_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(SECRET_AGE_REMINDER.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "secret age reminder: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_SECRET_AGE_REMINDER,
+        "secret age reminder",
     );
 }
 

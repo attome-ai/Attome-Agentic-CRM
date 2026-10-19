@@ -267,4 +267,10 @@ pub struct AppConfig {
     /// built any other way.
     #[serde(skip)]
     pub(crate) fingerprint_view: serde_json::Value,
+
+    /// Z1-T8 — the loaded document's secrets, by name and key id, never a
+    /// value (see `crate::secret_inventory`), set by `from_file`; empty for
+    /// a configuration built any other way.
+    #[serde(skip)]
+    pub(crate) secret_inventory: Vec<crate::secret_inventory::SecretState>,
 }

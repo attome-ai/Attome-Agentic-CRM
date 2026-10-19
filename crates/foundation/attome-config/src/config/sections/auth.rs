@@ -663,6 +663,13 @@ pub struct SecuritySection {
     /// honest sentence.
     #[serde(default)]
     pub external_effects_enabled: bool,
+
+    /// Z1-T8: days a secret's active key may stay in use before
+    /// administrators are reminded (once a day at most, and then once every
+    /// 30 days per secret) to rotate it. `0` turns the reminder off; the
+    /// inventory (`GET /api/v1/admin/secrets`) still shows every age.
+    #[serde(default = "default_secret_max_age_days")]
+    pub secret_max_age_days: u32,
 }
 
 /// Not `#[derive(Default)]`: a derived impl would give `csrf_enforce`/
@@ -683,8 +690,14 @@ impl Default for SecuritySection {
             hsts_max_age_secs: default_hsts_max_age_secs(),
             hsts_include_subdomains: false,
             external_effects_enabled: false,
+            secret_max_age_days: default_secret_max_age_days(),
         }
     }
+}
+
+/// One year. See `SecuritySection::secret_max_age_days`.
+pub(crate) fn default_secret_max_age_days() -> u32 {
+    365
 }
 
 /// One year, the value the HSTS preload list requires and the usual

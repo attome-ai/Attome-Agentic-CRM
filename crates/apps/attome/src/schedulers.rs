@@ -98,6 +98,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_slo_burn_check_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // AA9-T7: limits near their value, daily.
     crate::jobs::spawn_limit_warning_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
+    // Z1-T8: secrets past their age limit, daily.
+    crate::jobs::spawn_secret_age_reminder_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // AA14-T8: p95 regressions since the last upgrade, daily.
     crate::jobs::spawn_perf_regression_scheduler(
         db.clone(),

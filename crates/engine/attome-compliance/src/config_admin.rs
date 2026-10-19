@@ -3,6 +3,9 @@
 //! /api/v1/admin/config/starts/diff?a={id}&b={id}` names the keys whose
 //! values differ between two starts (secret values are never stored, so
 //! never shown). Administrators only.
+//!
+//! Z1-T8: `GET /api/v1/admin/secrets` lists every secret the configuration
+//! holds with its users, key ids and age, and no value.
 
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized};
@@ -20,6 +23,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::config_starts::{self, ConfigStartRow};
+use crate::secret_inventory::{self, SecretInventoryRow};
 
 /// One changed key in a comparison.
 #[derive(Debug, Serialize, ToSchema)]
@@ -93,14 +97,45 @@ async fn diff_config_starts(
     Ok(Json(PaginatedResponse::new(changes, total, 1, page_size)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/secrets",
+    tag = "admin-config",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "Every secret of this node's configuration by name: the features that use it, its key ids, the active one and its age. Never a value.", body = PaginatedResponse<SecretInventoryRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_secrets(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<SecretInventoryRow>>, AppError> {
+    let window = PageWindow::resolve(page.page, page.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+    let config = &state.base.config;
+    Ok(Json(
+        secret_inventory::list(
+            &state.base.db,
+            config.secret_inventory(),
+            config.security.secret_max_age_days,
+            window,
+        )
+        .await?,
+    ))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/config/starts", get(list_config_starts))
         .route("/api/v1/admin/config/starts/diff", get(diff_config_starts))
+        .route("/api/v1/admin/secrets", get(list_secrets))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_config_starts, diff_config_starts))]
+#[openapi(paths(list_config_starts, diff_config_starts, list_secrets))]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {

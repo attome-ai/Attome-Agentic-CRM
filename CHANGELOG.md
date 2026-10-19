@@ -103,6 +103,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Secret inventory (Z1-T8): `GET /api/v1/admin/secrets` lists every secret the configuration holds by
+  path, with the features that use it, its key ids, the active one, since when it has been active and
+  its age, and never a value. Each start records them in `secret_inventory` (migration 0120). A daily
+  job tells administrators about a secret older than `security.secret_max_age_days` (default 365,
+  `0` off), at most once every 30 days per secret.
 - Job types registered at run time (Z7-T1): `attome_jobs::JobRegistry` maps a job name to its
   declaration (`JobType`: payload version, lane, priority, attempts, per-node concurrency cap) and
   handler, and `EngineJob::Registered` carries `{name, version, payload}`, so an engine adds a job

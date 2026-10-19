@@ -232,7 +232,9 @@
     "_hsts_comment": "Strict-Transport-Security max-age in seconds; 0 omits the header. Default one year, and safe in local dev — RFC 6797 §8.1 has browsers ignore HSTS received over plain http. validate_production_profile requires at least 15552000 (180 days). Kept in lockstep with deploy/frontend/nginx.conf's own add_header — see attome_server::middleware::security_headers.",
     "hsts_max_age_secs": 31536000,
     "_hsts_include_subdomains_comment": "Opt-in, unlike the other security toggles here: a browser caches this for the full max-age, so enabling it while any sibling subdomain is still plain http makes that subdomain unreachable for up to a year with no server-side undo. Turn on once every subdomain of this origin is confirmed TLS-only.",
-    "hsts_include_subdomains": false
+    "hsts_include_subdomains": false,
+    "_secret_max_age_comment": "Z1-T8: days a secret's active key may stay in use before administrators are reminded to rotate it (at most once per 30 days per secret); 0 turns the reminder off. GET /api/v1/admin/secrets lists every secret's age, never its value.",
+    "secret_max_age_days": 365
   },
   "cors": {
     "_comment": "Explicit CORS allow-list (Plan 1.3a). Omit/leave empty to fall back to http://{app.frontend_host}:{app.frontend_port} — dev-only, always http. Any deployment behind TLS MUST set this explicitly.",

@@ -58,6 +58,7 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 static MIGRATION_CHECKSUM_BASELINE: &str = include_str!("../migrations/checksums.sha256");
 
 /// Z1-T7: writes this start's `config_start` row on a short-lived pool.
+/// Z1-T8: and this start's secret inventory, each failure logged apart.
 async fn record_config_start(config: &AppConfig) {
     let node = std::env::var("HOSTNAME")
         .or_else(|_| std::env::var("COMPUTERNAME"))
@@ -74,6 +75,15 @@ async fn record_config_start(config: &AppConfig) {
             config.fingerprint_view(),
         )
         .await;
+        if let Err(error) =
+            attome_compliance::secret_inventory::record_boot(&db, config.secret_inventory()).await
+        {
+            tracing::warn!(
+                event = "config.secret_inventory.record_failed",
+                %error,
+                "could not record this start's secret inventory; continuing"
+            );
+        }
         db.close().await;
         result
     }

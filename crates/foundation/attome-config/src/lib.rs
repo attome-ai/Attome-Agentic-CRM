@@ -48,6 +48,8 @@ mod keyring;
 pub mod limits;
 mod net;
 pub mod secret;
+/// Z1-T8 — every secret the configuration holds, without its value.
+pub mod secret_inventory;
 
 pub use config::{
     AiEnablement, AiSurface, AnchorStoreSection, ApiKeyPepper, AppConfig, AppSection, AuthSection,

@@ -85,6 +85,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // themselves to a shared helper without more ceremony than the two calls
     // they'd replace.
     let mut jobs = jobs;
+    attome::jobs::register_job_types();
     attome::jobs::start_job_wakeup_listener(&config, &mut jobs).await;
     // AB7-T2: names unique to this process, so its held jobs can be
     // released on stop without touching another worker's.
