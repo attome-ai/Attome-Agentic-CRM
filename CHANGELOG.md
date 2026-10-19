@@ -124,6 +124,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Territory realignment (D13-T3): `POST /api/v1/sales/territories/realign/preview` lists the accounts
+  whose rule-made territory would change. `POST /api/v1/sales/territories/realign` queues the
+  `territory_realign` job, which applies the changes in batches through the generic write path,
+  leaving manual links alone.
 - Dialer calls through J6 (D21-T6): `POST /api/v1/sales/call-lists/{id}/dial` rings the agent's
   phone and then the customer through the voice system. The customer sees the caller ID the
   caller ID rules choose for their country, and only ever a number the system owns.

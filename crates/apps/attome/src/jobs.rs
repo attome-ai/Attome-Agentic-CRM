@@ -2626,6 +2626,11 @@ pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calen
 /// transcription (payload `{"call_id"}`).
 pub const VOICE_RECORDING: attome_jobs::JobType = attome_jobs::JobType::new("voice_recording", 1);
 
+/// D13-T3: territory realignment, run as the person who asked (payload
+/// `{"user_id"}`).
+pub const TERRITORY_REALIGN: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_sales::territory::REALIGN_JOB, 1);
+
 /// D15-T2: emails in people's own mailboxes captured onto matching records.
 pub const MAIL_CAPTURE: attome_jobs::JobType = attome_jobs::JobType::new("mail_capture", 1);
 
@@ -2646,6 +2651,22 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            TERRITORY_REALIGN,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                #[derive(serde::Deserialize)]
+                struct Payload {
+                    user_id: uuid::Uuid,
+                }
+                let payload: Payload = job.payload()?;
+                attome_sales::territory::apply(&state, payload.user_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");

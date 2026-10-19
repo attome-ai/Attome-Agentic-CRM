@@ -62,6 +62,14 @@ impl EngineModel for SalesModel {
                 post(crate::dialer::build::post_sales_build_list),
             )
             .route(
+                "/api/v1/sales/territories/realign/preview",
+                post(crate::territory::post_preview),
+            )
+            .route(
+                "/api/v1/sales/territories/realign",
+                post(crate::territory::post_realign),
+            )
+            .route(
                 "/api/v1/sales/call-lists/{id}/dial",
                 post(crate::dialer::telephony::post_dial),
             )

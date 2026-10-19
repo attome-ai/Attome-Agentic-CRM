@@ -39,6 +39,8 @@ pub mod split_store;
 pub mod splits;
 pub mod team;
 pub mod team_defaults;
+/// D13-T3: territory realignment.
+pub mod territory;
 pub mod undo;
 pub mod win_loss;
 
@@ -64,6 +66,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::build::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::telephony::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<territory::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<competitor_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
