@@ -473,7 +473,10 @@ pub(super) async fn scan_act(
     ctx: Authorized<SelfService>,
     Json(body): Json<ScanActBody>,
 ) -> Result<(axum::http::StatusCode, Json<ScanActResult>), AppError> {
-    if !state.feature_flags().is_on("scan.enabled", &ctx).await {
+    let flags = state.feature_flags();
+    // B16-T9: acting on a scan has its own flag, which needs scan.enabled.
+    if !flags.is_on("scan.enabled", &ctx).await || !flags.is_on("scan.actions_enabled", &ctx).await
+    {
         return Err(AppError::NotFound);
     }
     let (status, result) = act(&state, &ctx, &body).await?;

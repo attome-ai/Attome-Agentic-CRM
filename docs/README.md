@@ -15,6 +15,7 @@
 - [Agents](agents.md): what agents may do, their tools, delegation and safety.
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
 - [Duplicate rules](duplicates.md): comparators, what saving a duplicate does, scans, merges and undo.
+- [Scanning](scanning.md): scannable fields, GS1 codes, finding records by code, scan actions and the deep-link rule.
 - [Deal teams and splits](deal-teams.md): team members, revenue and overlay splits, won deals and leavers.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Invoicing](invoicing.md): drafts, issue and numbering, notes, the invoice document, statements, ageing and write-offs.

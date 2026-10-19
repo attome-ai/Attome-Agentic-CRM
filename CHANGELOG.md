@@ -124,6 +124,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Scanning (B16-T5, B16-T8, B16-T13): `GET /api/v1/scan/find` finds the records a scanned value
+  belongs to among scan-enabled fields, under the caller's permissions; `POST /api/v1/scan/act` runs
+  a scan action (open, start its flow at a `scan` trigger, or set a field) with one audit event,
+  behind the `scan.actions_enabled` flag. Agents get `scan.lookup` and `code.generate`. See
+  [docs/scanning.md](docs/scanning.md).
 - Batch document generation (K3-T3): `POST /api/v1/docgen/templates/{id}/render-batch` renders a
   template for up to 500 records, one render job each (attached to its record when the template names
   a field), and `GET /api/v1/docgen/batches/{batch_id}` counts them pending, running, completed,
