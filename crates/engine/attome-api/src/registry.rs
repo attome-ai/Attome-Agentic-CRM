@@ -219,9 +219,10 @@ mod entity_module_tests {
             assert_eq!(owner.model_name, model, "{entity} owner");
         }
 
-        // 1 workflow + 1 notification + 2 report + 18 project + 11 service
+        // 1 workflow + 1 notification + 2 report + 18 project + 14 service
         // (G9-T3 added `supplier_sla_clock`, G8-T1 `service_escalation_rule`,
-        // G2-T3 `service_conversion_map`)
+        // G2-T3 `service_conversion_map`, G3-T1 `service_catalog`,
+        // `service_category` and `service_offering_version`)
         // (M70 added `service_offering`, D-423; M73 added
         // `service_sla_clock`, D-422; D-517 added `service_sla_calculation`; M25 added `attome_report`/`report_schedule`,
         // D-440; M72 added `resource_allocation`; M84 added
@@ -234,7 +235,7 @@ mod entity_module_tests {
         // lists; `entity_module_gate.rs`'s
         // `the_real_engines_declare_exactly_these_entities` is what pins
         // those against each engine's own seed.
-        assert_eq!(map.len(), 33, "unexpected claimed-entity count");
+        assert_eq!(map.len(), 36, "unexpected claimed-entity count");
     }
 
     #[test]

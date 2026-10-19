@@ -54,7 +54,7 @@ async fn insert_offering(
     is_public: bool,
     is_active: bool,
     default_priority: &str,
-    default_queue_ref: Option<&str>,
+    default_queue_ref: Option<Uuid>,
     default_sla_policy_id: Option<Uuid>,
 ) -> Uuid {
     let id = Uuid::now_v7();
@@ -95,13 +95,22 @@ async fn creating_from_an_offering_inherits_its_defaults_and_issues_a_verifiable
     let actor = insert_systemuser(db).await;
     let requester_id = insert_systemuser(db).await;
     let sla_policy_id = insert_sla_policy(db).await;
+    // G3-T1: the offering's default queue is a work queue record.
+    let queue_id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO service_work_queue (id, name, distribution) VALUES ($1, 'Laptops', 'manual')",
+    )
+    .bind(queue_id)
+    .execute(db)
+    .await
+    .expect("insert service_work_queue");
     let offering_id = insert_offering(
         db,
         "Laptop Request",
         true,
         true,
         "high",
-        Some("placeholder-queue"),
+        Some(queue_id),
         Some(sla_policy_id),
     )
     .await;
@@ -153,8 +162,8 @@ async fn creating_from_an_offering_inherits_its_defaults_and_issues_a_verifiable
     );
     assert_eq!(
         stored.queue_ref.as_deref(),
-        Some("placeholder-queue"),
-        "inherited from the offering's default_queue_ref (M84 placeholder)"
+        Some(queue_id.to_string().as_str()),
+        "inherited from the offering's default_queue_ref"
     );
     assert_eq!(stored.sla_policy_id, Some(sla_policy_id));
     assert_eq!(stored.offering_id, Some(offering_id));

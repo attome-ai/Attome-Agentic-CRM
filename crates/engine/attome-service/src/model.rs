@@ -41,6 +41,10 @@ impl EngineModel for ServiceModel {
             "service_escalation_rule",
             // G2-T3: conversion maps.
             "service_conversion_map",
+            // G3-T1: catalogs, categories and offering versions.
+            "service_catalog",
+            "service_category",
+            "service_offering_version",
         ]
     }
 

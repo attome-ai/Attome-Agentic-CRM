@@ -101,11 +101,13 @@
         { "logicalname": "category", "display_name": "Category", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["it", "hr", "procurement", "access", "other"], "multi": false } },
         { "logicalname": "description", "display_name": "Description", "field_type": "text" },
         { "logicalname": "intake_form_ref", "display_name": "Intake Form (M65/M56, not yet wired)", "field_type": "text" },
-        { "logicalname": "default_queue_ref", "display_name": "Default Queue (M84, not yet wired)", "field_type": "text" },
+        { "logicalname": "default_queue_ref", "display_name": "Default Queue", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_work_queue" },
         { "logicalname": "default_sla_policy_id", "display_name": "Default SLA Policy", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_sla_policy" },
         { "logicalname": "default_priority", "display_name": "Default Priority", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
         { "logicalname": "approval_policy_ref", "display_name": "Approval Policy (M10, not yet wired)", "field_type": "text" },
         { "logicalname": "fulfilment", "display_name": "Fulfilment (ticket | task | project | workflow:<def>)", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "category_ref", "display_name": "Category (Catalog)", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_category" },
+        { "logicalname": "current_version", "display_name": "Published Version", "field_type": "number", "is_sortable": true },
         { "logicalname": "is_public", "display_name": "Public (self-service portal)", "field_type": "bool", "is_sortable": true, "is_filterable": true },
         { "logicalname": "is_active", "display_name": "Active", "field_type": "bool", "is_sortable": true, "is_filterable": true }
       ]
@@ -200,6 +202,39 @@
         { "logicalname": "offering_ref", "display_name": "Offering", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_offering" },
         { "logicalname": "direct_create", "display_name": "Create At Once", "field_type": "bool", "is_filterable": true }
       ]
+    },
+    {
+      "logicalname": "service_catalog",
+      "display_name": "Service Catalog",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "service_category",
+      "display_name": "Service Category",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "catalog_ref", "display_name": "Catalog", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_catalog" },
+        { "logicalname": "parent_ref", "display_name": "Parent Category", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_category" }
+      ]
+    },
+    {
+      "logicalname": "service_offering_version",
+      "display_name": "Offering Version",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "offering_ref", "display_name": "Offering", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "service_offering" },
+        { "logicalname": "version_number", "display_name": "Version", "field_type": "number", "is_required": true, "is_sortable": true },
+        { "logicalname": "snapshot", "display_name": "Snapshot (JSON)", "field_type": "text" },
+        { "logicalname": "published_at", "display_name": "Published At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+      ]
     }
   ],
   "queries": [
@@ -226,7 +261,10 @@
     { "entity": "service_work_queue", "name": "Queue Average Wait, Minutes (Currently Unassigned Items)", "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (NOW() - created_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND assignee_id IS NULL AND status NOT IN ('resolved', 'closed') GROUP BY work_queue_ref", "required_privilege": "service_work_queue.read", "is_report": true },
     { "entity": "service_ticket", "name": "Queue Claim-To-Resolve, Minutes (Last 30 Days)", "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (resolved_at - claimed_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND status IN ('resolved', 'closed') AND resolved_at IS NOT NULL AND claimed_at IS NOT NULL AND resolved_at >= NOW() - INTERVAL '30 days'", "required_privilege": "service_ticket.read", "is_report": true },
     { "entity": "service_escalation_rule", "name": "Active Escalation Rules", "sql": "SELECT id FROM service_escalation_rule WHERE is_active = true", "required_privilege": "service_escalation_rule.read" },
-    { "entity": "service_conversion_map", "name": "Active Conversion Maps", "sql": "SELECT id FROM service_conversion_map WHERE is_active = true", "required_privilege": "service_conversion_map.read" }
+    { "entity": "service_conversion_map", "name": "Active Conversion Maps", "sql": "SELECT id FROM service_conversion_map WHERE is_active = true", "required_privilege": "service_conversion_map.read" },
+    { "entity": "service_catalog", "name": "Active Service Catalogs", "sql": "SELECT id FROM service_catalog WHERE is_active = true", "required_privilege": "service_catalog.read" },
+    { "entity": "service_category", "name": "Active Service Categories", "sql": "SELECT id FROM service_category WHERE is_active = true", "required_privilege": "service_category.read" },
+    { "entity": "service_offering_version", "name": "Active Offering Versions", "sql": "SELECT id FROM service_offering_version WHERE is_active = true", "required_privilege": "service_offering_version.read" }
   ],
   "views": [
     { "entity": "service_work_request", "name": "Active Work Requests", "query": { "entity": "service_work_request", "name": "Active Work Requests" }, "is_default": true },
@@ -246,7 +284,10 @@
     { "entity": "service_work_queue_member", "name": "Active Work Queue Members", "query": { "entity": "service_work_queue_member", "name": "Active Work Queue Members" }, "is_default": true },
     { "entity": "service_work_queue_member", "name": "Inactive Work Queue Members", "query": { "entity": "service_work_queue_member", "name": "Inactive Work Queue Members" }, "is_default": false },
     { "entity": "service_escalation_rule", "name": "Active Escalation Rules", "query": { "entity": "service_escalation_rule", "name": "Active Escalation Rules" }, "is_default": true },
-    { "entity": "service_conversion_map", "name": "Active Conversion Maps", "query": { "entity": "service_conversion_map", "name": "Active Conversion Maps" }, "is_default": true }
+    { "entity": "service_conversion_map", "name": "Active Conversion Maps", "query": { "entity": "service_conversion_map", "name": "Active Conversion Maps" }, "is_default": true },
+    { "entity": "service_catalog", "name": "Active Service Catalogs", "query": { "entity": "service_catalog", "name": "Active Service Catalogs" }, "is_default": true },
+    { "entity": "service_category", "name": "Active Service Categories", "query": { "entity": "service_category", "name": "Active Service Categories" }, "is_default": true },
+    { "entity": "service_offering_version", "name": "Active Offering Versions", "query": { "entity": "service_offering_version", "name": "Active Offering Versions" }, "is_default": true }
   ],
   "state_models": [
     {

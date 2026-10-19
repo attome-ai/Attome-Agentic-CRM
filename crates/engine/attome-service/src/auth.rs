@@ -45,6 +45,15 @@ impl PrivilegeKey for OfferingRead {
     const KEY: &'static str = "service_offering.read";
 }
 
+/// `service_offering.update` — `offering::publish_offering`'s compile-time
+/// policy (G3-T1).
+#[derive(Debug)]
+pub struct OfferingUpdate;
+
+impl PrivilegeKey for OfferingUpdate {
+    const KEY: &'static str = "service_offering.update";
+}
+
 /// `service_ticket.read` — M85's `timeline::ticket_timeline` compile-time policy.
 /// A read-only route, unlike `TicketUpdate` above; the entity-level gate here
 /// only proves the caller may read tickets at all — `timeline::build_timeline`

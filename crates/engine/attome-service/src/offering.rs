@@ -54,7 +54,8 @@ struct OfferingRow {
 /// the soft-delete predicate).
 async fn load_active_offering(db: &DbPool, offering_id: Uuid) -> Result<OfferingRow, AppError> {
     sqlx::query_as::<_, OfferingRow>(
-        "SELECT id, category, default_priority, default_queue_ref, default_sla_policy_id \
+        "SELECT id, category, default_priority, default_queue_ref::text AS default_queue_ref, \
+                default_sla_policy_id \
          FROM service_offering \
          WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )
@@ -171,6 +172,16 @@ pub async fn create_work_request_from_offering(
     record.insert("offering_id".into(), Value::String(offering.id.to_string()));
     record.insert("priority".into(), Value::String(effective.priority.clone()));
     put_opt(&mut record, "queue_ref", effective.queue_ref.clone());
+    // G3-T1: a queue that names a work queue record also sets the lookup.
+    put_opt(
+        &mut record,
+        "work_queue_ref",
+        effective
+            .queue_ref
+            .as_deref()
+            .and_then(|q| Uuid::parse_str(q).ok())
+            .map(|q| q.to_string()),
+    );
     put_opt(&mut record, "channel", body.channel.clone());
     // G2-T2: the offering's category, unless rules set another in the create.
     crate::intake::classify(&mut record, offering.category.as_deref());
@@ -377,6 +388,213 @@ async fn create_work_request(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+// ── G3-T1: offering versions on publish ─────────────────────────────────────
+
+/// A published offering's version.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OfferingPublished {
+    pub offering_id: Uuid,
+    pub version_id: Uuid,
+    pub version_number: i64,
+}
+
+/// The number the next published version gets. Pure.
+pub fn next_version(current: Option<i64>) -> i64 {
+    current.unwrap_or(0).max(0) + 1
+}
+
+/// Publishes an offering (G3-T1): it becomes public, and what it is now is
+/// kept as its next numbered version (`service_offering_version`, a snapshot
+/// of the offering), through the entity engine in one transaction. The
+/// caller needs `service_offering.update` and update access to this
+/// offering, and `service_offering_version.create`.
+pub async fn publish_offering(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    offering_id: Uuid,
+) -> Result<OfferingPublished, AppError> {
+    ctx.require_key("service_offering.update")?;
+    ctx.require_key("service_offering_version.create")?;
+    let offering = IntakeEntity::resolve(state, "service_offering").await?;
+    let version = IntakeEntity::resolve(state, "service_offering_version").await?;
+    attome_records::entity_crud::require_record_access(
+        state,
+        ctx,
+        offering.id,
+        &offering.name,
+        offering_id,
+        attome_security::RecordAction::Update,
+    )
+    .await?;
+    let actor = MutationActor::fetch(state, ctx.user_id).await;
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-service/offering-publish:{offering_id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Err(AppError::Conflict(
+            "this offering is already being published",
+        ));
+    }
+    let row: Option<(Value, i64)> = sqlx::query_as(
+        "SELECT to_jsonb(o), o.row_version FROM service_offering o \
+          WHERE o.id = $1 AND (o.is_active IS NULL OR o.is_active = true)",
+    )
+    .bind(offering_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let (snapshot, row_version) = row.ok_or(AppError::NotFound)?;
+    let current: Option<i64> = sqlx::query_scalar(
+        "SELECT max(version_number)::bigint FROM service_offering_version \
+          WHERE offering_ref = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(offering_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let number = next_version(current);
+
+    let mut version_body = Map::new();
+    version_body.insert(
+        "offering_ref".into(),
+        Value::String(offering_id.to_string()),
+    );
+    version_body.insert("version_number".into(), Value::from(number));
+    version_body.insert("snapshot".into(), Value::String(snapshot.to_string()));
+    version_body.insert(
+        "published_at".into(),
+        Value::String(chrono::Utc::now().to_rfc3339()),
+    );
+    let created = create_one_as(
+        &mut tx,
+        state,
+        Principal::Staff(ctx),
+        &version.name,
+        &version.attrs,
+        &version_body,
+        CreateStamp::staff(ctx.user_id, actor.org_ref),
+        MutationMode::Strict,
+    )
+    .await?;
+    attome_records::entity_crud::grant_creator_share(
+        &mut tx,
+        version.id,
+        created.record_id,
+        ctx.user_id,
+    )
+    .await?;
+
+    let mut patch = Map::new();
+    patch.insert("is_public".into(), Value::Bool(true));
+    patch.insert("current_version".into(), Value::from(number));
+    let updated = attome_records::entity_mutation::update_one_as(
+        &mut tx,
+        state,
+        Principal::Staff(ctx),
+        &offering.name,
+        offering.id,
+        offering_id,
+        &offering.attrs,
+        &patch,
+        Some(ctx.user_id),
+        row_version,
+        MutationMode::Strict,
+    )
+    .await?;
+    audit_entity_write(
+        &mut tx,
+        state,
+        &actor,
+        &version,
+        &created,
+        AuditOperation::Create,
+        &version_body,
+        "service_offering.publish",
+    )
+    .await?;
+    audit_entity_write(
+        &mut tx,
+        state,
+        &actor,
+        &offering,
+        &updated,
+        AuditOperation::Update,
+        &patch,
+        "service_offering.publish",
+    )
+    .await?;
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            &offering.name,
+            Some(offering_id),
+        )
+        .organization(actor.org_ref)
+        .named("service_offering.publish")
+        .comment(format!("version {number}")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(OfferingPublished {
+        offering_id,
+        version_id: created.record_id,
+        version_number: number,
+    })
+}
+
+/// Publishes an offering as its next version (G3-T1).
+///
+/// The offering becomes public, and a snapshot of it is kept as a numbered
+/// `service_offering_version`, so what a request was filed against stays
+/// known after the offering changes.
+#[utoipa::path(
+    post,
+    path = "/api/v1/service-offering/{id}/publish",
+    tag = "service",
+    params(("id" = Uuid, Path)),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update),
+        (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create),
+        (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update),
+    ])))),
+    responses(
+        (status = 200, description = "Published as a new version", body = OfferingPublished),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such active offering", body = ErrorResponse),
+        (status = 409, description = "The offering is being published already, or changed meanwhile", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn publish_offering_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<crate::auth::OfferingUpdate>>,
+    Path(offering_id): Path<Uuid>,
+) -> Result<Json<OfferingPublished>, AppError> {
+    Ok(Json(publish_offering(&state, &ctx, offering_id).await?))
+}
+
+#[cfg(test)]
+mod offering_versions {
+    use super::*;
+
+    #[test]
+    fn offering_versions_count_up_from_one() {
+        assert_eq!(next_version(None), 1);
+        assert_eq!(next_version(Some(1)), 2);
+        assert_eq!(next_version(Some(-3)), 1);
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -387,12 +605,16 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/service-offering/{id}/create-work-request",
             post(create_work_request),
         )
+        .route(
+            "/api/v1/service-offering/{id}/publish",
+            post(publish_offering_route),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document; merged by this crate's own `openapi()`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_active_offerings, create_work_request))]
+#[openapi(paths(list_active_offerings, create_work_request, publish_offering_route))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
