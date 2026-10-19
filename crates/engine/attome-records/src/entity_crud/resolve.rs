@@ -1,3 +1,4 @@
+use attome_core::meta_registry::OPTIONS_SQL;
 use attome_core::{AttrInfo, DataClassification, EngineState, EntityModuleMap, OnTargetDelete};
 use attome_modules::ModuleSet;
 use attome_types::AppError;
@@ -50,9 +51,12 @@ pub async fn resolve_entity_from_db(
 
     let (entity_id, entity_name, is_append_only) = entity_row.ok_or(AppError::NotFound)?;
 
-    let attrs: Vec<AttrRow> = sqlx::query_as(attome_db::tagged_sql!(
+    // A5-T1: a choice field that names an option set gets the set's
+    // published, not retired codes, as the registry gives them.
+    let sql = attome_db::tag_dynamic(
         "entity.resolve",
-        r#"SELECT COALESCE(logicalname, '')        AS logicalname,
+        &format!(
+            r#"SELECT COALESCE(logicalname, '')        AS logicalname,
                   COALESCE("type", 3)              AS field_type_int,
                   COALESCE(required, false)         AS is_required,
                   max_length,
@@ -63,15 +67,17 @@ pub async fn resolve_entity_from_db(
                   lookup_entity_ref,
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
-                  options
+                  {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE entity_ref = $1 AND (is_active IS NULL OR is_active = true)
              AND logicalname IS NOT NULL AND logicalname <> ''"#
-    ))
-    .bind(entity_id)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
+        ),
+    );
+    let attrs: Vec<AttrRow> = sqlx::query_as(&sql)
+        .bind(entity_id)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
 
     let attrs = attrs
         .into_iter()

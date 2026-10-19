@@ -2626,6 +2626,12 @@ pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calen
 /// transcription (payload `{"call_id"}`).
 pub const VOICE_RECORDING: attome_jobs::JobType = attome_jobs::JobType::new("voice_recording", 1);
 
+/// A5-T2: an option set value merged into another, rewritten on every record
+/// that holds it, as the person who asked (payload
+/// `attome_api::model_admin::option_merge::MergePayload`).
+pub const OPTION_SET_MERGE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::model_admin::option_merge::MERGE_JOB, 1);
+
 /// D13-T3: territory realignment, run as the person who asked (payload
 /// `{"user_id"}`).
 pub const TERRITORY_REALIGN: attome_jobs::JobType =
@@ -2664,6 +2670,18 @@ pub fn register_job_types() {
                 }
                 let payload: Payload = job.payload()?;
                 attome_sales::territory::apply(&state, payload.user_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OPTION_SET_MERGE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::model_admin::option_merge::MergePayload = job.payload()?;
+                attome_api::model_admin::option_merge::apply(&state, &payload)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())

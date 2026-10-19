@@ -435,7 +435,9 @@ impl From<AttrRow> for AttrInfo {
 /// A5-T1: an attribute's `options`, with a choice field that names an option
 /// set (`{"option_set": "<name>"}`) given that set's published, not retired
 /// codes as `choices`, in order, so every choice check works unchanged.
-const OPTIONS_SQL: &str = "CASE WHEN options ? 'option_set' THEN \
+/// Public so a path that reads `attribute_info` without the registry
+/// (`attome_records`'s database resolve) sees the same choices.
+pub const OPTIONS_SQL: &str = "CASE WHEN options ? 'option_set' THEN \
     options || jsonb_build_object('choices', COALESCE(( \
         SELECT jsonb_agg(val->'code' ORDER BY COALESCE((val->>'order')::bigint, 9223372036854775807)) \
         FROM metadata_object o \
