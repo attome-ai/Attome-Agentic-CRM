@@ -26,7 +26,9 @@
         { "logicalname": "sla_policy_id", "display_name": "SLA Policy", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_sla_policy" },
         { "logicalname": "portal_public_id", "display_name": "Portal Access Id", "field_type": "text", "is_sensitive": true },
         { "logicalname": "portal_secret_hash", "display_name": "Portal Access Secret Hash", "field_type": "text", "is_sensitive": true },
-        { "logicalname": "work_queue_ref", "display_name": "Work Queue", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_work_queue" }
+        { "logicalname": "work_queue_ref", "display_name": "Work Queue", "field_type": "lookup", "is_filterable": true, "lookup_entity": "service_work_queue" },
+        { "logicalname": "reference", "display_name": "Reference", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "category", "display_name": "Category", "field_type": "text", "is_sortable": true, "is_filterable": true }
       ]
     },
     {
@@ -267,6 +269,15 @@
         { "from_state": "rejected", "to_state": "new", "name": "Reopen", "display_order": 4 },
         { "from_state": "new", "to_state": "converted", "name": "Convert", "display_order": 5, "guard_expression": "not is_null(resolved_record_id)" },
         { "from_state": "triaged", "to_state": "converted", "name": "Convert", "display_order": 6, "guard_expression": "not is_null(resolved_record_id)" }
+      ]
+    }
+  ],
+  "record_sets": [
+    {
+      "entity": "autovalue",
+      "key_fields": ["name"],
+      "rows": [
+        { "name": "Work request reference", "entity_logicalname": "service_work_request", "attribute_logicalname": "reference", "format": "REQ-{YYYY}-{DDDDD}", "sequence_key": "REQ", "reset_scope": "yearly", "initial_value": 1, "next_value": 1, "fast_mode": true }
       ]
     }
   ]

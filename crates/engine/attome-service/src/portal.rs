@@ -68,6 +68,8 @@ pub struct AnonymousRequest {
 pub struct AnonymousRequestAccepted {
     /// The `{public_id}.{secret}` bearer for `GET /api/v1/service-portal/status`.
     pub status_token: String,
+    /// G2-T2: the request's reference, to quote when following it up.
+    pub reference: Option<String>,
 }
 
 /// The deployment's anonymous-intake settings: the offerings that take
@@ -192,8 +194,11 @@ pub async fn submit_anonymous(
     )
     .await
     {
+        // Every anonymous request shares one service account as requester,
+        // so `open_requests` would list strangers' requests: not passed on.
         Ok(created) => Ok(AnonymousRequestAccepted {
             status_token: created.portal_token,
+            reference: created.reference,
         }),
         Err(AppError::Forbidden) => {
             tracing::warn!(

@@ -134,3 +134,94 @@ pub(crate) fn placeholder_number(prefix: &str) -> String {
     let simple = Uuid::now_v7().simple().to_string();
     format!("{prefix}-{}", simple[24..].to_uppercase())
 }
+
+// ── G2-T2: reference, existing work and classification on submit ────────────
+
+/// The work-request statuses that are still open: a new submission can be
+/// added to one of these instead.
+pub const OPEN_STATUSES: [&str; 2] = ["new", "triaged"];
+
+/// Most open requests a submission is shown.
+pub const MAX_OPEN_REQUESTS: i64 = 5;
+
+/// The autonumber rule that gives every work request its reference
+/// (`REQ-2026-00042`, a counter per year), seeded by the service module.
+pub const REFERENCE_RULE: &str = "Work request reference";
+
+/// One of the requester's open requests, offered when they submit another.
+#[derive(Debug, Clone, serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]
+pub struct OpenRequest {
+    pub id: Uuid,
+    pub reference: Option<String>,
+    pub title: String,
+    pub status: String,
+}
+
+/// The classification a submission starts with before the rules run: the
+/// offering's category when the submission names none. Rules (A11
+/// `set_value`) and routing then set type, category and priority on top,
+/// inside the create. Pure.
+pub fn classify(record: &mut Map<String, Value>, offering_category: Option<&str>) {
+    let has_category = record
+        .get("category")
+        .and_then(Value::as_str)
+        .is_some_and(|c| !c.trim().is_empty());
+    if !has_category
+        && let Some(category) = offering_category.map(str::trim).filter(|c| !c.is_empty())
+    {
+        record.insert("category".into(), Value::String(category.to_owned()));
+    }
+}
+
+/// The requester's other open requests, newest first, in the submission's
+/// transaction, so the person can add to one instead.
+pub(crate) async fn open_requests_of(
+    tx: &mut Transaction<'_, Postgres>,
+    requester_id: Uuid,
+    except: Uuid,
+) -> Result<Vec<OpenRequest>, AppError> {
+    sqlx::query_as(
+        "SELECT id, reference, title, status FROM service_work_request \
+          WHERE requester_id = $1 AND id <> $2 AND status = ANY($3) \
+            AND (is_active IS NULL OR is_active = true) \
+          ORDER BY created_at DESC LIMIT $4",
+    )
+    .bind(requester_id)
+    .bind(except)
+    .bind(OPEN_STATUSES.as_slice())
+    .bind(MAX_OPEN_REQUESTS)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)
+}
+
+#[cfg(test)]
+mod intake_classify {
+    use super::*;
+
+    #[test]
+    fn intake_classify_takes_the_offerings_category_when_none_is_given() {
+        let mut record = Map::new();
+        classify(&mut record, Some(" Hardware "));
+        assert_eq!(record["category"], "Hardware");
+    }
+
+    #[test]
+    fn intake_classify_keeps_a_given_category() {
+        let mut record = Map::new();
+        record.insert("category".into(), Value::String("Access".into()));
+        classify(&mut record, Some("Hardware"));
+        assert_eq!(record["category"], "Access");
+        let mut blank = Map::new();
+        classify(&mut blank, Some("  "));
+        assert!(!blank.contains_key("category"));
+    }
+
+    #[test]
+    fn intake_classify_offers_only_open_requests() {
+        assert!(OPEN_STATUSES.contains(&"new"));
+        assert!(OPEN_STATUSES.contains(&"triaged"));
+        assert!(!OPEN_STATUSES.contains(&"converted"));
+        assert!(!OPEN_STATUSES.contains(&"rejected"));
+    }
+}

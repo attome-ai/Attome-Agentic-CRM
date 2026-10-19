@@ -95,6 +95,13 @@ pub struct CreateWorkRequestFromOfferingResponse {
     /// (`service_work_request.portal_secret_hash`); this response is the only
     /// place the raw secret ever exists.
     pub portal_token: String,
+    /// G2-T2: the request's reference (`REQ-2026-00042`), when the
+    /// deployment's reference rule numbered it.
+    pub reference: Option<String>,
+    /// G2-T2: the requester's other open requests, newest first, so the
+    /// submission can be added to one instead. Empty when the caller may not
+    /// read work requests.
+    pub open_requests: Vec<crate::intake::OpenRequest>,
 }
 
 /// The actual creation — loads the offering, evaluates routing, mints a
@@ -160,6 +167,8 @@ pub async fn create_work_request_from_offering(
     record.insert("priority".into(), Value::String(effective.priority.clone()));
     put_opt(&mut record, "queue_ref", effective.queue_ref.clone());
     put_opt(&mut record, "channel", body.channel.clone());
+    // G2-T2: the offering's category, unless rules set another in the create.
+    crate::intake::classify(&mut record, offering.category.as_deref());
     put_opt(
         &mut record,
         "sla_policy_id",
@@ -237,6 +246,19 @@ pub async fn create_work_request_from_offering(
         .comment(format!("created from service offering {offering_id}")),
     )
     .await?;
+    // G2-T2: the reference the autonumber rule gave it, and the requester's
+    // other open requests (only for a caller who may read requests).
+    let reference: Option<String> =
+        sqlx::query_scalar("SELECT reference FROM service_work_request WHERE id = $1")
+            .bind(work_request_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    let open_requests = if ctx.require("service_work_request", "read").is_ok() {
+        crate::intake::open_requests_of(&mut tx, body.requester_id, work_request_id).await?
+    } else {
+        Vec::new()
+    };
     attome_db::tx::commit(tx).await?;
     attome_records::rw_pin::pin_write_with_current_lsn(
         state,
@@ -259,6 +281,8 @@ pub async fn create_work_request_from_offering(
         work_request_id,
         status: "new".to_owned(),
         portal_token: issued.bearer,
+        reference,
+        open_requests,
     })
 }
 
