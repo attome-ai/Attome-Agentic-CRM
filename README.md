@@ -136,6 +136,6 @@ to embed Attome in a closed product or to offer it as a closed service. Contact 
 
 ## Contributing and security
 
-Outside contributions are not accepted yet; see [`CONTRIBUTING.md`](CONTRIBUTING.md). Bug reports and
-ideas are welcome as issues. Report security problems privately as described in
-[`SECURITY.md`](SECURITY.md).
+Contributions are welcome under the [contributor licence agreement](CLA.md);
+[`CONTRIBUTING.md`](CONTRIBUTING.md) says how to build, test and open a pull request. Report security
+problems privately as described in [`SECURITY.md`](SECURITY.md).
