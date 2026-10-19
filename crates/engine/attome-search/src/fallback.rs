@@ -130,8 +130,9 @@ pub async fn fallback_search(
             };
             let column = quote_ident(&title.logicalname);
             let mut sql = format!(
-                "SELECT t.id, t.{column}::text FROM {} t WHERE t.{column} ILIKE $1 ESCAPE '\\'",
-                quote_ident(&entity)
+                "SELECT t.id, t.{col}::text FROM {} t WHERE t.{col} ILIKE $1 ESCAPE '\\'",
+                quote_ident(&entity),
+                col = quote_ident(&title.logicalname),
             );
             if !meta.is_append_only {
                 sql.push_str(" AND t.is_active = true");

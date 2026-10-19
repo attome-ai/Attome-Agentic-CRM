@@ -512,7 +512,7 @@ async fn an_unknown_action_is_indistinguishable_from_an_unavailable_one() {
     // A model naming a tool that does not exist must not be able to learn
     // anything from the difference between "no such action" and "not licensed"
     // — both are 404 (I-9 / the dark license gate).
-    for id in ["record.drop_table", "record.summarise", "../../etc/passwd"] {
+    for id in ["record.drop_table", "record.summarise"] {
         let (status, _) = post(
             &app,
             &format!("/api/v1/actions/{id}/invoke"),
@@ -526,6 +526,19 @@ async fn an_unknown_action_is_indistinguishable_from_an_unavailable_one() {
             "unknown action {id} must 404, not 400/500"
         );
     }
+
+    // A `..` segment never reaches the router: the web firewall (Z5-T4)
+    // refuses it with 400 on every path, so the refusal says nothing about
+    // which actions exist.
+    let (status, body) = post(
+        &app,
+        "/api/v1/actions/../../etc/passwd/invoke",
+        &cookie,
+        json!({ "args": {} }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["error"], "request_rejected", "{body}");
 }
 
 #[tokio::test]
