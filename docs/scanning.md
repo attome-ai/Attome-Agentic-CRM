@@ -11,7 +11,7 @@ Two feature flags, both off by default:
 
 | Flag | What it turns on |
 |---|---|
-| `scan.enabled` | Scan buttons on scan-enabled fields, `GET /api/v1/scan/find`, the `scan.lookup` agent action |
+| `scan.enabled` | `GET /api/v1/scan/find`, the `scan.lookup` agent action, and scanning into scan-enabled fields in the clients that offer a camera |
 | `scan.actions_enabled` | `POST /api/v1/scan/act`, which runs a scan action. Needs `scan.enabled`. |
 
 Set them like any feature flag (their stored values are the settings
