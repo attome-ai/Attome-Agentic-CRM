@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { DOCUMENT } from '@angular/common';
 import { TranslocoService } from '@jsverse/transloco';
 import { ATTOME_CONFIG } from './config';
+import { ConditionalCache } from './conditional-cache';
 import type { Translation } from '@jsverse/transloco';
 import { CATALOG_LOAD, EAGER_CATALOGS } from './i18n/catalogs';
 import { ATTOME_LANGUAGES, BASE_LANGUAGE, LanguageDef, fallbackChain } from './i18n/languages';
@@ -70,6 +71,7 @@ export class LangService {
   private readonly transloco  = inject(TranslocoService);
   private readonly load       = inject(CATALOG_LOAD);
   private readonly registry   = inject(LayerCatalogRegistry);
+  private readonly conditional = inject(ConditionalCache);
   /** B20-T1: the languages the interface can be shown in, in picker order. */
   readonly languages          = inject(ATTOME_LANGUAGES);
 
@@ -317,6 +319,8 @@ export class LangService {
   }
 
   private apply(lang: Lang): void {
+    // AA7-T11: a schema or query answer carries the language it was fetched in.
+    if (lang !== this.current()) this.conditional.clear();
     this.current.set(lang);
     this.transloco.setActiveLang(lang);
     this.doc.documentElement.lang = lang;

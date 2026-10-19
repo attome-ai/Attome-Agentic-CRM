@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { ApiService, CHANGESET_HEADER, changesetRefusalCode } from './api.service';
+import { AuthService } from './auth.service';
+import { ConditionalCache } from './conditional-cache';
 import { ATTOME_CONFIG } from './config';
 import type { ApiError } from './types';
 
@@ -17,6 +20,7 @@ describe('ApiService', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
+        { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
       ],
     });
     service = TestBed.inject(ApiService);
@@ -539,6 +543,74 @@ describe('ApiService', () => {
       expect(changesetRefusalCode('conflict: layer_mismatch: owned by platform')).toBe('layer_mismatch');
       expect(changesetRefusalCode('conflict: something else')).toBeNull();
       expect(changesetRefusalCode(undefined)).toBeNull();
+    });
+  });
+  describe('conditional cache (AA7-T11)', () => {
+    const QUERY = 'http://localhost:7865/api/v1/query/execute';
+    const query = { entity: 'account', page_size: 25 };
+
+    function prime(): void {
+      service.post('/api/v1/query/execute', query).subscribe();
+      httpMock.expectOne(QUERY).flush({ rows: [{ id: 1 }] }, { headers: { ETag: '"q1"' } });
+    }
+
+    it('reuses cached body on 304', async () => {
+      prime();
+      const again = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', query));
+      const req = httpMock.expectOne(QUERY);
+      expect(req.request.headers.get('If-None-Match')).toBe('"q1"');
+      req.flush(null, { status: 304, statusText: 'Not Modified' });
+      expect(await again).toEqual({ rows: [{ id: 1 }] });
+    });
+
+    it('revalidates a schema GET and keys entries by request', async () => {
+      service.get('/api/v1/schema/account').subscribe();
+      httpMock.expectOne('http://localhost:7865/api/v1/schema/account')
+        .flush({ fields: [] }, { headers: { ETag: '"s1"' } });
+      service.get('/api/v1/schema/contact').subscribe();
+      const other = httpMock.expectOne('http://localhost:7865/api/v1/schema/contact');
+      expect(other.request.headers.has('If-None-Match')).toBe(false);
+      other.flush({ fields: [] });
+      const again = firstValueFrom(service.get('/api/v1/schema/account'));
+      const req = httpMock.expectOne('http://localhost:7865/api/v1/schema/account');
+      expect(req.request.headers.get('If-None-Match')).toBe('"s1"');
+      req.flush(null, { status: 304, statusText: 'Not Modified' });
+      expect(await again).toEqual({ fields: [] });
+    });
+
+    it('does not let a caller edit the remembered body', async () => {
+      const first = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', query));
+      httpMock.expectOne(QUERY).flush({ rows: [{ id: 1 }] }, { headers: { ETag: '"q1"' } });
+      (await first).rows.push({ id: 2 });
+      const again = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', query));
+      httpMock.expectOne(QUERY).flush(null, { status: 304, statusText: 'Not Modified' });
+      expect(await again).toEqual({ rows: [{ id: 1 }] });
+    });
+
+    it('leaves other requests alone', () => {
+      service.get('/api/v1/account').subscribe();
+      httpMock.expectOne('http://localhost:7865/api/v1/account').flush([], { headers: { ETag: '"a"' } });
+      service.get('/api/v1/account').subscribe();
+      const req = httpMock.expectOne('http://localhost:7865/api/v1/account');
+      expect(req.request.headers.has('If-None-Match')).toBe(false);
+      req.flush([]);
+    });
+
+    it('clears cache on logout', () => {
+      prime();
+      TestBed.inject(AuthService).clearSession();
+      service.post('/api/v1/query/execute', query).subscribe();
+      const req = httpMock.expectOne(QUERY);
+      expect(req.request.headers.has('If-None-Match')).toBe(false);
+      req.flush({ rows: [] });
+    });
+
+    it('keeps at most 200 entries, dropping the least recently used', () => {
+      const cache = TestBed.inject(ConditionalCache);
+      for (let i = 0; i <= ConditionalCache.MAX_ENTRIES; i++) cache.set(`k${i}`, `"${i}"`, i);
+      expect(cache.size).toBe(ConditionalCache.MAX_ENTRIES);
+      expect(cache.get('k0')).toBeUndefined();
+      expect(cache.get('k1')?.etag).toBe('"1"');
     });
   });
 });

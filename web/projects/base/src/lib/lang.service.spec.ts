@@ -5,6 +5,7 @@ import { TRANSLOCO_TRANSPILER, TranslocoService } from '@jsverse/transloco';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FIRST_RENDER_BOOT_TIMEOUT_MS, LangService } from './lang.service';
 import { ATTOME_CONFIG } from './config';
+import { ConditionalCache } from './conditional-cache';
 import { provideAttomeI18n } from './provide';
 import { CATALOG_LOAD } from './i18n/catalogs';
 import { LazyMessageFormatTranspiler } from './i18n/lazy-messageformat.transpiler';
@@ -100,6 +101,16 @@ describe('LangService', () => {
     const doc = TestBed.inject(DOCUMENT);
     expect(doc.documentElement.dir).toBe('rtl');
     expect(doc.documentElement.lang).toBe('ar');
+  });
+
+  it('a language change forgets remembered API answers (AA7-T11)', async () => {
+    const lang = setUp();
+    const cache = TestBed.inject(ConditionalCache);
+    cache.set('GET /api/v1/schema/account?#', '"s1"', {});
+    await lang.set('en');
+    expect(cache.size).toBe(1);
+    await lang.set('ar');
+    expect(cache.size).toBe(0);
   });
 
   it('toggle() flips between en and ar', async () => {

@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { ApiService } from './api.service';
+import { ConditionalCache } from './conditional-cache';
 import { ATTOME_CONFIG } from './config';
 import {
   Ack,
@@ -42,6 +43,7 @@ export interface PowChallenge {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api    = inject(ApiService);
+  private readonly conditional = inject(ConditionalCache);
   private readonly router = inject(Router);
   private readonly config = inject(ATTOME_CONFIG);
 
@@ -309,6 +311,8 @@ export class AuthService {
 
   clearSession(): void {
     this._session.set(null);
+    // AA7-T11: no remembered answer outlives the user it was fetched for.
+    this.conditional.clear();
   }
 
   // ── Private ───────────────────────────────────────────────────────────────
