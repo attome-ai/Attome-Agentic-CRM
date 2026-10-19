@@ -3,7 +3,8 @@
 Thank you for helping. Bug reports, ideas, translations, documentation and code are all welcome.
 
 Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems never go in a
-public issue, discussion or pull request: follow [`SECURITY.md`](SECURITY.md).
+public issue, discussion or pull request: follow [`SECURITY.md`](SECURITY.md). This guide in Arabic is
+[`CONTRIBUTING.ar.md`](CONTRIBUTING.ar.md).
 
 ## Before you write code
 
@@ -12,8 +13,12 @@ public issue, discussion or pull request: follow [`SECURITY.md`](SECURITY.md).
 - **Features and larger changes**: open an issue first and describe the problem you want solved. A
   change that alters the public API, the database schema or a security control is discussed before it
   is written, so neither of us spends time on a pull request that cannot be merged.
+- **Packs** (a sector or module built from metadata): use the pack proposal template.
 - **Small fixes** (a typo, a clear bug with an obvious fix, a missing translation) can go straight to a
   pull request.
+
+Issues use the templates in [`.github/ISSUE_TEMPLATE`](.github/ISSUE_TEMPLATE) (bug, feature, pack) and
+pull requests the [pull request template](.github/pull_request_template.md).
 
 ## The contributor licence agreement
 
@@ -78,3 +83,9 @@ request whose gate is not green is not reviewed. Add `--web` when you changed th
 - Mark anything you are unsure about. Small, focused pull requests are reviewed first.
 
 A maintainer reviews it, may ask for changes, and merges it once the gate and the CLA check are green.
+
+## Labels
+
+Every issue gets one `type:` label and one `status:` label, and `area:` and the others as they apply. The
+full list is [`.github/labels.yml`](.github/labels.yml). Issues labelled `good first issue` are a good
+place to start.

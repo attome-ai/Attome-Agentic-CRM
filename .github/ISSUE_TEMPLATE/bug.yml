@@ -1,0 +1,73 @@
+name: Bug report
+description: Something does not work as documented. (Security problems go to SECURITY.md, never here.)
+labels: ["type: bug", "status: triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. Please do **not** report a security problem here: follow
+        [SECURITY.md](../blob/main/SECURITY.md) instead. You can write in English or Arabic.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Include the error text, and for an API problem the request and the response (remove any secret or personal data).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v2.0.0, or a commit hash
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system of the server
+      options:
+        - Windows
+        - Linux
+        - Both
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Records, forms and lists
+        - Builder (entities, fields, flows, rules)
+        - Security and sign-in
+        - AI and agents
+        - Sales, service or marketing packs
+        - Billing and e-invoicing
+        - Install, upgrade and operations
+        - Web application (look, language, right to left)
+        - API
+        - Other
+  - type: dropdown
+    id: language
+    attributes:
+      label: Interface language when it happened
+      options:
+        - English
+        - Arabic
+        - Both
+        - Not relevant

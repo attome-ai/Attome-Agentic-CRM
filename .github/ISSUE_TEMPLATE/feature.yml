@@ -1,0 +1,44 @@
+name: Feature request
+description: A problem you want solved, or a change to how something works.
+labels: ["type: feature", "status: triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first, then the solution you have in mind. A change to the public API,
+        the database schema or a security control is discussed here before anyone writes it.
+        You can write in English or Arabic.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Who has it, when, and what they do about it today.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What you would like
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: What it would touch, as far as you know
+      options:
+        - label: The public API (`/api/v1`)
+        - label: The database schema
+        - label: Security, sign-in or permissions
+        - label: Configuration only (metadata a builder could set up)
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to build it?
+      options:
+        - Yes, with guidance
+        - Maybe
+        - No

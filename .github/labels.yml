@@ -1,0 +1,84 @@
+# The issue and pull request labels, kept here so they can be applied to the
+# repository the same way every time (for example with a labels sync action).
+# Every issue gets one `type:` and one `status:`; `area:` and the others as
+# they apply.
+
+# What it is
+- name: "type: bug"
+  color: "d73a4a"
+  description: Something does not work as documented
+- name: "type: feature"
+  color: "0e8a16"
+  description: A new capability or a change to how something works
+- name: "type: pack"
+  color: "5319e7"
+  description: A sector or module pack built from metadata
+- name: "type: docs"
+  color: "0075ca"
+  description: Documentation only
+- name: "type: translation"
+  color: "c5def5"
+  description: Arabic or English text
+- name: "type: chore"
+  color: "cfd3d7"
+  description: Build, dependencies, tooling
+
+# Where it is in its life
+- name: "status: triage"
+  color: "fbca04"
+  description: Not looked at yet
+- name: "status: needs info"
+  color: "fef2c0"
+  description: Waiting for the reporter
+- name: "status: accepted"
+  color: "0e8a16"
+  description: Agreed; ready for someone to take
+- name: "status: in progress"
+  color: "1d76db"
+  description: Someone is working on it
+- name: "status: blocked"
+  color: "b60205"
+  description: Waits on something else
+- name: "status: wontfix"
+  color: "ffffff"
+  description: Will not be done; the reason is in the issue
+
+# Where in the product
+- name: "area: records"
+  color: "bfdadc"
+  description: Records, forms, lists and views
+- name: "area: builder"
+  color: "bfdadc"
+  description: Entities, fields, flows, rules and publishing
+- name: "area: security"
+  color: "bfdadc"
+  description: Sign-in, permissions and audit
+- name: "area: ai"
+  color: "bfdadc"
+  description: AI actions and agents
+- name: "area: packs"
+  color: "bfdadc"
+  description: Sales, service, marketing and other packs
+- name: "area: billing"
+  color: "bfdadc"
+  description: Billing, payments and e-invoicing
+- name: "area: ops"
+  color: "bfdadc"
+  description: Install, upgrade, backup and operations
+- name: "area: web"
+  color: "bfdadc"
+  description: The web application, languages and right to left
+- name: "area: api"
+  color: "bfdadc"
+  description: The HTTP API and its document
+
+# For newcomers and for impact
+- name: "good first issue"
+  color: "7057ff"
+  description: Small, well described, a good start
+- name: "help wanted"
+  color: "008672"
+  description: Maintainers would welcome a contribution
+- name: "breaking"
+  color: "b60205"
+  description: Changes the public API or a stored format

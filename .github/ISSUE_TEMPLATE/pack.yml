@@ -1,0 +1,41 @@
+name: Pack proposal
+description: A new pack (a sector or a module built from metadata), or a change to an existing one.
+labels: ["type: pack", "status: triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A pack is configuration, not code: entities, fields, forms, flows, rules and roles, shipped as
+        changesets under `packs/`. Prefer metadata; propose engine code only for what metadata cannot
+        express. You can write in English or Arabic.
+  - type: input
+    id: name
+    attributes:
+      label: Pack
+      description: An existing pack under `packs/`, or the name of a new one.
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: Who uses it and for what
+      description: The sector, the people in it, and the work the pack supports.
+    validations:
+      required: true
+  - type: textarea
+    id: contents
+    attributes:
+      label: What it contains
+      description: Entities and fields, stages, flows, rules, roles, reports. A rough list is fine.
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Country rules it depends on
+      description: Tax, e-invoicing, data protection, calendars (Hijri), language, if any.
+  - type: textarea
+    id: engine
+    attributes:
+      label: Anything metadata cannot express
+      description: Behaviour that would need engine code. Leave empty if none.
