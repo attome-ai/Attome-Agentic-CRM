@@ -664,15 +664,19 @@ pub async fn busy(
         };
         let (status, body) = match provider {
             Provider::Microsoft => {
-                answer(
-                    request(provider, client().get(GRAPH_CALENDAR_VIEW), &token).query(&[
+                // reqwest is built without its `query` feature: the URL
+                // carries the parameters.
+                let url = url::Url::parse_with_params(
+                    GRAPH_CALENDAR_VIEW,
+                    &[
                         ("startDateTime", from.to_rfc3339()),
                         ("endDateTime", to.to_rfc3339()),
                         ("$select", "start,end,showAs,isCancelled".to_owned()),
                         ("$top", "500".to_owned()),
-                    ]),
+                    ],
                 )
-                .await?
+                .map_err(AppError::internal)?;
+                answer(request(provider, client().get(url), &token)).await?
             }
             Provider::Google => {
                 answer(

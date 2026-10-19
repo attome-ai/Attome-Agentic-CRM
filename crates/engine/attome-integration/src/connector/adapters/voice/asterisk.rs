@@ -116,10 +116,12 @@ pub(super) async fn place_call(
         .timeout(super::TIMEOUT)
         .build()
         .map_err(AppError::internal)?;
+    let url =
+        url::Url::parse_with_params(&format!("{}/channels", base.trim_end_matches('/')), &query)
+            .map_err(AppError::internal)?;
     let res = client
-        .post(format!("{}/channels", base.trim_end_matches('/')))
+        .post(url)
         .basic_auth(user, Some(password))
-        .query(&query)
         .send()
         .await
         .map_err(AppError::internal)?;

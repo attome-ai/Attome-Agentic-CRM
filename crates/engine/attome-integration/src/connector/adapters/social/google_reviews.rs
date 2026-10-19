@@ -166,9 +166,13 @@ pub async fn fetch_reviews(
     system: &IntegrationSystem,
 ) -> Result<Vec<Review>, AppError> {
     let token = access_token(state, system).await?;
+    let url = url::Url::parse_with_params(
+        &format!("{API}/{}/reviews", location(system)?),
+        &[("pageSize", "50"), ("orderBy", "updateTime desc")],
+    )
+    .map_err(AppError::internal)?;
     let res = client()
-        .get(format!("{API}/{}/reviews", location(system)?))
-        .query(&[("pageSize", "50"), ("orderBy", "updateTime desc")])
+        .get(url)
         .bearer_auth(token)
         .send()
         .await
