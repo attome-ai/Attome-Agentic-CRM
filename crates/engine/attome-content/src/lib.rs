@@ -37,6 +37,8 @@ pub mod model;
 pub mod scheduling;
 pub mod space_admin;
 pub mod template_admin;
+/// K5-T4: linked translations with stale flags.
+pub mod translations;
 /// K5-T1: page versions, compare, restore and approval per space.
 pub mod versions;
 

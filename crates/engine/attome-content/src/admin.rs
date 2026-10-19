@@ -1141,6 +1141,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/content/pages/{id}/stats", get(page_stats))
         .merge(crate::versions::routes())
         .merge(crate::audience::routes())
+        .merge(crate::translations::routes())
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1165,5 +1166,6 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::versions::openapi_fragment());
     doc.merge(crate::audience::openapi_fragment());
+    doc.merge(crate::translations::openapi_fragment());
     doc
 }

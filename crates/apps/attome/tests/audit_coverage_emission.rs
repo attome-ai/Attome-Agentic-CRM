@@ -4110,6 +4110,35 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"minutes": 30})),
             )
         }
+        "POST /api/v1/admin/content/pages/{id}/translations" => {
+            let (id, _) = content_page(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/content/pages/{id}/translations"),
+                t,
+                Some(
+                    json!({"language": "ar", "title": "Arabic", "url_path": format!("/{}", uniq("ar"))}),
+                ),
+            )
+        }
+        "POST /api/v1/admin/content/pages/{id}/translation/current" => {
+            // K5-T4: translate a page, then mark the translation current.
+            let (id, _) = content_page(fx).await;
+            let created = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/content/pages/{id}/translations"),
+                Some(json!({"language": "ar", "title": "Arabic", "url_path": format!("/{}", uniq("ar"))})),
+            )
+            .await;
+            let translation = id_of(&created);
+            request(
+                "POST",
+                &format!("/api/v1/admin/content/pages/{translation}/translation/current"),
+                t,
+                None,
+            )
+        }
         "PUT /api/v1/admin/content/pages/{id}/schedule" => {
             let (id, row_version) = content_page(fx).await;
             with_if_match(
