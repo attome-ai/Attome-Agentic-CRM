@@ -18,6 +18,7 @@
 /// AA7-T5: cooked artefacts at hash-named URLs.
 pub(crate) mod cooked;
 
+use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
@@ -1706,6 +1707,241 @@ async fn tours(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+// ── G6-T3: reply suggestions ────────────────────────────────────────────────
+
+const REPLY_TEMPLATE_KIND: &str = "reply_template";
+
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+struct ReplySuggestQuery {
+    /// The record's entity, e.g. `service_ticket`.
+    entity: String,
+    record_id: Uuid,
+    /// The channel the reply is for (`email`, `sms`, `whatsapp`, `chat`,
+    /// `portal`); `email` when unset.
+    channel: Option<String>,
+}
+
+/// Every text value of a record, for a record the search index has not
+/// reached yet.
+fn record_text(data: &Value) -> String {
+    data.as_object()
+        .map(|o| {
+            o.values()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .unwrap_or_default()
+}
+
+/// The queues the caller works in, for queue-scoped templates. A deployment
+/// without the service module has none.
+async fn caller_queues(state: &EngineState, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+    let provisioned: bool =
+        sqlx::query_scalar("SELECT to_regclass('service_work_queue_member') IS NOT NULL")
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if !provisioned {
+        return Ok(Vec::new());
+    }
+    sqlx::query_scalar(
+        "SELECT queue_ref FROM service_work_queue_member \
+          WHERE user_ref = $1 AND (is_active IS NULL OR is_active = true) \
+            AND queue_ref IS NOT NULL",
+    )
+    .bind(user_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// The likely replies for a record (G6-T3).
+///
+/// Ranks the reply templates the caller may use by what was used on similar
+/// earlier records of the same entity, by how much of the template's wording
+/// the record shares, and by how often it is used, best first (at most 5).
+/// Each comes rendered for the record and channel, with the reasons it was
+/// suggested. The caller must be able to read the record.
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/reply-suggestions",
+    tag = "model",
+    params(ReplySuggestQuery),
+    responses(
+        (status = 200, description = "The suggested replies, best first", body = PaginatedResponse<attome_ai::reply_suggest::Suggestion>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not read the record", body = ErrorResponse),
+        (status = 404, description = "No such record", body = ErrorResponse),
+        (status = 422, description = "Unknown channel", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn reply_suggestions(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(q): Query<ReplySuggestQuery>,
+) -> Result<Json<PaginatedResponse<attome_ai::reply_suggest::Suggestion>>, AppError> {
+    use attome_ai::reply_suggest::{self, Candidate, SimilarUse, Viewer};
+
+    let channel = q.channel.as_deref().unwrap_or("email");
+    if !attome_model::kinds::reply_template::CHANNELS.contains(&channel) {
+        return Err(AppError::Validation(
+            "channel is email, sms, whatsapp, chat or portal".into(),
+        ));
+    }
+    let record =
+        attome_records::entity_crud::read_record(&state, &ctx, &q.entity, q.record_id).await?;
+
+    let indexed: Option<String> = sqlx::query_scalar(
+        "SELECT coalesce(title_norm, '') || ' ' || coalesce(body_indexed, '') \
+           FROM search_index \
+          WHERE corpus = 'record' AND entity_logicalname = $1 AND record_id = $2",
+    )
+    .bind(&q.entity)
+    .bind(q.record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let case_indexed =
+        indexed.unwrap_or_else(|| reply_suggest::index_text(&record_text(record.data())));
+
+    if cooked().snapshot().version == 0 {
+        refresh_cooked(&state).await?;
+    }
+    let registry = cooked();
+    let viewer = Viewer {
+        user_id: ctx.user_id,
+        is_admin: ctx.is_admin,
+        team_ids: ctx.team_ids.clone(),
+        role_ids: ctx.role_ids.clone().unwrap_or_default(),
+        queue_ids: caller_queues(&state, ctx.user_id).await?,
+    };
+    let templates: HashMap<String, Arc<Value>> = registry
+        .hashes(REPLY_TEMPLATE_KIND)
+        .into_iter()
+        .filter_map(|(key, _)| registry.get::<Value>(REPLY_TEMPLATE_KIND, &key))
+        .filter(|doc| reply_suggest::visible(doc, &viewer))
+        .filter_map(|doc| Some((doc["id"].as_str()?.to_owned(), doc)))
+        .collect();
+    let candidates: Vec<Candidate> = templates
+        .iter()
+        .map(|(id, doc)| {
+            let folder = doc["folder"].as_str().map(str::to_owned);
+            let text = format!(
+                "{} {}",
+                folder.as_deref().unwrap_or_default(),
+                doc["body"].as_str().unwrap_or_default()
+            );
+            Candidate {
+                id: id.clone(),
+                name: doc["name"].as_str().unwrap_or_default().to_owned(),
+                folder,
+                indexed: reply_suggest::index_text(&text),
+            }
+        })
+        .collect();
+
+    let mut similar: HashMap<String, SimilarUse> = HashMap::new();
+    if let Some(query) = reply_suggest::any_term_query(&reply_suggest::terms(&case_indexed))
+        && !candidates.is_empty()
+    {
+        let rows: Vec<(String, f64, i64)> = sqlx::query_as(
+            "SELECT u.template_id, max(ts_rank(s.tsv, q))::float8, count(DISTINCT u.record_id) \
+               FROM reply_template_use u \
+               JOIN search_index s \
+                 ON s.corpus = 'record' AND s.entity_logicalname = u.entity_logicalname \
+                AND s.record_id = u.record_id \
+              CROSS JOIN to_tsquery('attome_search', $3) q \
+              WHERE u.entity_logicalname = $1 AND u.record_id <> $2 AND s.tsv @@ q \
+                AND u.used_at > NOW() - interval '365 days' \
+              GROUP BY u.template_id",
+        )
+        .bind(&q.entity)
+        .bind(q.record_id)
+        .bind(&query)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        for (id, best_rank, cases) in rows {
+            similar.insert(id, SimilarUse { best_rank, cases });
+        }
+    }
+    let usage: HashMap<String, i64> = sqlx::query_as::<_, (String, i64)>(
+        "SELECT template_id, count(*) FROM reply_template_use \
+          WHERE used_at > NOW() - interval '90 days' GROUP BY template_id",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+
+    let empty = serde_json::Map::new();
+    let fields = record.data().as_object().unwrap_or(&empty);
+    let items = reply_suggest::rank(&case_indexed, &candidates, &similar, &usage, |id| {
+        templates
+            .get(id)
+            .map(|doc| attome_model::kinds::reply_template::render(doc, channel, fields))
+            .unwrap_or_default()
+    });
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
+/// `POST /api/v1/model/reply-templates/{id}/used`.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct ReplyTemplateUsed {
+    /// The record the reply was for.
+    entity: String,
+    record_id: Uuid,
+}
+
+/// Records that a reply template was used on a record (G6-T3).
+///
+/// The reply suggestions learn from it: what was used on similar records,
+/// and how often. The caller must be able to read the record.
+#[utoipa::path(
+    post,
+    path = "/api/v1/model/reply-templates/{id}/used",
+    tag = "model",
+    params(("id" = Uuid, Path, description = "The reply template's id")),
+    request_body = ReplyTemplateUsed,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Telemetry,
+        None,
+        "counts a reply template's use for suggestions; the reply itself is audited where it is sent"
+    )))),
+    responses(
+        (status = 204, description = "Counted"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not read the record", body = ErrorResponse),
+        (status = 404, description = "No such record", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn reply_template_used(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ReplyTemplateUsed>,
+) -> Result<StatusCode, AppError> {
+    attome_records::entity_crud::read_record(&state, &ctx, &body.entity, body.record_id).await?;
+    sqlx::query(
+        "INSERT INTO reply_template_use (template_id, entity_logicalname, record_id, used_by) \
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(id.to_string())
+    .bind(&body.entity)
+    .bind(body.record_id)
+    .bind(ctx.user_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/model/kinds", get(list_kinds))
@@ -1743,6 +1979,11 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/model/{kind}/{id}/publish", post(publish))
         .route("/api/v1/model/forms/{id}/plan", get(form_plan))
         .route("/api/v1/model/tours", get(tours))
+        .route("/api/v1/model/reply-suggestions", get(reply_suggestions))
+        .route(
+            "/api/v1/model/reply-templates/{id}/used",
+            post(reply_template_used),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1767,7 +2008,9 @@ pub fn routes() -> Router<EngineState> {
         blueprint_rollback,
         menu,
         form_plan,
-        tours
+        tours,
+        reply_suggestions,
+        reply_template_used
     ),
     components(schemas(
         KindView,

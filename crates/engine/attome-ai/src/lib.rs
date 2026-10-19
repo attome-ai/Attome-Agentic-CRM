@@ -135,6 +135,8 @@ pub mod publish_gate;
 pub mod quality_monitor;
 pub mod registry;
 pub mod relationship_strength;
+/// G6-T3: the likely reply template for a case.
+pub mod reply_suggest;
 pub mod runtime_switch;
 pub mod sanitize_input;
 pub mod scope_switch;
