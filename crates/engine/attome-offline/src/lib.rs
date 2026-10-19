@@ -5,6 +5,8 @@
 //! it. Gated on the `offline` module.
 
 pub mod model;
+/// B18-T4: the caller's offline profile.
+pub mod profile;
 
 pub use model::OfflineModel;
 
@@ -13,7 +15,11 @@ pub use model::OfflineModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 41;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <ApiDocFragment as utoipa::OpenApi>::openapi()
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(profile::get_offline_profile))]
+struct ApiDocFragment;
