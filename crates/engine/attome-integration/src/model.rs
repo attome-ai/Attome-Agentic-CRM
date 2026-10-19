@@ -35,5 +35,7 @@ impl EngineModel for IntegrationModel {
             .merge(crate::webhook::routes())
             // D15-T1: a person's own mailbox connection.
             .merge(crate::connector::adapters::user_mail_sync::routes())
+            // J7-T1: online meetings.
+            .merge(crate::connector::adapters::video::routes())
     }
 }
