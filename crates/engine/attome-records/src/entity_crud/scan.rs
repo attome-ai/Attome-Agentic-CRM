@@ -454,7 +454,7 @@ pub async fn act(
     path = "/api/v1/scan/act",
     tag = "entity",
     request_body = ScanActBody,
-    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Done", body = ScanActResult),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
