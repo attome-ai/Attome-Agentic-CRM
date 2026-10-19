@@ -584,7 +584,7 @@ async fn update_rule(
     path = "/api/v1/admin/retention/rules/{id}",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The rule's id")),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "The rule is removed"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -600,7 +600,7 @@ async fn delete_rule(
 ) -> Result<StatusCode, AppError> {
     let event = SecurityEvent::new(
         MandatoryCategory::Configuration,
-        AuditOperation::Delete,
+        AuditOperation::HardDelete,
         ctx.user_id,
         "retention_rule",
         Some(id),
