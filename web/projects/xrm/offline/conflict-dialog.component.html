@@ -1,0 +1,43 @@
+<section class="oc-dialog" role="dialog" aria-labelledby="oc-title" data-testid="offline-conflict">
+  <h2 id="oc-title" class="oc-title">{{ 'offline.conflict.title' | translate }}</h2>
+  <p class="oc-hint">{{ 'offline.conflict.hint' | translate }}</p>
+  <div class="oc-bulk">
+    <button type="button" class="oc-btn" (click)="chooseAll('mine')" data-testid="offline-conflict-keep-mine">
+      {{ 'offline.conflict.keep_mine' | translate }}
+    </button>
+    <button type="button" class="oc-btn" (click)="chooseAll('server')" data-testid="offline-conflict-keep-server">
+      {{ 'offline.conflict.keep_server' | translate }}
+    </button>
+  </div>
+  <div class="oc-grid" role="table">
+    <div class="oc-row oc-head" role="row">
+      <span role="columnheader">{{ 'offline.conflict.field' | translate }}</span>
+      <span role="columnheader" class="oc-mine-col">{{ 'offline.conflict.mine' | translate }}</span>
+      <span role="columnheader">{{ 'offline.conflict.server' | translate }}</span>
+    </div>
+    @for (row of rows(); track row.field) {
+      <div class="oc-row" role="row" data-testid="offline-conflict-row">
+        <span class="oc-field" role="cell">{{ row.field }}</span>
+        <label class="oc-side oc-mine-col" role="cell" [class.oc-chosen]="choices()[row.field] === 'mine'">
+          <input type="radio" [name]="'oc-' + row.field" [checked]="choices()[row.field] === 'mine'"
+                 (change)="choose(row.field, 'mine')" data-testid="offline-conflict-mine" />
+          <span class="oc-value">{{ shown(row.mine) }}</span>
+        </label>
+        <label class="oc-side" role="cell" [class.oc-chosen]="choices()[row.field] === 'server'">
+          <input type="radio" [name]="'oc-' + row.field" [checked]="choices()[row.field] === 'server'"
+                 (change)="choose(row.field, 'server')" data-testid="offline-conflict-server" />
+          <span class="oc-value">{{ shown(row.server) }}</span>
+        </label>
+      </div>
+    }
+  </div>
+  <div class="oc-actions">
+    <button type="button" class="oc-btn oc-btn-primary" [disabled]="!ready() || saving()" (click)="save()"
+            data-testid="offline-conflict-save">
+      {{ 'offline.conflict.save' | translate }}
+    </button>
+    <button type="button" class="oc-btn" (click)="cancelled.emit()">
+      {{ 'offline.conflict.later' | translate }}
+    </button>
+  </div>
+</section>

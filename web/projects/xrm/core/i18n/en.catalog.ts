@@ -457,6 +457,20 @@ export const xrmEn = {
     state: { draft: 'Draft', published: 'Published' },
     unusedTitle: 'Nobody opened these items in the last 60 days; consider hiding them:',
   },
+  // B18-T9: offline conflicts and refused changes.
+  offline: {
+    conflict: {
+      title: 'Someone else changed this record too',
+      hint: 'Choose which value to keep for each field. Nothing is saved until every field has a choice.',
+      field: 'Field', mine: 'Mine', server: 'Server',
+      keep_mine: 'Keep all mine', keep_server: 'Keep all from the server',
+      save: 'Save my choices', later: 'Decide later',
+    },
+    errors: {
+      title: 'Changes that could not be saved',
+      open: 'Open', dismiss: 'Dismiss',
+    },
+  },
   activitiesPanel: {
     type: 'Activity type', task: 'Task', phoneCall: 'Phone call',
     subject: 'Subject', dueAt: 'Due', direction: 'Direction',

@@ -425,6 +425,20 @@ export const xrmAr = {
     state: { draft: 'مسودة', published: 'منشور' },
     unusedTitle: 'لم يفتح أحد هذه العناصر خلال آخر 60 يومًا؛ فكّر في إخفائها:',
   },
+  // B18-T9: offline conflicts and refused changes.
+  offline: {
+    conflict: {
+      title: 'غيّر شخص آخر هذا السجل أيضًا',
+      hint: 'اختر القيمة التي تريد الاحتفاظ بها لكل حقل. لا يُحفظ شيء حتى تختار لكل حقل.',
+      field: 'الحقل', mine: 'قيمتي', server: 'الخادم',
+      keep_mine: 'الاحتفاظ بكل قيمي', keep_server: 'الاحتفاظ بكل قيم الخادم',
+      save: 'حفظ اختياراتي', later: 'القرار لاحقًا',
+    },
+    errors: {
+      title: 'تغييرات تعذّر حفظها',
+      open: 'فتح', dismiss: 'إخفاء',
+    },
+  },
   activitiesPanel: {
     type: 'نوع النشاط', task: 'مهمة', phoneCall: 'مكالمة هاتفية',
     subject: 'الموضوع', dueAt: 'الاستحقاق', direction: 'الاتجاه',

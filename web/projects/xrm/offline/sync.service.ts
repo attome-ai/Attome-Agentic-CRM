@@ -23,6 +23,15 @@ export interface PushResult {
   link?: string;
 }
 
+/**
+ * A change the server did not apply, with the change itself: a conflict
+ * needs the person's own values to choose from (B18-T9).
+ */
+export interface SyncProblem {
+  result: PushResult;
+  op: QueuedOp;
+}
+
 interface PullAnswer {
   upserts: { entity: string; record: Record<string, unknown> & { id?: string } }[];
   removals: { entity: string; id: string }[];
@@ -66,7 +75,7 @@ export class SyncService {
 
   readonly syncing = signal(false);
   /** Changes the server refused or that clashed, for the person to see. */
-  readonly problems = signal<PushResult[]>([]);
+  readonly problems = signal<SyncProblem[]>([]);
   readonly lastError = signal<string | null>(null);
 
   private deviceId: string | null = null;
@@ -141,16 +150,21 @@ export class SyncService {
         ops: batch.map(withoutSeq),
         queue_size: await this.queue.size(),
       }));
-      const bySeq = new Map(batch.map(op => [op.client_op_id, op.seq]));
+      const byId = new Map(batch.map(op => [op.client_op_id, op]));
       for (const result of answer.results) {
-        const seq = bySeq.get(result.client_op_id);
-        if (seq === undefined) continue;
+        const op = byId.get(result.client_op_id);
+        if (op === undefined) continue;
         if (result.status === 'conflict' || result.status === 'rejected') {
-          this.problems.update(p => [...p, result]);
+          this.problems.update(p => [...p, { result, op }]);
         }
-        await this.queue.remove(seq);
+        await this.queue.remove(op.seq);
       }
     }
+  }
+
+  /** Clears a problem the person dealt with. */
+  dismiss(problem: SyncProblem): void {
+    this.problems.update(p => p.filter(x => x !== problem));
   }
 
   /** The offline profile, kept when it changed; none (404) or a failure keeps the last one. */
