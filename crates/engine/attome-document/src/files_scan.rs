@@ -819,6 +819,13 @@ pub async fn process(state: &EngineState, session_id: Uuid) -> Result<(), AppErr
                 &format!("scan result: clean; pinned etag {source_etag}"),
             )
             .await?;
+            // K1-T4: the clean file's text, for global search.
+            attome_jobs::enqueue_in_tx(
+                &mut tx,
+                attome_core::jobs::EngineJob::DocumentTextExtract { session_id },
+            )
+            .await
+            .map_err(AppError::internal)?;
             attome_db::tx::commit(tx).await?;
 
             if let Err(e) = state.base.storage.store().delete(&quarantine_path).await {

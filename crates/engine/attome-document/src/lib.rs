@@ -46,6 +46,8 @@ pub mod engine;
 pub mod files;
 pub mod files_scan;
 pub mod share;
+/// K1-T4: document text for global search.
+pub mod text_extract;
 
 pub use engine::DocumentModel;
 

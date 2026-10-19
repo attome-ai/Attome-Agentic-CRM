@@ -151,6 +151,11 @@ pub enum EngineJob {
     /// either promotes it to `clean` or rejects it — never on the request
     /// thread (guidelines §10).
     ScanUploadedFile { session_id: Uuid },
+    /// K1-T4 — extracts a clean upload's text (plain text, DOCX, PDF) into
+    /// `document_text` for global search and re-announces the documents that
+    /// name the file (`attome_document::text_extract::process`). Enqueued in
+    /// the scan's clean transaction. Pure pointer; idempotent.
+    DocumentTextExtract { session_id: Uuid },
     /// P-file-upload-pipeline — periodic sweep that expires abandoned upload
     /// sessions (presigned but never uploaded, uploaded but never
     /// finalized) past `attome_document::files::UPLOAD_SESSION_TTL_SECS` and
@@ -985,6 +990,7 @@ impl EngineJob {
             | Self::BuildAttributeIndex { .. }
             | Self::BuildBusinessKeyIndex { .. }
             | Self::ScanUploadedFile { .. }
+            | Self::DocumentTextExtract { .. }
             | Self::PruneExpiredUploadSessions
             | Self::PruneApalisJobHistory
             | Self::RevalidateQueryPlans
@@ -1103,6 +1109,7 @@ impl EngineJob {
             EngineJob::ApplyStagedImport(_) => "ApplyStagedImport",
             EngineJob::RewrapSecrets { .. } => "RewrapSecrets",
             EngineJob::ScanUploadedFile { .. } => "ScanUploadedFile",
+            EngineJob::DocumentTextExtract { .. } => "DocumentTextExtract",
             EngineJob::PruneExpiredUploadSessions => "PruneExpiredUploadSessions",
             EngineJob::PruneApalisJobHistory => "PruneApalisJobHistory",
             EngineJob::RevalidateQueryPlans => "RevalidateQueryPlans",
@@ -1233,6 +1240,7 @@ impl EngineJob {
             // High — a human or an external SLA is waiting on this outcome.
             Self::SendEmail(_)
             | Self::ScanUploadedFile { .. }
+            | Self::DocumentTextExtract { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::FanOutNotification { .. }
@@ -1508,6 +1516,7 @@ impl EngineJob {
             | Self::BulkEntityOperation(_)
             | Self::ApplyStagedImport(_)
             | Self::ScanUploadedFile { .. }
+            | Self::DocumentTextExtract { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::CrawlWebsite { .. }
@@ -1775,6 +1784,13 @@ mod tests {
         for domain in RewrapDomain::ALL {
             assert_round_trips(EngineJob::RewrapSecrets { domain });
         }
+    }
+
+    #[test]
+    fn document_text_extract_round_trips() {
+        assert_round_trips(EngineJob::DocumentTextExtract {
+            session_id: Uuid::now_v7(),
+        });
     }
 
     #[test]

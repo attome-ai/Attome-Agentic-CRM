@@ -751,6 +751,10 @@ async fn dispatch_platform_job(
         EngineJob::ScanUploadedFile { session_id } => {
             attome_document::files_scan::process(&attome_state, session_id).await?;
         }
+        // K1-T4 — see this variant's doc comment.
+        EngineJob::DocumentTextExtract { session_id } => {
+            attome_document::text_extract::process(&attome_state, session_id).await?;
+        }
         EngineJob::PruneExpiredUploadSessions => {
             attome_document::files_scan::prune_expired_sessions(&attome_state).await?;
         }

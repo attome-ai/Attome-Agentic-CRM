@@ -125,6 +125,22 @@ pub fn title_attribute<'a>(
     indexable.first().copied()
 }
 
+/// The document entity whose projection carries its file's text (K1-T4).
+pub const DOCUMENT_ENTITY: &str = "attome_document";
+
+/// The extracted text of the file a document names, if any.
+async fn document_text(db: &PgPool, document_id: Uuid) -> Result<Option<String>, AppError> {
+    sqlx::query_scalar(
+        "SELECT t.content_text FROM attome_document d \
+           JOIN document_text t ON t.file_key = d.file \
+          WHERE d.id = $1",
+    )
+    .bind(document_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 /// Reads one record and projects it.
 ///
 /// `Ok(None)` means "gone or not indexable", which the drain treats exactly
@@ -199,6 +215,24 @@ pub async fn project_record(
         .filter_map(|a| value_of(a))
         .collect::<Vec<_>>()
         .join(" ");
+
+    // K1-T4: a document is also found by the text of the file it names
+    // (`attome_document::text_extract`), under the document's own
+    // permissions, which are the row's.
+    let body = if entity_logicalname == DOCUMENT_ENTITY {
+        // Cut to the index ceiling here too: the body is also stored verbatim
+        // for snippets, and a whole book there helps no one.
+        let text = document_text(db, record_id)
+            .await?
+            .map(|t| crate::project::truncate_for_index(&t).to_owned());
+        match text {
+            Some(text) if body.is_empty() => text,
+            Some(text) => format!("{body}\n{text}"),
+            None => body,
+        }
+    } else {
+        body
+    };
 
     Ok(Some((
         project(&title, None, &body, vec![record_id.to_string()]),
