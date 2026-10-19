@@ -45,6 +45,7 @@ pub mod sales_competitors;
 pub mod sales_lines;
 pub mod sales_team;
 pub mod search_records;
+pub mod secrets_list;
 pub mod sentiment;
 pub mod summary_context;
 pub mod system_status;
@@ -82,6 +83,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
     all.push(ops_slo::descriptor());
+    all.push(secrets_list::descriptor());
     all.push(table::health_descriptor());
     all.push(table::index_proposals_descriptor());
     all.push(table::change_plan_descriptor());
@@ -136,6 +138,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
     all.push(Box::new(ops_slo::OpsSloHealth));
+    all.push(Box::new(secrets_list::SecretsList));
     all.push(Box::new(table::TableHealthTool));
     all.push(Box::new(table::TableIndexProposalsTool));
     all.push(Box::new(table::TableChangePlanTool));

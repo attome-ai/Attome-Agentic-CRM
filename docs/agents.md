@@ -84,6 +84,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   person confirms. Issuing, cancelling, issuing a credit note and writing off stay with people.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
+- Secrets (administrators, reads only): `secrets.list` names every configured secret with the
+  features that use it, whether it is set and how many days its active key has been in use. It never
+  returns a value or a key id, and there is no tool that writes or rotates a secret.
 - Tables (administrators, reads only): `table.health` reads an entity table's size, dead rows,
   unused indexes and unindexed lookups; `table.index_proposals` lists the indexes slow statements
   suggest; `table.change_plan` previews how structure changes would run, with estimates. None

@@ -16,6 +16,7 @@ attome-audit.workspace        = true
 attome-auth.workspace         = true
 attome-cache.workspace        = true
 attome-commission.workspace   = true
+attome-compliance.workspace   = true
 attome-config.workspace       = true
 attome-core.workspace         = true
 attome-db.workspace           = true

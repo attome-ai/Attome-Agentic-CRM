@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- The `secrets.list` agent action (Z1-T13, administrators): each configured secret's name, the
+  features that use it, whether it is set and its active key's age in days. Never a value or key id.
 - Rejection counts (Z5-T11): every protective layer counts its refusals in
   `http_rejections_total{layer, reason}` with fixed reasons (`waf`, `flood`, `pre_auth_rate_limit`,
   `rate_limit` with `limit`/`temporary_ban`/`account_budget`, `body_limit`, `host_gate`, `csrf`,
