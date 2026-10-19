@@ -758,6 +758,8 @@ async fn dispatch_platform_job(
             prune_apalis_job_history(&db, &config).await?;
             // Z7-T5: chain steps and finished fan-out groups past 30 days.
             attome_jobs::chain::prune(&db, 30).await?;
+            // Z7-T4: finished and cancelled batch jobs past 30 days.
+            attome_jobs::batch::prune(&db, 30).await?;
             // M3-T4: the same daily prune clears old workflow step payloads.
             attome_workflow::retention::prune_payloads(
                 &attome_state,

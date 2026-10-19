@@ -4781,6 +4781,14 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             .expect("insert throwaway dead-letter job");
             request("DELETE", &format!("/api/v1/admin/jobs/{job_id}"), t, None)
         }
+        // Z7-T4: cancelling a running batch job (a `Configuration`/`Update`).
+        "POST /api/v1/jobs/{id}/cancel" => {
+            let mut conn = fx.base.db.acquire().await.expect("connection");
+            let id = attome_jobs::batch::start(&mut conn, "emission.batch", Some(1), None)
+                .await
+                .expect("start a throwaway batch");
+            request("POST", &format!("/api/v1/jobs/{id}/cancel"), t, None)
+        }
         // M06 W1 follow-up: entity-trigger dead letters (migration 0510). The
         // throwaway row names an entity no workflow watches, so the replay
         // dispatches nothing and succeeds.

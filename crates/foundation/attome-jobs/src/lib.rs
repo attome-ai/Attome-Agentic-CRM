@@ -9,6 +9,8 @@ mod job;
 
 /// Z7-T1: job types registered at run time. See the module docs.
 /// Z7-T5 — chains and fan-out over registered jobs.
+/// Z7-T4 — chunked batch jobs with a checkpoint, progress and cancel.
+pub mod batch;
 pub mod chain;
 /// Z7-T2 — five-field cron expressions for [`schedule::Schedule`].
 pub mod cron;

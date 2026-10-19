@@ -110,6 +110,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Chunked batch jobs (Z7-T4): a long job runs in chunks, each committed with its checkpoint and
+  progress (`job_batch`, migration 0124), so a job killed mid-way resumes after its last committed
+  chunk. `GET /api/v1/jobs/{id}` shows its status and progress and `POST /api/v1/jobs/{id}/cancel`
+  stops it after the current chunk, for the person who started it or an administrator.
 - The portal cache is two declared caches (Z3-T8), `attome-portal:portal` and `attome-portal:plan`,
   listed in `/api/v1/admin/caches`. Same TTL, capacity and keys; a generic write of a portal record
   now also drops its cached entry through the change feed.
