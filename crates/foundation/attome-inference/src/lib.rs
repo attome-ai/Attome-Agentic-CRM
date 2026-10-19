@@ -39,6 +39,8 @@ use std::time::Duration;
 use attome_config::InferenceEndpoint;
 use serde::{Deserialize, Serialize};
 
+/// Z9-T1: one provider-neutral way to call a model.
+pub mod adapter;
 pub mod budget;
 pub mod embed;
 pub mod generate;
