@@ -30,7 +30,7 @@ pub const PREVIEW_DOMAIN: &str = "attome-content-preview";
 pub const MAX_PREVIEW_MINUTES: i64 = 7 * 24 * 60;
 
 /// `PUT .../audience`.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct AudienceBody {
     /// `public` or `internal`.
     pub audience: String,
