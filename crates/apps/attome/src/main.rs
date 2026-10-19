@@ -44,6 +44,8 @@ Usage:
   attome secrets generate|rotate <VAR> --env-file <path> | rewrap <domain>
                                 Fill the secrets an install generates, rotate a
                                 key ring (old key kept readable), start a rewrap
+  attome runbook [<Alert>]      Print an alert's runbook filled with this
+                                deployment's addresses (no name: list the alerts)
   attome status [--url <url>]...
                                 Each node's version, schema, and whether it has
                                 started and is ready
@@ -142,6 +144,10 @@ fn main() -> ExitCode {
         ["secrets", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::secrets::run(&rest)
+        }
+        ["runbook", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::runbook::run(&rest)
         }
         ["status", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

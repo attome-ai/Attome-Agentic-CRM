@@ -15,7 +15,7 @@
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slolatencyburnfast"
+          runbook_url: "observability/runbooks/SloLatencyBurnFast.md"
           summary: "{{ $labels.slo_class }} is burning its latency budget at 14.4x"
           description: >
             More than 14.4% of {{ $labels.slo_route }} requests took longer than the
@@ -38,7 +38,7 @@
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slolatencyburnslow"
+          runbook_url: "observability/runbooks/SloLatencyBurnSlow.md"
           summary: "{{ $labels.slo_class }} is burning its latency budget at 6x"
           description: >
             More than 6% of {{ $labels.slo_route }} requests took longer than the
@@ -61,7 +61,7 @@
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#sloerrorburnfast"
+          runbook_url: "observability/runbooks/SloErrorBurnFast.md"
           summary: "{{ $labels.slo_class }} is burning its 5xx budget at 14.4x"
           description: >
             More than 1.44% of {{ $labels.slo_route }} requests returned 5xx over both
@@ -83,7 +83,7 @@
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#sloerrorburnslow"
+          runbook_url: "observability/runbooks/SloErrorBurnSlow.md"
           summary: "{{ $labels.slo_class }} is burning its 5xx budget at 6x"
           description: >
             More than 0.6% of {{ $labels.slo_route }} requests returned 5xx over both
@@ -101,7 +101,7 @@
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slolatencybucketmissing"
+          runbook_url: "observability/runbooks/SloLatencyBucketMissing.md"
           summary: "{{ $labels.slo_class }} latency SLO cannot be measured: no {{ $labels.slo_p99_ms }}ms bucket"
           description: >
             {{ $labels.slo_route }} is serving traffic but the request histogram has no
@@ -117,7 +117,7 @@
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slogaugeoverobjective"
+          runbook_url: "observability/runbooks/SloGaugeOverObjective.md"
           summary: "{{ $labels.slo_class }} {{ $labels.slo_series }} is over its objective of {{ $labels.slo_objective }}"
           description: >
             More than half of the one-minute samples of {{ $labels.slo_metric }}

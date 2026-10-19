@@ -110,6 +110,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Alert runbooks (AB10-T3): every alert in `observability/alerts.yml` and `builtin-alerts.json` has
+  its own `observability/runbooks/<Alert>.md` (meaning, checks, fix, escalation), and every rule
+  links to its file. Placeholders are filled with the deployment's addresses (never a secret): a
+  firing built-in alert's email and webhook message carry the filled runbook, and
+  `attome runbook <Alert>` prints it. `observability/RUNBOOK.md` is now the index.
 - Chunked batch jobs (Z7-T4): a long job runs in chunks, each committed with its checkpoint and
   progress (`job_batch`, migration 0124), so a job killed mid-way resumes after its last committed
   chunk. `GET /api/v1/jobs/{id}` shows its status and progress and `POST /api/v1/jobs/{id}/cancel`

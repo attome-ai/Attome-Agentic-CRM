@@ -20,6 +20,8 @@ pub mod read_only;
 pub mod replica_watermark;
 /// Z5-T3 — per-route policy read from the API document.
 pub mod route_policy;
+/// AB10-T3: one runbook per alert, filled with this deployment's values.
+pub mod runbooks;
 pub mod secrets;
 pub mod security;
 pub mod session_activity;

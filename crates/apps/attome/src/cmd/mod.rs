@@ -9,6 +9,7 @@ pub mod init;
 pub mod migrate;
 pub mod model_files;
 pub mod preflight;
+pub mod runbook;
 pub mod secrets;
 pub mod service;
 pub mod sizing;

@@ -44,7 +44,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#highhttperrorrate"
+          runbook_url: "observability/runbooks/HighHttpErrorRate.md"
           summary: "5xx rate above 2% over 5m"
           description: >
             {{ $value | humanizePercentage }} of requests are failing with a 5xx
@@ -57,7 +57,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#redisdown"
+          runbook_url: "observability/runbooks/RedisDown.md"
           summary: "Redis/Dragonfly unreachable"
           description: >
             attome_server::metrics's pool-gauge refresh loop could not ping Redis.
@@ -83,7 +83,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#rediscoordinationdown"
+          runbook_url: "observability/runbooks/RedisCoordinationDown.md"
           summary: "Coordination-role Redis/Dragonfly unreachable"
           description: >
             attome_server::metrics's pool-gauge refresh loop could not ping
@@ -108,7 +108,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+          runbook_url: "observability/runbooks/RedisCoordinationLatencyHigh.md"
           summary: "Coordination-role Redis latency above 150ms (half of the 300ms fail-closed budget) for 2m"
           description: >
             {{ printf "%.0f" $value }}ms average ping latency to the
@@ -125,7 +125,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+          runbook_url: "observability/runbooks/RedisCoordinationLatencyHigh.md"
           summary: "Coordination-role Redis latency at/above the 300ms fail-closed timeout budget for 1m"
           description: >
             {{ printf "%.0f" $value }}ms average ping latency to the
@@ -141,7 +141,7 @@ groups:
           severity: warning
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#dbpoolnearexhaustion"
+          runbook_url: "observability/runbooks/DbPoolNearExhaustion.md"
           summary: "Main DB pool >90% utilized for 5m"
           description: >
             Fewer than 10% of the primary Postgres pool's connections are idle.
@@ -161,7 +161,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#apalisbackloggrowing"
+          runbook_url: "observability/runbooks/ApalisBacklogGrowing.md"
           summary: "apalis fast-queue pending-job backlog above 100 for 10m"
           description: >
             The platform-job-worker isn't keeping up (or is down). Check
@@ -174,7 +174,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#apalisbatchbackloggrowing"
+          runbook_url: "observability/runbooks/ApalisBatchBacklogGrowing.md"
           summary: "apalis batch-queue pending-job backlog above 1000 for 10m"
           description: >
             The platform-job-batch-worker (BulkEntityOperation/
@@ -196,7 +196,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#apalisdeadlettergrowing"
+          runbook_url: "observability/runbooks/ApalisDeadLetterGrowing.md"
           summary: "{{ $labels.queue }} queue has dead-lettered jobs"
           description: >
             {{ $value }} job(s) in the {{ $labels.queue }} queue have
@@ -219,7 +219,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#apalisworkerstale"
+          runbook_url: "observability/runbooks/ApalisWorkerStale.md"
           summary: "No {{ $labels.queue }}-queue apalis worker heartbeat in over 90s"
           description: >
             The platform-job{{ if eq $labels.queue "batch" }}-batch{{ end }}-worker
@@ -250,7 +250,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#apalisworkerneverseen"
+          runbook_url: "observability/runbooks/ApalisWorkerNeverSeen.md"
           summary: "No apalis worker has ever reported a heartbeat for one or both queues"
           description: >
             No row in apalis.workers exists yet for the fast and/or batch
@@ -270,7 +270,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#auditchainerlaghigh"
+          runbook_url: "observability/runbooks/AuditChainerLagHigh.md"
           summary: "Audit chainer more than 5 minutes behind"
           description: >
             audit.chainer_enabled defaults to true and is required under
@@ -297,7 +297,7 @@ groups:
           severity: warning
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#partitionedtabledeadtupleratiohigh"
+          runbook_url: "observability/runbooks/PartitionedTableDeadTupleRatioHigh.md"
           summary: "A partitioned audit/access-log table is >20% dead tuples for 30m"
           description: >
             {{ $labels.table }} has a dead-tuple ratio above 20% sustained for 30
@@ -337,7 +337,7 @@ groups:
           severity: critical
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#backuptooold"
+          runbook_url: "observability/runbooks/BackupTooOld.md"
           summary: "No successful backup in over 26 hours"
           description: >
             {{ $labels.instance }}'s last successful pgbackrest backup was
@@ -381,7 +381,7 @@ groups:
           severity: warning
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#walarchivelaghigh"
+          runbook_url: "observability/runbooks/WalArchiveLagHigh.md"
           summary: "WAL archiving lag above 15 minutes (as of last cron check)"
           description: >
             {{ $labels.instance }}'s pg_stat_archiver.last_archived_time is
@@ -415,7 +415,7 @@ groups:
           severity: warning
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#replicalaghigh"
+          runbook_url: "observability/runbooks/ReplicaLagHigh.md"
           summary: "Read-replica lag above 30s"
           description: >
             {{ $value | humanizeDuration }} of replication lag on the pool
@@ -432,7 +432,7 @@ groups:
           severity: critical
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#replicalagcritical"
+          runbook_url: "observability/runbooks/ReplicaLagCritical.md"
           summary: "Read-replica lag above 30s, sustained for 5m"
           description: >
             Same signal as ReplicaLagHigh, escalated: 5 minutes of sustained
@@ -456,7 +456,7 @@ groups:
           severity: warning
           owner: db
         annotations:
-          runbook_url: "observability/RUNBOOK.md#partitionbloatmetricmissing"
+          runbook_url: "observability/runbooks/PartitionBloatMetricMissing.md"
           summary: "No partition-bloat metric sample for over an hour"
           description: >
             None of the four P-db-maintenance partitioned tables have reported a
@@ -480,7 +480,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#objectstoragedown"
+          runbook_url: "observability/runbooks/ObjectStorageDown.md"
           summary: "Object storage (S3/RustFS) unreachable"
           description: >
             The configured storage.s3_endpoint has failed a HEAD probe for 2
@@ -502,7 +502,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#storagepresignfailures"
+          runbook_url: "observability/runbooks/StoragePresignFailures.md"
           summary: "Presigned URL signing is failing"
           description: >
             Every failure here is a 500 on the upload/download routes
@@ -517,7 +517,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#objectstorageprobelatencyhigh"
+          runbook_url: "observability/runbooks/ObjectStorageProbeLatencyHigh.md"
           summary: "Object-storage probe approaching its 2s hard timeout"
           description: >
             attome_storage::health_check records this for every outcome. The
@@ -533,7 +533,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#uploadscanbacklogstale"
+          runbook_url: "observability/runbooks/UploadScanBacklogStale.md"
           summary: "A file upload has waited over 15 minutes to be scanned"
           description: >
             Runbook: confirm storage.clamd_address points at a live clamd (the
@@ -551,7 +551,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#idempotencykeysstuckpending"
+          runbook_url: "observability/runbooks/IdempotencyKeysStuckPending.md"
           summary: "A retried request's original died mid-flight; its outcome is unknown"
           description: >
             Runbook: a request on a mandatory-idempotency route never finished
@@ -574,7 +574,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#rediscoordinationmemoryhigh"
+          runbook_url: "observability/runbooks/RedisCoordinationMemoryHigh.md"
           summary: "Coordination Redis is over 80% of its memory ceiling"
           description: >
             The coordination store holds nonces, rate limits, sessions and the
@@ -591,7 +591,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#rediscoordinationnomemoryceiling"
+          runbook_url: "observability/runbooks/RedisCoordinationNoMemoryCeiling.md"
           summary: "Coordination Redis runs without a memory ceiling"
           description: >
             maxmemory is unset, so the instance grows until the host kills it
@@ -611,7 +611,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#platformjobfailures"
+          runbook_url: "observability/runbooks/PlatformJobFailures.md"
           summary: "A platform job kind is failing repeatedly"
           description: >
             A job kind has failed at least once every few minutes for 15
@@ -627,7 +627,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#apalisoldestpendingagehigh"
+          runbook_url: "observability/runbooks/ApalisOldestPendingAgeHigh.md"
           summary: "A queued job has been pending for over 15 minutes"
           description: >
             The oldest Pending row in a queue is older than 15 minutes, which
@@ -642,7 +642,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#jobschedulestale"
+          runbook_url: "observability/runbooks/JobScheduleStale.md"
           summary: "A periodic sweep has not succeeded in a long time"
           description: >
             A schedule's last success is older than two hours. The intended
@@ -666,7 +666,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#workflowtriggerdeadlettered"
+          runbook_url: "observability/runbooks/WorkflowTriggerDeadLettered.md"
           summary: "A workflow entity-trigger event was dead-lettered"
           description: >
             An entity change event failed workflow dispatch repeatedly and was
@@ -690,7 +690,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#diskspacelow"
+          runbook_url: "observability/runbooks/DiskSpaceLow.md"
           summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} below 10% free space"
           description: >
             Less than 10% free space on {{ $labels.mountpoint }} for 10
@@ -708,7 +708,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#diskspacecritical"
+          runbook_url: "observability/runbooks/DiskSpaceCritical.md"
           summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} below 5% free space"
           description: >
             Same signal as DiskSpaceLow, escalated: under 5% free for 5
@@ -735,7 +735,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#securityanomalyratehigh"
+          runbook_url: "observability/runbooks/SecurityAnomalyRateHigh.md"
           summary: "Sustained rise in {{ $labels.reason }} rejections"
           description: >
             {{ $labels.reason }}-classified security rejections have
@@ -763,7 +763,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#httprejectionsspike"
+          runbook_url: "observability/runbooks/HttpRejectionsSpike.md"
           summary: "The {{ $labels.layer }} layer is refusing ten times its usual rate"
           description: >
             Requests refused by the {{ $labels.layer }} layer have run above
@@ -790,7 +790,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#capabilityunavailable"
+          runbook_url: "observability/runbooks/CapabilityUnavailable.md"
           summary: "Capability {{ $labels.capability }} is unavailable on at least one node"
           description: >
             Operations that cannot durably complete without
@@ -816,7 +816,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#capabilityrejectingtraffic"
+          runbook_url: "observability/runbooks/CapabilityRejectingTraffic.md"
           summary: "Requests are being refused because {{ $labels.capability }} is down"
           description: >
             Callers are actively being turned away on {{ $labels.capability }}
@@ -858,7 +858,7 @@ groups:
           severity: critical
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#redispersistencedisabled"
+          runbook_url: "observability/runbooks/RedisPersistenceDisabled.md"
           summary: "The coordination Redis/Dragonfly has no persistence policy"
           description: >
             This instance is running purely in memory: no Dragonfly
@@ -890,7 +890,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#redissnapshotstale"
+          runbook_url: "observability/runbooks/RedisSnapshotStale.md"
           summary: "The coordination store has not completed a snapshot in over 10 minutes"
           description: >
             A persistence policy IS configured but saves are not completing —
@@ -918,7 +918,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#s2saccesslogbackloggrowing"
+          runbook_url: "observability/runbooks/S2sAccessLogBacklogGrowing.md"
           summary: "S2S access-log entries are accumulating unflushed in Redis"
           description: >
             Entries are being XADDed faster than the 30s flusher commits them
@@ -936,7 +936,7 @@ groups:
       # notification engine's direct send (M51) both emit them. Labels are
       # bounded: `outcome` is SendError::label's nine values plus `sent`,
       # `reason` is SuppressionReason's three — never a recipient. Runbooks
-      # are in deploy/email/README.md.
+      # are observability/runbooks/Email*.md.
       #
       # email_send_duration_seconds is a bare `metrics::histogram!`. The
       # recorder (axum-prometheus's PrometheusMetricLayerBuilder) configures
@@ -970,7 +970,7 @@ groups:
             {{ $value | humanizePercentage }} of SMTP sends over 15m ended
             transient or permanent_relay. Run preflight against the relay and
             check its credentials and sender policy.
-          runbook_url: "deploy/email/README.md#relay-outage"
+          runbook_url: "observability/runbooks/EmailRelayFailureRatioHigh.md"
 
       - alert: EmailSendOutcomeUnknown
         # A timeout at or after DATA: the relay may have accepted the mail, so
@@ -987,7 +987,7 @@ groups:
             At least one send timed out at or after DATA in the last 15m and
             was not retried. Check the relay's logs for each ledger row with
             status=unknown and resend only what it did not accept.
-          runbook_url: "deploy/email/README.md#unknown-outcome-triage"
+          runbook_url: "observability/runbooks/EmailSendOutcomeUnknown.md"
 
       - alert: EmailSuppressionSpike
         # Automatic suppressions only (hard_bounce, complaint); admin_manual
@@ -1007,7 +1007,7 @@ groups:
             hard_bounce/complaint in 1h. Group the suppressions by detail; one
             identical relay reply across many addresses is a false
             suppression.
-          runbook_url: "deploy/email/README.md#mass-false-suppression"
+          runbook_url: "observability/runbooks/EmailSuppressionSpike.md"
 
       - alert: EmailSendSlow
         # Half of the 120 s whole-send deadline. Plan §5 names this metric as
@@ -1023,7 +1023,7 @@ groups:
             The p95 SMTP send duration is {{ $value }}s, half of the 120s
             whole-send deadline. Sends that cross it end as unknown and are
             not retried.
-          runbook_url: "deploy/email/README.md#slow-sends"
+          runbook_url: "observability/runbooks/EmailSendSlow.md"
 
       # ── Portal (web-portal-users §5) and event bus (M62 §4.3, M86 O5) ───────
       # Rules on signals built 2026-09-28. Every label is a closed set; none
@@ -1050,7 +1050,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#portalloginfailureratiohigh"
+          runbook_url: "observability/runbooks/PortalLoginFailureRatioHigh.md"
           summary: "More than half of portal password logins are failing"
           description: >
             Over 15 minutes, more than 50% of portal password logins ended
@@ -1069,7 +1069,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#portalgrantdrift"
+          runbook_url: "observability/runbooks/PortalGrantDrift.md"
           summary: "A portal access grant no longer matches anything"
           description: >
             At least one portal grant condition stopped rendering in the last hour, so
@@ -1087,7 +1087,7 @@ groups:
           severity: warning
           owner: security
         annotations:
-          runbook_url: "observability/RUNBOOK.md#portalcacheinvalidationfailed"
+          runbook_url: "observability/runbooks/PortalCacheInvalidationFailed.md"
           summary: "A portal access-cache invalidation failed after an admin write"
           description: >
             A portal admin change committed but the access-version bump on the cache
@@ -1106,7 +1106,7 @@ groups:
           severity: warning
           owner: integration
         annotations:
-          runbook_url: "observability/RUNBOOK.md#eventdeliverybackloggrowing"
+          runbook_url: "observability/runbooks/EventDeliveryBacklogGrowing.md"
           summary: "A {{ $labels.kind }} event subscription is more than 1000 rows behind"
           description: >
             An active {{ $labels.kind }} subscription has had more than 1000 unread feed
@@ -1129,7 +1129,7 @@ groups:
           severity: warning
           owner: integration
         annotations:
-          runbook_url: "observability/RUNBOOK.md#eventdeliverydeadlettered"
+          runbook_url: "observability/runbooks/EventDeliveryDeadLettered.md"
           summary: "{{ $labels.kind }} event deliveries were dead-lettered ({{ $labels.reason }})"
           description: >
             At least one {{ $labels.kind }} delivery gave up with reason
@@ -1954,7 +1954,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slolatencyburnfast"
+          runbook_url: "observability/runbooks/SloLatencyBurnFast.md"
           summary: "{{ $labels.slo_class }} is burning its latency budget at 14.4x"
           description: >
             More than 14.4% of {{ $labels.slo_route }} requests took longer than the
@@ -1977,7 +1977,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slolatencyburnslow"
+          runbook_url: "observability/runbooks/SloLatencyBurnSlow.md"
           summary: "{{ $labels.slo_class }} is burning its latency budget at 6x"
           description: >
             More than 6% of {{ $labels.slo_route }} requests took longer than the
@@ -2000,7 +2000,7 @@ groups:
           severity: critical
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#sloerrorburnfast"
+          runbook_url: "observability/runbooks/SloErrorBurnFast.md"
           summary: "{{ $labels.slo_class }} is burning its 5xx budget at 14.4x"
           description: >
             More than 1.44% of {{ $labels.slo_route }} requests returned 5xx over both
@@ -2022,7 +2022,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#sloerrorburnslow"
+          runbook_url: "observability/runbooks/SloErrorBurnSlow.md"
           summary: "{{ $labels.slo_class }} is burning its 5xx budget at 6x"
           description: >
             More than 0.6% of {{ $labels.slo_route }} requests returned 5xx over both
@@ -2040,7 +2040,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slolatencybucketmissing"
+          runbook_url: "observability/runbooks/SloLatencyBucketMissing.md"
           summary: "{{ $labels.slo_class }} latency SLO cannot be measured: no {{ $labels.slo_p99_ms }}ms bucket"
           description: >
             {{ $labels.slo_route }} is serving traffic but the request histogram has no
@@ -2056,7 +2056,7 @@ groups:
           severity: warning
           owner: platform
         annotations:
-          runbook_url: "observability/RUNBOOK.md#slogaugeoverobjective"
+          runbook_url: "observability/runbooks/SloGaugeOverObjective.md"
           summary: "{{ $labels.slo_class }} {{ $labels.slo_series }} is over its objective of {{ $labels.slo_objective }}"
           description: >
             More than half of the one-minute samples of {{ $labels.slo_metric }}
