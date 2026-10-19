@@ -8,9 +8,10 @@
 use std::collections::BTreeMap;
 
 use attome_core::EngineState;
+use attome_core::chart_view_metadata::ChartViewMetadata;
 use attome_core::chart_view_metadata::DateBucket;
 use attome_core::data_definition::{MeasureFn, Presentation};
-use attome_search::{BucketKey, DrillTarget, StructuredRecords};
+use attome_search::{BucketKey, DrillTarget, RecordColumn, StructuredRecords};
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege};
 use attome_server::security::{AccessLevel, SecurityContext};
@@ -32,7 +33,8 @@ use crate::execution::{
     WidgetInputs, find_widget, load_definition,
 };
 use crate::widget_data::{
-    KpiMetric, definition_fingerprint, kpi_data, resolve_widget_context, structured_plan,
+    KpiMetric, WidgetContext, definition_fingerprint, kpi_data, query_bindings, query_request,
+    resolve_widget_context, run_query, structured_plan,
 };
 
 /// What a viewer may send to the records route: the data route's values plus
@@ -129,6 +131,25 @@ async fn widget_records(
             }
         )));
     }
+    // P7-T1: a query or view widget over one entity drills through its own
+    // stored query, filtered by the clicked bucket.
+    if wc.data_class == DataClass::Query {
+        let (records, applied_filters) =
+            query_records(&state, &ctx, &definition, &wc, &inputs).await?;
+        return Ok(Json(WidgetRecordsResponse {
+            widget_id: wc.widget_id,
+            drillability: wc.drillability,
+            definition_source: definition.source,
+            published_version_number: definition.version_number,
+            definition_fingerprint: definition_fingerprint(&definition, &wc, &applied_filters),
+            timezone: wc.tz.name().to_owned(),
+            timezone_source: wc.timezone_source,
+            applied_filters,
+            bucket_key: inputs.bucket_key,
+            series_key: inputs.series_key,
+            records,
+        }));
+    }
     let plan = structured_plan(&state, &wc)?;
     let records = attome_search::run_structured_records(
         &state,
@@ -158,6 +179,111 @@ async fn widget_records(
         series_key: inputs.series_key,
         records,
     }))
+}
+
+/// The filters that select one bucket of a chart over a query's rows: the
+/// category (`x_field`) for `bucket_key` and the series (`group_by_field`)
+/// for `series_key`. `Total` selects everything. Pure.
+pub fn bucket_filters(
+    chart: Option<&ChartViewMetadata>,
+    bucket_key: Option<&BucketKey>,
+    series_key: Option<&BucketKey>,
+) -> Result<Vec<attome_core::Filter>, AppError> {
+    let mut out = Vec::new();
+    for (key, field) in [
+        (
+            bucket_key,
+            chart.map(|c| c.x_field.as_str()).filter(|f| !f.is_empty()),
+        ),
+        (series_key, chart.and_then(|c| c.group_by_field.as_deref())),
+    ] {
+        match (key, field) {
+            (None | Some(BucketKey::Total), _) => {}
+            (Some(key), Some(field)) => out.extend(attome_search::key_filters(field, key)?),
+            (Some(_), None) => {
+                return Err(AppError::Validation(
+                    "this widget's query is not grouped by that key".into(),
+                ));
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// P7-T1: the records behind a query widget's value or bucket (D-522): the
+/// widget's own request (same query, version, bindings, security) with the
+/// bucket's grouping values added as bound filters, paged by keyset, with
+/// the exact total of the same request. Only a query over one entity drills.
+async fn query_records(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    definition: &crate::execution::DashboardDefinition,
+    wc: &WidgetContext<'_>,
+    inputs: &WidgetRecordsInputs,
+) -> Result<(StructuredRecords, Vec<AppliedFilter>), AppError> {
+    let bound = query_bindings(wc)?;
+    let mut filters: Vec<attome_core::Filter> =
+        bound.iter().map(|applied| applied.filter.clone()).collect();
+
+    // What the query is: its entity, and the chart's grouping.
+    let (probe, captured) = query_request(definition, wc.widget, &wc.config, 1, filters.clone())?;
+    let probe = run_query(state, ctx, probe.drill_page(None), captured).await?;
+    let entity = probe
+        .entity_logical_name()
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            AppError::Validation(
+                "this widget's query reads more than one entity; its rows are the result".into(),
+            )
+        })?;
+    let chart: Option<ChartViewMetadata> = probe
+        .view_metadata()
+        .and_then(|v| serde_json::from_value(v.clone()).ok());
+    filters.extend(bucket_filters(
+        chart.as_ref(),
+        inputs.bucket_key.as_ref(),
+        inputs.series_key.as_ref(),
+    )?);
+
+    let (count, captured) = query_request(definition, wc.widget, &wc.config, 1, filters.clone())?;
+    let counted = run_query(state, ctx, count.drill_count(), captured).await?;
+    let (total, estimated) = counted.total();
+    if estimated {
+        return Err(AppError::Validation(
+            "too many records to count exactly; narrow the dashboard's filters".into(),
+        ));
+    }
+
+    let page_size = inputs
+        .page_size
+        .unwrap_or(attome_types::DEFAULT_PAGE_SIZE)
+        .clamp(1, attome_types::MAX_PAGE_SIZE);
+    let (rows, captured) = query_request(
+        definition,
+        wc.widget,
+        &wc.config,
+        page_size,
+        filters.clone(),
+    )?;
+    let page = run_query(state, ctx, rows.drill_page(inputs.after_id), captured).await?;
+    let columns = page
+        .column_types()
+        .into_iter()
+        .map(|(name, data_type)| RecordColumn { name, data_type })
+        .collect();
+    let (rows, next_cursor) = page.into_rows();
+    Ok((
+        StructuredRecords {
+            entity_logical_name: entity,
+            columns,
+            rows,
+            total: total.unwrap_or(0),
+            as_of: Utc::now(),
+            next_cursor,
+            drill_filters: Some(filters),
+        },
+        bound,
+    ))
 }
 
 // ── Explanation (Phase 3.2) ─────────────────────────────────────────────────
@@ -274,7 +400,8 @@ pub struct QueryExplanation {
     pub required_privilege: Option<String>,
     pub view_id: Option<Uuid>,
     pub pinned_query_version_id: Option<Uuid>,
-    /// Always true: the rows shown are the result; there is no aggregate to drill.
+    /// True when the rows shown are the result (a query over more than one
+    /// entity); false when its buckets drill to records (P7-T1).
     pub rows_are_the_result: bool,
 }
 
@@ -536,7 +663,9 @@ async fn widget_explain(
             });
         }
         DataClass::Query => {
-            explanation.query = Some(explain_query(&state, &definition, widget).await?);
+            let mut query = explain_query(&state, &definition, widget).await?;
+            query.rows_are_the_result = wc.drillability != Drillability::Exact;
+            explanation.query = Some(query);
         }
         DataClass::None => {}
     }
@@ -706,4 +835,49 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod query_drill_tests {
+    use super::*;
+
+    fn chart(x: &str, series: Option<&str>) -> ChartViewMetadata {
+        let mut v = serde_json::json!({
+            "chart_type": "bar",
+            "x_field": x,
+            "y_fields": [{"field": "id", "aggregation": "count", "label": "Deals"}],
+        });
+        if let Some(series) = series {
+            v["group_by_field"] = serde_json::json!(series);
+        }
+        serde_json::from_value(v).unwrap()
+    }
+
+    #[test]
+    fn a_bucket_drills_by_its_grouping_values() {
+        let c = chart("stage", Some("owner_name"));
+        let won = BucketKey::Value {
+            value: "won".into(),
+        };
+        let filters = bucket_filters(Some(&c), Some(&won), None).unwrap();
+        assert_eq!(filters.len(), 1);
+        assert_eq!(
+            (filters[0].field.as_str(), filters[0].op.as_str()),
+            ("stage", "eq")
+        );
+        let both = bucket_filters(Some(&c), Some(&won), Some(&BucketKey::Null)).unwrap();
+        assert_eq!(both.len(), 2);
+        assert_eq!(both[1].field, "owner_name");
+        assert!(
+            bucket_filters(Some(&c), Some(&BucketKey::Total), None)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(bucket_filters(None, None, None).unwrap().is_empty());
+        assert!(
+            bucket_filters(None, Some(&won), None).is_err(),
+            "no grouping to drill by"
+        );
+        assert!(bucket_filters(Some(&chart("stage", None)), None, Some(&won)).is_err());
+    }
 }

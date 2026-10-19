@@ -217,6 +217,27 @@ impl ExecuteQueryRequest {
         request
     }
 
+    /// P7-T1: this request as a dashboard drill's page of rows: a keyset page
+    /// from `after_id` (D-522: the same query, filters and security as the
+    /// widget's value, so the rows cannot drift from it).
+    pub fn drill_page(mut self, after_id: Option<Uuid>) -> Self {
+        self.after_id = after_id;
+        self.include_total = false;
+        self.force_cursor = true;
+        self
+    }
+
+    /// P7-T1: this request as a dashboard drill's count: one offset row with
+    /// the exact total (only offset mode counts; see `include_total`).
+    pub fn drill_count(mut self) -> Self {
+        self.page = 1;
+        self.page_size = 1;
+        self.after_id = None;
+        self.include_total = true;
+        self.force_cursor = false;
+        self
+    }
+
     /// Dashboard 10/10 Phase 2.3 — an editor's draft preview of a widget: its
     /// live view (preferred, as the viewer always rendered it) or query, never
     /// pinned. `None` when the widget names neither.
@@ -1282,6 +1303,36 @@ pub struct ExecResponse {
 impl ExecResponse {
     /// S1-T2: the records as a cursor page (`next_cursor` the last record's
     /// id when the page was full).
+    /// P7-T1: the entity the query's rows are records of, when it has one
+    /// (a multi-entity or custom query has none).
+    pub fn entity_logical_name(&self) -> Option<&str> {
+        self.metadata.entity_logical_name.as_deref()
+    }
+
+    /// P7-T1: the executed view's metadata (a chart's grouping), when any.
+    pub fn view_metadata(&self) -> Option<&Value> {
+        self.metadata.view_metadata.as_ref()
+    }
+
+    /// P7-T1: the total, and whether it is the planner's estimate.
+    pub fn total(&self) -> (Option<i64>, bool) {
+        (self.data.total, self.data.total_estimated)
+    }
+
+    /// P7-T1: each column's name and data type.
+    pub fn column_types(&self) -> Vec<(String, String)> {
+        self.data
+            .columns
+            .iter()
+            .map(|c| (c.name.clone(), c.data_type.clone()))
+            .collect()
+    }
+
+    /// P7-T1: the rows and the next keyset cursor.
+    pub fn into_rows(self) -> (Vec<Value>, Option<Uuid>) {
+        (self.data.records, self.data.next_cursor)
+    }
+
     pub fn into_cursor_page(self) -> attome_types::CursorPage<Value> {
         attome_types::CursorPage::new(
             self.data.records,

@@ -289,7 +289,16 @@ pub async fn resolve_widget_context<'a>(
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
-    let (data_class, drillability) = classify(widget);
+    let (data_class, mut drillability) = classify(widget);
+    let config = widget_config(widget);
+    // P7-T1: a query or view widget drills exactly when its stored query
+    // reads one entity (its rows are records); otherwise its rows are the
+    // result.
+    if data_class == DataClass::Query
+        && query_reads_one_entity(state, definition, widget, &config).await
+    {
+        drillability = Drillability::Exact;
+    }
     let page_id = page.get("id").and_then(Value::as_str);
     let parameters = resolve_parameters(
         &declared_parameters(&definition.snapshot, page_id),
@@ -311,8 +320,62 @@ pub async fn resolve_widget_context<'a>(
         builtins,
         tz,
         timezone_source,
-        config: widget_config(widget),
+        config,
     })
+}
+
+/// P7-T1: whether the stored query a query widget runs is over one entity.
+/// Unknown (no query, a lookup failure) is `false`: not drillable.
+async fn query_reads_one_entity(
+    state: &EngineState,
+    definition: &DashboardDefinition,
+    widget: &Value,
+    config: &serde_json::Map<String, Value>,
+) -> bool {
+    let id = |v: Option<&Value>| {
+        v.and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .and_then(|s| Uuid::parse_str(s).ok())
+    };
+    let (query_id, view_id) = match definition.source {
+        DefinitionSource::Published => {
+            let widget_id = widget.get("id").and_then(Value::as_str).unwrap_or_default();
+            let dependency = definition
+                .snapshot
+                .get("dependencies")
+                .and_then(Value::as_array)
+                .and_then(|deps| {
+                    deps.iter()
+                        .find(|dep| dep.get("widget_id").and_then(Value::as_str) == Some(widget_id))
+                });
+            (dependency.and_then(|d| id(d.get("query_id"))), None)
+        }
+        DefinitionSource::Draft => (
+            id(widget.get("query_id")).or_else(|| id(config.get("query_ref"))),
+            id(widget.get("view_id")),
+        ),
+    };
+    let found: Result<Option<bool>, sqlx::Error> = match (view_id, query_id) {
+        (Some(view), _) => {
+            sqlx::query_scalar(
+                "SELECT q.entity_logical_name IS NOT NULL FROM view v \
+                   JOIN sql_query q ON q.id = v.sql_query_ref WHERE v.id = $1",
+            )
+            .bind(view)
+            .fetch_optional(&state.base.db)
+            .await
+        }
+        (None, Some(query)) => {
+            sqlx::query_scalar(
+                "SELECT entity_logical_name IS NOT NULL FROM sql_query WHERE id = $1",
+            )
+            .bind(query)
+            .fetch_optional(&state.base.db)
+            .await
+        }
+        (None, None) => Ok(None),
+    };
+    matches!(found, Ok(Some(true)))
 }
 
 /// A Class A widget's validated definition and its compiled bindings.
@@ -380,7 +443,7 @@ pub fn structured_plan(
 }
 
 /// The Class C widget's `config.bindings` compiled to filters.
-fn query_bindings(wc: &WidgetContext<'_>) -> Result<Vec<AppliedFilter>, AppError> {
+pub(crate) fn query_bindings(wc: &WidgetContext<'_>) -> Result<Vec<AppliedFilter>, AppError> {
     let bindings: Vec<Binding> = match wc.config.get("bindings") {
         Some(raw) => serde_json::from_value(raw.clone())
             .map_err(|e| AppError::Validation(format!("widget bindings are malformed: {e}")))?,
@@ -563,6 +626,20 @@ async fn query_data(
     page_size: i64,
     filters: Vec<attome_core::Filter>,
 ) -> Result<ExecResponse, AppError> {
+    let (request, captured) = query_request(definition, widget, config, page_size, filters)?;
+    run_query(state, ctx, request, captured).await
+}
+
+/// The stored-query request a query widget runs, and the definition a
+/// published widget captured at publish (P7-T1: the value and drill routes
+/// build it here, so both run the same query).
+pub(crate) fn query_request(
+    definition: &DashboardDefinition,
+    widget: &Value,
+    config: &serde_json::Map<String, Value>,
+    page_size: i64,
+    filters: Vec<attome_core::Filter>,
+) -> Result<(ExecuteQueryRequest, Option<PublishedDefinition>), AppError> {
     let uuid_field = |key: &str| {
         widget
             .get(key)
@@ -622,7 +699,7 @@ async fn query_data(
                 page_size,
                 filters,
             );
-            execute_stored_query_with_definition(state, ctx, request, Some(captured)).await
+            Ok((request, Some(captured)))
         }
         DefinitionSource::Draft => {
             let request = ExecuteQueryRequest::for_draft_widget(
@@ -632,8 +709,23 @@ async fn query_data(
                 filters,
             )
             .ok_or_else(|| AppError::Validation("this widget has no data source".into()))?;
-            execute_stored_query(state, ctx, request).await
+            Ok((request, None))
         }
+    }
+}
+
+/// Runs a query widget's request, with its captured definition when published.
+pub(crate) async fn run_query(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    request: ExecuteQueryRequest,
+    captured: Option<PublishedDefinition>,
+) -> Result<ExecResponse, AppError> {
+    match captured {
+        Some(captured) => {
+            execute_stored_query_with_definition(state, ctx, request, Some(captured)).await
+        }
+        None => execute_stored_query(state, ctx, request).await,
     }
 }
 
