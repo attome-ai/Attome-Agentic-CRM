@@ -75,7 +75,8 @@ async fn view_page(
     let row: Option<ViewRow> = sqlx::query_as(
         "SELECT id, title, blocks_published, seo_title, seo_description \
              FROM content_page \
-             WHERE url_path = $1 AND status = 'published' AND is_deleted = FALSE",
+             WHERE url_path = $1 AND status = 'published' AND is_deleted = FALSE \
+               AND audience = 'public'",
     )
     .bind(&q.path)
     .fetch_optional(&state.base.db)
@@ -254,6 +255,18 @@ async fn deliver_page(
     if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
+    delivered(&state, q, &headers, &["public"]).await
+}
+
+/// The latest published version of the page at `q` whose audience is one of
+/// `audiences`, as a delivery response (200 or 304).
+async fn delivered(
+    state: &EngineState,
+    q: DeliveryQuery,
+    headers: &HeaderMap,
+    audiences: &[&str],
+) -> Result<Response, AppError> {
+    let audiences: Vec<String> = audiences.iter().map(|a| (*a).to_owned()).collect();
     let row: DeliveryRow = sqlx::query_as(
         "SELECT p.id AS page_id, COALESCE(v.version_number, 0) AS version, \
                 COALESCE(v.title, p.title) AS title, \
@@ -269,10 +282,11 @@ async fn deliver_page(
                 ORDER BY version_number DESC LIMIT 1 \
            ) v ON true \
           WHERE p.content_space_id = $1 AND p.url_path = $2 \
-            AND p.status = 'published' AND p.is_deleted = FALSE",
+            AND p.status = 'published' AND p.is_deleted = FALSE AND p.audience = ANY($3)",
     )
     .bind(q.space)
     .bind(&q.path)
+    .bind(&audiences)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?
@@ -309,6 +323,83 @@ async fn deliver_page(
         .into_response())
 }
 
+/// A published page for a signed-in person (K5-T2).
+///
+/// The same answer as `/api/v1/content/delivery`, for `public` and
+/// `internal` pages; anything else is the same 404.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/internal",
+    tag = "content",
+    params(DeliveryQuery),
+    responses(
+        (status = 200, description = "The page's published version", body = DeliveredPage),
+        (status = 304, description = "The client already holds this version"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No published page at this path in this space that the caller may read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn deliver_internal_page(
+    State(state): State<EngineState>,
+    _ctx: attome_server::authz::Authorized<attome_server::authz::SelfService>,
+    Query(q): Query<DeliveryQuery>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    delivered(&state, q, &headers, &["public", "internal"]).await
+}
+
+#[derive(Deserialize, IntoParams)]
+struct PreviewQuery {
+    /// The signed token from `POST /api/v1/admin/content/pages/{id}/preview-link`.
+    token: String,
+}
+
+/// A page's current draft through a signed preview link (K5-T2).
+///
+/// Anyone with an unexpired link reads the draft (title, SEO text and draft
+/// blocks), whatever the page's audience. A wrong, expired or forged token
+/// and a deleted page are the same 404.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/preview",
+    tag = "content",
+    params(PreviewQuery),
+    responses(
+        (status = 200, description = "The page's draft", body = PublicPageView),
+        (status = 404, description = "The link is wrong or expired, or the page is gone", body = ErrorResponse),
+    ),
+)]
+async fn preview_page(
+    State(state): State<EngineState>,
+    Query(q): Query<PreviewQuery>,
+) -> Result<Json<PublicPageView>, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let secret = attome_content::audience::preview_secret(&state)?;
+    let page_id = attome_content::audience::preview_page(&secret, &q.token, chrono::Utc::now())
+        .ok_or(AppError::NotFound)?;
+    let row: (String, serde_json::Value, Option<String>, Option<String>) = sqlx::query_as(
+        "SELECT title, blocks_draft, seo_title, seo_description FROM content_page \
+          WHERE id = $1 AND is_deleted = FALSE",
+    )
+    .bind(page_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    Ok(Json(PublicPageView {
+        title: row.0,
+        blocks: row.1,
+        seo_title: row.2,
+        seo_description: row.3,
+    }))
+}
+
 #[cfg(test)]
 mod delivery_tests {
     use super::*;
@@ -332,10 +423,18 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/content/view", get(view_page))
         .route("/api/v1/content/vote", post(vote_on_page))
         .route("/api/v1/content/delivery", get(deliver_page))
+        .route("/api/v1/content/internal", get(deliver_internal_page))
+        .route("/api/v1/content/preview", get(preview_page))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(view_page, vote_on_page, deliver_page))]
+#[openapi(paths(
+    view_page,
+    vote_on_page,
+    deliver_page,
+    deliver_internal_page,
+    preview_page
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

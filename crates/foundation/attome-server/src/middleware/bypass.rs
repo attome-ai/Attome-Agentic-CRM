@@ -65,6 +65,10 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // with the same identical 404 as `/content/view`; space and path are
     // query parameters so this stays one exact entry.
     "/api/v1/content/delivery",
+    // K5-T2: a signed preview link opens one page's draft for anyone who
+    // holds it; the handler checks the signature and expiry and answers the
+    // same 404 for every miss.
+    "/api/v1/content/preview",
     // Work Intake self-service portal (M70, D-423): public offering
     // browsing and request-status-by-token lookup. Its handlers
     // (`xrm_server::service_public`) do their own manual license check and
@@ -288,6 +292,8 @@ mod tests {
     fn content_view_is_bypassed_but_its_admin_surface_is_not() {
         assert!(is_bypass("/api/v1/content/view"));
         assert!(is_bypass("/api/v1/content/delivery"));
+        assert!(is_bypass("/api/v1/content/preview"));
+        assert!(!is_bypass("/api/v1/content/internal"));
         assert!(!is_bypass("/api/v1/content/delivery/x"));
         assert!(is_csrf_exempt("/api/v1/content/view"));
         // Regression guard: the public view route must never accidentally

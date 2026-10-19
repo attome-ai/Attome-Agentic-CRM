@@ -29,6 +29,8 @@
 
 pub mod admin;
 pub mod analytics;
+/// K5-T2: page audiences and signed preview links.
+pub mod audience;
 pub mod blocks;
 pub mod hierarchy;
 pub mod model;

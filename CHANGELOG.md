@@ -119,6 +119,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Page audiences and preview links (K5-T2): a content page is `public` or `internal`
+  (`PUT /api/v1/admin/content/pages/{id}/audience`, migration 0128). The public view and delivery
+  routes answer an internal page with the same 404 as a missing one; signed-in people read it at
+  `GET /api/v1/content/internal`. `POST .../preview-link` makes a signed link (1 minute to 7 days) to
+  the page's draft, opened at `GET /api/v1/content/preview?token=` without signing in.
 - Headless delivery (K5-T3): `GET /api/v1/content/delivery?space=&path=` serves a published page's
   latest version (title, SEO text, blocks) as JSON without signing in, with an ETag naming the page and
   version so a client revalidates with `If-None-Match` and gets 304 until the next publish.

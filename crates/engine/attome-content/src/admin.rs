@@ -35,7 +35,7 @@ use uuid::Uuid;
 
 const PAGE_COLUMNS: &str = "id, parent_page_id, content_space_id, title, url_path, status, \
      template_id, blocks_draft, blocks_published, seo_title, seo_description, published_at, \
-     publish_at, unpublish_at, row_version, created_at, updated_at, review_by";
+     publish_at, unpublish_at, row_version, created_at, updated_at, review_by, audience";
 
 /// Parses the `If-Match` header into an expected `row_version` — the same
 /// contract `entity_crud`'s generic PATCH enforces (D-079), reimplemented
@@ -1140,6 +1140,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/content/pages/{id}/stats", get(page_stats))
         .merge(crate::versions::routes())
+        .merge(crate::audience::routes())
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1163,5 +1164,6 @@ struct ApiDocFragment;
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::versions::openapi_fragment());
+    doc.merge(crate::audience::openapi_fragment());
     doc
 }

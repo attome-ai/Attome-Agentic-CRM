@@ -752,6 +752,7 @@ name = "attome-content"
 version = "0.1.0"
 dependencies = [
  "attome-audit",
+ "attome-auth",
  "attome-cache",
  "attome-config",
  "attome-core",

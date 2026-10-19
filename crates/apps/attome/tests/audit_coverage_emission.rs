@@ -4092,6 +4092,24 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "PUT /api/v1/admin/content/pages/{id}/audience" => {
+            let (id, _) = content_page(fx).await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/content/pages/{id}/audience"),
+                t,
+                Some(json!({"audience": "internal"})),
+            )
+        }
+        "POST /api/v1/admin/content/pages/{id}/preview-link" => {
+            let (id, _) = content_page(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/content/pages/{id}/preview-link"),
+                t,
+                Some(json!({"minutes": 30})),
+            )
+        }
         "PUT /api/v1/admin/content/pages/{id}/schedule" => {
             let (id, row_version) = content_page(fx).await;
             with_if_match(

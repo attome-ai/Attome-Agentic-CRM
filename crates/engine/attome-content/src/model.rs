@@ -47,6 +47,10 @@ pub struct PageSummary {
     pub updated_at: DateTime<Utc>,
 }
 
+fn public_audience() -> String {
+    "public".to_owned()
+}
+
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize, ToSchema)]
 pub struct PageDetail {
     pub id: Uuid,
@@ -74,6 +78,9 @@ pub struct PageDetail {
     pub row_version: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// K5-T2: `public` (anyone) or `internal` (signed-in people only).
+    #[serde(default = "public_audience")]
+    pub audience: String,
     /// M37 Phase 2 (D-452) — when set, the owner (`updated_by`) is reminded
     /// through M51 once `NOW()` passes it, and retrieval callers are told the
     /// underlying content is stale. `None` means no review cadence is set,

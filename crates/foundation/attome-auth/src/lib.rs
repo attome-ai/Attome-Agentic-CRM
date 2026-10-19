@@ -85,6 +85,8 @@ pub mod refresh;
 pub mod reset;
 pub mod revocation;
 pub mod session;
+/// K5-T2: short signed links (preview links) with an expiry.
+pub mod signed_link;
 pub mod step_up;
 pub mod verification;
 
