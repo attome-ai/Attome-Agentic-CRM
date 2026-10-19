@@ -94,6 +94,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/pay/pay-page.component').then(m => m.PayPageComponent),
   },
   {
+    // E26-T2: the contact's preference page from a signed email link.
+    // Public, no session; ahead of the Content Management catch-all below.
+    path: 'preferences',
+    loadComponent: () => import('@attome/xrm/portal/preferences').then(m => m.PreferencesComponent),
+  },
+  {
     // Work Intake self-service portal (M70, D-423) — public offering
     // browsing + request-status-by-token lookup, no session/authGuard. Must
     // sit ahead of the Content Management catch-all below, or a real deep

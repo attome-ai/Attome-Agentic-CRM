@@ -1802,6 +1802,27 @@ export const xrmEn = {
       failed: 'The reminder could not be saved.',
     },
   },
+  // ── E26-T2: the public preference page ──
+  consentPreferences: {
+    title: 'Your communication preferences',
+    intro: 'Choose what we may contact you about, and how.',
+    otherLanguage: 'العربية',
+    loading: 'Loading…',
+    empty: 'There is nothing to choose here yet.',
+    save: 'Save preferences',
+    saving: 'Saving…',
+    saved: 'Your preferences are saved.',
+    invalidLink: 'This link has expired or is not valid. Use the latest link you received.',
+    failed: 'Your preferences could not be loaded or saved. Try again later.',
+    channel: {
+      any: 'Any channel',
+      email: 'Email',
+      sms: 'Text message',
+      whatsapp: 'WhatsApp',
+      phone: 'Phone call',
+      ads: 'Advertising',
+    },
+  },
   // ── C2-T2: following a record ──
   follow: {
     follow: 'Follow',
