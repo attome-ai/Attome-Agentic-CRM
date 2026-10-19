@@ -31,6 +31,9 @@ impl EngineModel for IntegrationModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::admin::routes().merge(crate::webhook::routes())
+        crate::admin::routes()
+            .merge(crate::webhook::routes())
+            // D15-T1: a person's own mailbox connection.
+            .merge(crate::connector::adapters::user_mail_sync::routes())
     }
 }

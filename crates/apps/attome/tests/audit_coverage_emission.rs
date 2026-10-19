@@ -223,6 +223,10 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          login hook",
     ),
     (
+        "DELETE /api/v1/me/mail-connections/{provider}",
+        "an attome-integration route, and this harness answers attome-integration          routes 404 (the undiagnosed gap noted for the systems/{id}/credential entry          below)",
+    ),
+    (
         "POST /api/v1/admin/integrations/systems/{id}/credential",
         "the create_system prerequisite 404s (FeatureHidden) in this harness even \
          with full_license() (all module bits set) and \

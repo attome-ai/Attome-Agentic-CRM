@@ -37,5 +37,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(webhook::openapi_fragment());
     doc.merge(sms::openapi_fragment());
+    doc.merge(connector::adapters::user_mail_sync::openapi_fragment());
     doc
 }
