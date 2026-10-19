@@ -123,6 +123,8 @@ pub mod metadata_reference;
 pub mod model;
 pub mod my_work;
 pub mod partition_maintenance;
+/// R1-T1: restriction of processing, shared by every processing path.
+pub mod processing_restriction;
 pub mod reconcile;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day encrypted recovery archive.
 pub mod recovery_archive;

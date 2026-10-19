@@ -92,7 +92,10 @@ use uuid::Uuid;
 pub const ACTION_DSR_FULFILL_ERASURE: &str = "dsr.fulfill_erasure";
 
 fn valid_request_type(s: &str) -> bool {
-    matches!(s, "access" | "erasure" | "portability" | "objection")
+    matches!(
+        s,
+        "access" | "erasure" | "portability" | "objection" | "restriction" | "rectification"
+    )
 }
 
 /// Worst-case severity ordering for picking one classification across a
@@ -114,7 +117,8 @@ fn classification_rank(c: DataClassification) -> u8 {
 struct DsrRequestQuery {
     /// `"pending" | "blocked" | "fulfilled" | "rejected"`.
     status: Option<String>,
-    /// `"access" | "erasure" | "portability" | "objection"`.
+    /// `"access" | "erasure" | "portability" | "objection" | "restriction" |
+    /// "rectification"`.
     request_type: Option<String>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
@@ -132,6 +136,12 @@ struct DsrRequestSummary {
     requested_at: DateTime<Utc>,
     fulfilled_at: Option<DateTime<Utc>>,
     evidence_ref: Option<String>,
+    /// R1-T1: when the request must be answered by.
+    due_at: Option<DateTime<Utc>>,
+    /// The law the deadline follows, when the platform knows it.
+    law: Option<String>,
+    /// A rectification's outcome: what was corrected, or why not.
+    resolution: Option<String>,
 }
 
 /// `GET /api/v1/admin/dsr/requests` — `system.admin` only.
@@ -166,7 +176,7 @@ async fn list_requests(
 
     let items: Vec<DsrRequestSummary> = sqlx::query_as(
         "SELECT id, subject_reference, request_type, status, block_reason, requested_by, \
-                requested_at, fulfilled_at, evidence_ref \
+                requested_at, fulfilled_at, evidence_ref, due_at, law, resolution \
            FROM dsr_request \
           WHERE is_deleted = false \
             AND ($1::text IS NULL OR status = $1) \
@@ -232,12 +242,32 @@ async fn create_request(
     let request_type = body.request_type.trim().to_lowercase();
     if !valid_request_type(&request_type) {
         return Err(AppError::Validation(
-            "request_type must be one of: access, erasure, portability, objection".into(),
+            "request_type must be one of: access, erasure, portability, objection, \
+             restriction, rectification"
+                .into(),
         ));
     }
 
     let row = insert_request(&state, subject_reference, &request_type, ctx.user_id).await?;
     Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// R1-T1: the deadline a new request gets, from `compliance.dsr_response_days`
+/// and `core.country` (`attome_core::processing_restriction::response_deadline`).
+fn response_deadline(state: &EngineState) -> (Option<&'static str>, i64) {
+    let settings = state.settings.load();
+    let registry = attome_core::setting_registry();
+    let override_days = registry
+        .get("compliance.dsr_response_days")
+        .and_then(|d| settings.resolve(d, None, None).0.as_i64());
+    let country = registry.get("core.country").and_then(|d| {
+        settings
+            .resolve(d, None, None)
+            .0
+            .as_str()
+            .map(str::to_owned)
+    });
+    attome_core::processing_restriction::response_deadline(country.as_deref(), override_days)
 }
 
 /// Records a pending request and its business event in one transaction.
@@ -247,16 +277,19 @@ async fn insert_request(
     request_type: &str,
     actor: Uuid,
 ) -> Result<DsrRequestSummary, AppError> {
+    let (law, days) = response_deadline(state);
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: DsrRequestSummary = sqlx::query_as(
-        "INSERT INTO dsr_request (subject_reference, request_type, requested_by) \
-         VALUES ($1, $2, $3) \
+        "INSERT INTO dsr_request (subject_reference, request_type, requested_by, due_at, law) \
+         VALUES ($1, $2, $3, NOW() + make_interval(days => $4), $5) \
          RETURNING id, subject_reference, request_type, status, block_reason, requested_by, \
-                   requested_at, fulfilled_at, evidence_ref",
+                   requested_at, fulfilled_at, evidence_ref, due_at, law, resolution",
     )
     .bind(subject_reference)
     .bind(request_type)
     .bind(actor)
+    .bind(i32::try_from(days).unwrap_or(30))
+    .bind(law)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -337,6 +370,16 @@ impl std::fmt::Debug for DsrScope {
 }
 
 impl DsrScope {
+    /// The entity the scope searches.
+    pub fn entity(&self) -> &str {
+        &self.entity_logicalname
+    }
+
+    /// The attribute that identifies the subject in it.
+    pub fn match_attribute(&self) -> &str {
+        &self.match_attribute
+    }
+
     /// A scope for another engine's own access export (web portal plan G-14).
     /// Validated like a caller-supplied one when the export runs.
     pub fn new(entity_logicalname: impl Into<String>, match_attribute: impl Into<String>) -> Self {
@@ -1364,6 +1407,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/dsr/requests/{id}/fulfill-erasure",
             post(fulfill_erasure),
         )
+        .merge(crate::dsr_restriction::routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -1381,5 +1425,7 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::dsr_restriction::openapi_fragment());
+    doc
 }

@@ -373,11 +373,25 @@ fn core_settings() -> Vec<SettingDescriptor> {
         ),
         SettingDescriptor::new(
             "core.country",
-            "The country this deployment serves, as an ISO 3166 alpha-2 code              (SA, AE, EG). Set by the first-run wizard (X12-T3), which also              installs the regions pack and the matching locale, time zone and              calendar. Empty until then.",
+            "The country this deployment serves, as an ISO 3166 alpha-2 code \
+             (SA, AE, EG). Set by the first-run wizard (X12-T3), which also \
+             installs the regions pack and the matching locale, time zone and \
+             calendar. Empty until then.",
             || json!({"type": "string", "pattern": "^([A-Z]{2})?$"}),
             &[SettingScope::Deployment],
             false,
             || json!(""),
+        ),
+        SettingDescriptor::new(
+            "compliance.dsr_response_days",
+            "Days a data-subject request (access, erasure, restriction, \
+             rectification and the rest) must be answered within, counted from \
+             when it is recorded (R1-T1). 0 uses the law of core.country where \
+             the platform knows it (30 days under Saudi PDPL), else 30.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 365}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
         ),
     ]
 }

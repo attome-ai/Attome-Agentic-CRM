@@ -570,6 +570,8 @@ pub async fn create_dispatch_in_tx(
                     // not send" than a generic suppression entry), inside
                     // the same transaction as the rest of this decision so
                     // it's atomic with the dispatch insert further down.
+                    // R1-T1: a consent-gated (marketing) email is processing
+                    // a restricted person may have stopped.
                     let consent_ok = match &consent_purpose_key {
                         Some(purpose_key) => {
                             crate::consent_gate::has_active_consent(
@@ -579,6 +581,12 @@ pub async fn create_dispatch_in_tx(
                                 purpose_key,
                             )
                             .await?
+                                && !attome_core::processing_restriction::record_is_restricted(
+                                    &mut **tx,
+                                    "user_account",
+                                    user_id,
+                                )
+                                .await?
                         }
                         None => true,
                     };

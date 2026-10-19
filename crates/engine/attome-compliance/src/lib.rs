@@ -46,6 +46,8 @@ pub mod consent;
 pub mod consent_admin;
 pub mod consent_seed;
 pub mod dsr_admin;
+/// R1-T1: restriction and rectification requests.
+pub mod dsr_restriction;
 pub mod erasure_admin;
 pub mod erasure_replay;
 pub mod governance_admin;

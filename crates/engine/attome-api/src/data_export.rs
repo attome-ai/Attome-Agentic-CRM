@@ -364,6 +364,14 @@ async fn plan_export(
         conds.push(live);
     }
 
+    // R1-T1: a record whose subject restricted its processing is not
+    // exported in bulk (the subject's own DSR exports are a separate path).
+    params.push(entity_name.to_owned());
+    conds.push(attome_core::processing_restriction::exclusion_sql(
+        &format!("${}", params.len()),
+        "t.id",
+    ));
+
     let filter_schema = DataExportFilterSchema {
         attrs,
         allowed_fields: &allowed_fields,

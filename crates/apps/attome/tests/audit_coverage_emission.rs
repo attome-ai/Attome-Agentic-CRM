@@ -3487,6 +3487,67 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 ]})),
             )
         }
+        "POST /api/v1/admin/dsr/requests/{id}/restrict" => {
+            let subject = uniq("dsr-restrict");
+            entity_record(fx, &subject).await;
+            let dsr = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/dsr/requests",
+                Some(json!({"subject_reference": subject, "request_type": "restriction"})),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/dsr/requests/{}/restrict", id_of(&dsr)),
+                t,
+                Some(json!({"scopes": [
+                    {"entity_logicalname": fx.entity, "match_attribute": "title"},
+                ]})),
+            )
+        }
+        "POST /api/v1/admin/dsr/requests/{id}/lift" => {
+            // R1-T1: restrict a subject's record, then lift it.
+            let subject = uniq("dsr-lift");
+            entity_record(fx, &subject).await;
+            let dsr = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/dsr/requests",
+                Some(json!({"subject_reference": subject, "request_type": "restriction"})),
+            )
+            .await;
+            admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/dsr/requests/{}/restrict", id_of(&dsr)),
+                Some(json!({"scopes": [
+                    {"entity_logicalname": fx.entity, "match_attribute": "title"},
+                ]})),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/dsr/requests/{}/lift", id_of(&dsr)),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/dsr/requests/{id}/rectify" => {
+            let dsr = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/dsr/requests",
+                Some(json!({"subject_reference": uniq("dsr-rectify"), "request_type": "rectification"})),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/dsr/requests/{}/rectify", id_of(&dsr)),
+                t,
+                Some(json!({"outcome": "fulfilled", "resolution": "Phone number corrected"})),
+            )
+        }
         "POST /api/v1/admin/security/erasure/{logicalname}/{record_id}" => {
             // A fresh record: erasure destroys the record's audit key.
             let record = entity_record(fx, &uniq("erased")).await;

@@ -252,6 +252,7 @@ impl Action for RecordGet {
                 args.record_id,
             )
             .await?;
+            refuse_if_restricted(state, &args.entity, args.record_id).await?;
             let mut value = serde_json::to_value(record)
                 .map_err(|e| AppError::internal(format!("record serialization failed: {e}")))?;
             // D-769: over MCP, lookup display names into entities not
@@ -338,6 +339,9 @@ impl Action for RecordSummarize {
             let facts =
                 super::summary_context::gather(state, &ctx.security, &args.entity, args.record_id)
                     .await?;
+            // R1-T1: after the read check, so a caller who cannot read the
+            // record learns nothing about its restriction.
+            refuse_if_restricted(state, &args.entity, args.record_id).await?;
 
             let client = crate::inference_client::client_for(state, RECORD_SUMMARIZE).await?;
 
@@ -503,6 +507,51 @@ impl Action for RecordSummarize {
 
 struct QueryExecute;
 
+/// R1-T1: AI does not process a record whose subject restricted processing.
+pub(crate) async fn refuse_if_restricted(
+    state: &EngineState,
+    entity: &str,
+    record_id: uuid::Uuid,
+) -> Result<(), AppError> {
+    if attome_core::processing_restriction::record_is_restricted(&state.base.db, entity, record_id)
+        .await?
+    {
+        return Err(AppError::Validation(
+            "this record's processing is restricted at the data subject's request".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// R1-T1: drops restricted records from a `query.execute` result
+/// (`data.records`, each with its `id`). The page's counts are not
+/// recomputed; they may count a dropped row.
+async fn drop_restricted_rows(state: &EngineState, value: &mut Value) -> Result<(), AppError> {
+    let Some(records) = value
+        .get_mut("data")
+        .and_then(|d| d.get_mut("records"))
+        .and_then(Value::as_array_mut)
+    else {
+        return Ok(());
+    };
+    let ids: Vec<uuid::Uuid> = records
+        .iter()
+        .filter_map(|r| r.get("id").and_then(Value::as_str))
+        .filter_map(|s| uuid::Uuid::parse_str(s).ok())
+        .collect();
+    let restricted =
+        attome_core::processing_restriction::restricted_among(&state.base.db, &ids).await?;
+    if !restricted.is_empty() {
+        records.retain(|r| {
+            r.get("id")
+                .and_then(Value::as_str)
+                .and_then(|s| uuid::Uuid::parse_str(s).ok())
+                .is_none_or(|id| !restricted.contains(&id))
+        });
+    }
+    Ok(())
+}
+
 impl Action for QueryExecute {
     fn id(&self) -> ActionId {
         ActionId(QUERY_EXECUTE)
@@ -550,6 +599,7 @@ impl Action for QueryExecute {
             let mut value = serde_json::to_value(response).map_err(|e| {
                 AppError::internal(format!("query result serialization failed: {e}"))
             })?;
+            drop_restricted_rows(state, &mut value).await?;
             // D-769: an admitted row's lookup display name into an entity not
             // admitted for read is a read of that entity; over MCP it is
             // dropped (the raw foreign-key id, the row's own column, stays).
