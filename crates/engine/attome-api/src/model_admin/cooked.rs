@@ -31,7 +31,7 @@ use axum::{
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use super::{cooked, refresh_cooked};
+use super::cooked;
 
 /// The kinds a signed-in caller may fetch: their artefacts hold nothing a
 /// user cannot already read.
@@ -65,11 +65,8 @@ fn is_hash(hash: &str) -> bool {
 }
 
 async fn ensure_loaded(state: &EngineState) -> Result<(), AppError> {
-    if cooked().snapshot().version == 0 {
-        // Cold start: build the cooked registry from the published store.
-        refresh_cooked(state).await?;
-    }
-    Ok(())
+    // Cold start: the current version, or a first cook of the published store.
+    super::ensure_cooked(state).await
 }
 
 #[utoipa::path(

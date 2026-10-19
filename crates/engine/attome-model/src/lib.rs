@@ -28,6 +28,7 @@ pub mod publish;
 pub mod references;
 pub mod runtime;
 pub mod store;
+pub mod switch;
 pub mod upgrade;
 pub mod validate;
 
