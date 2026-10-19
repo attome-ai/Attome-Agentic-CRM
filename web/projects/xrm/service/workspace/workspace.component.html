@@ -52,6 +52,8 @@
           <dt>{{ 'serviceWorkspace.priority' | translate }}</dt><dd>{{ field(record, 'priority') }}</dd>
           <dt>{{ 'serviceWorkspace.requester' | translate }}</dt><dd>{{ field(record, 'requester_id') }}</dd>
         </dl>
+        <!-- G11-T2: articles for this case, with feedback. -->
+        <xrm-article-suggest [text]="caseText(record)" />
       }
     </aside>
   </div>

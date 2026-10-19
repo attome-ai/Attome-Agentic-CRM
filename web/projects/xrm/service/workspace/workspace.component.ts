@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { RouterLink } from '@angular/router';
 import { ApiError, TranslatePipe } from '@attome/base';
 import { SlaBadgeComponent } from '@attome/xrm/service';
+import { ArticleSuggestComponent, caseQuery } from './article-suggest.component';
 
 import {
   ConversationSummary,
@@ -27,7 +28,7 @@ const STORE = 'attome-service-workspace';
 @Component({
   selector: 'attome-service-workspace',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, SlaBadgeComponent],
+  imports: [TranslatePipe, RouterLink, SlaBadgeComponent, ArticleSuggestComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../styles/admin-page.css', './workspace.component.css'],
   templateUrl: './workspace.component.html',
@@ -95,6 +96,11 @@ export class WorkspaceComponent implements OnInit {
   setDraft(key: string, draft: string): void {
     this.tabs.update(tabs => tabs.map(t => (t.key === key ? { ...t, draft } : t)));
     this.persist();
+  }
+
+  /** G11-T2: the case text articles are suggested for. */
+  caseText(record: RecordView | null): string {
+    return caseQuery(this.field(record, 'title'), this.field(record, 'description'));
   }
 
   field(record: RecordView | null, name: string): string {

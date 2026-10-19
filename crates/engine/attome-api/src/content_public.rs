@@ -178,6 +178,73 @@ async fn vote_on_page(
     Ok(Json(VoteAck { recorded: true }))
 }
 
+// ── G11-T2: feedback on a suggested article ─────────────────────────────────
+
+/// `POST /api/v1/content/knowledge-feedback`.
+#[derive(Deserialize, ToSchema)]
+struct KnowledgeFeedback {
+    /// The knowledge item a suggestion cited (`KnowledgeCitation.item_id`).
+    item_id: Uuid,
+    /// Whether the article helped.
+    useful: bool,
+}
+
+/// G11-T2: a signed-in person's helpful/not-helpful on an article suggested
+/// to them, counted with the article page's votes. A cited item that is not a
+/// published article is 404, as a missing one.
+#[utoipa::path(
+    post,
+    path = "/api/v1/content/knowledge-feedback",
+    tag = "content",
+    request_body = KnowledgeFeedback,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Telemetry,
+        None,
+        "a rate-limited helpful/not-helpful count on a published article; no business or security effect",
+    )))),
+    responses(
+        (status = 200, description = "Success", body = VoteAck),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "The item is not a published article", body = ErrorResponse),
+        (status = 429, description = "Too many votes for this article from this person", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn knowledge_feedback(
+    State(state): State<EngineState>,
+    ctx: attome_server::authz::Authorized<attome_server::authz::SelfService>,
+    Json(body): Json<KnowledgeFeedback>,
+) -> Result<Json<VoteAck>, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let page_id: Uuid = sqlx::query_scalar(
+        "SELECT id FROM content_page \
+          WHERE knowledge_item_id = $1 AND status = 'published' AND is_deleted = FALSE \
+          ORDER BY id LIMIT 1",
+    )
+    .bind(body.item_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let key = format!("content:rl:feedback:{page_id}:{}", ctx.user_id);
+    let outcome = attome_cache::rate_limit::check(
+        &state.base.redis_coordination,
+        &key,
+        VOTE_LIMIT_PER_MINUTE,
+    )
+    .await?;
+    if !outcome.allowed {
+        return Err(AppError::TooManyRequests {
+            retry_after_secs: None,
+        });
+    }
+    attome_content::analytics::record_helpfulness_vote(&state.base.db, page_id, body.useful)
+        .await?;
+    Ok(Json(VoteAck { recorded: true }))
+}
+
 // ── K5-T3: headless delivery ─────────────────────────────────────────────────
 
 #[derive(Deserialize, IntoParams)]
@@ -422,6 +489,10 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/content/view", get(view_page))
         .route("/api/v1/content/vote", post(vote_on_page))
+        .route(
+            "/api/v1/content/knowledge-feedback",
+            post(knowledge_feedback),
+        )
         .route("/api/v1/content/delivery", get(deliver_page))
         .route("/api/v1/content/internal", get(deliver_internal_page))
         .route("/api/v1/content/preview", get(preview_page))
@@ -431,6 +502,7 @@ pub fn routes() -> Router<EngineState> {
 #[openapi(paths(
     view_page,
     vote_on_page,
+    knowledge_feedback,
     deliver_page,
     deliver_internal_page,
     preview_page

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,6 +45,8 @@ describe('WorkspaceComponent', () => {
       providers: [
         provideRouter([]),
         { provide: WorkspaceService, useValue: svc },
+        // G11-T2: the article suggestions in the context panel.
+        { provide: ApiService, useValue: { get: vi.fn(() => of({ items: [] })), post: vi.fn(() => of({})) } },
         {
           provide: LangService,
           useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' },

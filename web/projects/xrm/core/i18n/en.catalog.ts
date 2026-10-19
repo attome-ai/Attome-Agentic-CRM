@@ -1823,6 +1823,15 @@ export const xrmEn = {
       ads: 'Advertising',
     },
   },
+  // ── G11-T2: suggested articles ──
+  articleSuggest: {
+    title: 'Suggested articles',
+    helpful: 'Helpful',
+    notHelpful: 'Not helpful',
+    thanks: 'Thanks for the feedback.',
+    noFeedback: 'Feedback is only taken on published articles.',
+    none: 'No articles match this case yet.',
+  },
   // ── C9-T2: internal chat ──
   chat: {
     title: 'Chat',
