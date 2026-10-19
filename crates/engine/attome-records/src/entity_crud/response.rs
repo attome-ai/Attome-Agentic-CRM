@@ -83,6 +83,15 @@ pub struct EntityRecordResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<std::collections::HashMap<String, serde_json::Value>>)]
     expanded: Option<serde_json::Map<String, Value>>,
+    /// A16-T2: on an update sent with `If-Match-Merge: attributes` over a
+    /// stale version, the attributes others changed since that version,
+    /// which the update was merged over. Omitted otherwise.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    merged_over: Vec<String>,
+    /// A16-T2: how many more such attributes the caller may not read.
+    /// Omitted when 0.
+    #[serde(skip_serializing_if = "is_zero")]
+    merged_hidden: i64,
 }
 
 fn is_zero(n: &i64) -> bool {
@@ -135,6 +144,11 @@ pub struct MinimalRecord {
     duplicate_warnings: Vec<crate::duplicate_check::DuplicateMatch>,
     #[serde(skip_serializing_if = "is_zero")]
     hidden_duplicates: i64,
+    /// As on the full record: what an automatic merge went over (A16-T2).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    merged_over: Vec<String>,
+    #[serde(skip_serializing_if = "is_zero")]
+    merged_hidden: i64,
 }
 
 /// A write's answer: the whole record, or with `return=minimal` its id and
@@ -156,6 +170,8 @@ pub(super) fn write_response(
                 warnings: record.warnings,
                 duplicate_warnings: record.duplicate_warnings,
                 hidden_duplicates: record.hidden_duplicates,
+                merged_over: record.merged_over,
+                merged_hidden: record.merged_hidden,
             };
             (
                 status,
@@ -247,6 +263,14 @@ pub(super) fn request_locale(headers: &axum::http::HeaderMap) -> Option<&'static
 
 impl EntityRecordResponse {
     /// S1-T3: keeps only the selected attributes in `data` and `lookups`.
+    /// A16-T2: marks this answer as an update merged over `shown` (and
+    /// `hidden` unreadable) attributes others changed.
+    pub(super) fn merged(mut self, shown: Vec<String>, hidden: i64) -> Self {
+        self.merged_over = shown;
+        self.merged_hidden = hidden;
+        self
+    }
+
     pub(super) fn selected(mut self, names: Option<&[String]>) -> Self {
         let Some(names) = names else {
             return self;
@@ -553,6 +577,8 @@ pub(super) fn build_response(
         hidden_duplicates: 0,
         merged_into: None,
         expanded: None,
+        merged_over: Vec::new(),
+        merged_hidden: 0,
     }
 }
 

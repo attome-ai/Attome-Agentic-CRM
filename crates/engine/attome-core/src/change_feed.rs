@@ -120,6 +120,10 @@ pub struct ChangePayload {
     /// attribute's value is `{"ref": true}`.
     pub before: Option<serde_json::Value>,
     pub after: Option<serde_json::Value>,
+    /// A16-T2: the record's row version after this write, set by the
+    /// generic update path, so a stale update can tell exactly what each
+    /// version it missed changed. `None` for any other write.
+    pub row_version: Option<i64>,
 }
 
 /// Y7-T2: [`emit`] with what changed, and optionally an event name (a merge
@@ -134,8 +138,9 @@ pub async fn emit_with(
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, event_name, changed_attributes, before, after) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+             (entity_logicalname, record_id, operation, event_name, changed_attributes, before, after, \
+              row_version) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -144,6 +149,7 @@ pub async fn emit_with(
     .bind(&payload.changed_attributes)
     .bind(&payload.before)
     .bind(&payload.after)
+    .bind(payload.row_version)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;

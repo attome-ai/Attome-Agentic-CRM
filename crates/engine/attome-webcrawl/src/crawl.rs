@@ -573,6 +573,7 @@ impl DbPageSink<'_> {
                     after: Some(serde_json::json!({
                         "target_id": self.target_id, "url_path": url_path, "added": added,
                     })),
+                    row_version: None,
                 },
             )
             .await

@@ -9670,3 +9670,127 @@ fn expand_returns_related_record_inline() {
         assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
+
+/// A16-T2: one PATCH at `version`, with `If-Match-Merge` when given.
+async fn patch_at(
+    app: &axum::Router,
+    cookie: &str,
+    uri: &str,
+    version: i64,
+    merge: Option<&str>,
+    body: &str,
+) -> (StatusCode, serde_json::Value) {
+    let mut req = Request::builder()
+        .method("PATCH")
+        .uri(uri)
+        .header("cookie", cookie)
+        .header("content-type", "application/json")
+        .header("if-match", format!("\"{version}\""));
+    if let Some(merge) = merge {
+        req = req.header("if-match-merge", merge);
+    }
+    let res = app
+        .clone()
+        .oneshot(req.body(Body::from(body.to_owned())).unwrap())
+        .await
+        .expect("patch");
+    let status = res.status();
+    (status, body_json(res).await)
+}
+
+/// A16-T2: with `If-Match-Merge: attributes`, a stale PATCH that touches
+/// none of the attributes changed since its version is applied at the
+/// current version and says what it was merged over; one that touches a
+/// changed attribute is still the 409, as is any stale PATCH without the
+/// header. The header takes only `attributes`.
+#[test]
+fn stale_update_merges_over_other_attributes_and_conflicts_on_its_own() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (logicalname, cookie, app) = provision_test_entity(system, "rowmerge").await;
+        let create_req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/v1/{logicalname}"))
+            .header("cookie", &cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"title":"v0"}"#))
+            .unwrap();
+        let res = app.clone().oneshot(create_req).await.expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let record_id = body_json(res).await["id"]
+            .as_str()
+            .expect("record id")
+            .to_owned();
+        let uri = format!("/api/v1/{logicalname}/{record_id}");
+
+        // Someone else changes the title: version 0 -> 1.
+        let (status, _) = patch_at(&app, &cookie, &uri, 0, None, r#"{"title":"v1"}"#).await;
+        assert_eq!(status, StatusCode::OK);
+
+        // A stale update to the amount only, asking to merge: applied at 1.
+        let (status, merged) = patch_at(
+            &app,
+            &cookie,
+            &uri,
+            0,
+            Some("attributes"),
+            r#"{"amount":5}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{merged}");
+        assert_eq!(merged["row_version"].as_i64(), Some(2), "{merged}");
+        assert_eq!(
+            merged["merged_over"],
+            serde_json::json!(["title"]),
+            "{merged}"
+        );
+        assert_eq!(
+            merged["data"]["title"], "v1",
+            "the other change is kept: {merged}"
+        );
+        assert_eq!(merged["data"]["amount"].as_f64(), Some(5.0), "{merged}");
+
+        // A stale update to the title, which changed meanwhile: the 409.
+        let (status, conflict) = patch_at(
+            &app,
+            &cookie,
+            &uri,
+            0,
+            Some("attributes"),
+            r#"{"title":"mine"}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{conflict}");
+        assert_eq!(conflict["error"], "version_conflict");
+        assert_eq!(conflict["current_version"].as_i64(), Some(2), "{conflict}");
+
+        // Without the header a stale update is the 409, as before.
+        let (status, _) = patch_at(&app, &cookie, &uri, 1, None, r#"{"amount":6}"#).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+
+        // The header takes only `attributes`.
+        let (status, invalid) = patch_at(
+            &app,
+            &cookie,
+            &uri,
+            2,
+            Some("everything"),
+            r#"{"amount":6}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{invalid}");
+
+        // At the current version the header changes nothing.
+        let (status, plain) = patch_at(
+            &app,
+            &cookie,
+            &uri,
+            2,
+            Some("attributes"),
+            r#"{"amount":7}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{plain}");
+        assert!(plain.get("merged_over").is_none(), "{plain}");
+    });
+}

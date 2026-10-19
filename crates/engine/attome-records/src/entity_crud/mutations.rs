@@ -1252,10 +1252,10 @@ pub(crate) async fn sync_file_field_documents(
         ("id" = Uuid, Path),
     ),
     responses(
-        (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
+        (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`. With `If-Match-Merge: attributes` over a stale version whose changes touched none of the attributes sent, the update is applied at the current version and `merged_over` lists the attributes others changed (`merged_hidden` counts those the caller cannot read)", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-        (status = 409, description = "version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read", body = ErrorResponse),
+        (status = 409, description = "version_conflict: the record changed since If-Match (with `If-Match-Merge: attributes`, in an attribute this update sends, or in a way the record's history cannot account for). `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -1295,39 +1295,79 @@ pub(super) async fn update_record(
     // differently). Header parsing is the one thing that non-HTTP-caller
     // version cannot do for itself, so that is all this handler still does.
     let expected_version = expected_row_version(&headers)?;
+    let merge = super::row_version::merge_requested(&headers)?;
     let skip_duplicates = duplicate_bypass(&ctx, &headers)?;
+    // A16-T2: what this update writes, and a copy for a merged retry.
+    let sent: Vec<String> = body
+        .as_object()
+        .map(|fields| fields.keys().cloned().collect())
+        .unwrap_or_default();
+    let retry_body = merge.then(|| body.clone());
+    let recording = Arc::new(recording.0);
     // D-787 rule 7: see `create_record` (reference data only).
-    let response = match reference::scope(
-        Arc::new(recording.0),
-        attome_core::match_rule::with_duplicate_skip(
-            skip_duplicates,
-            attome_core::match_rule::with_duplicate_reason(
-                duplicate_reason_header(&headers),
-                update_record_for(
+    let attempt = |version: i64, body: Value| {
+        reference::scope(
+            Arc::clone(&recording),
+            attome_core::match_rule::with_duplicate_skip(
+                skip_duplicates,
+                attome_core::match_rule::with_duplicate_reason(
+                    duplicate_reason_header(&headers),
+                    update_record_for(
+                        &state,
+                        &ctx,
+                        claims.sub,
+                        &entity_input,
+                        record_id,
+                        version,
+                        body,
+                    ),
+                ),
+            ),
+        )
+    };
+    let response = match attempt(expected_version, body).await {
+        Err(AppError::VersionConflict) => {
+            // A16-T2: a stale update that touches nothing the missed
+            // versions changed is applied at the current version.
+            let basis = match retry_body {
+                Some(_) => super::history::merge_basis(
                     &state,
                     &ctx,
-                    claims.sub,
                     &entity_input,
                     record_id,
                     expected_version,
-                    body,
-                ),
-            ),
-        ),
-    )
-    .await
-    {
-        // A16-T1: say what changed since the caller's version.
-        Err(AppError::VersionConflict) => {
-            return Err(super::history::version_conflict(
-                &state,
-                &ctx,
-                &entity_input,
-                record_id,
-                expected_version,
-                "api",
-            )
-            .await);
+                )
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!(error = %e, %record_id, "automatic merge basis unavailable");
+                    None
+                })
+                .filter(|basis| !basis.changed.iter().any(|name| sent.contains(name))),
+                None => None,
+            };
+            let merged = match (basis, retry_body) {
+                (Some(basis), Some(body)) => match attempt(basis.current_version, body).await {
+                    Ok(response) => Some(response.merged(basis.shown, basis.hidden)),
+                    Err(AppError::VersionConflict) => None,
+                    Err(other) => return Err(other),
+                },
+                _ => None,
+            };
+            match merged {
+                Some(response) => response,
+                // A16-T1: say what changed since the caller's version.
+                None => {
+                    return Err(super::history::version_conflict(
+                        &state,
+                        &ctx,
+                        &entity_input,
+                        record_id,
+                        expected_version,
+                        "api",
+                    )
+                    .await);
+                }
+            }
         }
         other => other?,
     };

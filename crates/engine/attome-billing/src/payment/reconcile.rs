@@ -222,6 +222,7 @@ async fn reconcile_payout(
                     "currency": payout.currency,
                     "day": payout.day,
                 })),
+                row_version: None,
             },
         )
         .await?;

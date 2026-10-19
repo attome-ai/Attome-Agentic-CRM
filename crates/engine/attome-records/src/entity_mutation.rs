@@ -2166,6 +2166,7 @@ pub fn change_payload(
         changed_attributes: names,
         before: old.map(|_| Value::Object(before)),
         after: Some(Value::Object(after)),
+        row_version: None,
     }
 }
 
@@ -2175,6 +2176,7 @@ fn active_flag_payload(now_active: bool) -> attome_core::change_feed::ChangePayl
         changed_attributes: vec!["is_active".to_owned()],
         before: Some(serde_json::json!({ "is_active": !now_active })),
         after: Some(serde_json::json!({ "is_active": now_active })),
+        row_version: None,
     }
 }
 
@@ -3050,12 +3052,15 @@ pub async fn update_one_as(
         None => return Err(AppError::NotFound),
     };
 
+    // A16-T2: the version this update wrote goes with its change event.
+    let mut payload = change_payload(attrs, old_row.as_ref(), Some(&new_row));
+    payload.row_version = new_row.get("row_version").and_then(Value::as_i64);
     write_entity_change_event_with(
         tx,
         entity_name,
         record_id,
         attome_core::ChangeOperation::Update,
-        &change_payload(attrs, old_row.as_ref(), Some(&new_row)),
+        &payload,
     )
     .await?;
 

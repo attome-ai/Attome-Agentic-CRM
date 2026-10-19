@@ -112,6 +112,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   recorded under the entities and records it came from, and every node drops it within about a second
   of a write to one of them, by reading the entity change feed (no Redis needed); a record write also
   rings `attome-cache:invalidate` so nodes read at once.
+- Automatic merge of a stale update (A16-T2): `PATCH /api/v1/{entity}/{id}` with
+  `If-Match-Merge: attributes` and an `If-Match` version that is out of date is applied at the current
+  version when none of the attributes it sends changed since that version, and answers 200 with
+  `merged_over` (the attributes others changed; `merged_hidden` counts those the caller cannot read).
+  An overlap, or a version the record's change history cannot account for, is the usual 409. Change
+  events of generic updates now carry the row version they wrote (migration 0121).
 - Job types registered at run time (Z7-T1): `attome_jobs::JobRegistry` maps a job name to its
   declaration (`JobType`: payload version, lane, priority, attempts, per-node concurrency cap) and
   handler, and `EngineJob::Registered` carries `{name, version, payload}`, so an engine adds a job

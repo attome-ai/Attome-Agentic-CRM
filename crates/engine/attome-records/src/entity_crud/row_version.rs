@@ -25,6 +25,20 @@ pub(super) fn expected_row_version(headers: &axum::http::HeaderMap) -> Result<i6
     })
 }
 
+/// A16-T2: whether a PATCH asks for an automatic merge
+/// (`If-Match-Merge: attributes`, the one value it takes). Absent is no.
+pub(super) fn merge_requested(headers: &axum::http::HeaderMap) -> Result<bool, AppError> {
+    let Some(raw) = headers.get("if-match-merge") else {
+        return Ok(false);
+    };
+    match raw.to_str().map(str::trim) {
+        Ok(value) if value.eq_ignore_ascii_case("attributes") => Ok(true),
+        _ => Err(AppError::Validation(
+            "If-Match-Merge takes only the value `attributes`".into(),
+        )),
+    }
+}
+
 /// Parses `If-Match` for the delete/restore paths, where the header is
 /// **optional** (DATA-7/CONC-1, PLATFORM-REVIEW-2026-08-24).
 ///

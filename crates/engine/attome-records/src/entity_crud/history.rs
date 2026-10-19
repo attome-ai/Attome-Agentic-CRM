@@ -115,6 +115,103 @@ pub async fn version_conflict(
     }
 }
 
+/// A16-T2: the most missed versions an automatic merge looks back over.
+const MERGE_VERSIONS_MAX: i64 = 50;
+
+/// A16-T2: what a stale update may be merged over.
+#[derive(Debug, Clone)]
+pub struct MergeBasis {
+    /// The record's row version now, which the merged update is applied at.
+    pub current_version: i64,
+    /// Every attribute the missed versions changed.
+    pub changed: Vec<String>,
+    /// Those of them the caller may read, for `merged_over`.
+    pub shown: Vec<String>,
+    /// How many the caller may not read.
+    pub hidden: i64,
+}
+
+/// A16-T2: the attributes the versions after `expected_version` changed,
+/// when every one of those versions is accounted for: each must be a
+/// generic update whose change event names its row version and what it
+/// changed (an update that changed nothing names nothing, and is no
+/// obstacle). A version written any other way (an engine's own write, a
+/// restore, an event pruned from the feed) leaves a gap, and then there is
+/// no basis and the caller gets the ordinary conflict.
+pub async fn merge_basis(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    record_id: Uuid,
+    expected_version: i64,
+) -> Result<Option<MergeBasis>, AppError> {
+    let (_, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
+    let db = &state.base.db;
+    let current: Option<i64> = sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.history",
+        &format!(
+            "SELECT row_version FROM {} WHERE id = $1 AND is_active = true",
+            quote_ident(&entity_name)
+        ),
+    ))
+    .bind(record_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(current) = current else {
+        return Ok(None);
+    };
+    let missed = current - expected_version;
+    if missed <= 0 || missed > MERGE_VERSIONS_MAX {
+        return Ok(None);
+    }
+    let versions: Vec<(i64, Vec<String>)> = sqlx::query_as(attome_db::tagged_sql!(
+        "entity.history",
+        "SELECT row_version, changed_attributes FROM entity_change_event \
+         WHERE entity_logicalname = $1 AND record_id = $2 \
+           AND row_version > $3 AND row_version <= $4 AND operation = 'update' \
+         ORDER BY row_version"
+    ))
+    .bind(&entity_name)
+    .bind(record_id)
+    .bind(expected_version)
+    .bind(current)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let accounted = versions.len() == usize::try_from(missed).unwrap_or(usize::MAX)
+        && versions
+            .iter()
+            .zip(expected_version + 1..=current)
+            .all(|((version, _), want)| *version == want);
+    if !accounted {
+        return Ok(None);
+    }
+    let mut changed: Vec<String> = Vec::new();
+    for (_, names) in versions {
+        for name in names {
+            if !changed.contains(&name) {
+                changed.push(name);
+            }
+        }
+    }
+    let mut shown = Vec::new();
+    let mut hidden = 0;
+    for name in &changed {
+        if readable_attr(ctx, &entity_name, &attrs, name).is_some() {
+            shown.push(name.clone());
+        } else {
+            hidden += 1;
+        }
+    }
+    Ok(Some(MergeBasis {
+        current_version: current,
+        changed,
+        shown,
+        hidden,
+    }))
+}
+
 /// A16-T7: where a version conflict happened: a single write through the
 /// API, a bulk operation, or a staged import.
 pub const CONFLICT_SOURCES: [&str; 3] = ["api", "bulk", "import"];
