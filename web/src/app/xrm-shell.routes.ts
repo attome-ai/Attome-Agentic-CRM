@@ -599,6 +599,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/entity').then(m => m.RecycleBinComponent),
           },
           {
+            // C9-T2: internal chat.
+            path: 'chat',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/chat').then(m => m.ChatComponent),
+          },
+          {
             // C3-T2: posts and changes to the records the person follows.
             path: 'feed',
             canActivate: [authGuard],
