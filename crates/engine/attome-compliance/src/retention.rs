@@ -116,6 +116,8 @@ pub async fn propose_retention_actions(state: &EngineState) -> Result<u32, AppEr
         &retention.disposition_action,
     )
     .await?;
+    // R3-T1: live records past their retention rule's period.
+    proposed += crate::retention_rules::propose_rule_actions(state).await?;
 
     Ok(proposed)
 }
@@ -224,6 +226,39 @@ pub async fn execute_action(state: &EngineState, action_id: Uuid) -> Result<(), 
             )
             .await
         }
+        // R3-T1: a reviewed record is kept; a purge or archive first deletes
+        // the live record as the approver, then runs the bin disposition.
+        "rule_review" => Ok(Some("reviewed: kept".to_owned())),
+        "rule_purge" => match crate::retention_rules::delete_for_disposition(
+            state,
+            &action.target,
+            action_id,
+            action.approved_by,
+        )
+        .await
+        {
+            Ok(()) => execute_entity_purge(state, &action.target, action.approved_by).await,
+            Err(e) => Err(e),
+        },
+        "rule_archive" => match crate::retention_rules::delete_for_disposition(
+            state,
+            &action.target,
+            action_id,
+            action.approved_by,
+        )
+        .await
+        {
+            Ok(()) => {
+                crate::archive::execute_entity_archive(
+                    state,
+                    &action.target,
+                    action_id,
+                    action.approved_by,
+                )
+                .await
+            }
+            Err(e) => Err(e),
+        },
         other => Err(AppError::internal(format!(
             "retention execute: unknown action_type {other:?} for action {action_id}"
         ))),

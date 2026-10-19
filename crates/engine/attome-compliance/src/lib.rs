@@ -54,6 +54,8 @@ pub mod legal_matter_admin;
 pub mod model;
 pub mod retention;
 pub mod retention_admin;
+/// R3-T1: retention rules per entity and their disposition proposals.
+pub mod retention_rules;
 pub mod rewrap_admin;
 /// Z1-T8 — the secret inventory: names, key ids and ages, never values.
 pub mod secret_inventory;

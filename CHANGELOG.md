@@ -115,6 +115,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Retention rules (R3-T1): `GET`/`POST /api/v1/admin/retention/rules` and `PUT`/`DELETE
+  /api/v1/admin/retention/rules/{id}` (administrators, Configuration audit events) keep rules per
+  entity and category: a filter condition, the date the period starts from (`created_at`,
+  `modified_at` or a date attribute such as a closed date or contract end), the period in days and
+  the action (`purge`, `archive` or `review`). The daily retention sweep proposes every live record
+  past its rule's period (`rule_purge`, `rule_archive`, `rule_review`, migration 0125), never one
+  under a legal hold. An approved review keeps the record; an approved purge or archive deletes it
+  as the approver (audited, into the recycle bin) and then purges or archives it.
 - First-run region setup (X12-T3): `GET`/`POST /api/v1/admin/setup/region` (administrators) list the
   countries the regions pack presets and set the deployment up for one: the pack is installed (the
   same idempotent path as `attome init --pack regions`) and the deployment's `core.country` (new),

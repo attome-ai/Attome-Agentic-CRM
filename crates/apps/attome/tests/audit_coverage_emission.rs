@@ -4574,6 +4574,35 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // ── Retention rules (R3-T1) ──────────────────────────────────────────
+        "POST /api/v1/admin/retention/rules" => request(
+            "POST",
+            "/api/v1/admin/retention/rules",
+            t,
+            Some(
+                json!({"name": uniq("rule"), "entity": fx.entity, "period_days": 365, "action": "review"}),
+            ),
+        ),
+        "PUT /api/v1/admin/retention/rules/{id}" => {
+            let id = retention_rule(fx).await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/retention/rules/{id}"),
+                t,
+                Some(
+                    json!({"name": uniq("rule"), "entity": fx.entity, "period_days": 730, "action": "review"}),
+                ),
+            )
+        }
+        "DELETE /api/v1/admin/retention/rules/{id}" => {
+            let id = retention_rule(fx).await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/retention/rules/{id}"),
+                t,
+                None,
+            )
+        }
         // ── Retention (Phase 3.7 part H) ─────────────────────────────────────
         "POST /api/v1/admin/retention/actions/{id}/reject" => {
             let id = retention_action(fx).await;
@@ -5924,6 +5953,23 @@ async fn retention_action(fx: &Fx) -> Uuid {
     .execute(&fx.base.db)
     .await
     .expect("insert throwaway retention action");
+    id
+}
+
+/// A retention rule on the fixture entity — inserted directly (a throwaway
+/// database, coding-guidelines §4) so the update and delete drivers each
+/// have their own.
+async fn retention_rule(fx: &Fx) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO retention_rule (id, name, entity_logicalname, period_days, action)          VALUES ($1, $2, $3, 365, 'review')",
+    )
+    .bind(id)
+    .bind(uniq("rule"))
+    .bind(&fx.entity)
+    .execute(&fx.base.db)
+    .await
+    .expect("insert throwaway retention rule");
     id
 }
 

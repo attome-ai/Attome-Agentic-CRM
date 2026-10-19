@@ -449,6 +449,7 @@ pub fn routes() -> Router<EngineState> {
             post(reject_action),
         )
         .route("/api/v1/admin/retention/propose", post(trigger_propose))
+        .merge(crate::retention_rules::routes())
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -460,5 +461,7 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(crate::retention_rules::openapi_fragment());
+    doc
 }
