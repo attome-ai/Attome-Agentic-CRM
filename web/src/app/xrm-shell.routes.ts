@@ -441,6 +441,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.LimitsComponent),
           },
           {
+            // X12-T3: the first-run wizard: country, language and calendar.
+            path: 'first-run',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.FirstRunComponent),
+          },
+          {
             // Q20-T5: temporary rate-limit bans, and lifting one.
             path: 'rate-limit-bans',
             canActivate: [authGuard],

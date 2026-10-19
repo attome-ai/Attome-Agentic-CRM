@@ -1160,6 +1160,281 @@ fn branding_response(
         .into_response())
 }
 
+// ── X12-T3: the first-run region setup ─────────────────────────────────────
+
+/// The pack whose `region_country` records the first-run wizard offers.
+const REGIONS_PACK: &str = "regions";
+/// The languages the wizard offers; the locale becomes `{language}-{country}`.
+const SETUP_LANGUAGES: [&str; 2] = ["ar", "en"];
+/// `core.calendar`'s values.
+const SETUP_CALENDARS: [&str; 3] = ["gregorian", "hijri", "both"];
+
+/// One country the regions pack presets, from its `region_country` record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+pub(crate) struct RegionPreset {
+    /// ISO 3166 alpha-2 code, e.g. `SA`.
+    code: String,
+    name: String,
+    name_ar: Option<String>,
+    currency_code: Option<String>,
+    /// IANA time zone, e.g. `Asia/Riyadh`.
+    time_zone: String,
+    /// `gregorian`, `hijri` or `both`.
+    default_date_calendar: String,
+    /// First day of the business week (`sun`, `mon`, `sat`).
+    week_start: Option<String>,
+}
+
+/// `GET`/`POST /api/v1/admin/setup/region`.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct RegionSetupView {
+    /// The deployment's country (`core.country`), or null before the first
+    /// run picked one.
+    country: Option<String>,
+    /// Whether the regions pack is next to the server (`app.packs_root`).
+    pack_available: bool,
+    /// The countries the pack presets, by code.
+    countries: Vec<RegionPreset>,
+}
+
+/// `POST /api/v1/admin/setup/region`.
+#[derive(Debug, Deserialize, ToSchema)]
+struct RegionSetupRequest {
+    /// A code from `countries`.
+    country: String,
+    /// `ar` or `en`.
+    language: String,
+    /// `gregorian`, `hijri` or `both`; omitted, the country's default.
+    calendar: Option<String>,
+}
+
+/// The `region_country` records of the regions pack's documents, sorted by
+/// code. An operation that is not a country record, or lacks a code, name or
+/// time zone, is skipped.
+pub(crate) fn region_presets(documents: &[serde_json::Value]) -> Vec<RegionPreset> {
+    let text = |v: &serde_json::Value, key: &str| {
+        v.get(key)
+            .and_then(serde_json::Value::as_str)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+    };
+    let mut out: Vec<RegionPreset> = documents
+        .iter()
+        .filter_map(|doc| doc.get("operations").and_then(serde_json::Value::as_array))
+        .flatten()
+        .filter(|op| {
+            op.get("op").and_then(serde_json::Value::as_str) == Some("upsert_record")
+                && op["target"]["entity"].as_str() == Some("region_country")
+        })
+        .filter_map(|op| {
+            let values = &op["args"]["values"];
+            Some(RegionPreset {
+                code: text(values, "code")?,
+                name: text(values, "name")?,
+                name_ar: text(values, "name_ar"),
+                currency_code: text(values, "currency_code"),
+                time_zone: text(values, "time_zone")?,
+                default_date_calendar: text(values, "default_date_calendar")
+                    .filter(|c| SETUP_CALENDARS.contains(&c.as_str()))
+                    .unwrap_or_else(|| "gregorian".to_owned()),
+                week_start: text(values, "week_start"),
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| a.code.cmp(&b.code));
+    out.dedup_by(|a, b| a.code == b.code);
+    out
+}
+
+/// The regions pack's documents, read off the async runtime. `None` when the
+/// pack is not next to the server.
+async fn regions_documents(state: &EngineState) -> Option<Vec<serde_json::Value>> {
+    let config = state.base.config.clone();
+    match tokio::task::spawn_blocking(move || {
+        crate::changeset::boot::read_pack_documents(&config, REGIONS_PACK)
+    })
+    .await
+    {
+        Ok(Ok(documents)) => Some(documents),
+        Ok(Err(error)) => {
+            tracing::info!(%error, "first-run setup: the regions pack is not available");
+            None
+        }
+        Err(error) => {
+            tracing::warn!(%error, "first-run setup: reading the regions pack failed");
+            None
+        }
+    }
+}
+
+/// The deployment's `core.country`, or `None` while it is empty.
+fn current_country(state: &EngineState) -> Option<String> {
+    let descriptor = setting_registry().get("core.country")?;
+    let (value, _) = state.settings.load().resolve(descriptor, None, None);
+    value.as_str().filter(|c| !c.is_empty()).map(str::to_owned)
+}
+
+async fn region_setup_view(state: &EngineState) -> RegionSetupView {
+    let documents = regions_documents(state).await;
+    RegionSetupView {
+        country: current_country(state),
+        pack_available: documents.is_some(),
+        countries: documents.as_deref().map(region_presets).unwrap_or_default(),
+    }
+}
+
+/// The first-run region setup's state (X12-T3).
+///
+/// The deployment's country, if one was picked, and the countries the
+/// regions pack presets (currency, time zone, default calendar and business
+/// week), so the first-run wizard can offer them. `pack_available` is false
+/// when the regions pack is not next to the server.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/setup/region",
+    tag = "admin",
+    responses(
+        (status = 200, description = "The deployment's country and the presets on offer", body = RegionSetupView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_region_setup(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<RegionSetupView>, AppError> {
+    Ok(Json(region_setup_view(&state).await))
+}
+
+/// Sets the deployment up for a country (X12-T3).
+///
+/// Installs the regions pack (its changesets through the same idempotent
+/// ledger path as `attome init --pack`; a second run changes nothing), then
+/// stores the deployment defaults: `core.country`, `core.locale`
+/// (`{language}-{country}`), `core.time_zone` and `core.calendar` (the given
+/// one, else the country's). Each setting write is audited. A person's own
+/// choices still win over these defaults.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/setup/region",
+    tag = "admin",
+    request_body = RegionSetupRequest,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The deployment is set up for the country", body = RegionSetupView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 422, description = "Unknown country, language or calendar, or the regions pack is not next to the server", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn post_region_setup(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(request): Json<RegionSetupRequest>,
+) -> Result<Json<RegionSetupView>, AppError> {
+    if !SETUP_LANGUAGES.contains(&request.language.as_str()) {
+        return Err(AppError::Validation("language must be ar or en".to_owned()));
+    }
+    if let Some(calendar) = &request.calendar
+        && !SETUP_CALENDARS.contains(&calendar.as_str())
+    {
+        return Err(AppError::Validation(
+            "calendar must be gregorian, hijri or both".to_owned(),
+        ));
+    }
+    let documents = regions_documents(&state).await.ok_or_else(|| {
+        AppError::Validation(
+            "the regions pack is not next to the server: install the packs directory \
+             beside the executable or set app.packs_root"
+                .to_owned(),
+        )
+    })?;
+    let preset = region_presets(&documents)
+        .into_iter()
+        .find(|p| p.code == request.country)
+        .ok_or_else(|| AppError::Validation(format!("unknown country {:?}", request.country)))?;
+
+    for document in &documents {
+        crate::changeset::boot::apply_pack_document(&state, document).await?;
+    }
+    let calendar = request
+        .calendar
+        .unwrap_or_else(|| preset.default_date_calendar.clone());
+    let locale = format!("{}-{}", request.language, preset.code);
+    let values = [
+        ("core.country", serde_json::json!(preset.code)),
+        ("core.locale", serde_json::json!(locale)),
+        ("core.time_zone", serde_json::json!(preset.time_zone)),
+        ("core.calendar", serde_json::json!(calendar)),
+    ];
+    for (key, value) in values {
+        write_setting(
+            &state,
+            ctx.user_id,
+            key,
+            SettingScope::Deployment,
+            None,
+            value,
+        )
+        .await?;
+    }
+    Ok(Json(region_setup_view(&state).await))
+}
+
+#[cfg(test)]
+mod region_setup_tests {
+    use super::*;
+
+    #[test]
+    fn presets_come_from_country_records_only() {
+        let doc = serde_json::json!({ "operations": [
+            { "op": "upsert_record", "target": { "entity": "region_country", "key": { "code": "SA" } },
+              "args": { "values": { "code": "SA", "name": "Saudi Arabia", "name_ar": "السعودية",
+                "currency_code": "SAR", "time_zone": "Asia/Riyadh", "default_date_calendar": "both",
+                "week_start": "sun" } } },
+            { "op": "upsert_record", "target": { "entity": "region_tax_rate", "key": { "code": "SA-VAT-S" } },
+              "args": { "values": { "code": "SA-VAT-S", "name": "VAT", "time_zone": "x" } } },
+            { "op": "upsert_record", "target": { "entity": "region_country", "key": { "code": "XX" } },
+              "args": { "values": { "code": "XX", "name": "No zone" } } },
+            { "op": "add_field", "args": {} }
+        ] });
+        let doc2 = serde_json::json!({ "operations": [
+            { "op": "upsert_record", "target": { "entity": "region_country", "key": { "code": "AE" } },
+              "args": { "values": { "code": "AE", "name": "UAE", "time_zone": "Asia/Dubai",
+                "default_date_calendar": "lunar" } } }
+        ] });
+        let presets = region_presets(&[doc, doc2]);
+        let codes: Vec<&str> = presets.iter().map(|p| p.code.as_str()).collect();
+        assert_eq!(codes, ["AE", "SA"]);
+        assert_eq!(presets[1].time_zone, "Asia/Riyadh");
+        assert_eq!(presets[1].default_date_calendar, "both");
+        // An unknown calendar falls back to gregorian.
+        assert_eq!(presets[0].default_date_calendar, "gregorian");
+    }
+
+    #[test]
+    fn the_shipped_regions_pack_presets_saudi_arabia_the_uae_and_egypt() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../packs/regions/changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .map(|entries| entries.flatten().map(|e| e.path()).collect())
+            .unwrap_or_default();
+        files.sort();
+        let documents: Vec<serde_json::Value> = files
+            .iter()
+            .filter_map(|f| std::fs::read_to_string(f).ok())
+            .filter_map(|t| serde_json::from_str(&t).ok())
+            .collect();
+        let codes: Vec<String> = region_presets(&documents)
+            .into_iter()
+            .map(|p| p.code)
+            .collect();
+        assert_eq!(codes, ["AE", "EG", "SA"]);
+    }
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/settings", get(list_admin_settings))
@@ -1189,6 +1464,10 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/branding/asset", get(public_brand_asset))
         .route("/api/v1/admin/backup", get(backup_status))
         .route(
+            "/api/v1/admin/setup/region",
+            get(get_region_setup).post(post_region_setup),
+        )
+        .route(
             "/api/v1/admin/themes/{id}/assets",
             get(list_theme_assets).post(upload_theme_asset),
         )
@@ -1213,7 +1492,9 @@ pub fn routes() -> Router<EngineState> {
     public_brand_asset,
     backup_status,
     upload_theme_asset,
-    list_theme_assets
+    list_theme_assets,
+    get_region_setup,
+    post_region_setup
 ))]
 struct ApiDocFragment;
 

@@ -316,6 +316,20 @@ pub fn expected_identities(config: &AppConfig) -> ExpectedIdentities<'_> {
     }
 }
 
+/// Applies every configured pack's changesets in file order.
+async fn apply_configured_packs(
+    state: &attome_core::EngineState,
+    config: &AppConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for pack in &config.app.packs {
+        for document in attome_api::changeset::boot::read_pack_documents(config, pack)? {
+            attome_api::changeset::boot::apply_pack_document(state, &document).await?;
+        }
+        tracing::info!(pack, "pack applied");
+    }
+    Ok(())
+}
+
 /// Runs the shared boot sequence against an already-loaded, already-
 /// validated `config`. Boot errors (missing
 /// `database.runtime`/`database.migrator` outside `APP_ENV=debug`, a
@@ -330,53 +344,6 @@ pub fn expected_identities(config: &AppConfig) -> ExpectedIdentities<'_> {
 /// Redis pool — the same store `GET /api/v1/admin/profiler/stats` reads. The
 /// write is detached and fail-open, so it never delays or fails a boot; same
 /// posture as `attome-server`'s per-request profiler middleware.
-/// Where packs live: `app.packs_root`, else `packs` next to the executable.
-fn packs_root(config: &AppConfig) -> std::path::PathBuf {
-    match &config.app.packs_root {
-        Some(dir) => std::path::PathBuf::from(dir),
-        None => std::env::current_exe()
-            .ok()
-            .and_then(|exe| exe.parent().map(|dir| dir.join("packs")))
-            .unwrap_or_else(|| std::path::PathBuf::from("packs")),
-    }
-}
-
-/// Applies every configured pack's changesets in file order.
-async fn apply_configured_packs(
-    state: &attome_core::EngineState,
-    config: &AppConfig,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if config.app.packs.is_empty() {
-        return Ok(());
-    }
-    let root = packs_root(config);
-    for pack in &config.app.packs {
-        if !pack
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-        {
-            return Err(format!("pack name {pack:?} is not a plain name").into());
-        }
-        let dir = root.join(pack).join("changesets");
-        let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&dir)
-            .map_err(|e| format!("pack {pack}: cannot read {}: {e}", dir.display()))?
-            .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
-            .collect();
-        files.sort();
-        for file in files {
-            let text = std::fs::read_to_string(&file)
-                .map_err(|e| format!("pack {pack}: cannot read {}: {e}", file.display()))?;
-            let value: serde_json::Value = serde_json::from_str(&text)
-                .map_err(|e| format!("pack {pack}: {} is not JSON: {e}", file.display()))?;
-            attome_api::changeset::boot::apply_pack_document(state, &value).await?;
-        }
-        tracing::info!(pack, "pack applied");
-    }
-    Ok(())
-}
-
 pub async fn init(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Error>> {
     warn_if_public_portal_without_captcha(config);
     // D-792 — decided before anything else boots, so a half-open fleet

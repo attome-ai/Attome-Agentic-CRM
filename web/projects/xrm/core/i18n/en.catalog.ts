@@ -271,6 +271,17 @@ export const xrmEn = {
     inConfig: 'Set in the configuration file; takes effect after a restart.',
     none: 'No limits to show.',
   },
+  firstRun: {
+    title: 'Set up Attome for your country',
+    intro: 'Pick the country this deployment serves. Attome installs its region preset (currency, VAT rates, identity document formats, business week and public holidays) and sets the default language, time zone and calendar. People can still choose their own language and calendar.',
+    country: 'Country', language: 'Language', calendar: 'Calendar',
+    lang: { ar: 'Arabic', en: 'English' },
+    cal: { gregorian: 'Gregorian', hijri: 'Hijri (Umm al-Qura)', both: 'Hijri and Gregorian' },
+    summary: 'Currency {currency}, time zone {zone}.',
+    save: 'Set up', done: 'This deployment is set up for {country}.', start: 'Go to the home page',
+    noPack: 'The regions pack is not next to the server. Put the packs folder beside the attome executable, or set app.packs_root, and open this page again.',
+    prompt: 'This deployment has no country yet.', promptLink: 'Set it up now',
+  },
   rateLimitBans: {
     title: 'Rate-limit bans',
     intro: 'Callers that tripped a limit five times in an hour are refused for fifteen minutes. Lift a ban when you know the caller.',

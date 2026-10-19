@@ -110,6 +110,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- First-run region setup (X12-T3): `GET`/`POST /api/v1/admin/setup/region` (administrators) list the
+  countries the regions pack presets and set the deployment up for one: the pack is installed (the
+  same idempotent path as `attome init --pack regions`) and the deployment's `core.country` (new),
+  `core.locale`, `core.time_zone` and `core.calendar` are set. The web app's wizard
+  (`/xrm/admin/first-run`, Arabic by default) asks for country, language and calendar, and an
+  administrator sees a prompt leading to it until a country is set.
 - Alert runbooks (AB10-T3): every alert in `observability/alerts.yml` and `builtin-alerts.json` has
   its own `observability/runbooks/<Alert>.md` (meaning, checks, fix, escalation), and every rule
   links to its file. Placeholders are filled with the deployment's addresses (never a secret): a

@@ -326,6 +326,14 @@ fn core_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        SettingDescriptor::new(
+            "core.country",
+            "The country this deployment serves, as an ISO 3166 alpha-2 code              (SA, AE, EG). Set by the first-run wizard (X12-T3), which also              installs the regions pack and the matching locale, time zone and              calendar. Empty until then.",
+            || json!({"type": "string", "pattern": "^([A-Z]{2})?$"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
     ]
 }
 

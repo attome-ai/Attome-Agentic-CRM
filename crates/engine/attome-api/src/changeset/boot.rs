@@ -210,6 +210,50 @@ async fn apply_phase(
     }
 }
 
+/// Where packs live: `app.packs_root`, else `packs` next to the executable.
+pub fn packs_root(config: &attome_config::AppConfig) -> std::path::PathBuf {
+    match &config.app.packs_root {
+        Some(dir) => std::path::PathBuf::from(dir),
+        None => std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|dir| dir.join("packs")))
+            .unwrap_or_else(|| std::path::PathBuf::from("packs")),
+    }
+}
+
+/// Every changeset document of the pack `name`
+/// (`<packs_root>/<name>/changesets/*.json`), in file order. Blocking file
+/// I/O: call it at boot or from `spawn_blocking`.
+pub fn read_pack_documents(
+    config: &attome_config::AppConfig,
+    name: &str,
+) -> Result<Vec<Value>, String> {
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(format!("pack name {name:?} is not a plain name"));
+    }
+    let dir = packs_root(config).join(name).join("changesets");
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(&dir)
+        .map_err(|e| format!("pack {name}: cannot read {}: {e}", dir.display()))?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
+        .collect();
+    files.sort();
+    files
+        .iter()
+        .map(|file| {
+            let text = std::fs::read_to_string(file)
+                .map_err(|e| format!("pack {name}: cannot read {}: {e}", file.display()))?;
+            serde_json::from_str(&text)
+                .map_err(|e| format!("pack {name}: {} is not JSON: {e}", file.display()))
+        })
+        .collect()
+}
+
 /// Applies one pack changeset document (`packs/<name>/changesets/*.json`)
 /// through the same ledger path as a platform changeset: idempotent, a
 /// changed checksum after apply is an error, expand always and contract only
