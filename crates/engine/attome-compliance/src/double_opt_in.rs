@@ -359,7 +359,7 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 }
 
 #[cfg(test)]
-mod double_opt_in {
+mod tests {
     use super::*;
     use chrono::TimeZone;
 

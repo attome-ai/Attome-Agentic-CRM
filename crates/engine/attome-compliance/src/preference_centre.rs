@@ -367,7 +367,7 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 }
 
 #[cfg(test)]
-mod preference_centre {
+mod tests {
     use super::*;
 
     #[test]

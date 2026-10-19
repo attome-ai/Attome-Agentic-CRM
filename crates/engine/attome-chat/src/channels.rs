@@ -1063,7 +1063,7 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 }
 
 #[cfg(test)]
-mod channels {
+mod tests {
     use super::*;
 
     fn req(kind: &str, members: &[u128], name: Option<&str>) -> NewChannel {

@@ -232,7 +232,7 @@ async fn apply_case_merge(
 }
 
 #[cfg(test)]
-mod case_merge {
+mod tests {
     use super::*;
 
     #[test]

@@ -146,7 +146,7 @@ pub fn definitions_in(text: &str, terms: &[GlossaryTerm]) -> Vec<(String, String
 }
 
 #[cfg(test)]
-mod glossary {
+mod tests {
     use super::*;
 
     fn term(name: &str, synonyms: &str, definition: &str, translations: &str) -> GlossaryTerm {

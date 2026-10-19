@@ -592,7 +592,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[cfg(test)]
-mod cobrowse {
+mod tests {
     use super::*;
     use serde_json::json;
 
