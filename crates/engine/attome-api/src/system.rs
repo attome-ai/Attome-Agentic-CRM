@@ -811,6 +811,8 @@ impl EngineSystemBuilder {
         state.my_work_providers = std::sync::Arc::new(self.my_work_providers);
         // C5 — the registered `WorkflowStarter`, frozen the same way.
         state.workflow_starter = self.workflow_starter;
+        // U10-T2: the settings agent tool writes through the settings API.
+        state.settings_writer = Some(Arc::new(crate::settings_admin::ApiSettingsWriter));
         // E8-T1 — the registered step handlers and kind guards, frozen the
         // same way.
         state.workflow_step_handlers = std::sync::Arc::new(self.workflow_step_handlers);

@@ -231,6 +231,10 @@ pub struct EngineState {
     /// implementation is registered — `workflow.start` then answers as
     /// absent, never as a silent no-op (`workflow_start.rs`).
     pub workflow_starter: Option<Arc<dyn crate::workflow_start::WorkflowStarter>>,
+    /// U10-T2 — the settings API's write, registered by `attome-api` on the
+    /// builder so the settings agent tool writes as the admin route does.
+    /// `None` on a bare state (`settings_write.rs`).
+    pub settings_writer: Option<Arc<dyn crate::settings_write::SettingsWriter>>,
     /// E8-T1 — the step handlers engines registered on the builder, by node
     /// key, frozen at build (`workflow_step.rs`). Empty on a bare state.
     pub workflow_step_handlers: Arc<
@@ -326,6 +330,7 @@ impl EngineState {
             feature_flags: create_hot_cache(10_000, 30),
             my_work_providers: Arc::new(Vec::new()),
             workflow_starter: None,
+            settings_writer: None,
             workflow_step_handlers: Arc::new(std::collections::HashMap::new()),
             workflow_kind_guards: Arc::new(std::collections::HashMap::new()),
         }

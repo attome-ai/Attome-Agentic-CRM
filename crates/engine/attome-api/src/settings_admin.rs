@@ -83,6 +83,28 @@ use utoipa::ToSchema;
 /// this node's own `state.settings` cache so the actor's own next read is
 /// never stale — other nodes catch up via the poll loop in `system.rs`
 /// (`setting_store`'s module doc explains why that's poll-only).
+/// U10-T2: the settings API's write, behind `attome_core::SettingsWriter`,
+/// for the settings agent tool (`attome_ai::actions::settings`). It writes
+/// the deployment value exactly as `PUT /api/v1/admin/settings/{key}` does.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ApiSettingsWriter;
+
+impl attome_core::SettingsWriter for ApiSettingsWriter {
+    fn write_deployment<'a>(
+        &'a self,
+        state: &'a EngineState,
+        actor: Uuid,
+        key: &'a str,
+        value: serde_json::Value,
+    ) -> attome_core::settings_write::SettingWriteFuture<'a> {
+        Box::pin(async move {
+            let view =
+                write_setting(state, actor, key, SettingScope::Deployment, None, value).await?;
+            serde_json::to_value(view).map_err(AppError::internal)
+        })
+    }
+}
+
 pub(crate) async fn write_setting(
     state: &EngineState,
     actor_user_id: Uuid,

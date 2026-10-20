@@ -49,6 +49,9 @@ Usage:
   attome status [--url <url>]...
                                 Each node's version, schema, and whether it has
                                 started and is ready
+  attome settings list|get <key>|set <key> <json> --url <server>
+                                Read or change a setting (the API key is read
+                                from ATTOME_API_KEY)
   attome status-page --url <server> --out <dir>
                                 Write a server's public status page as static
                                 HTML and JSON into a directory
@@ -151,6 +154,10 @@ fn main() -> ExitCode {
         ["runbook", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::runbook::run(&rest)
+        }
+        ["settings", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::settings::run(&rest)
         }
         ["status-page", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

@@ -143,6 +143,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Settings from the command line and for agents (U10-T2): `attome settings list|get <key>|set <key>
+  <json> --url <server>` reads and changes settings with the administrator API key in `ATTOME_API_KEY`;
+  the agent tools `settings.list` and `settings.set` do the same for administrators, a change waiting
+  for a person's approval and written through the settings API itself. A build test fails when a
+  registered setting is missing from the console, the API, the CLI or the agent tool.
 - Report schedules on the job scheduler (M12-T2): job schedules gain a recurrence-rule kind (an
   RFC 5545 RRULE without `COUNT`, counted from a start time), and each report schedule is now one
   entry of the job schedule ledger (`report-schedule:{id}`), counted from the schedule's creation, so an

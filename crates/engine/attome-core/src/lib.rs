@@ -169,6 +169,7 @@ pub mod timer;
 pub mod transfer_gate;
 /// C5 (chatbot plan) — the `WorkflowStarter` seam `attome-ai`'s `workflow.start`
 /// reaches `attome-workflow` through without a dependency cycle.
+pub mod settings_write;
 pub mod workflow_start;
 /// E8-T1: engine-contributed workflow steps and kind guards.
 pub mod workflow_step;
@@ -242,4 +243,5 @@ pub use state_registry::{
     check_initial_state, check_transition, check_transition_with,
 };
 pub use transfer_gate::{TransferDecision, assert_transfer_allowed};
+pub use settings_write::SettingsWriter;
 pub use workflow_start::{WorkflowStartFuture, WorkflowStartRequest, WorkflowStarter};
