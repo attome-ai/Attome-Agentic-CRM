@@ -89,6 +89,14 @@ pub struct EngineSystemBuilder {
     notifications: Arc<dyn NotificationService>,
     my_work_providers: Vec<Box<dyn MyWorkProvider>>,
     workflow_starter: Option<Arc<dyn attome_core::WorkflowStarter>>,
+    workflow_step_handlers: std::collections::HashMap<
+        &'static str,
+        Arc<dyn attome_core::workflow_step::WorkflowStepHandler>,
+    >,
+    workflow_kind_guards: std::collections::HashMap<
+        &'static str,
+        Arc<dyn attome_core::workflow_step::WorkflowKindGuard>,
+    >,
 }
 
 impl std::fmt::Debug for EngineSystemBuilder {
@@ -108,6 +116,8 @@ impl EngineSystem {
             notifications: Arc::new(NoopNotifications),
             my_work_providers: Vec::new(),
             workflow_starter: None,
+            workflow_step_handlers: std::collections::HashMap::new(),
+            workflow_kind_guards: std::collections::HashMap::new(),
         }
     }
 
@@ -725,6 +735,46 @@ impl EngineSystemBuilder {
         self
     }
 
+    /// E8-T1 — adds an engine's workflow step handler, keyed by its node
+    /// key. A second handler for one key is a programming error found at
+    /// boot.
+    ///
+    /// # Panics
+    ///
+    /// When a handler for the same key is already registered.
+    pub fn register_workflow_step_handler(
+        mut self,
+        handler: impl attome_core::workflow_step::WorkflowStepHandler + 'static,
+    ) -> Self {
+        let key = handler.key();
+        insert_once(
+            &mut self.workflow_step_handlers,
+            key,
+            Arc::new(handler),
+            "workflow step handler",
+        );
+        self
+    }
+
+    /// E8-T1 — adds a workflow kind guard, keyed by its kind.
+    ///
+    /// # Panics
+    ///
+    /// When a guard for the same kind is already registered.
+    pub fn register_workflow_kind_guard(
+        mut self,
+        guard: impl attome_core::workflow_step::WorkflowKindGuard + 'static,
+    ) -> Self {
+        let kind = guard.kind();
+        insert_once(
+            &mut self.workflow_kind_guards,
+            kind,
+            Arc::new(guard),
+            "workflow kind guard",
+        );
+        self
+    }
+
     /// Loads the module configuration (D-778), wires services into state, and
     /// spawns the background hourly module-configuration reload.
     pub async fn build(self) -> Result<EngineSystem, Box<dyn std::error::Error>> {
@@ -755,6 +805,10 @@ impl EngineSystemBuilder {
         state.my_work_providers = std::sync::Arc::new(self.my_work_providers);
         // C5 — the registered `WorkflowStarter`, frozen the same way.
         state.workflow_starter = self.workflow_starter;
+        // E8-T1 — the registered step handlers and kind guards, frozen the
+        // same way.
+        state.workflow_step_handlers = std::sync::Arc::new(self.workflow_step_handlers);
+        state.workflow_kind_guards = std::sync::Arc::new(self.workflow_kind_guards);
 
         // Loaded here, ahead of the platform-bundle applies below, not in its
         // original later position (next to the audit-signer/security-resolver
@@ -2067,4 +2121,42 @@ async fn catch_up(
 /// the only switch that hides a module.
 pub async fn load_license(db: &DbPool) -> ModuleSet {
     crate::license_admin::narrow_by_runtime_configuration(db, &ModuleSet::all()).await
+}
+
+/// E8-T1 — inserts `value` under `key`, panicking (naming the key) when the
+/// key is taken: a duplicate registration is a boot-time programming error.
+#[expect(
+    clippy::panic,
+    reason = "a duplicate workflow step key or kind is a boot-time programming error (E8-T1)"
+)]
+fn insert_once<V>(
+    map: &mut std::collections::HashMap<&'static str, V>,
+    key: &'static str,
+    value: V,
+    what: &str,
+) {
+    if map.insert(key, value).is_some() {
+        panic!("{what} {key:?} is registered twice");
+    }
+}
+
+#[cfg(test)]
+mod workflow_step_registration {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "\"marketing.send_email\" is registered twice")]
+    fn duplicate_step_handler_key_rejected() {
+        let mut map = std::collections::HashMap::new();
+        insert_once(&mut map, "marketing.send_email", 1, "workflow step handler");
+        insert_once(&mut map, "marketing.send_email", 2, "workflow step handler");
+    }
+
+    #[test]
+    fn distinct_keys_are_kept() {
+        let mut map = std::collections::HashMap::new();
+        insert_once(&mut map, "a", 1, "workflow kind guard");
+        insert_once(&mut map, "b", 2, "workflow kind guard");
+        assert_eq!(map.len(), 2);
+    }
 }

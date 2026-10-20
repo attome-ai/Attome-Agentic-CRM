@@ -170,6 +170,8 @@ pub mod transfer_gate;
 /// C5 (chatbot plan) — the `WorkflowStarter` seam `attome-ai`'s `workflow.start`
 /// reaches `attome-workflow` through without a dependency cycle.
 pub mod workflow_start;
+/// E8-T1: engine-contributed workflow steps and kind guards.
+pub mod workflow_step;
 
 pub use audit_signing::AuditSigner;
 pub use business_rules::{
