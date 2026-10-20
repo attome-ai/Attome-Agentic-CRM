@@ -132,6 +132,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Page search settings and structured data (E13-T4): `attome_content::seo` reads and writes a page's
+  title, description, canonical, robots flags and Open Graph card at its row version (409 on a stale
+  one), fills empty ones from the page (title, first paragraph, base URL plus path), and builds and
+  checks schema.org JSON-LD for organizations, breadcrumbs, articles, FAQs, events, products, job
+  postings and local businesses.
 - Dynamic email blocks (E25-T1): an email design's `dynamic` block holds variants (a rule condition over
   the recipient and/or a list they must be in) and a default; `attome_marketing::dynamic_blocks::resolve`
   picks the first match per recipient and reports the choice, the renderer refuses an unresolved block,

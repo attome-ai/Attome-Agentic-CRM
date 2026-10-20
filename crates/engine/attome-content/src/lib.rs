@@ -37,6 +37,8 @@ pub mod blocks;
 pub mod hierarchy;
 pub mod model;
 pub mod scheduling;
+/// E13-T4: page search settings and JSON-LD.
+pub mod seo;
 pub mod space_admin;
 pub mod template_admin;
 /// K5-T4: linked translations with stale flags.
