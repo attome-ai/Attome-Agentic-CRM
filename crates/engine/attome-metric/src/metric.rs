@@ -143,17 +143,25 @@ pub async fn seed_for_tests(db: &attome_db::DbPool) -> Result<(), attome_types::
 
 // ── Snapshot status ──────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A snapshot's band (roadmap P9-T6): on track, at risk or off track
+/// against its target, or failed. Rows written before P9-T6 say `ok`,
+/// `warn` and `crit`; those still read as on track, at risk and off track
+/// ([`SnapshotStatus::parse`]) and are never rewritten (snapshots are
+/// append-only).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SnapshotStatus {
-    Ok,
-    Warn,
-    Crit,
-    /// Not in the plan's `ok|warn|crit` list — added deliberately (plan §8):
-    /// "a metric query that becomes slow: compute under `statement_timeout`,
-    /// mark snapshot `failed`... never block the scheduler." A failed
-    /// snapshot is still a real, visible row (never silently dropped), and
-    /// the scheduler retries it on the next sweep (see
-    /// `run_scheduled_snapshot_sweep`'s idempotency check, which treats
+    #[serde(alias = "ok")]
+    OnTrack,
+    #[serde(alias = "warn")]
+    AtRisk,
+    #[serde(alias = "crit")]
+    OffTrack,
+    /// Not a band (plan §8): "a metric query that becomes slow: compute
+    /// under `statement_timeout`, mark snapshot `failed`... never block the
+    /// scheduler." A failed snapshot is still a real, visible row (never
+    /// silently dropped), and the scheduler retries it on the next sweep
+    /// (see `run_scheduled_snapshot_sweep`'s idempotency check, which treats
     /// `failed` as "not yet successfully computed for this period").
     Failed,
 }
@@ -161,72 +169,122 @@ pub enum SnapshotStatus {
 impl SnapshotStatus {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Ok => "ok",
-            Self::Warn => "warn",
-            Self::Crit => "crit",
+            Self::OnTrack => "on_track",
+            Self::AtRisk => "at_risk",
+            Self::OffTrack => "off_track",
             Self::Failed => "failed",
+        }
+    }
+
+    /// A stored status, the pre-P9-T6 values included. Pure.
+    pub fn parse(stored: &str) -> Option<Self> {
+        match stored {
+            "on_track" | "ok" => Some(Self::OnTrack),
+            "at_risk" | "warn" => Some(Self::AtRisk),
+            "off_track" | "crit" => Some(Self::OffTrack),
+            "failed" => Some(Self::Failed),
+            _ => None,
+        }
+    }
+
+    /// How bad a band is (`None` for failed).
+    pub fn rank(self) -> Option<u8> {
+        match self {
+            Self::OnTrack => Some(0),
+            Self::AtRisk => Some(1),
+            Self::OffTrack => Some(2),
+            Self::Failed => None,
+        }
+    }
+
+    fn worst(self, other: Self) -> Self {
+        if other.rank() > self.rank() {
+            other
+        } else {
+            self
         }
     }
 }
 
+/// A target: the total's (`dimension_value` empty) or one member's.
+#[derive(Debug, Clone, PartialEq)]
 struct TargetRow {
     target_value: f64,
     threshold_warn: Option<f64>,
     threshold_crit: Option<f64>,
+    /// Percent of the target a value may miss by and be at risk rather
+    /// than off track.
+    at_risk_tolerance: Option<f64>,
+    dimension_value: Option<String>,
 }
 
-/// Pure — unit-tested directly. No target for this period means nothing to
-/// compare against, so the snapshot is recorded `ok` (a value with no
-/// judgment attached, not a fabricated warning).
+/// The target for the total (`member` `None`) or for one member: the
+/// member's own target when it has one, else the total's. Pure.
+fn pick_target<'a>(targets: &'a [TargetRow], member: Option<&str>) -> Option<&'a TargetRow> {
+    let total = || {
+        targets
+            .iter()
+            .find(|t| t.dimension_value.as_deref().is_none_or(str::is_empty))
+    };
+    match member {
+        Some(value) => targets
+            .iter()
+            .find(|t| t.dimension_value.as_deref() == Some(value))
+            .or_else(total),
+        None => total(),
+    }
+}
+
+/// The band from the explicit thresholds (`threshold_warn` at risk,
+/// `threshold_crit` off track).
+fn threshold_band(actual: f64, direction: &str, t: &TargetRow) -> SnapshotStatus {
+    let (hit, measure): (fn(f64, f64) -> bool, f64) = match direction {
+        "lower" => (|a, limit| a >= limit, actual),
+        "target_band" => (|a, limit| a >= limit, (actual - t.target_value).abs()),
+        _ => (|a, limit| a <= limit, actual),
+    };
+    if t.threshold_crit.is_some_and(|c| hit(measure, c)) {
+        return SnapshotStatus::OffTrack;
+    }
+    if t.threshold_warn.is_some_and(|w| hit(measure, w)) {
+        return SnapshotStatus::AtRisk;
+    }
+    SnapshotStatus::OnTrack
+}
+
+/// The band from the tolerance: meeting the target is on track, missing it
+/// by up to `at_risk_tolerance` percent of the target is at risk, and
+/// missing it by more is off track. For `target_band` the target itself is
+/// the band's centre: within the tolerance is on track, within twice the
+/// tolerance at risk.
+fn tolerance_band(actual: f64, direction: &str, t: &TargetRow) -> SnapshotStatus {
+    let Some(tolerance) = t.at_risk_tolerance.filter(|p| *p >= 0.0) else {
+        return SnapshotStatus::OnTrack;
+    };
+    let slack = t.target_value.abs() * tolerance / 100.0;
+    let miss = match direction {
+        "lower" => actual - t.target_value,
+        "target_band" => (actual - t.target_value).abs() - slack,
+        _ => t.target_value - actual,
+    };
+    if miss <= 0.0 {
+        SnapshotStatus::OnTrack
+    } else if miss <= slack {
+        SnapshotStatus::AtRisk
+    } else {
+        SnapshotStatus::OffTrack
+    }
+}
+
+/// Pure — unit-tested directly. No target means nothing to compare
+/// against, so the snapshot is on track (a value with no judgment attached,
+/// not a fabricated warning). With a target, the worse of its thresholds'
+/// band and its tolerance's band.
 fn evaluate_status(actual: f64, direction: &str, target: Option<&TargetRow>) -> SnapshotStatus {
     let Some(t) = target else {
-        return SnapshotStatus::Ok;
+        return SnapshotStatus::OnTrack;
     };
-    match direction {
-        "lower" => {
-            if let Some(crit) = t.threshold_crit
-                && actual >= crit
-            {
-                return SnapshotStatus::Crit;
-            }
-            if let Some(warn) = t.threshold_warn
-                && actual >= warn
-            {
-                return SnapshotStatus::Warn;
-            }
-            SnapshotStatus::Ok
-        }
-        "target_band" => {
-            let deviation = (actual - t.target_value).abs();
-            if let Some(crit) = t.threshold_crit
-                && deviation >= crit
-            {
-                return SnapshotStatus::Crit;
-            }
-            if let Some(warn) = t.threshold_warn
-                && deviation >= warn
-            {
-                return SnapshotStatus::Warn;
-            }
-            SnapshotStatus::Ok
-        }
-        // "higher_is_better" and any other/unrecognized value — the seeded
-        // choice list only allows the three above, so this arm is really
-        // just "higher_is_better", named generically for defense in depth.
-        _ => {
-            if let Some(crit) = t.threshold_crit
-                && actual <= crit
-            {
-                return SnapshotStatus::Crit;
-            }
-            if let Some(warn) = t.threshold_warn
-                && actual <= warn
-            {
-                return SnapshotStatus::Warn;
-            }
-            SnapshotStatus::Ok
-        }
-    }
+    threshold_band(actual, direction, t).worst(tolerance_band(actual, direction, t))
 }
 
 /// Which calendar a metric's periods follow (roadmap P9-T4).
@@ -423,30 +481,59 @@ pub async fn fetch_metric(db: &DbPool, metric_id: Uuid) -> Result<MetricDefiniti
     .ok_or(AppError::NotFound)
 }
 
-async fn fetch_target(
+/// The most targets one metric period reads (the total's and its members').
+const MAX_TARGETS: i64 = 2_000;
+
+/// The period's targets, newest first, read without assuming the governance
+/// columns (`at_risk_tolerance`, `dimension_value`, P9-T4) exist.
+async fn fetch_targets(
     db: &DbPool,
     metric_id: Uuid,
     period_start: NaiveDate,
-) -> Result<Option<TargetRow>, AppError> {
-    let row: Option<(f64, Option<f64>, Option<f64>)> = sqlx::query_as(
-        "SELECT target_value::double precision, threshold_warn::double precision, \
-                threshold_crit::double precision \
-         FROM dashboard_metric_target \
+) -> Result<Vec<TargetRow>, AppError> {
+    let rows: Vec<serde_json::Value> = sqlx::query_scalar(
+        "SELECT to_jsonb(t) FROM dashboard_metric_target t \
          WHERE metric_ref = $1 AND period_start = $2 AND (is_active IS NULL OR is_active = true) \
-         ORDER BY created_at DESC LIMIT 1",
+         ORDER BY created_at DESC LIMIT $3",
     )
     .bind(metric_id)
     .bind(period_start)
-    .fetch_optional(db)
+    .bind(MAX_TARGETS)
+    .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
-    Ok(
-        row.map(|(target_value, threshold_warn, threshold_crit)| TargetRow {
-            target_value,
-            threshold_warn,
-            threshold_crit,
-        }),
-    )
+    let num = |row: &serde_json::Value, key: &str| -> Option<f64> {
+        match row.get(key)? {
+            serde_json::Value::Number(n) => n.as_f64(),
+            serde_json::Value::String(s) => s.trim().parse().ok(),
+            _ => None,
+        }
+    };
+    Ok(rows
+        .iter()
+        .filter_map(|row| {
+            Some(TargetRow {
+                target_value: num(row, "target_value")?,
+                threshold_warn: num(row, "threshold_warn"),
+                threshold_crit: num(row, "threshold_crit"),
+                at_risk_tolerance: num(row, "at_risk_tolerance"),
+                dimension_value: row
+                    .get("dimension_value")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned),
+            })
+        })
+        .collect())
+}
+
+/// One member's stored value: its dimension values, comma-separated.
+fn member_value(member: &MemberValue) -> String {
+    member
+        .dimensions
+        .iter()
+        .map(|d| d.as_deref().unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 #[derive(Debug, sqlx::FromRow, Serialize, ToSchema)]
@@ -588,6 +675,7 @@ async fn insert_snapshot(
     evaluated_by: Option<Uuid>,
     error_message: Option<&str>,
     members: &[MemberValue],
+    member_statuses: &[SnapshotStatus],
     dimension_attribute: Option<&str>,
     definition_version: Option<i32>,
 ) -> Result<SnapshotRow, AppError> {
@@ -641,13 +729,12 @@ async fn insert_snapshot(
 
     // P9-T5: one row per member, each chained to that member's last row.
     if let Some(attribute) = dimension_attribute {
-        for member in members {
-            let value = member
-                .dimensions
-                .iter()
-                .map(|d| d.as_deref().unwrap_or(""))
-                .collect::<Vec<_>>()
-                .join(",");
+        for (n, member) in members.iter().enumerate() {
+            let value = member_value(member);
+            let member_status = member_statuses
+                .get(n)
+                .copied()
+                .unwrap_or(SnapshotStatus::OnTrack);
             sqlx::query(
                 "INSERT INTO metric_snapshot \
                  (id, metric_ref, period_start, actual, source_version, status, superseded_ref, \
@@ -664,7 +751,7 @@ async fn insert_snapshot(
             .bind(period_start)
             .bind(member.value)
             .bind(source_version)
-            .bind(SnapshotStatus::Ok.as_str())
+            .bind(member_status.as_str())
             .bind(evaluated_by)
             .bind(attribute)
             .bind(&value)
@@ -1048,6 +1135,7 @@ pub async fn compute_and_record(
 
     let (dimensions, aggregate, definition_version) = metric_dimensions(db, metric_id).await?;
     let mut members: Vec<MemberValue> = Vec::new();
+    let mut member_statuses: Vec<SnapshotStatus> = Vec::new();
     let (actual, source_version, status, error_message): (
         Option<f64>,
         Option<String>,
@@ -1061,8 +1149,8 @@ pub async fn compute_and_record(
                         .into(),
                 ));
             };
-            let target = fetch_target(db, metric_id, period_start).await?;
-            let status = evaluate_status(actual, &metric.direction, target.as_ref());
+            let targets = fetch_targets(db, metric_id, period_start).await?;
+            let status = evaluate_status(actual, &metric.direction, pick_target(&targets, None));
             (Some(actual), Some("manual".to_string()), status, None)
         }
         "query" => {
@@ -1085,8 +1173,20 @@ pub async fn compute_and_record(
             };
             match ran {
                 Ok((actual, version)) => {
-                    let target = fetch_target(db, metric_id, period_start).await?;
-                    let status = evaluate_status(actual, &metric.direction, target.as_ref());
+                    let targets = fetch_targets(db, metric_id, period_start).await?;
+                    let status =
+                        evaluate_status(actual, &metric.direction, pick_target(&targets, None));
+                    member_statuses = members
+                        .iter()
+                        .map(|m| {
+                            let value = member_value(m);
+                            evaluate_status(
+                                m.value,
+                                &metric.direction,
+                                pick_target(&targets, Some(&value)),
+                            )
+                        })
+                        .collect();
                     (Some(actual), Some(version), status, None)
                 }
                 Err(e) => {
@@ -1124,8 +1224,9 @@ pub async fn compute_and_record(
             };
             match evaluate_formula_metric(db, &formula, period_start, None).await {
                 Ok(actual) => {
-                    let target = fetch_target(db, metric_id, period_start).await?;
-                    let status = evaluate_status(actual, &metric.direction, target.as_ref());
+                    let targets = fetch_targets(db, metric_id, period_start).await?;
+                    let status =
+                        evaluate_status(actual, &metric.direction, pick_target(&targets, None));
                     (Some(actual), Some("formula".to_string()), status, None)
                 }
                 Err(e) => {
@@ -1159,6 +1260,7 @@ pub async fn compute_and_record(
         evaluated_by,
         error_message.as_deref(),
         &members,
+        &member_statuses,
         (!members.is_empty())
             .then(|| dimensions.join(","))
             .as_deref(),
@@ -1780,18 +1882,19 @@ mod tests {
             target_value: 100.0,
             threshold_warn: Some(80.0),
             threshold_crit: Some(60.0),
+            ..target(100.0)
         };
         assert_eq!(
             evaluate_status(90.0, "higher_is_better", Some(&target)),
-            SnapshotStatus::Ok
+            SnapshotStatus::OnTrack
         );
         assert_eq!(
             evaluate_status(75.0, "higher_is_better", Some(&target)),
-            SnapshotStatus::Warn
+            SnapshotStatus::AtRisk
         );
         assert_eq!(
             evaluate_status(50.0, "higher_is_better", Some(&target)),
-            SnapshotStatus::Crit
+            SnapshotStatus::OffTrack
         );
     }
 
@@ -1801,18 +1904,19 @@ mod tests {
             target_value: 5.0,
             threshold_warn: Some(10.0),
             threshold_crit: Some(20.0),
+            ..target(5.0)
         };
         assert_eq!(
             evaluate_status(3.0, "lower", Some(&target)),
-            SnapshotStatus::Ok
+            SnapshotStatus::OnTrack
         );
         assert_eq!(
             evaluate_status(12.0, "lower", Some(&target)),
-            SnapshotStatus::Warn
+            SnapshotStatus::AtRisk
         );
         assert_eq!(
             evaluate_status(25.0, "lower", Some(&target)),
-            SnapshotStatus::Crit
+            SnapshotStatus::OffTrack
         );
     }
 
@@ -1822,28 +1926,138 @@ mod tests {
             target_value: 100.0,
             threshold_warn: Some(5.0),
             threshold_crit: Some(15.0),
+            ..target(100.0)
         };
         assert_eq!(
             evaluate_status(103.0, "target_band", Some(&target)),
-            SnapshotStatus::Ok
+            SnapshotStatus::OnTrack
         );
         assert_eq!(
             evaluate_status(93.0, "target_band", Some(&target)),
-            SnapshotStatus::Warn,
+            SnapshotStatus::AtRisk,
             "7 below target is within crit but past warn"
         );
         assert_eq!(
             evaluate_status(120.0, "target_band", Some(&target)),
-            SnapshotStatus::Crit,
+            SnapshotStatus::OffTrack,
             "20 above target exceeds the critical band"
         );
     }
 
     #[test]
-    fn no_target_means_ok_not_a_fabricated_status() {
+    fn no_target_means_on_track_not_a_fabricated_status() {
         assert_eq!(
             evaluate_status(0.0, "higher_is_better", None),
-            SnapshotStatus::Ok
+            SnapshotStatus::OnTrack
+        );
+    }
+
+    fn target(value: f64) -> TargetRow {
+        TargetRow {
+            target_value: value,
+            threshold_warn: None,
+            threshold_crit: None,
+            at_risk_tolerance: None,
+            dimension_value: None,
+        }
+    }
+
+    #[test]
+    fn higher_is_better_within_tolerance_is_at_risk() {
+        let t = TargetRow {
+            at_risk_tolerance: Some(10.0),
+            ..target(100.0)
+        };
+        let band = |actual| evaluate_status(actual, "higher_is_better", Some(&t));
+        assert_eq!(band(100.0), SnapshotStatus::OnTrack);
+        assert_eq!(band(120.0), SnapshotStatus::OnTrack);
+        assert_eq!(band(95.0), SnapshotStatus::AtRisk);
+        assert_eq!(band(90.0), SnapshotStatus::AtRisk);
+        assert_eq!(band(85.0), SnapshotStatus::OffTrack);
+        // A crossed threshold is never softened by the tolerance.
+        let strict = TargetRow {
+            threshold_crit: Some(98.0),
+            ..t.clone()
+        };
+        assert_eq!(
+            evaluate_status(95.0, "higher_is_better", Some(&strict)),
+            SnapshotStatus::OffTrack
+        );
+    }
+
+    #[test]
+    fn lower_is_better_over_crit_is_off_track() {
+        let t = TargetRow {
+            threshold_crit: Some(20.0),
+            at_risk_tolerance: Some(50.0),
+            ..target(10.0)
+        };
+        let band = |actual| evaluate_status(actual, "lower", Some(&t));
+        assert_eq!(band(8.0), SnapshotStatus::OnTrack);
+        assert_eq!(band(14.0), SnapshotStatus::AtRisk);
+        assert_eq!(band(17.0), SnapshotStatus::OffTrack);
+        assert_eq!(band(25.0), SnapshotStatus::OffTrack);
+    }
+
+    #[test]
+    fn target_band_tolerance_is_both_sides() {
+        let t = TargetRow {
+            at_risk_tolerance: Some(5.0),
+            ..target(100.0)
+        };
+        let band = |actual| evaluate_status(actual, "target_band", Some(&t));
+        assert_eq!(band(104.0), SnapshotStatus::OnTrack);
+        assert_eq!(band(92.0), SnapshotStatus::AtRisk);
+        assert_eq!(band(111.0), SnapshotStatus::OffTrack);
+    }
+
+    #[test]
+    fn old_status_values_still_parse() {
+        assert_eq!(SnapshotStatus::parse("ok"), Some(SnapshotStatus::OnTrack));
+        assert_eq!(SnapshotStatus::parse("warn"), Some(SnapshotStatus::AtRisk));
+        assert_eq!(
+            SnapshotStatus::parse("crit"),
+            Some(SnapshotStatus::OffTrack)
+        );
+        assert_eq!(
+            SnapshotStatus::parse("at_risk"),
+            Some(SnapshotStatus::AtRisk)
+        );
+        assert_eq!(
+            SnapshotStatus::parse("failed"),
+            Some(SnapshotStatus::Failed)
+        );
+        assert_eq!(SnapshotStatus::parse("nonsense"), None);
+        let old: SnapshotStatus = serde_json::from_str("\"warn\"").unwrap();
+        assert_eq!(old, SnapshotStatus::AtRisk);
+        let new: SnapshotStatus = serde_json::from_str("\"off_track\"").unwrap();
+        assert_eq!(new, SnapshotStatus::OffTrack);
+        assert_eq!(
+            serde_json::to_string(&SnapshotStatus::OnTrack).unwrap(),
+            "\"on_track\""
+        );
+    }
+
+    #[test]
+    fn a_member_uses_its_own_target_else_the_total() {
+        let targets = vec![
+            TargetRow {
+                dimension_value: Some("Riyadh".into()),
+                ..target(50.0)
+            },
+            target(100.0),
+        ];
+        assert_eq!(
+            pick_target(&targets, None).map(|t| t.target_value),
+            Some(100.0)
+        );
+        assert_eq!(
+            pick_target(&targets, Some("Riyadh")).map(|t| t.target_value),
+            Some(50.0)
+        );
+        assert_eq!(
+            pick_target(&targets, Some("Jeddah")).map(|t| t.target_value),
+            Some(100.0)
         );
     }
 }

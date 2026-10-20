@@ -765,7 +765,7 @@ async fn a_formula_referencing_two_metrics_computes_correctly() {
     )
     .await
     .expect("compute_and_record itself must not error");
-    assert_eq!(outcome.snapshot.status, "ok");
+    assert_eq!(outcome.snapshot.status, "on_track");
     assert_eq!(outcome.snapshot.actual, Some(600.0));
     assert_eq!(outcome.snapshot.source_version.as_deref(), Some("formula"));
 }
@@ -945,7 +945,7 @@ async fn the_principal_runs_an_opted_in_query_and_records_the_pinned_version() {
     let metric_id = insert_query_metric(&db, query_id).await;
 
     let snapshot = compute_query_metric(&state, metric_id).await;
-    assert_eq!(snapshot.status, "ok", "{:?}", snapshot.error_message);
+    assert_eq!(snapshot.status, "on_track", "{:?}", snapshot.error_message);
     assert_eq!(snapshot.actual, Some(42.0));
     assert_eq!(
         snapshot.source_version.as_deref(),
@@ -1000,7 +1000,10 @@ async fn a_disabled_principal_fails_closed() {
     .await;
     let metric_id = insert_query_metric(&db, query_id).await;
     // First use provisions the principal.
-    assert_eq!(compute_query_metric(&state, metric_id).await.status, "ok");
+    assert_eq!(
+        compute_query_metric(&state, metric_id).await.status,
+        "on_track"
+    );
 
     sqlx::query("UPDATE user_account SET is_active = false WHERE id = $1")
         .bind(METRIC_PRINCIPAL_ID)
@@ -1051,7 +1054,10 @@ async fn a_principal_holding_admin_rights_is_refused() {
     )
     .await;
     let metric_id = insert_query_metric(&db, query_id).await;
-    assert_eq!(compute_query_metric(&state, metric_id).await.status, "ok");
+    assert_eq!(
+        compute_query_metric(&state, metric_id).await.status,
+        "on_track"
+    );
 
     let admin_privilege: Uuid = sqlx::query_scalar("SELECT id FROM privilege WHERE key = $1")
         .bind(attome_security::context::ADMIN_PRIVILEGE_KEY)
@@ -1115,7 +1121,7 @@ async fn the_scheduled_sweep_records_the_principal_as_evaluator() {
     .fetch_one(&db)
     .await
     .expect("the sweep wrote a snapshot");
-    assert_eq!(status, "ok");
+    assert_eq!(status, "on_track");
     assert_eq!(actual, Some(3.0));
     assert_eq!(evaluated_by, Some(METRIC_PRINCIPAL_ID));
 }
@@ -1153,7 +1159,7 @@ async fn dimension_members_sum_to_total() {
     .expect("set the dimension");
 
     let total = compute_query_metric(&state, metric_id).await;
-    assert_eq!(total.status, "ok", "{:?}", total.error_message);
+    assert_eq!(total.status, "on_track", "{:?}", total.error_message);
     assert_eq!(total.actual, Some(3.0));
     assert_eq!(total.dimension_attribute, None);
 

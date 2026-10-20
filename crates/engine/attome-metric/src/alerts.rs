@@ -1,5 +1,6 @@
-//! Metric alerts (roadmap P11-T1): after each snapshot, a metric whose status
-//! got worse (`ok` to `warn` or `crit`, `warn` to `crit`) notifies its owner
+//! Metric alerts (roadmap P11-T1): after each snapshot, a metric whose band
+//! got worse (on track to at risk or off track, at risk to off track; the
+//! pre-P9-T6 `ok`/`warn`/`crit` rows read as those bands) notifies its owner
 //! and steward once. The same status again is not a new crossing, so a metric
 //! that stays red does not repeat itself every period; a failed snapshot is
 //! not a status and is skipped. `alerts_snoozed_until` on the metric
@@ -10,22 +11,33 @@ use attome_types::AppError;
 use chrono::{NaiveDate, Utc};
 use uuid::Uuid;
 
-/// How bad a status is; `None` for one that is not a threshold status.
+use crate::metric::SnapshotStatus;
+
+/// How bad a stored status is; `None` for one that is not a band.
 fn rank(status: &str) -> Option<u8> {
-    match status {
-        "ok" => Some(0),
-        "warn" => Some(1),
-        "crit" => Some(2),
-        _ => None,
+    SnapshotStatus::parse(status)?.rank()
+}
+
+/// The band a metric has crossed into, when it got worse since the
+/// previous band (`None` before the first one counts as on track).
+pub fn crossing(previous: Option<&str>, current: &str) -> Option<SnapshotStatus> {
+    let now = rank(current)?;
+    let before = previous.and_then(rank).unwrap_or(0);
+    if now > before {
+        SnapshotStatus::parse(current)
+    } else {
+        None
     }
 }
 
-/// The status a metric has crossed into, when it got worse since the
-/// previous threshold status (`None` before the first one counts as `ok`).
-pub fn crossing<'a>(previous: Option<&str>, current: &'a str) -> Option<&'a str> {
-    let now = rank(current)?;
-    let before = previous.and_then(rank).unwrap_or(0);
-    (now > before).then_some(current)
+/// The words for a band in a notification.
+fn words(band: SnapshotStatus) -> &'static str {
+    match band {
+        SnapshotStatus::OffTrack => "off track",
+        SnapshotStatus::AtRisk => "at risk",
+        SnapshotStatus::OnTrack => "on track",
+        SnapshotStatus::Failed => "failed",
+    }
 }
 
 /// Whether alerts are snoozed on `today`.
@@ -50,7 +62,8 @@ async fn notify_on_crossing(state: &EngineState, metric_id: Uuid) -> Result<(), 
     // The two newest threshold statuses, newest first.
     let statuses: Vec<String> = sqlx::query_scalar(
         "SELECT status FROM metric_snapshot \
-         WHERE metric_ref = $1 AND status IN ('ok', 'warn', 'crit') \
+         WHERE metric_ref = $1 \
+           AND status IN ('on_track', 'at_risk', 'off_track', 'ok', 'warn', 'crit') \
            AND dimension_attribute IS NULL \
          ORDER BY computed_at DESC LIMIT 2",
     )
@@ -61,9 +74,10 @@ async fn notify_on_crossing(state: &EngineState, metric_id: Uuid) -> Result<(), 
     let Some(current) = statuses.first() else {
         return Ok(());
     };
-    let Some(level) = crossing(statuses.get(1).map(String::as_str), current) else {
+    let Some(band) = crossing(statuses.get(1).map(String::as_str), current) else {
         return Ok(());
     };
+    let level = words(band);
     let metric: Option<MetricAlertRow> = sqlx::query_as(
         "SELECT name, owner_ref, steward_ref, alerts_snoozed_until::date \
              FROM dashboard_metric_definition WHERE id = $1",
@@ -82,7 +96,7 @@ async fn notify_on_crossing(state: &EngineState, metric_id: Uuid) -> Result<(), 
     recipients.dedup();
     let subject = format!("Metric {name} is now {level}");
     let body = format!(
-        "The latest value of {name} crossed its {level} threshold. Open the metric to see the value \
+        "The latest value of {name} is {level} against its target. Open the metric to see the value \
          against its target."
     );
     for user in recipients {
@@ -100,7 +114,12 @@ async fn notify_on_crossing(state: &EngineState, metric_id: Uuid) -> Result<(), 
                 "/xrm/entity/dashboard_metric_definition/{metric_id}"
             )),
             variables: std::collections::HashMap::new(),
-            priority: if level == "crit" { "high" } else { "normal" }.to_string(),
+            priority: if band == SnapshotStatus::OffTrack {
+                "high"
+            } else {
+                "normal"
+            }
+            .to_string(),
             escalate_after_minutes: None,
             escalate_channels: None,
         };
@@ -116,9 +135,21 @@ mod tests {
 
     #[test]
     fn only_a_worsening_status_is_a_crossing() {
-        assert_eq!(crossing(None, "warn"), Some("warn"));
-        assert_eq!(crossing(Some("ok"), "crit"), Some("crit"));
-        assert_eq!(crossing(Some("warn"), "crit"), Some("crit"));
+        assert_eq!(crossing(None, "warn"), Some(SnapshotStatus::AtRisk));
+        assert_eq!(crossing(Some("ok"), "crit"), Some(SnapshotStatus::OffTrack));
+        assert_eq!(
+            crossing(Some("warn"), "crit"),
+            Some(SnapshotStatus::OffTrack)
+        );
+        assert_eq!(
+            crossing(Some("on_track"), "at_risk"),
+            Some(SnapshotStatus::AtRisk)
+        );
+        assert_eq!(
+            crossing(Some("warn"), "at_risk"),
+            None,
+            "an old row and a new one in the same band are the same"
+        );
         assert_eq!(
             crossing(Some("warn"), "warn"),
             None,

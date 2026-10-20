@@ -1150,6 +1150,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   transaction, store each line total and the deal's one-time, recurring and contract totals and amount,
   and recalculate the stored split amounts. A product must be on the deal's price list in its currency
   (`product_not_on_price_list`). `opportunity_line` and the deal totals are now engine-managed.
+- Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
+  instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
+  near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
+  the explicit thresholds still apply and the worse band wins. Each dimension member is banded against
+  its own target (`dimension_value`), else the total's. Older rows keep their values and read as the
+  matching band; alerts treat both the same.
 - Commission plan acceptance, spiffs and draws (F10-T10, commission pack `0005`):
   `POST /api/v1/commission/plans/{id}/send-for-acceptance` renders a K3 plan document per participant of
   the latest published version and the `commission_acceptance` job sends it as a K4 signature envelope;
