@@ -48,6 +48,7 @@ attome-compliance.workspace = true
 attome-model.workspace = true
 attome-jobs.workspace = true
 attome-metadata.workspace = true
+attome-metric.workspace = true
 attome-service.workspace = true
 rust_decimal.workspace = true
 tracing-subscriber.workspace = true

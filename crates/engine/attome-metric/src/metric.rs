@@ -1693,6 +1693,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/metrics/{id}/lineage",
             get(crate::lineage::metric_lineage),
         )
+        .route(
+            "/api/v1/metrics/{id}/impact",
+            get(crate::lineage_graph::metric_impact),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
@@ -1700,7 +1704,8 @@ pub fn routes() -> Router<EngineState> {
     list_metrics,
     list_snapshots,
     compute_metric,
-    crate::lineage::metric_lineage
+    crate::lineage::metric_lineage,
+    crate::lineage_graph::metric_impact
 ))]
 struct ApiDocFragment;
 

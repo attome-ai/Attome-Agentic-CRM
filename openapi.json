@@ -68905,6 +68905,82 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/metrics/{id}/impact": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "description": "What the metric reads (entities, attributes and other metrics) and what uses it (dashboard widgets, metrics), from the lineage graph; the counts preview what a change reaches (P10-T1).",
+        "operationId": "metric_impact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The metric's inputs and consumers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricImpact"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/metrics/{id}/lineage": {
       "get": {
         "tags": [
@@ -122435,6 +122511,28 @@
           }
         }
       },
+      "MetricConsumer": {
+        "type": "object",
+        "description": "One thing that uses a metric.",
+        "required": [
+          "kind",
+          "id",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "What it is: `dashboard` (a widget), `metric`, ..."
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
       "MetricDefinitionSummary": {
         "type": "object",
         "required": [
@@ -122488,6 +122586,46 @@
           }
         }
       },
+      "MetricImpact": {
+        "type": "object",
+        "description": "What a metric is made of and what a change to it reaches.",
+        "required": [
+          "metric_id",
+          "upstream",
+          "downstream",
+          "impact"
+        ],
+        "properties": {
+          "downstream": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricConsumer"
+            },
+            "description": "Everything that references the metric, by kind (at most 500)."
+          },
+          "impact": {
+            "type": "object",
+            "description": "How many consumers of each kind a change reaches.",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upstream": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricInput"
+            }
+          }
+        }
+      },
       "MetricInfo": {
         "type": "object",
         "description": "One metric.",
@@ -122514,6 +122652,41 @@
           },
           "unit": {
             "type": "string"
+          }
+        }
+      },
+      "MetricInput": {
+        "type": "object",
+        "description": "One thing a metric reads.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "attribute": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The attribute, when the input is one attribute of the entity."
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The entity's logical name (an entity input)."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`entity` or `metric`."
+          },
+          "metric_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The metric's id (a metric input)."
           }
         }
       },
@@ -159974,7 +160147,6 @@
     }
   ],
   "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -160026,5 +160198,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }

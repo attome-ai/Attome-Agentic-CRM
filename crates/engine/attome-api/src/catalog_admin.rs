@@ -424,6 +424,24 @@ pub async fn run_dashboard_lineage_sweep(
     let mut seen = std::collections::HashSet::new();
     for event in &events {
         stats.events_processed += 1;
+        // P10-T1: a metric's own lineage (what it reads) follows its
+        // definition, on the same sweep.
+        if event.entity_logicalname == "dashboard_metric_definition" {
+            if !seen.insert(event.record_id) {
+                continue;
+            }
+            if let Err(e) =
+                attome_metric::lineage_graph::sync_metric_lineage(&state.base.db, event.record_id)
+                    .await
+            {
+                tracing::warn!(
+                    metric_id = %event.record_id,
+                    error = %e,
+                    "catalog lineage sweep: syncing one metric failed, continuing"
+                );
+            }
+            continue;
+        }
         if event.entity_logicalname != "dashboard_widget" {
             continue;
         }
@@ -463,8 +481,9 @@ pub async fn run_dashboard_lineage_sweep(
 /// widget previously had" — the correct "current state, not audit history"
 /// behavior 0356's header documents.
 async fn sync_widget_lineage(state: &EngineState, widget_id: Uuid) -> Result<(), AppError> {
-    let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT name, query_id FROM dashboard_widget WHERE id = $1 AND is_active = true",
+    let row: Option<(Option<String>, Option<String>, serde_json::Value)> = sqlx::query_as(
+        "SELECT name, query_id, to_jsonb(w) FROM dashboard_widget w \
+         WHERE id = $1 AND is_active = true",
     )
     .bind(widget_id)
     .fetch_optional(&state.base.db)
@@ -473,14 +492,19 @@ async fn sync_widget_lineage(state: &EngineState, widget_id: Uuid) -> Result<(),
 
     let (label, refs): (String, Vec<attome_core::MetadataReferenceInput>) = match row {
         None => (String::new(), Vec::new()),
-        Some((name, None)) => (name.unwrap_or_default(), Vec::new()),
-        Some((name, Some(query_id_text))) => {
-            let refs = match Uuid::parse_str(&query_id_text) {
-                Ok(query_id) => {
+        Some((name, query_id, widget)) => {
+            let mut refs = match query_id.as_deref().map(Uuid::parse_str) {
+                Some(Ok(query_id)) => {
                     attome_core::references_from(&state.base.db, "query", query_id).await?
                 }
-                Err(_) => Vec::new(),
+                _ => Vec::new(),
             };
+            // P10-T1: a KPI widget references the metrics it shows.
+            refs.extend(
+                attome_dashboard::execution::kpi_metric_refs(&widget)
+                    .into_iter()
+                    .map(attome_core::MetadataReferenceInput::metric),
+            );
             (name.unwrap_or_default(), refs)
         }
     };
@@ -489,6 +513,43 @@ async fn sync_widget_lineage(state: &EngineState, widget_id: Uuid) -> Result<(),
     attome_core::replace_references(&mut tx, "dashboard", widget_id, &label, &refs).await?;
     tx.commit().await.map_err(AppError::internal)?;
     Ok(())
+}
+
+/// P10-T1: one bounded batch of the backfill that records which metrics
+/// existing dashboard widgets show (widgets saved before widget lineage
+/// carried metrics), kind `dashboard-metrics`, keyset-paginated by id; 0 once
+/// complete. Each widget's whole lineage is rewritten, as the sweep does.
+pub async fn backfill_widget_metric_lineage(
+    state: &EngineState,
+    batch_limit: i64,
+) -> Result<usize, AppError> {
+    const KIND: &str = "dashboard-metrics";
+    let db = &state.base.db;
+    let mut conn = db.acquire().await.map_err(AppError::internal)?;
+    let progress = attome_core::backfill_progress(&mut conn, KIND).await?;
+    if progress.completed {
+        return Ok(0);
+    }
+    let cursor = progress.last_ref.unwrap_or(Uuid::nil());
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM dashboard_widget WHERE id > $1 AND is_active = true ORDER BY id LIMIT $2",
+    )
+    .bind(cursor)
+    .bind(batch_limit)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    drop(conn);
+    let mut last = cursor;
+    for id in &ids {
+        sync_widget_lineage(state, *id).await?;
+        last = *id;
+    }
+    let completed = (ids.len() as i64) < batch_limit;
+    let mut conn = db.acquire().await.map_err(AppError::internal)?;
+    attome_core::advance_backfill_progress(&mut conn, KIND, last, ids.len() as i64, completed)
+        .await?;
+    Ok(ids.len())
 }
 
 // ── Usage rollup (EngineJob::CatalogUsageRollup) ──────────────────────────

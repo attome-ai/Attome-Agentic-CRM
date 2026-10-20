@@ -2118,6 +2118,7 @@ dependencies = [
  "attome-integration",
  "attome-jobs",
  "attome-metadata",
+ "attome-metric",
  "attome-model",
  "attome-modules",
  "attome-records",

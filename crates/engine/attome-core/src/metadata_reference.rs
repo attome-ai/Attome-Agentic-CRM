@@ -22,6 +22,11 @@ use uuid::Uuid;
 pub struct MetadataReferenceInput {
     pub to_entity: String,
     pub to_attribute: Option<String>,
+    /// P10-T1: what the reference points at — `entity` (an entity or one of
+    /// its attributes) or `metric`.
+    pub to_kind: &'static str,
+    /// P10-T1: the target's id when it is not an entity (a metric's id).
+    pub to_ref: Option<Uuid>,
 }
 
 impl MetadataReferenceInput {
@@ -29,6 +34,8 @@ impl MetadataReferenceInput {
         Self {
             to_entity: to_entity.into(),
             to_attribute: None,
+            to_kind: "entity",
+            to_ref: None,
         }
     }
 
@@ -36,6 +43,19 @@ impl MetadataReferenceInput {
         Self {
             to_entity: to_entity.into(),
             to_attribute: Some(to_attribute.into()),
+            to_kind: "entity",
+            to_ref: None,
+        }
+    }
+
+    /// P10-T1: a reference to a metric. `to_entity` holds `metric:<id>`, so
+    /// it never matches an entity's name.
+    pub fn metric(metric_id: Uuid) -> Self {
+        Self {
+            to_entity: format!("metric:{metric_id}"),
+            to_attribute: None,
+            to_kind: "metric",
+            to_ref: Some(metric_id),
         }
     }
 }
@@ -89,8 +109,8 @@ pub async fn replace_references(
     for r in refs {
         sqlx::query(
             "INSERT INTO metadata_reference \
-                (from_kind, from_ref, from_label, to_entity, to_attribute) \
-             VALUES ($1, $2, $3, $4, $5) \
+                (from_kind, from_ref, from_label, to_entity, to_attribute, to_kind, to_ref) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7) \
              ON CONFLICT (from_kind, from_ref, to_entity, to_attribute) DO NOTHING",
         )
         .bind(from_kind)
@@ -98,6 +118,8 @@ pub async fn replace_references(
         .bind(from_label)
         .bind(&r.to_entity)
         .bind(r.to_attribute.as_deref().unwrap_or(""))
+        .bind(r.to_kind)
+        .bind(r.to_ref)
         .execute(&mut **tx)
         .await
         .map_err(AppError::internal)?;
@@ -157,8 +179,8 @@ pub async fn references_from<'e, E>(
 where
     E: sqlx::Executor<'e, Database = Postgres>,
 {
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT to_entity, to_attribute FROM metadata_reference \
+    let rows: Vec<(String, String, String, Option<Uuid>)> = sqlx::query_as(
+        "SELECT to_entity, to_attribute, to_kind, to_ref FROM metadata_reference \
          WHERE from_kind = $1 AND from_ref = $2",
     )
     .bind(from_kind)
@@ -169,15 +191,49 @@ where
 
     Ok(rows
         .into_iter()
-        .map(|(to_entity, to_attribute)| MetadataReferenceInput {
-            to_entity,
-            to_attribute: if to_attribute.is_empty() {
-                None
-            } else {
-                Some(to_attribute)
-            },
+        .map(|(to_entity, to_attribute, to_kind, to_ref)| {
+            if to_kind == "metric"
+                && let Some(id) = to_ref
+            {
+                return MetadataReferenceInput::metric(id);
+            }
+            MetadataReferenceInput {
+                to_entity,
+                to_attribute: if to_attribute.is_empty() {
+                    None
+                } else {
+                    Some(to_attribute)
+                },
+                to_kind: "entity",
+                to_ref: None,
+            }
         })
         .collect())
+}
+
+/// P10-T1: every object that references the metric `metric_id` (a
+/// dashboard widget showing it, a metric whose formula reads it), by kind
+/// and newest first, at most `limit`.
+pub async fn references_to_metric<'e, E>(
+    executor: E,
+    metric_id: Uuid,
+    limit: i64,
+) -> Result<Vec<MetadataReferenceRow>, AppError>
+where
+    E: sqlx::Executor<'e, Database = Postgres>,
+{
+    sqlx::query_as(
+        "SELECT from_kind, from_ref, from_label, to_attribute, created_at \
+         FROM metadata_reference \
+         WHERE to_kind = 'metric' AND to_ref = $1 \
+         ORDER BY from_kind, created_at DESC \
+         LIMIT $2",
+    )
+    .bind(metric_id)
+    .bind(limit)
+    .fetch_all(executor)
+    .await
+    .map_err(AppError::internal)
 }
 
 /// This kind's resumable keyset-cursor position in

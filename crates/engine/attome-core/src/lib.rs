@@ -210,7 +210,8 @@ pub use meta_registry::{
 };
 pub use metadata_reference::{
     BackfillProgress, MetadataReferenceInput, MetadataReferenceRow, advance_backfill_progress,
-    backfill_progress, references_from, references_to_entity, replace_references,
+    backfill_progress, references_from, references_to_entity, references_to_metric,
+    replace_references,
 };
 pub use model::{EngineModel, EntityModuleMap, EntityModuleOwner};
 pub use my_work::{MyWorkAction, MyWorkFuture, MyWorkItem, MyWorkPage, MyWorkProvider};

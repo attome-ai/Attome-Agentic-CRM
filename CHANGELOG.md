@@ -143,6 +143,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Metric lineage and impact (P10-T1): the lineage graph can point at metrics, not only entities
+  (migration 0181). A metric records what it reads (its stored query's entities and the metrics its
+  formula uses) and a dashboard widget the metrics it shows, kept current by the catalog lineage
+  sweep and backfilled for existing metrics and widgets. `GET /api/v1/metrics/{id}/impact` lists a
+  metric's inputs and consumers with counts per kind, a preview of what changing it reaches.
 - Master-data settings on entities (L1-T1): `PATCH /api/v1/admin/entities/{id}` takes
   `master_data: {is_master, hub_style}` (hub style `registry`, `consolidation` or `coexistence`) and
   `GET` returns it. A master entity needs a data domain (422 naming `is_master`). The settings are

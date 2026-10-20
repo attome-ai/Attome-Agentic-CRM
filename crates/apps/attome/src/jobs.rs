@@ -1633,8 +1633,19 @@ async fn dispatch_platform_job(
             let queries = attome_records::query_admin::backfill_catalog_lineage(&db, 200).await?;
             let workflows =
                 attome_workflow::catalog_backfill::backfill_catalog_lineage(&db, 200).await?;
-            if queries > 0 || workflows > 0 {
-                tracing::info!(queries, workflows, "catalog lineage backfill: run complete");
+            // P10-T1: metrics and the widgets that show them.
+            let metrics = attome_metric::lineage_graph::backfill_catalog_lineage(&db, 200).await?;
+            let widgets =
+                attome_api::catalog_admin::backfill_widget_metric_lineage(&attome_state, 200)
+                    .await?;
+            if queries > 0 || workflows > 0 || metrics > 0 || widgets > 0 {
+                tracing::info!(
+                    queries,
+                    workflows,
+                    metrics,
+                    widgets,
+                    "catalog lineage backfill: run complete"
+                );
             }
         }
         // M18 Data Catalog Phase 1 (D-466) — see this variant's doc comment.

@@ -12842,6 +12842,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/metrics/{id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description What the metric reads (entities, attributes and other metrics) and what uses it (dashboard widgets, metrics), from the lineage graph; the counts preview what a change reaches (P10-T1). */
+        get: operations["metric_impact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metrics/{id}/lineage": {
         parameters: {
             query?: never;
@@ -27836,6 +27853,14 @@ export interface components {
         MetadataManifest: {
             bundles: components["schemas"]["ManifestEntry"][];
         };
+        /** @description One thing that uses a metric. */
+        MetricConsumer: {
+            /** Format: uuid */
+            id: string;
+            /** @description What it is: `dashboard` (a widget), `metric`, ... */
+            kind: string;
+            label: string;
+        };
         MetricDefinitionSummary: {
             direction: string;
             /** Format: uuid */
@@ -27853,6 +27878,18 @@ export interface components {
             /** Format: double */
             weight?: number | null;
         };
+        /** @description What a metric is made of and what a change to it reaches. */
+        MetricImpact: {
+            /** @description Everything that references the metric, by kind (at most 500). */
+            downstream: components["schemas"]["MetricConsumer"][];
+            /** @description How many consumers of each kind a change reaches. */
+            impact: {
+                [key: string]: number;
+            };
+            /** Format: uuid */
+            metric_id: string;
+            upstream: components["schemas"]["MetricInput"][];
+        };
         /** @description One metric. */
         MetricInfo: {
             ar: string;
@@ -27861,6 +27898,20 @@ export interface components {
             kind: string;
             name: string;
             unit: string;
+        };
+        /** @description One thing a metric reads. */
+        MetricInput: {
+            /** @description The attribute, when the input is one attribute of the entity. */
+            attribute?: string | null;
+            /** @description The entity's logical name (an entity input). */
+            entity?: string | null;
+            /** @description `entity` or `metric`. */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description The metric's id (a metric input).
+             */
+            metric_id?: string | null;
         };
         MetricLineageNode: {
             /**
@@ -84149,6 +84200,55 @@ export interface operations {
             };
             /** @description Missing actual for a manual metric, formula source, or bad query_ref */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    metric_impact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The metric's inputs and consumers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricImpact"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

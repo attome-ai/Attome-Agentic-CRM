@@ -10,6 +10,7 @@ pub mod alerts;
 pub mod anomaly;
 pub mod auth;
 pub mod lineage;
+pub mod lineage_graph;
 pub mod metric;
 pub mod model;
 pub mod principal;
