@@ -426,6 +426,88 @@ async fn delivered(
         .into_response())
 }
 
+/// A published page as HTML (E12-T1).
+///
+/// The page's latest published version as a whole HTML document, rendered
+/// when it was published: its text readable without script, interactive
+/// blocks as `data-hydrate` points the web app fills in. The same ETag as
+/// `/api/v1/content/delivery`; a client that sends it back gets 304. No
+/// sign-in; the same 404 for a missing, unpublished or unlicensed page.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/html",
+    tag = "content",
+    params(DeliveryQuery),
+    responses(
+        (status = 200, description = "The page's published version as HTML", content_type = "text/html"),
+        (status = 301, description = "The page moved; `Location` names its current path"),
+        (status = 304, description = "The client already holds this version"),
+        (status = 404, description = "No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed)", body = ErrorResponse),
+    ),
+)]
+async fn page_html(
+    State(state): State<EngineState>,
+    Query(q): Query<DeliveryQuery>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let row: Option<(Uuid, i32, Option<String>)> = sqlx::query_as(
+        "SELECT p.id, v.version_number, v.html \
+           FROM content_page p \
+           JOIN LATERAL ( \
+               SELECT version_number, html FROM content_page_version WHERE page_id = p.id \
+                ORDER BY version_number DESC LIMIT 1 \
+           ) v ON true \
+          WHERE p.content_space_id = $1 AND p.url_path = $2 \
+            AND p.status = 'published' AND p.is_deleted = FALSE AND p.audience = 'public'",
+    )
+    .bind(q.space)
+    .bind(&q.path)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((page_id, version, html)) = row else {
+        return moved(&state, &q.path, &["public"], |space, path| {
+            format!("/api/v1/content/html?space={space}&path={path}")
+        })
+        .await;
+    };
+    // A version published before E12 has no stored HTML: not served here.
+    let html = html.ok_or(AppError::NotFound)?;
+    let etag = delivery_etag(page_id, version);
+    let etag_value = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
+    let cache = HeaderValue::from_static("public, max-age=60, must-revalidate");
+    if etag_held(
+        headers
+            .get(axum::http::header::IF_NONE_MATCH)
+            .and_then(|v| v.to_str().ok()),
+        &etag,
+    ) {
+        return Ok((
+            StatusCode::NOT_MODIFIED,
+            [
+                (axum::http::header::ETAG, etag_value),
+                (axum::http::header::CACHE_CONTROL, cache),
+            ],
+        )
+            .into_response());
+    }
+    Ok((
+        [
+            (axum::http::header::ETAG, etag_value),
+            (axum::http::header::CACHE_CONTROL, cache),
+            (
+                axum::http::header::CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            ),
+        ],
+        html,
+    )
+        .into_response())
+}
+
 /// A published page for a signed-in person (K5-T2).
 ///
 /// The same answer as `/api/v1/content/delivery`, for `public` and
@@ -538,6 +620,7 @@ pub fn routes() -> Router<EngineState> {
             post(knowledge_feedback),
         )
         .route("/api/v1/content/delivery", get(deliver_page))
+        .route("/api/v1/content/html", get(page_html))
         .route("/api/v1/content/internal", get(deliver_internal_page))
         .route("/api/v1/content/preview", get(preview_page))
 }
@@ -548,6 +631,7 @@ pub fn routes() -> Router<EngineState> {
     vote_on_page,
     knowledge_feedback,
     deliver_page,
+    page_html,
     deliver_internal_page,
     preview_page
 ))]

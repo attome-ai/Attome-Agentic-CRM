@@ -689,6 +689,8 @@ pub async fn do_publish_page(
 
     let version_number =
         crate::versions::record_version_in_tx(&mut tx, id, actor, restored_from).await?;
+    // E12-T1: the version's HTML, rendered once here so serving it does no work.
+    crate::render_html::render_version_in_tx(&mut tx, id, version_number).await?;
 
     attome_audit::security::write_security_event(
         &mut tx,

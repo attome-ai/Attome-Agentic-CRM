@@ -69,6 +69,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // with the same identical 404 as `/content/view`; space and path are
     // query parameters so this stays one exact entry.
     "/api/v1/content/delivery",
+    // E12-T1: the same published page as server-rendered HTML, with the
+    // same checks and the same identical 404 as `/content/delivery`.
+    "/api/v1/content/html",
     // K5-T2: a signed preview link opens one page's draft for anyone who
     // holds it; the handler checks the signature and expiry and answers the
     // same 404 for every miss.
