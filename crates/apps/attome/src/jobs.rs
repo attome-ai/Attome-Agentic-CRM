@@ -2687,6 +2687,8 @@ const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 /// E8-T5: the journey entry tick and the date entry (registered job types).
 const DEDUP_KEY_JOURNEY_ENTRY: &str = "marketing-journey-entry";
 const DEDUP_KEY_JOURNEY_DATE_ENTRY: &str = "marketing-journey-date-entry";
+/// I1-T2: completed work orders invoiced (a registered job type).
+const DEDUP_KEY_WORK_ORDER_INVOICING: &str = "work-order-invoicing";
 /// F10-T10: commission plan acceptance (a registered job type).
 const DEDUP_KEY_COMMISSION_ACCEPTANCE: &str = "commission-acceptance";
 /// H8-T1: status page notices from the change feed (a registered job type).
@@ -2769,6 +2771,11 @@ pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
 /// read from the change feed.
 pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
+
+/// I1-T2: completed work orders split into covered and billable lines, and
+/// the billable ones sent to billing as an invoice request.
+pub const WORK_ORDER_INVOICING: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::work_order::JOB, 1);
 
 /// F10-T10: plan documents sent for signature once rendered, and signed
 /// envelopes recorded as accepted.
@@ -3050,6 +3057,23 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WORK_ORDER_INVOICING,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let handled = attome_service::work_order::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if handled > 0 {
+                    tracing::info!(handled, "work orders sent for invoicing");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3471,6 +3495,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_REPUTATION_FETCH
         }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
+        EngineJob::Registered(job) if job.name == WORK_ORDER_INVOICING.name => {
+            DEDUP_KEY_WORK_ORDER_INVOICING
+        }
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
         }
@@ -4003,6 +4030,21 @@ pub fn spawn_segment_live_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SEGMENT_LIVE, "live segments");
+}
+
+/// I1-T2: every five minutes, one tick of work order invoicing.
+pub fn spawn_work_order_invoicing_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(WORK_ORDER_INVOICING.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_WORK_ORDER_INVOICING,
+            "work order invoicing",
+        ),
+        Err(error) => tracing::error!(%error, "work order invoicing: not scheduled"),
+    }
 }
 
 /// F10-T10: every thirty seconds, one tick of plan acceptance.

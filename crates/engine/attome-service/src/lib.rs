@@ -30,6 +30,7 @@ pub mod supplier_sla;
 pub mod timeline;
 pub mod token;
 pub mod warranty;
+pub mod work_order;
 
 pub use model::ServiceModel;
 

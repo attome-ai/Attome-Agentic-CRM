@@ -1,0 +1,140 @@
+{
+  "author": "packs",
+  "checksum": "sha256:04392f54332b8b5865168dd25ed05d451e1cfb8ee6cf38f56aff94698b2ac537",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Work order invoicing (I1-T2): each line keeps the percent its warranty or contract entitlement covered and the amount left billable, and the work order its currency for the invoice request.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d10-7f11-9a11-11c011c011c0",
+  "layer": "product",
+  "name": "field-service-work-order-coverage",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 3,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "work_order",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Covered %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "covered_pct",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "work_order_line",
+        "field": "covered_pct"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Billable Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billable_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "work_order_line",
+        "field": "billable_amount"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "work_order.currency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة التغطية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "work_order_line.covered_pct",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ القابل للفوترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "work_order_line.billable_amount",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "field-service",
+  "seq": 4,
+  "title": "Pack: work order coverage and invoicing"
+}

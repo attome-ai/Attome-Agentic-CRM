@@ -125,6 +125,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_webinar_sync_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // E7-T6: live segments, a tick every five seconds.
     crate::jobs::spawn_segment_live_scheduler(db.clone(), std::time::Duration::from_secs(5));
+    // I1-T2: completed work orders invoiced, a tick every five minutes.
+    crate::jobs::spawn_work_order_invoicing_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(300),
+    );
     // F10-T10: commission plan acceptance, a tick every thirty seconds.
     crate::jobs::spawn_commission_acceptance_scheduler(
         db.clone(),

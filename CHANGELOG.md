@@ -1150,6 +1150,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   transaction, store each line total and the deal's one-time, recurring and contract totals and amount,
   and recalculate the stored split amounts. A product must be on the deal's price list in its currency
   (`product_not_on_price_list`). `opportunity_line` and the deal totals are now engine-managed.
+- Work order invoicing (I1-T2, field-service pack `0004`): when a work order is completed, each line is
+  split into what its entitlement covers and what is billable (a warranty by its term's parts and labour
+  percent, an hours entitlement from the hours left, a cases entitlement with one case; contracts never
+  cover parts), kept on the line as `covered_pct` and `billable_amount`, and the billable lines go to
+  billing as an invoice request keyed `work_order:{id}` by the `work_order_invoicing` job. The request id
+  is kept in the work order's `invoice_reference`.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
