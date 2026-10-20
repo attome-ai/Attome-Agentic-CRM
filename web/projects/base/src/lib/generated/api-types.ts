@@ -11929,6 +11929,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/deliverability/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deliverability dashboard.
+         * @description Over the last `days` days: sent, delivered, bounced and complaints per
+         *     mailbox provider and day, the largest sends, the alerts raised with their
+         *     guidance keys, the latest result per target and blocklist, and each
+         *     domain's DMARC pass share, with the bounce and complaint limits in force.
+         */
+        get: operations["get_deliverability_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/deliverability/sends/{send_id}": {
         parameters: {
             query?: never;
@@ -13783,6 +13806,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/accounts/{id}/org-chart/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exports an account's org chart.
+         * @description Queues a PDF of the account's people from the built-in "Account org
+         *     chart" document template, rendered with what the caller may read, and
+         *     answers the render's id.
+         */
+        post: operations["post_sales_org_chart_export"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/call-list-members/{id}/outcome": {
         parameters: {
             query?: never;
@@ -14077,6 +14122,29 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_sales_change_owner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/committee-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A deal's buying committee.
+         * @description The account's chart, each contact on the deal with their role (and
+         *     their influence and attitude only through the Deal Attitude profile),
+         *     the "influences" links between them, the roles the deal's stage
+         *     requires and the coverage gaps, as the caller may read them.
+         */
+        get: operations["get_sales_committee_map"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18492,6 +18560,23 @@ export interface components {
             /** @description Turns over the last 24 hours, by how they ended. */
             turns_last_day: components["schemas"]["TurnCount"][];
         };
+        /** @description One alert raised by the daily evaluation (E6-T10). */
+        AlertView: {
+            /** Format: date */
+            day: string;
+            /** @description The screens' translation key for what to do (`deliverabilityAlert.<kind>`). */
+            guidance_key: string;
+            /**
+             * @description `bounce_rate`, `complaint_rate`, `blocklisted`, `dmarc_failures` or
+             *     `reputation_drop`.
+             */
+            kind: string;
+            subject: string;
+            /** Format: double */
+            threshold: number;
+            /** Format: double */
+            value: number;
+        };
         /** @description One allocation written. */
         AllocationLine: {
             /** @description Decimal, as text. */
@@ -19662,6 +19747,15 @@ export interface components {
          * @enum {string}
          */
         BlockKind: "heading" | "rich_text" | "alert" | "image" | "columns" | "data_table" | "chart" | "form" | "component";
+        /** @description The latest check of one target on one blocklist. */
+        BlocklistStatus: {
+            /** Format: date-time */
+            checked_at: string;
+            list_name: string;
+            listed: boolean;
+            target: string;
+            target_kind: string;
+        };
         BlueprintApplied: {
             /**
              * @description Every object the apply published, with the version it published and
@@ -23203,6 +23297,36 @@ export interface components {
              */
             variant: string;
         };
+        /** @description One contact on the deal. */
+        DealContact: {
+            attitude?: string | null;
+            /** Format: uuid */
+            contact_id: string;
+            full_name?: string | null;
+            /** @description Absent unless the caller holds the Deal Attitude profile. */
+            influence?: string | null;
+            is_primary: boolean;
+            /** @description A meeting regarding the contact in the last 180 days. */
+            met_recently: boolean;
+            role?: string | null;
+        };
+        /** @description A deal's buying committee. */
+        DealMap: {
+            /** Format: uuid */
+            account_id?: string | null;
+            chart?: null | components["schemas"]["OrgChart"];
+            contacts: components["schemas"]["DealContact"][];
+            gaps: components["schemas"]["Gap"][];
+            /**
+             * Format: date-time
+             * @description When the stored gaps were computed; `None` when computed for this read.
+             */
+            gaps_computed_at?: string | null;
+            influences: components["schemas"]["InfluenceLink"][];
+            /** Format: uuid */
+            opportunity_id: string;
+            required_roles: string[];
+        };
         /** @description A new line on a debit note. */
         DebitLine: {
             description: string;
@@ -23415,6 +23539,25 @@ export interface components {
             sending_domain: string;
             /** Format: int64 */
             sent: number;
+        };
+        /** @description The deliverability dashboard's figures. */
+        DeliverabilityOverview: {
+            /** @description The 100 newest alerts in the window. */
+            alerts: components["schemas"]["AlertView"][];
+            blocklist: components["schemas"]["BlocklistStatus"][];
+            /**
+             * Format: double
+             * @description The bounce and complaint limits in force, in percent.
+             */
+            bounce_limit: number;
+            /** Format: double */
+            complaint_limit: number;
+            /** Format: int32 */
+            days: number;
+            dmarc: components["schemas"]["DmarcShare"][];
+            providers: components["schemas"]["ProviderDay"][];
+            /** @description The 50 largest sends in the window. */
+            sends: components["schemas"]["SendTotals"][];
         };
         /** @description One published page for a headless site (K5-T3). */
         DeliveredPage: {
@@ -23706,6 +23849,14 @@ export interface components {
             variables?: {
                 [key: string]: string;
             };
+        };
+        /** @description DMARC messages for one domain and how many passed (SPF or DKIM aligned). */
+        DmarcShare: {
+            domain: string;
+            /** Format: int64 */
+            messages: number;
+            /** Format: int64 */
+            passed: number;
         };
         DmarcSourceView: {
             /** Format: int64 */
@@ -25475,6 +25626,18 @@ export interface components {
             scopes: components["schemas"]["ScopeExportResult"][];
             status: string;
         };
+        /** @description One coverage gap. */
+        Gap: {
+            /** Format: uuid */
+            contact_id?: string | null;
+            kind: components["schemas"]["GapKind"];
+            role?: string | null;
+        };
+        /**
+         * @description What a gap is.
+         * @enum {string}
+         */
+        GapKind: "missing_role" | "unmet_high_influence";
         /**
          * @description A row of the authors' knowledge-gap queue (D-452; surfaced by D-489).
          *
@@ -26016,6 +26179,13 @@ export interface components {
              *     lexical-only by configuration.
              */
             embedding_model?: string | null;
+        };
+        /** @description "From influences to". */
+        InfluenceLink: {
+            /** Format: uuid */
+            from_contact: string;
+            /** Format: uuid */
+            to_contact: string;
         };
         IngestResult: {
             /** Format: int64 */
@@ -35076,6 +35246,20 @@ export interface components {
              */
             suggestion_id?: string | null;
         };
+        /** @description One provider's totals on one day. */
+        ProviderDay: {
+            /** Format: int64 */
+            bounced: number;
+            /** Format: int64 */
+            complaints: number;
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            delivered: number;
+            mailbox_provider: string;
+            /** Format: int64 */
+            sent: number;
+        };
         /** @description A booking page as the public sees it. */
         PublicBookingPage: {
             description?: string | null;
@@ -37363,6 +37547,21 @@ export interface components {
             sales_price?: string | null;
             term_months?: string | null;
         };
+        /** @description The queued render. */
+        SalesOrgChartExport: {
+            /**
+             * Format: uuid
+             * @description The docgen render; read it at `GET /api/v1/docgen/renders/{render_id}`.
+             */
+            render_id: string;
+        };
+        /** @description What to export an org chart as. */
+        SalesOrgChartExportBody: {
+            /** @description `pdf`; the document renderer makes PDFs only. */
+            format?: string;
+            /** @description `en` or `ar`; the template shows both languages. */
+            locale?: string | null;
+        };
         SalesOwnerChanged: {
             /** Format: uuid */
             opportunity_id: string;
@@ -37861,6 +38060,22 @@ export interface components {
             mailbox_provider: string;
             /** Format: int64 */
             opened: number;
+            /** Format: int64 */
+            sent: number;
+        };
+        /** @description One send's totals over the window. */
+        SendTotals: {
+            /** Format: int64 */
+            bounced: number;
+            /** Format: int64 */
+            clicked: number;
+            /** Format: int64 */
+            complaints: number;
+            /** Format: int64 */
+            delivered: number;
+            /** Format: int64 */
+            opened: number;
+            send_ref: string;
             /** Format: int64 */
             sent: number;
         };
@@ -80567,6 +80782,47 @@ export interface operations {
             };
         };
     };
+    get_deliverability_overview: {
+        parameters: {
+            query?: {
+                /** @description Days back from today, 1 to 90 (default 30). */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dashboard's figures */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliverabilityOverview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_deliverability_policy.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_send_deliverability: {
         parameters: {
             query?: never;
@@ -86058,6 +86314,60 @@ export interface operations {
             };
         };
     };
+    post_sales_org_chart_export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The account */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesOrgChartExportBody"];
+            };
+        };
+        responses: {
+            /** @description The render is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrgChartExport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such account the caller may read, or no org chart template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A format other than pdf */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_call_outcome: {
         parameters: {
             query?: never;
@@ -87044,6 +87354,47 @@ export interface operations {
             };
             /** @description The new owner is already the owner, or their roles do not allow editing deals */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_committee_map: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The committee */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealMap"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity the caller may read */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

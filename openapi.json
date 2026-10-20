@@ -64729,6 +64729,76 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/deliverability/overview": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "The deliverability dashboard.",
+        "description": "Over the last `days` days: sent, delivered, bounced and complaints per\nmailbox provider and day, the largest sends, the alerts raised with their\nguidance keys, the latest result per target and blocklist, and each\ndomain's DMARC pass share, with the bounce and complaint limits in force.",
+        "operationId": "get_deliverability_overview",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days back from today, 1 to 90 (default 30).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "maximum": 90,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The dashboard's figures",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliverabilityOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_deliverability_policy.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/deliverability/sends/{send_id}": {
       "get": {
         "tags": [
@@ -73725,6 +73795,103 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/sales/accounts/{id}/org-chart/export": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Exports an account's org chart.",
+        "description": "Queues a PDF of the account's people from the built-in \"Account org\nchart\" document template, rendered with what the caller may read, and\nanswers the render's id.",
+        "operationId": "post_sales_org_chart_export",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The account",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesOrgChartExportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The render is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesOrgChartExport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such account the caller may read, or no org chart template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A format other than pdf",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/call-list-members/{id}/outcome": {
       "post": {
         "tags": [
@@ -75340,6 +75507,74 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/opportunities/{id}/committee-map": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "A deal's buying committee.",
+        "description": "The account's chart, each contact on the deal with their role (and\ntheir influence and attitude only through the Deal Attitude profile),\nthe \"influences\" links between them, the roles the deal's stage\nrequires and the coverage gaps, as the caller may read them.",
+        "operationId": "get_sales_committee_map",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The committee",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealMap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/sales/opportunities/{id}/deal-discount": {
@@ -98202,6 +98437,43 @@
           }
         }
       },
+      "AlertView": {
+        "type": "object",
+        "description": "One alert raised by the daily evaluation (E6-T10).",
+        "required": [
+          "day",
+          "subject",
+          "kind",
+          "value",
+          "threshold",
+          "guidance_key"
+        ],
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "guidance_key": {
+            "type": "string",
+            "description": "The screens' translation key for what to do (`deliverabilityAlert.<kind>`)."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`bounce_rate`, `complaint_rate`, `blocklisted`, `dmarc_failures` or\n`reputation_drop`."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "threshold": {
+            "type": "number",
+            "format": "double"
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "AllocationLine": {
         "type": "object",
         "description": "One allocation written.",
@@ -100969,6 +101241,35 @@
           "form",
           "component"
         ]
+      },
+      "BlocklistStatus": {
+        "type": "object",
+        "description": "The latest check of one target on one blocklist.",
+        "required": [
+          "target",
+          "target_kind",
+          "list_name",
+          "listed",
+          "checked_at"
+        ],
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "list_name": {
+            "type": "string"
+          },
+          "listed": {
+            "type": "boolean"
+          },
+          "target": {
+            "type": "string"
+          },
+          "target_kind": {
+            "type": "string"
+          }
+        }
       },
       "BlueprintApplied": {
         "type": "object",
@@ -110076,6 +110377,120 @@
           }
         }
       },
+      "DealContact": {
+        "type": "object",
+        "description": "One contact on the deal.",
+        "required": [
+          "contact_id",
+          "is_primary",
+          "met_recently"
+        ],
+        "properties": {
+          "attitude": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "influence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent unless the caller holds the Deal Attitude profile."
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "met_recently": {
+            "type": "boolean",
+            "description": "A meeting regarding the contact in the last 180 days."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DealMap": {
+        "type": "object",
+        "description": "A deal's buying committee.",
+        "required": [
+          "opportunity_id",
+          "contacts",
+          "influences",
+          "required_roles",
+          "gaps"
+        ],
+        "properties": {
+          "account_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "chart": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrgChart",
+                "description": "The account's chart, when the account is readable."
+              }
+            ]
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DealContact"
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Gap"
+            }
+          },
+          "gaps_computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the stored gaps were computed; `None` when computed for this read."
+          },
+          "influences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InfluenceLink"
+            }
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "required_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "DebitLine": {
         "type": "object",
         "description": "A new line on a debit note.",
@@ -110578,6 +110993,67 @@
           "sent": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "DeliverabilityOverview": {
+        "type": "object",
+        "description": "The deliverability dashboard's figures.",
+        "required": [
+          "days",
+          "bounce_limit",
+          "complaint_limit",
+          "providers",
+          "sends",
+          "alerts",
+          "blocklist",
+          "dmarc"
+        ],
+        "properties": {
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlertView"
+            },
+            "description": "The 100 newest alerts in the window."
+          },
+          "blocklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlocklistStatus"
+            }
+          },
+          "bounce_limit": {
+            "type": "number",
+            "format": "double",
+            "description": "The bounce and complaint limits in force, in percent."
+          },
+          "complaint_limit": {
+            "type": "number",
+            "format": "double"
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dmarc": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DmarcShare"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderDay"
+            }
+          },
+          "sends": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SendTotals"
+            },
+            "description": "The 50 largest sends in the window."
           }
         }
       },
@@ -111363,6 +111839,28 @@
             "propertyNames": {
               "type": "string"
             }
+          }
+        }
+      },
+      "DmarcShare": {
+        "type": "object",
+        "description": "DMARC messages for one domain and how many passed (SPF or DKIM aligned).",
+        "required": [
+          "domain",
+          "messages",
+          "passed"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "passed": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -115507,6 +116005,39 @@
           }
         }
       },
+      "Gap": {
+        "type": "object",
+        "description": "One coverage gap.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GapKind"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GapKind": {
+        "type": "string",
+        "description": "What a gap is.",
+        "enum": [
+          "missing_role",
+          "unmet_high_influence"
+        ]
+      },
       "GapTopic": {
         "type": "object",
         "description": "A row of the authors' knowledge-gap queue (D-452; surfaced by D-489).\n\nThe phrase is the scrubbed topic, never the caller's raw question — read\n[`normalize_gap_phrase`]'s doc before widening anything here, and D-452\nbefore changing what a row stores.",
@@ -116825,6 +117356,24 @@
               "null"
             ],
             "description": "The model chunk vectors are written with, or `None` when knowledge is\nlexical-only by configuration."
+          }
+        }
+      },
+      "InfluenceLink": {
+        "type": "object",
+        "description": "\"From influences to\".",
+        "required": [
+          "from_contact",
+          "to_contact"
+        ],
+        "properties": {
+          "from_contact": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to_contact": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -140452,6 +141001,43 @@
           }
         }
       },
+      "ProviderDay": {
+        "type": "object",
+        "description": "One provider's totals on one day.",
+        "required": [
+          "day",
+          "mailbox_provider",
+          "sent",
+          "delivered",
+          "bounced",
+          "complaints"
+        ],
+        "properties": {
+          "bounced": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "complaints": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "delivered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mailbox_provider": {
+            "type": "string"
+          },
+          "sent": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PublicBookingPage": {
         "type": "object",
         "description": "A booking page as the public sees it.",
@@ -146370,6 +146956,37 @@
           }
         }
       },
+      "SalesOrgChartExport": {
+        "type": "object",
+        "description": "The queued render.",
+        "required": [
+          "render_id"
+        ],
+        "properties": {
+          "render_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The docgen render; read it at `GET /api/v1/docgen/renders/{render_id}`."
+          }
+        }
+      },
+      "SalesOrgChartExportBody": {
+        "type": "object",
+        "description": "What to export an org chart as.",
+        "properties": {
+          "format": {
+            "type": "string",
+            "description": "`pdf`; the document renderer makes PDFs only."
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en` or `ar`; the template shows both languages."
+          }
+        }
+      },
       "SalesOwnerChanged": {
         "type": "object",
         "required": [
@@ -147736,6 +148353,48 @@
           "opened": {
             "type": "integer",
             "format": "int64"
+          },
+          "sent": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SendTotals": {
+        "type": "object",
+        "description": "One send's totals over the window.",
+        "required": [
+          "send_ref",
+          "sent",
+          "delivered",
+          "bounced",
+          "complaints",
+          "opened",
+          "clicked"
+        ],
+        "properties": {
+          "bounced": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "clicked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "complaints": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "delivered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "opened": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "send_ref": {
+            "type": "string"
           },
           "sent": {
             "type": "integer",
@@ -156287,7 +156946,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
@@ -156340,5 +156998,6 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": []
 }
