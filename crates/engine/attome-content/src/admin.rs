@@ -33,7 +33,7 @@ use sqlx::types::Json as SqlxJson;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-const PAGE_COLUMNS: &str = "id, parent_page_id, content_space_id, title, url_path, status, \
+pub(crate) const PAGE_COLUMNS: &str = "id, parent_page_id, content_space_id, title, url_path, status, \
      template_id, blocks_draft, blocks_published, seo_title, seo_description, published_at, \
      publish_at, unpublish_at, row_version, created_at, updated_at, review_by, audience";
 
@@ -690,7 +690,15 @@ pub async fn do_publish_page(
     let version_number =
         crate::versions::record_version_in_tx(&mut tx, id, actor, restored_from).await?;
     // E12-T1: the version's HTML, rendered once here so serving it does no work.
-    crate::render_html::render_version_in_tx(&mut tx, id, version_number).await?;
+    crate::render_html::render_version_in_tx(
+        &mut tx,
+        id,
+        version_number,
+        &crate::render_html::Site {
+            base_url: state.base.config.frontend_url(),
+        },
+    )
+    .await?;
 
     attome_audit::security::write_security_event(
         &mut tx,

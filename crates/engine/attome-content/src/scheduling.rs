@@ -141,7 +141,15 @@ pub async fn sweep_scheduled_transitions(state: &EngineState) -> Result<SweepSta
                 crate::versions::record_version_in_tx(&mut tx, draft.id, SCHEDULER_ACTOR_ID, None)
                     .await?;
             // E12-T1: the scheduled publish renders its HTML too.
-            crate::render_html::render_version_in_tx(&mut tx, draft.id, version).await?;
+            crate::render_html::render_version_in_tx(
+                &mut tx,
+                draft.id,
+                version,
+                &crate::render_html::Site {
+                    base_url: state.base.config.frontend_url(),
+                },
+            )
+            .await?;
         }
         tx.commit().await.map_err(AppError::internal)?;
 

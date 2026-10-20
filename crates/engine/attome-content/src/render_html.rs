@@ -19,7 +19,16 @@
 //!
 //! **The head** ([`render_head`]) is the one function that writes `<head>`:
 //! the title, the description (the SEO description, else the first
-//! paragraph), the canonical link and robots directives. E13-T6 extends it.
+//! paragraph), the canonical link and robots directives (E12-T1); and
+//! (E13-T6) the Open Graph card (`og:title`, `og:description`, `og:image`,
+//! `og:locale`), the X card, an `hreflang` link for every published public
+//! language version of the page (its K5 linked translations) with
+//! `x-default` on the original, and one JSON-LD script for each structured
+//! data document that passes `validate_json_ld` (one that fails is logged
+//! with the page and skipped). Absolute URLs start from the deployment's
+//! public frontend URL (`app.public_frontend_url`). Attribute values are
+//! HTML-escaped; JSON-LD is written as JSON with `<` escaped so it cannot
+//! close its script.
 
 use attome_html::escape_html;
 use serde_json::Value;
@@ -30,7 +39,7 @@ use crate::model::{Block, BlockKind};
 const MAX_DEPTH: usize = 3;
 
 /// What `<head>` says.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct HeadInput {
     pub title: String,
     pub description: Option<String>,
@@ -39,6 +48,60 @@ pub struct HeadInput {
     pub nofollow: bool,
     /// `ar`, `en`, …; `None` is English.
     pub language: Option<String>,
+    /// E13-T6: the Open Graph card.
+    pub og_title: Option<String>,
+    pub og_description: Option<String>,
+    /// An absolute URL.
+    pub og_image: Option<String>,
+    /// The page's language versions: (language, absolute URL).
+    pub alternates: Vec<(String, String)>,
+    /// The original language version's absolute URL.
+    pub x_default: Option<String>,
+    /// Structured data documents that passed validation.
+    pub json_ld: Vec<Value>,
+}
+
+/// Where the site is served, for absolute URLs.
+#[derive(Debug, Clone, Default)]
+pub struct Site {
+    /// The deployment's public frontend URL, without a trailing slash.
+    pub base_url: String,
+}
+
+impl Site {
+    /// `path` (a site path) as an absolute URL; an absolute URL unchanged.
+    /// Pure.
+    pub fn absolute(&self, path: &str) -> String {
+        let p = path.trim();
+        if p.starts_with("http://") || p.starts_with("https://") {
+            return p.to_owned();
+        }
+        let base = self.base_url.trim().trim_end_matches('/');
+        if p.starts_with('/') {
+            format!("{base}{p}")
+        } else {
+            format!("{base}/{p}")
+        }
+    }
+}
+
+/// The Open Graph locale for a language. Pure.
+pub fn og_locale(language: Option<&str>) -> &'static str {
+    match language
+        .map(|l| l.split(['-', '_']).next().unwrap_or(l).to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("ar") => "ar_SA",
+        Some("fr") => "fr_FR",
+        Some("es") => "es_ES",
+        Some("de") => "de_DE",
+        _ => "en_US",
+    }
+}
+
+/// JSON safe inside a `<script>` element: `<` written as `\u003c`. Pure.
+pub fn script_json(value: &Value) -> String {
+    value.to_string().replace('<', "\\u003c")
 }
 
 /// A published page to render.
@@ -84,6 +147,54 @@ pub fn render_head(head: &HeadInput) -> String {
             "<meta name=\"robots\" content=\"{}\">",
             robots.join(",")
         ));
+    }
+    let meta = |out: &mut String, property: &str, content: &str| {
+        out.push_str(&format!(
+            "<meta property=\"{property}\" content=\"{}\">",
+            escape_html(content)
+        ));
+    };
+    meta(
+        &mut out,
+        "og:title",
+        head.og_title.as_deref().unwrap_or(&head.title),
+    );
+    if let Some(d) = head
+        .og_description
+        .as_deref()
+        .or(head.description.as_deref())
+        .filter(|d| !d.trim().is_empty())
+    {
+        meta(&mut out, "og:description", d);
+    }
+    if let Some(i) = head.og_image.as_deref().filter(|i| safe_url(i)) {
+        meta(&mut out, "og:image", i);
+    }
+    if let Some(c) = head.canonical_url.as_deref().filter(|c| safe_url(c)) {
+        meta(&mut out, "og:url", c);
+    }
+    meta(&mut out, "og:type", "website");
+    meta(&mut out, "og:locale", og_locale(head.language.as_deref()));
+    out.push_str("<meta name=\"twitter:card\" content=\"summary_large_image\">");
+    for (language, url) in &head.alternates {
+        if safe_url(url) {
+            out.push_str(&format!(
+                "<link rel=\"alternate\" hreflang=\"{}\" href=\"{}\">",
+                escape_html(language),
+                escape_html(url)
+            ));
+        }
+    }
+    if let Some(url) = head.x_default.as_deref().filter(|u| safe_url(u)) {
+        out.push_str(&format!(
+            "<link rel=\"alternate\" hreflang=\"x-default\" href=\"{}\">",
+            escape_html(url)
+        ));
+    }
+    for doc in &head.json_ld {
+        out.push_str("<script type=\"application/ld+json\">");
+        out.push_str(&script_json(doc));
+        out.push_str("</script>");
     }
     out.push_str("<style>");
     out.push_str(BASE_STYLE);
@@ -226,7 +337,9 @@ pub async fn render_version_in_tx(
     tx: &mut attome_db::Tx<'_>,
     page_id: uuid::Uuid,
     version: i32,
+    site: &Site,
 ) -> Result<(), attome_types::AppError> {
+    use attome_types::AppError;
     type Row = (
         String,
         Value,
@@ -236,10 +349,15 @@ pub async fn render_version_in_tx(
         bool,
         bool,
         Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<uuid::Uuid>,
+        String,
     );
     let row: Option<Row> = sqlx::query_as(
         "SELECT v.title, v.blocks, v.seo_title, v.seo_description, p.seo_canonical_url, \
-                p.seo_noindex, p.seo_nofollow, p.language \
+                p.seo_noindex, p.seo_nofollow, p.language, p.og_title, p.og_description, \
+                p.translation_of, p.page_type \
            FROM content_page_version v JOIN content_page p ON p.id = v.page_id \
           WHERE v.page_id = $1 AND v.version_number = $2",
     )
@@ -247,24 +365,114 @@ pub async fn render_version_in_tx(
     .bind(version)
     .fetch_optional(&mut **tx)
     .await
-    .map_err(attome_types::AppError::internal)?;
-    let Some((title, blocks, seo_title, seo_description, canonical, noindex, nofollow, language)) =
-        row
+    .map_err(AppError::internal)?;
+    let Some((
+        title,
+        blocks,
+        seo_title,
+        seo_description,
+        canonical,
+        noindex,
+        nofollow,
+        language,
+        og_title,
+        og_description,
+        translation_of,
+        page_type,
+    )) = row
     else {
         return Ok(());
     };
+    let detail: Option<crate::model::PageDetail> = sqlx::query_as(&format!(
+        "SELECT {} FROM content_page WHERE id = $1 AND is_deleted = FALSE",
+        crate::admin::PAGE_COLUMNS
+    ))
+    .bind(page_id)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
     let blocks: Vec<Block> = serde_json::from_value(blocks).unwrap_or_default();
-    let description = seo_description
-        .filter(|d| !d.trim().is_empty())
-        .or_else(|| crate::seo::settings::first_paragraph(&blocks));
+    let stored = crate::seo::settings::PageSeo {
+        title: seo_title,
+        description: seo_description,
+        canonical_url: canonical,
+        noindex,
+        nofollow,
+        og_title,
+        og_description,
+        og_image_ref: None,
+    };
+    let seo = match &detail {
+        Some(d) => crate::seo::settings::effective(&stored, d, "", &site.base_url),
+        None => stored.clone(),
+    };
+
+    // K5 linked translations: every published public language version.
+    let root = translation_of.unwrap_or(page_id);
+    let versions: Vec<(uuid::Uuid, Option<String>, String)> = sqlx::query_as(
+        "SELECT id, language, url_path FROM content_page \
+          WHERE (id = $1 OR translation_of = $1) AND status = 'published' \
+            AND is_deleted = FALSE AND audience = 'public' ORDER BY id",
+    )
+    .bind(root)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let alternates: Vec<(String, String)> = if versions.len() > 1 {
+        versions
+            .iter()
+            .filter_map(|(_, l, path)| {
+                let l = l.as_deref()?.trim();
+                (!l.is_empty()).then(|| (l.to_owned(), site.absolute(path)))
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let x_default = (!alternates.is_empty())
+        .then(|| versions.iter().find(|(id, _, _)| *id == root))
+        .flatten()
+        .map(|(_, _, path)| site.absolute(path));
+
+    // The page's own first image is its card image.
+    let og_image = blocks
+        .iter()
+        .find(|b| b.kind == BlockKind::Image)
+        .map(|b| text(&b.props, "src").to_owned())
+        .filter(|src| safe_url(src))
+        .map(|src| site.absolute(&src));
+
+    let mut json_ld = Vec::new();
+    if let Some(d) = detail.as_ref().filter(|_| page_type == "article") {
+        let doc = crate::seo::structured_data::json_ld(
+            d,
+            crate::seo::structured_data::SchemaKind::Article,
+            &[],
+        );
+        match crate::seo::structured_data::validate_json_ld(&doc) {
+            Ok(()) => json_ld.push(doc),
+            Err(problems) => tracing::warn!(
+                page = %page_id,
+                problems = ?problems,
+                "page structured data failed validation; not written"
+            ),
+        }
+    }
+
     let html = render_page(&PageInput {
         head: HeadInput {
-            title: seo_title.filter(|t| !t.trim().is_empty()).unwrap_or(title),
-            description,
-            canonical_url: canonical,
+            title: seo.title.clone().unwrap_or(title),
+            description: seo.description.clone(),
+            canonical_url: seo.canonical_url.clone(),
             noindex,
             nofollow,
             language,
+            og_title: seo.og_title.clone(),
+            og_description: seo.og_description.clone(),
+            og_image,
+            alternates,
+            x_default,
+            json_ld,
         },
         blocks,
     });
@@ -276,7 +484,7 @@ pub async fn render_version_in_tx(
     .bind(&html)
     .execute(&mut **tx)
     .await
-    .map_err(attome_types::AppError::internal)?;
+    .map_err(AppError::internal)?;
     Ok(())
 }
 
@@ -303,6 +511,7 @@ mod tests {
                 noindex: true,
                 nofollow: false,
                 language: Some(language.into()),
+                ..HeadInput::default()
             },
             blocks,
         }
@@ -354,6 +563,44 @@ mod tests {
         assert!(html.contains("<h2>الأسعار</h2>"));
         assert!(is_rtl(Some("ar-SA")));
         assert!(!is_rtl(Some("en")));
+    }
+
+    #[test]
+    fn head_carries_cards_alternates_and_json_ld() {
+        let site = Site {
+            base_url: "https://example.com/".into(),
+        };
+        let mut p = page("ar", vec![]);
+        p.head.og_image = Some(site.absolute("/media/card.png"));
+        p.head.alternates = vec![
+            ("ar".into(), site.absolute("/ar/pricing")),
+            ("en".into(), site.absolute("/pricing")),
+        ];
+        p.head.x_default = Some(site.absolute("/pricing"));
+        p.head.json_ld = vec![serde_json::json!({
+            "@context": "https://schema.org", "@type": "Article",
+            "headline": "</script><script>alert(1)</script>", "datePublished": "2026-10-20"
+        })];
+        let html = render_page(&p);
+        assert!(html.contains("<meta property=\"og:title\" content=\"Pricing &amp; plans\">"));
+        assert!(html.contains(
+            "<meta property=\"og:image\" content=\"https://example.com/media/card.png\">"
+        ));
+        assert!(html.contains("<meta property=\"og:locale\" content=\"ar_SA\">"));
+        assert!(html.contains("<meta name=\"twitter:card\" content=\"summary_large_image\">"));
+        assert!(html.contains(
+            "<link rel=\"alternate\" hreflang=\"ar\" href=\"https://example.com/ar/pricing\">"
+        ));
+        assert!(html.contains(
+            "<link rel=\"alternate\" hreflang=\"en\" href=\"https://example.com/pricing\">"
+        ));
+        assert!(html.contains("hreflang=\"x-default\" href=\"https://example.com/pricing\""));
+        assert_eq!(html.matches("application/ld+json").count(), 1);
+        assert!(
+            !html.contains("</script><script>alert"),
+            "JSON-LD cannot close its script"
+        );
+        assert_eq!(og_locale(Some("en-GB")), "en_US");
     }
 
     #[test]
