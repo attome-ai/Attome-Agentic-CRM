@@ -2721,6 +2721,10 @@ pub const SMS_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("sms_ca
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
 
+/// E7-T5: one static list import (payload `{"import_id"}`).
+pub const MARKETING_LIST_IMPORT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::static_list::IMPORT_JOB, 1);
+
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
     attome_jobs::JobType::new("social_reviews_sync", 1);
@@ -2817,6 +2821,22 @@ pub fn register_job_types() {
                 if sent > 0 {
                     tracing::info!(sent, "sms campaign: run complete");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MARKETING_LIST_IMPORT,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                #[derive(serde::Deserialize)]
+                struct Payload {
+                    import_id: uuid::Uuid,
+                }
+                let payload: Payload = job.payload()?;
+                attome_marketing::static_list::run_import(&state, payload.import_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

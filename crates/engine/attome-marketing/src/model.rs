@@ -72,5 +72,6 @@ impl EngineModel for MarketingModel {
                 post(crate::sms_campaign::post_sms_send),
             )
             .merge(crate::deliverability::routes::routes())
+            .merge(crate::static_list::routes())
     }
 }

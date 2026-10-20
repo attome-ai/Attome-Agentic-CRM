@@ -51,7 +51,7 @@ async fn list_info(state: &EngineState, list: Uuid) -> Result<ListRow, AppError>
 }
 
 /// The ids among `ids` of `entity` that `ctx` may read.
-async fn readable(
+pub(crate) async fn readable(
     state: &EngineState,
     ctx: &SecurityContext,
     entity: &str,

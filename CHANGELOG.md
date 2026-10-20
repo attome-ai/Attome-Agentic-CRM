@@ -132,6 +132,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Static list operations (E7-T5): `POST /api/v1/marketing/lists/{id}/members` and `/members/remove`
+  (at most 1,000 readable people, membership events and audit), `POST /api/v1/marketing/lists/{id}/imports`
+  (a CSV document of emails or ids, run by the `marketing_list_import` job with its progress at
+  `GET .../imports/{import_id}`) and `POST .../imports/{import_id}/undo` (removes exactly that import's
+  members within seven days). Segment lists refuse all of them. Migration 0166.
 - Deliverability routes (E6-T11): `GET /api/v1/marketing/deliverability/daily` (paged rollup),
   `GET /api/v1/marketing/deliverability/sends/{send_id}`, `GET /api/v1/marketing/deliverability/dmarc`
   and `POST /api/v1/marketing/deliverability/dmarc/upload` (administrators; the report file as the
