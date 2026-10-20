@@ -2679,6 +2679,8 @@ const DEDUP_KEY_CASE_SUMMARY: &str = "case-summary";
 const DEDUP_KEY_SMS_CAMPAIGN: &str = "sms-campaign";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
+/// E7-T6: the live segment tick (a registered job type).
+const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 /// E23-T1: profile event retention (a registered job type).
 const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
@@ -2724,6 +2726,10 @@ pub const SMS_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("sms_ca
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
+
+/// E7-T6: live segments re-checked for the people a change-feed batch touched.
+pub const SEGMENT_LIVE: attome_jobs::JobType =
+    attome_jobs::JobType::new("marketing_segment_live", 1);
 
 /// E23-T1: drops profile event months past retention.
 pub const PROFILE_EVENT_RETENTION: attome_jobs::JobType =
@@ -2843,6 +2849,20 @@ pub fn register_job_types() {
                 }
                 let payload: Payload = job.payload()?;
                 attome_marketing::static_list::run_import(&state, payload.import_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SEGMENT_LIVE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_marketing::segment_live::live_tick(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
@@ -3062,6 +3082,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
         EngineJob::Registered(job) if job.name == SMS_CAMPAIGN.name => DEDUP_KEY_SMS_CAMPAIGN,
+        EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
         EngineJob::Registered(job) if job.name == PROFILE_EVENT_RETENTION.name => {
             DEDUP_KEY_PROFILE_EVENT_RETENTION
         }
@@ -3525,6 +3546,19 @@ pub fn spawn_sms_campaign_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SMS_CAMPAIGN, "sms campaign");
+}
+
+/// E7-T6: every five seconds, one tick of live segments (one pending at most).
+pub fn spawn_segment_live_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(SEGMENT_LIVE.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "live segments: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SEGMENT_LIVE, "live segments");
 }
 
 /// E23-T1: daily, profile event months past retention.

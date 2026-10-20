@@ -132,6 +132,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Live segments (E7-T6): a segment list with `refresh_mode = live` is re-checked every five seconds for
+  only the people a change-feed batch touched (the record, or the target records whose lookup points
+  at it), as its owner, with one membership event per change (reason `live`). Its query may read only
+  its target, consent and entities one lookup away (from the published version's relations); others
+  stay on the scheduled refresh.
 - Journey storage (E8-T3): `workflow_definition.kind` (`flow`, `journey`, `nurture`; existing ones are
   flows) and the journey enrolment, node-count, message-log and block tables (migration 0168); the
   marketing pack's `marketing_journey` settings entity (pack changeset 0007), whose status only the

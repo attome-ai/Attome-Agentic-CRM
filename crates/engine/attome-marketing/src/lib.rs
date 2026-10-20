@@ -25,6 +25,8 @@ pub mod profile_events;
 pub mod referral;
 pub mod segment;
 pub mod segment_insight;
+/// E7-T6: live segments re-checked from the change feed.
+pub mod segment_live;
 pub mod send_time;
 /// E16-T1: SMS campaigns with consent, an estimate and quiet hours.
 pub mod sms_campaign;

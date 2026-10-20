@@ -116,6 +116,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_case_summary_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // E16-T1: SMS campaigns, a batch every five minutes.
     crate::jobs::spawn_sms_campaign_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // E7-T6: live segments, a tick every five seconds.
+    crate::jobs::spawn_segment_live_scheduler(db.clone(), std::time::Duration::from_secs(5));
     // E23-T1: profile event months past retention, daily.
     crate::jobs::spawn_profile_event_retention_scheduler(
         db.clone(),
