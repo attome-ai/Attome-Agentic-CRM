@@ -32,7 +32,7 @@ use axum::{
 };
 use chrono::{DateTime, NaiveTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -521,6 +521,7 @@ pub(crate) struct ApiDocFragment;
 mod sms_campaign {
     use super::*;
     use chrono::TimeZone;
+    use serde_json::json;
 
     fn hhmm(t: &str) -> NaiveTime {
         NaiveTime::parse_from_str(t, "%H:%M").unwrap()

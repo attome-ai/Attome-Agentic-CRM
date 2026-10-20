@@ -31,7 +31,6 @@ use axum::{
 };
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::{IntoParams, ToSchema};
 
 /// `marketing_deliverability_policy.read` — who may read deliverability.

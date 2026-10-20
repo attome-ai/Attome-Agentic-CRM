@@ -32,7 +32,7 @@ use std::time::Duration;
 
 use attome_core::EngineState;
 use attome_types::AppError;
-use serde_json::{Value, json};
+use serde_json::Value;
 use uuid::Uuid;
 
 use super::{bots, writer};

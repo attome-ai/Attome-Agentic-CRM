@@ -19,7 +19,7 @@ use attome_core::EngineState;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
