@@ -43,7 +43,7 @@ export function groupByDay(
 ): SlotDay[] {
   const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
   const dayLabel = new Intl.DateTimeFormat(locale, { timeZone, weekday: 'long', day: 'numeric', month: 'long' });
-  const time = new Intl.DateTimeFormat(locale, { timeZone, hour: 'numeric', minute: '2-digit' });
+  const time = new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit' });
   const days: SlotDay[] = [];
   for (const s of [...slots].sort((a, b) => Date.parse(a.start) - Date.parse(b.start))) {
     const at = new Date(s.start);
@@ -78,9 +78,9 @@ export function ownTimeZone(): string {
 /** A meeting's time as one line, in the reader's language. Pure. */
 export function meetingTime(start: string, end: string, locale: string, timeZone?: string): string {
   const from = new Intl.DateTimeFormat(locale, {
-    timeZone, weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit',
+    timeZone, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
   });
-  const to = new Intl.DateTimeFormat(locale, { timeZone, hour: 'numeric', minute: '2-digit' });
+  const to = new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit' });
   return `${from.format(new Date(start))} – ${to.format(new Date(end))}`;
 }
 

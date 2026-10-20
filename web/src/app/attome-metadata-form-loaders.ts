@@ -139,7 +139,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     ]],
     [coreEntity, [
       'attome_document', 'note', 'api_key', 'authentication_type', 'autovalue',
-      'docgen_template', 'communication', 'communication_event', 'follow', 'glossary_term',
+      'docgen_template', 'communication', 'communication_event', 'follow', 'feed_post', 'glossary_term',
       'license', 'profiler_finding', 'record_relationship', 'resource_skill',
       'resource_availability', 'tag_category', 'tag_item', 'reminder', 'activity',
       'scan_action', 'task_checklist_item',
@@ -195,7 +195,9 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     [service, [
       'service_work_request', 'service_sla_policy', 'service_ticket', 'service_offering',
       'service_sla_clock', 'service_work_queue', 'service_work_queue_member',
-      'service_sla_calculation', 'supplier_sla_clock',
+      'service_sla_calculation', 'supplier_sla_clock', 'service_escalation_rule',
+      'service_conversion_map', 'service_catalog', 'service_category', 'service_offering_version',
+      'service_request_item', 'service_fulfilment_task', 'service_order_guide',
     ]],
     [portal, ['webportal', 'webportal_user']],
     [assetManagement, ['asset', 'location']],

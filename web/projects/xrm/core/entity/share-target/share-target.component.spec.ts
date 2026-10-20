@@ -17,8 +17,8 @@ function sharedCache() {
       title: '', text: 'From my phone', url: '',
       files: [{ name: 'a.pdf', type: 'application/pdf' }, { name: 'b.png', type: 'image/png' }],
     }))],
-    ['/share-target/file/0', new Response(new Blob(['pdf']))],
-    ['/share-target/file/1', new Response(new Blob(['png']))],
+    ['/share-target/file/0', new Response('pdf')],
+    ['/share-target/file/1', new Response('png')],
   ]);
   const cache = { match: vi.fn(async (key: string) => entries.get(key)?.clone()) };
   return { open: vi.fn(async () => cache), delete: vi.fn(async () => true) };
