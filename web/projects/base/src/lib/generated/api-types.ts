@@ -10001,7 +10001,7 @@ export interface paths {
          *     currency with planned charges due by `as_of`, in a background job; the
          *     charges become requested. A run that stops carries on where it stopped.
          */
-        post: operations["post_run"];
+        post: operations["start_billing_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10022,7 +10022,7 @@ export interface paths {
          * @description Lists, per account, billing period and currency, the planned charges a
          *     run on `as_of` would request from invoicing. Writes nothing.
          */
-        post: operations["post_preview"];
+        post: operations["preview_billing_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10062,7 +10062,7 @@ export interface paths {
          * @description The subscription as the caller may read it, with each line's quantity
          *     and price in force on `as_of` (today when absent).
          */
-        get: operations["get_subscription"];
+        get: operations["get_billing_subscription"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10129,7 +10129,7 @@ export interface paths {
          * @description At the end of its term, or on a date: the lines end then. Needs
          *     `subscription.cancel`.
          */
-        post: operations["post_cancel"];
+        post: operations["cancel_billing_subscription"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14402,6 +14402,28 @@ export interface paths {
         get: operations["lookup_status"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/viewing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say I am viewing a record, and see who else is.
+         * @description Records the caller's heartbeat on a record they can read (kept two
+         *     minutes) and answers the other people viewing it now, most recent first.
+         *     Send it every `heartbeat_secs` while the record is open.
+         */
+        post: operations["post_viewing"];
         delete?: never;
         options?: never;
         head?: never;
@@ -39796,6 +39818,26 @@ export interface components {
             sidebar_items: number;
             /** @description What to tell the person about to change it. */
             warnings: string[];
+        };
+        Viewer: {
+            name: string;
+            /** Format: uuid */
+            user_id: string;
+        };
+        ViewingRequest: {
+            /** @description The record's entity logical name. */
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        ViewingResponse: {
+            /**
+             * Format: int64
+             * @description Seconds until the next heartbeat is due.
+             */
+            heartbeat_secs: number;
+            /** @description Everyone else viewing the record now, most recent first. */
+            viewers: components["schemas"]["Viewer"][];
         };
         /** @description `POST /api/v1/cobrowse/visitor/end`. */
         VisitorEnd: {
@@ -73937,7 +73979,7 @@ export interface operations {
             };
         };
     };
-    post_run: {
+    start_billing_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -73979,7 +74021,7 @@ export interface operations {
             };
         };
     };
-    post_preview: {
+    preview_billing_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -74081,7 +74123,7 @@ export interface operations {
             };
         };
     };
-    get_subscription: {
+    get_billing_subscription: {
         parameters: {
             query?: never;
             header?: never;
@@ -74266,7 +74308,7 @@ export interface operations {
             };
         };
     };
-    post_cancel: {
+    cancel_billing_subscription: {
         parameters: {
             query?: never;
             header?: never;
@@ -87248,6 +87290,48 @@ export interface operations {
                 };
             };
             /** @description No such token — identical response whether the token is malformed, unknown, wrong, or the deployment isn't licensed for this module */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_viewing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewingRequest"];
+            };
+        };
+        responses: {
+            /** @description Who else is viewing the record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewingResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
             404: {
                 headers: {
                     [name: string]: unknown;

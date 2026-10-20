@@ -55437,7 +55437,7 @@
         ],
         "summary": "Starts a billing run.",
         "description": "Requests an invoice from invoicing for each account, billing period and\ncurrency with planned charges due by `as_of`, in a background job; the\ncharges become requested. A run that stops carries on where it stopped.",
-        "operationId": "post_run",
+        "operationId": "start_billing_run",
         "requestBody": {
           "content": {
             "application/json": {
@@ -55512,7 +55512,7 @@
         ],
         "summary": "Previews a billing run.",
         "description": "Lists, per account, billing period and currency, the planned charges a\nrun on `as_of` would request from invoicing. Writes nothing.",
-        "operationId": "post_preview",
+        "operationId": "preview_billing_run",
         "requestBody": {
           "content": {
             "application/json": {
@@ -55678,7 +55678,7 @@
         ],
         "summary": "Reads a subscription as of a date.",
         "description": "The subscription as the caller may read it, with each line's quantity\nand price in force on `as_of` (today when absent).",
-        "operationId": "get_subscription",
+        "operationId": "get_billing_subscription",
         "parameters": [
           {
             "name": "id",
@@ -55993,7 +55993,7 @@
         ],
         "summary": "Cancels a subscription.",
         "description": "At the end of its term, or on a date: the lines end then. Needs\n`subscription.cancel`.",
-        "operationId": "post_cancel",
+        "operationId": "cancel_billing_subscription",
         "parameters": [
           {
             "name": "id",
@@ -77355,6 +77355,77 @@
         "x-privilege": "public",
         "x-rate-class": "portal_status",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/service/viewing": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Say I am viewing a record, and see who else is.",
+        "description": "Records the caller's heartbeat on a record they can read (kept two\nminutes) and answers the other people viewing it now, most recent first.\nSend it every `heartbeat_secs` while the record is open.",
+        "operationId": "post_viewing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Who else is viewing the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a viewing heartbeat kept two minutes in Redis; no business or security effect",
+          "reason": "telemetry",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/settings/me": {
@@ -151603,6 +151674,60 @@
           }
         }
       },
+      "Viewer": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ViewingRequest": {
+        "type": "object",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The record's entity logical name."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ViewingResponse": {
+        "type": "object",
+        "required": [
+          "viewers",
+          "heartbeat_secs"
+        ],
+        "properties": {
+          "heartbeat_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds until the next heartbeat is due."
+          },
+          "viewers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Viewer"
+            },
+            "description": "Everyone else viewing the record now, most recent first."
+          }
+        }
+      },
       "VisitorEnd": {
         "type": "object",
         "description": "`POST /api/v1/cobrowse/visitor/end`.",
@@ -152678,6 +152803,7 @@
     }
   ],
   "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -152729,6 +152855,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }
