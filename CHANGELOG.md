@@ -133,6 +133,20 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Power dialer documented (D21-T14, `docs/dialer.md`): the call list routes
+  `POST /api/v1/sales/call-lists/{id}/build`, `/claim`, `/dial` and `/voicemail`, and
+  `POST /api/v1/sales/call-list-members/{id}/outcome` and `/skip`; what is off until set up, and that
+  no calling hours ship (a country without a `calling_hours` row cannot be called). The per-person
+  calling metrics now count each call for the person who made it (sales pack changeset 0022).
+- Deal committee and org chart export (D23-T7, D23-T9): `GET /api/v1/sales/opportunities/{id}/committee-map`
+  answers a deal's contacts with their roles (influence and attitude only through the Deal Attitude
+  profile), influence links, the stage's required roles and the coverage gaps;
+  `POST /api/v1/sales/accounts/{id}/org-chart/export` queues a PDF of the account's people (202, the
+  docgen render id).
+- Email deliverability (E6-T10, E6-T13): `POST /api/v1/marketing/precheck` scores a message before it
+  is sent; `GET /api/v1/marketing/deliverability/overview` gives the dashboard's figures; the daily
+  alerts notify the marketing owner role and administrators. Marketing > Deliverability shows the
+  dashboard.
 - Page redirects and Arabic paths (E13-T5): changing a page's `url_path` keeps the old path working —
   `GET /api/v1/content/view`, `/content/delivery` and `/content/internal` answer an old path with 301 and a
   `Location` naming the page's current path (percent-encoded), only for a published page the caller's
