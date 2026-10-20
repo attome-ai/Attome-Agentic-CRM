@@ -23,6 +23,18 @@ impl EngineModel for MarketingModel {
         &[]
     }
 
+    /// E8-T3: a journey's status moves only through the journey engine
+    /// (publish, pause); a new journey starts as a draft.
+    fn engine_managed_fields(&self) -> &'static [(&'static str, &'static str)] {
+        &[("marketing_journey", "status")]
+    }
+
+    fn engine_managed_initial_values(
+        &self,
+    ) -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("marketing_journey", "status", "draft")]
+    }
+
     /// E6-T6: an email address with a syntax error is refused on every
     /// generic write of a contact or lead; the softer findings are warnings
     /// from `address_check::check_address`, never a refusal.

@@ -132,6 +132,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Journey storage (E8-T3): `workflow_definition.kind` (`flow`, `journey`, `nurture`; existing ones are
+  flows) and the journey enrolment, node-count, message-log and block tables (migration 0168); the
+  marketing pack's `marketing_journey` settings entity (pack changeset 0007), whose status only the
+  journey engine moves.
+- Workflow step seam (E8-T1): engines register workflow step handlers and kind guards on the
+  `EngineSystem` builder (`attome_core::workflow_step`).
 - Profile events (E23-T1): `profile_event` (migration 0167), monthly partitions kept ahead by the
   partition job, indexed by contact and by anonymous id; the daily `profile_event_retention` job drops
   months older than `marketing.profile_event_retention_months` (default 13).
