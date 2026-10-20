@@ -31,6 +31,7 @@ pub mod owner_change;
 pub mod plays;
 pub mod price_resolution;
 pub mod pricing;
+pub mod quote;
 /// D9-T3: quote acceptance by guest link.
 pub mod quote_accept;
 pub mod quote_sync;
@@ -64,6 +65,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<catalogue::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<schedules::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<quote::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::skip::ApiDocFragment as utoipa::OpenApi>::openapi());

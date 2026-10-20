@@ -131,6 +131,18 @@ impl EngineModel for SalesModel {
                 post(crate::quote_sync::post_sales_quote_sync),
             )
             .route(
+                "/api/v1/sales/quotes/{id}/reprice",
+                post(crate::quote::post_sales_quote_reprice),
+            )
+            .route(
+                "/api/v1/sales/quotes/{id}/versions",
+                post(crate::quote::post_sales_quote_version),
+            )
+            .route(
+                "/api/v1/sales/quotes/{id}/primary",
+                post(crate::quote::post_sales_quote_primary),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/deal-discount",
                 post(crate::opportunity_lines::post_sales_deal_discount),
             )
