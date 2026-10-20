@@ -11,6 +11,8 @@ pub mod email_threading;
 pub mod entitlement;
 /// G8-T1: escalation rule sets compiled into M10 timers.
 pub mod escalation;
+/// G5-T3: agent presence and record viewers.
+pub mod inbox;
 mod intake;
 pub mod model;
 pub mod offering;
@@ -18,7 +20,6 @@ pub mod oncall;
 /// G3-T2: cart orders.
 pub mod order;
 pub mod portal;
-/// G5-T3: agent presence and record viewers.
 pub mod presence;
 pub mod queue;
 pub mod routing;
@@ -46,5 +47,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(timeline::openapi_fragment());
     doc.merge(queue::openapi_fragment());
     doc.merge(presence::openapi_fragment());
+    doc.merge(inbox::openapi_fragment());
     doc
 }

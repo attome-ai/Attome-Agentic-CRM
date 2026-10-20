@@ -415,6 +415,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.NewRequestPickerComponent),
           },
           {
+            // C8-T1: the shared inbox.
+            path: 'service/inbox',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/service/inbox').then(m => m.InboxComponent),
+          },
+          {
             // G5-T1: the agent's workspace: home, session tabs, context.
             path: 'service/workspace',
             canActivate: [authGuard],
