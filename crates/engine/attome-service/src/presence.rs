@@ -208,6 +208,11 @@ pub async fn viewing(
         "a viewing heartbeat kept two minutes in Redis; no business or security effect",
     )))),
 )]
+/// Say I am viewing a record, and see who else is.
+///
+/// Records the caller's heartbeat on a record they can read (kept two
+/// minutes) and answers the other people viewing it now, most recent first.
+/// Send it every `heartbeat_secs` while the record is open.
 async fn post_viewing(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,

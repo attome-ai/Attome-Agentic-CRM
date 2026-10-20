@@ -248,6 +248,7 @@ pub(crate) async fn post_subscription(
 #[utoipa::path(
     get,
     path = "/api/v1/billing/subscriptions/{id}",
+    operation_id = "get_billing_subscription",
     tag = "billing",
     params(("id" = Uuid, Path, description = "The subscription"), BillingAsOfQuery),
     responses(
@@ -369,6 +370,7 @@ pub(crate) async fn post_reverse_amendment(
 #[utoipa::path(
     post,
     path = "/api/v1/billing/subscriptions/{id}/cancel",
+    operation_id = "cancel_billing_subscription",
     tag = "billing",
     params(("id" = Uuid, Path, description = "The subscription")),
     request_body = BillingCancelBody,

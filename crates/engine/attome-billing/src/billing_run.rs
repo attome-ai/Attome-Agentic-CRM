@@ -566,6 +566,7 @@ fn as_of(body: &BillingRunBody) -> NaiveDate {
 #[utoipa::path(
     post,
     path = "/api/v1/billing/runs/preview",
+    operation_id = "preview_billing_run",
     tag = "billing",
     request_body = BillingRunBody,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
@@ -605,6 +606,7 @@ pub(crate) async fn post_preview(
 #[utoipa::path(
     post,
     path = "/api/v1/billing/runs",
+    operation_id = "start_billing_run",
     tag = "billing",
     request_body = BillingRunBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
