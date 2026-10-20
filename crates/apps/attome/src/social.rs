@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use attome_core::EngineState;
 use attome_integration::connector::adapters::social::{
-    self, ReplyTarget, SocialMessage, google_reviews, meta,
+    self, ReplyTarget, SocialMessage, brandwatch, google_reviews, meta,
 };
 use attome_integration::system::IntegrationSystem;
 use attome_modules::MODULE_OMNICHANNEL;
@@ -290,6 +290,84 @@ pub async fn sync_reviews(state: &EngineState) -> Result<u32, AppError> {
                 Err(error) => {
                     tracing::warn!(system = %system.id, %error, "social: review not recorded")
                 }
+            }
+        }
+    }
+    Ok(written)
+}
+
+/// E18-T1: new Brandwatch mentions of each configured query, stored with
+/// their sentiment (N19's local classifier over title and snippet). A
+/// query resumes from its latest stored mention (else the past day);
+/// a mention already stored is skipped. Marketing-licensed only.
+pub async fn sync_mentions(state: &EngineState) -> Result<u32, AppError> {
+    if state
+        .modules
+        .load()
+        .require(attome_modules::MODULE_MARKETING)
+        .is_err()
+    {
+        return Ok(0);
+    }
+    let mut written = 0;
+    for system in social::systems(state, "brandwatch").await? {
+        let (project, queries) = match brandwatch::project_and_queries(&system) {
+            Ok(pq) => pq,
+            Err(error) => {
+                tracing::warn!(system = %system.id, %error, "social: brandwatch is not configured");
+                continue;
+            }
+        };
+        for query in queries {
+            let since: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+                "SELECT max(published_at) FROM social_mention WHERE system_id = $1 AND query_id = $2",
+            )
+            .bind(system.id)
+            .bind(&query)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            let since = since.unwrap_or_else(|| chrono::Utc::now() - chrono::Duration::days(1));
+            let mentions = match brandwatch::fetch_mentions(state, &system, &project, &query, since)
+                .await
+            {
+                Ok(m) => m,
+                Err(error) => {
+                    tracing::warn!(system = %system.id, %query, %error, "social: mentions not read");
+                    continue;
+                }
+            };
+            for m in mentions {
+                let text = [m.title.as_deref(), m.snippet.as_deref()]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let sentiment = attome_ai::actions::sentiment::classify(&text);
+                let inserted = sqlx::query(
+                    "INSERT INTO social_mention (system_id, query_id, guid, url, title, snippet, author, \
+                        domain, language, published_at, provider_sentiment, sentiment, sentiment_score) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+                     ON CONFLICT (system_id, query_id, guid) DO NOTHING",
+                )
+                .bind(system.id)
+                .bind(&query)
+                .bind(&m.guid)
+                .bind(&m.url)
+                .bind(&m.title)
+                .bind(&m.snippet)
+                .bind(&m.author)
+                .bind(&m.domain)
+                .bind(&m.language)
+                .bind(m.published_at)
+                .bind(&m.provider_sentiment)
+                .bind(sentiment.label)
+                .bind(sentiment.score as f32)
+                .execute(&state.base.db)
+                .await
+                .map_err(AppError::internal)?
+                .rows_affected();
+                written += inserted as u32;
             }
         }
     }

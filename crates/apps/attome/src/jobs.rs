@@ -2688,6 +2688,7 @@ const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
 const DEDUP_KEY_SOCIAL_REVIEWS_SYNC: &str = "social-reviews-sync";
+const DEDUP_KEY_SOCIAL_MENTIONS_SYNC: &str = "social-mentions-sync";
 
 /// Z1-T8: reminds administrators of secrets older than
 /// `security.secret_max_age_days`. A registered type (Z7-T1), not an
@@ -2764,6 +2765,10 @@ pub const REPUTATION_FETCH: attome_jobs::JobType =
 
 /// E22-T1: webinar registrants pushed and attendance read.
 pub const WEBINAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("webinar_sync", 1);
+
+/// E18-T1: new Brandwatch mentions for the configured queries.
+pub const SOCIAL_MENTIONS_SYNC: attome_jobs::JobType =
+    attome_jobs::JobType::new("social_mentions_sync", 1);
 
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
@@ -3062,6 +3067,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SOCIAL_MENTIONS_SYNC,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let written = crate::social::sync_mentions(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if written > 0 {
+                    tracing::info!(written, "social mentions sync: run complete");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SOCIAL_REVIEWS_SYNC,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let written = crate::social::sync_reviews(&state)
@@ -3239,6 +3258,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
+        }
+        EngineJob::Registered(job) if job.name == SOCIAL_MENTIONS_SYNC.name => {
+            DEDUP_KEY_SOCIAL_MENTIONS_SYNC
         }
         _ => return None,
     })
@@ -3781,6 +3803,25 @@ pub fn spawn_deliverability_rollup_scheduler(db: DbPool, interval: std::time::Du
         job,
         DEDUP_KEY_DELIVERABILITY_ROLLUP,
         "deliverability rollup",
+    );
+}
+
+/// E18-T1: every 30 minutes, new Brandwatch mentions.
+pub fn spawn_social_mentions_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(SOCIAL_MENTIONS_SYNC.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "social mentions sync: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_SOCIAL_MENTIONS_SYNC,
+        "social mentions sync",
     );
 }
 

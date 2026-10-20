@@ -137,6 +137,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // J8-T1: new Google reviews, every 15 minutes.
     crate::jobs::spawn_social_reviews_scheduler(db.clone(), std::time::Duration::from_secs(900));
+    // E18-T1: Brandwatch mentions, every 30 minutes.
+    crate::jobs::spawn_social_mentions_scheduler(db.clone(), std::time::Duration::from_secs(1800));
     // D15-T3: meetings and people's own calendars, every five minutes.
     crate::jobs::spawn_calendar_sync_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // AA14-T8: p95 regressions since the last upgrade, daily.

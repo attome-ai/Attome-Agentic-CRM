@@ -13,6 +13,7 @@
 //! (the caller's side writes it). The person or comment it came from is kept
 //! as its address ([`ReplyTarget`]), so a reply goes back the same way.
 
+pub mod brandwatch;
 pub mod google_reviews;
 pub mod meta;
 
