@@ -229,8 +229,14 @@ fn at(seconds: i64) -> Option<DateTime<Utc>> {
 }
 
 /// Stores a report and its rows in one transaction. `false` when the same
-/// reporter's report id is already stored.
-pub async fn store_report(db: &DbPool, report: &DmarcReport) -> Result<bool, AppError> {
+/// reporter's report id is already stored. With `audit` (the audit service
+/// and the person uploading), a stored report writes its Configuration
+/// event in the same transaction.
+pub async fn store_report(
+    db: &DbPool,
+    report: &DmarcReport,
+    audit: Option<(&attome_audit::AuditService<'_>, Uuid)>,
+) -> Result<bool, AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
     let id: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO marketing_dmarc_report \
@@ -270,6 +276,25 @@ pub async fn store_report(db: &DbPool, report: &DmarcReport) -> Result<bool, App
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    if let Some((service, actor)) = audit {
+        attome_audit::security::write_security_event(
+            &mut tx,
+            service,
+            attome_audit::security::SecurityEvent::new(
+                attome_audit::security::MandatoryCategory::Configuration,
+                attome_audit::AuditOperation::Create,
+                actor,
+                "marketing_dmarc_report",
+                Some(id),
+            )
+            .named("dmarc.upload")
+            .comment(format!(
+                "DMARC report {} from {} for {}",
+                report.report_id, report.reporter_org, report.domain
+            )),
+        )
+        .await?;
+    }
     tx.commit().await.map_err(AppError::internal)?;
     Ok(true)
 }
@@ -277,7 +302,7 @@ pub async fn store_report(db: &DbPool, report: &DmarcReport) -> Result<bool, App
 /// Parses and stores one report file. `false` for a report already stored.
 pub async fn ingest(db: &DbPool, bytes: &[u8]) -> Result<bool, AppError> {
     let report = parse_report(bytes)?;
-    store_report(db, &report).await
+    store_report(db, &report, None).await
 }
 
 /// How one source sent as the domain over the window.

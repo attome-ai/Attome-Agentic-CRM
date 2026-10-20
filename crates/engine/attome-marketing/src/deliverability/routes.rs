@@ -298,7 +298,9 @@ async fn post_dmarc_upload(
     body: Bytes,
 ) -> Result<Json<DmarcUploaded>, AppError> {
     let report = crate::dmarc::parse_report(&body)?;
-    let stored = crate::dmarc::store_report(&state.base.db, &report).await?;
+    let service = attome_audit::audit_service(&state);
+    let stored =
+        crate::dmarc::store_report(&state.base.db, &report, Some((&service, ctx.user_id))).await?;
     tracing::info!(
         user = %ctx.user_id,
         reporter = %report.reporter_org,
