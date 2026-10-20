@@ -8,6 +8,7 @@ pub mod ab_test;
 pub mod abm;
 pub mod address_check;
 pub mod attribution;
+pub mod blocklist;
 pub mod deliverability;
 /// E6-T7: DMARC aggregate reports.
 pub mod dmarc;
@@ -27,6 +28,7 @@ pub mod nurture_tracks;
 /// E23-T1: profile events and their retention.
 pub mod profile_events;
 pub mod referral;
+pub mod reputation;
 pub mod segment;
 pub mod segment_insight;
 /// E7-T6: live segments re-checked from the change feed.

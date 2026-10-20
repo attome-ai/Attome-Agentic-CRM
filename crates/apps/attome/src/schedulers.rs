@@ -116,6 +116,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_case_summary_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // E16-T1: SMS campaigns, a batch every five minutes.
     crate::jobs::spawn_sms_campaign_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // E6-T8: blocklist check and reputation fetch, daily.
+    crate::jobs::spawn_sender_reputation_schedulers(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // E22-T1: webinar registrants and attendance, every fifteen minutes.
     crate::jobs::spawn_webinar_sync_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // E7-T6: live segments, a tick every five seconds.

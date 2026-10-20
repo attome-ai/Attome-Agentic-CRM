@@ -101,6 +101,40 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             false,
             || json!({"*": {"start": "21:00", "end": "08:00"}}),
         ),
+        SettingDescriptor::new(
+            "marketing.blocklist_zones",
+            "DNS blocklists this deployment may query (E6-T8), each {name, zone, \
+             kind: domain|ip, licence_note}: only lists whose terms allow your use, \
+             such as your own Spamhaus DQS zone. None by default.",
+            || {
+                json!({
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "zone", "kind"],
+                        "properties": {
+                            "name": {"type": "string", "minLength": 1, "maxLength": 100},
+                            "zone": {"type": "string", "minLength": 3, "maxLength": 253},
+                            "kind": {"type": "string", "enum": ["domain", "ip"]},
+                            "licence_note": {"type": "string", "maxLength": 500}
+                        }
+                    }
+                })
+            },
+            DEPLOYMENT,
+            false,
+            || json!([]),
+        ),
+        SettingDescriptor::new(
+            "marketing.blocklist_ips",
+            "The sending IPs the daily blocklist check looks up (E6-T8); the \
+             sending domains come from the deliverability rollup.",
+            || json!({"type": "array", "maxItems": 100, "items": {"type": "string", "maxLength": 45}}),
+            DEPLOYMENT,
+            false,
+            || json!([]),
+        ),
     ]
 }
 

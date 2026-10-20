@@ -3,6 +3,7 @@ pub mod calendar_sync;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
 pub mod mail;
 pub mod mailbox;
+pub mod reputation;
 pub mod rest;
 /// J4-T1: SMS segments, senders and the provider codecs.
 pub mod sms;

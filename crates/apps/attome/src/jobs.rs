@@ -2678,6 +2678,8 @@ const DEDUP_KEY_CASE_SUMMARY: &str = "case-summary";
 /// E16-T1: SMS campaign sending (a registered job type).
 const DEDUP_KEY_SMS_CAMPAIGN: &str = "sms-campaign";
 const DEDUP_KEY_WEBINAR_SYNC: &str = "webinar-sync";
+const DEDUP_KEY_BLOCKLIST_CHECK: &str = "marketing-blocklist-check";
+const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
 /// E7-T6: the live segment tick (a registered job type).
@@ -2751,6 +2753,14 @@ pub const MARKETING_WEB_EVENT_BATCH: attome_jobs::JobType =
 /// scheduled.
 pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::enrol::JOB, 1);
+
+/// E6-T8: the daily blocklist check of sending domains and IPs.
+pub const BLOCKLIST_CHECK: attome_jobs::JobType =
+    attome_jobs::JobType::new("marketing_blocklist_check", 1);
+
+/// E6-T8: the daily Postmaster Tools and SNDS reputation fetch.
+pub const REPUTATION_FETCH: attome_jobs::JobType =
+    attome_jobs::JobType::new("marketing_reputation_fetch", 1);
 
 /// E22-T1: webinar registrants pushed and attendance read.
 pub const WEBINAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("webinar_sync", 1);
@@ -2867,6 +2877,48 @@ pub fn register_job_types() {
                 attome_marketing::static_list::run_import(&state, payload.import_id)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            BLOCKLIST_CHECK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let run = attome_marketing::blocklist::run(
+                    &state,
+                    &attome_marketing::blocklist::SystemResolver,
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if run.checks > 0 {
+                    tracing::info!(
+                        checks = run.checks,
+                        listed = run.listed,
+                        newly_listed = run.newly_listed,
+                        "blocklist check: run complete"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            REPUTATION_FETCH,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_marketing::reputation::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if written > 0 {
+                    tracing::info!(written, "reputation fetch: run complete");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3174,6 +3226,10 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
         EngineJob::Registered(job) if job.name == SMS_CAMPAIGN.name => DEDUP_KEY_SMS_CAMPAIGN,
         EngineJob::Registered(job) if job.name == WEBINAR_SYNC.name => DEDUP_KEY_WEBINAR_SYNC,
+        EngineJob::Registered(job) if job.name == BLOCKLIST_CHECK.name => DEDUP_KEY_BLOCKLIST_CHECK,
+        EngineJob::Registered(job) if job.name == REPUTATION_FETCH.name => {
+            DEDUP_KEY_REPUTATION_FETCH
+        }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
         EngineJob::Registered(job) if job.name == PROFILE_EVENT_RETENTION.name => {
             DEDUP_KEY_PROFILE_EVENT_RETENTION
@@ -3638,6 +3694,30 @@ pub fn spawn_sms_campaign_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SMS_CAMPAIGN, "sms campaign");
+}
+
+/// E6-T8: the daily blocklist check and reputation fetch.
+pub fn spawn_sender_reputation_schedulers(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    for (job_type, key, what) in [
+        (
+            BLOCKLIST_CHECK,
+            DEDUP_KEY_BLOCKLIST_CHECK,
+            "blocklist check",
+        ),
+        (
+            REPUTATION_FETCH,
+            DEDUP_KEY_REPUTATION_FETCH,
+            "reputation fetch",
+        ),
+    ] {
+        match attome_core::jobs::JOB_TYPES.job(job_type.name, &()) {
+            Ok(job) => {
+                spawn_dedup_scheduler(db.clone(), interval, EngineJob::Registered(job), key, what)
+            }
+            Err(error) => tracing::error!(%error, what, "not scheduled"),
+        }
+    }
 }
 
 /// E22-T1: every fifteen minutes, webinar registrants and attendance.
