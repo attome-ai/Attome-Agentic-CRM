@@ -1669,6 +1669,12 @@ export const xrmAr = {
     separator: '، ',
     saveFailed: 'تعذّر حفظ حالة حضورك.',
   },
+  serviceCaseSummary: {
+    title: 'الملخص',
+    loading: 'جارٍ تلخيص الحالة…',
+    none: 'لا يوجد ملخص بعد.',
+    refresh: 'تحديث',
+  },
   serviceCatalog: {
     title: 'دليل الخدمات',
     subtitle: 'ابحث عمّا تحتاجه وأضفه إلى السلة واطلبه.',

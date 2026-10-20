@@ -53,7 +53,11 @@
       <!-- G5-T3: colleagues on this record. -->
       <xrm-service-presence [entity]="tab.entity" [recordId]="tab.recordId" />
       @if (activeRecord(); as record) {
-        @if (tab.entity === 'service_ticket') { <xrm-sla-badge [ticket]="record.data" /> }
+        @if (tab.entity === 'service_ticket') {
+          <xrm-sla-badge [ticket]="record.data" />
+          <!-- G1-T3: the case summary, kept current by the server. -->
+          <xrm-service-case-summary [entity]="tab.entity" [recordId]="tab.recordId" />
+        }
         <dl>
           <dt>{{ 'serviceWorkspace.status' | translate }}</dt><dd>{{ field(record, 'status') }}</dd>
           <dt>{{ 'serviceWorkspace.priority' | translate }}</dt><dd>{{ field(record, 'priority') }}</dd>

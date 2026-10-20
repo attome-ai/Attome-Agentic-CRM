@@ -10,4 +10,6 @@ export { WorkspaceService, MAX_SESSIONS, openSession, sessionKey } from './works
 // G5-T3: presence and record viewers.
 export { PresenceComponent, PRESENCES, toPresence } from './presence.component';
 export type { Presence, Viewer } from './presence.component';
+// G1-T3: the case summary panel.
+export { CaseSummaryComponent, summaryText } from './case-summary.component';
 export type { WorkItem, QueueSummary, ConversationSummary, RecordView, SessionTab } from './workspace.service';

@@ -2671,6 +2671,8 @@ const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
 const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
 /// J2-T2: the shared mailbox routing (a registered job type).
 const DEDUP_KEY_INBOUND_MAIL: &str = "inbound-mail";
+/// G1-T3: case summaries for quiet threads (a registered job type).
+const DEDUP_KEY_CASE_SUMMARY: &str = "case-summary";
 /// J8-T1: the Google reviews read (a registered job type).
 const DEDUP_KEY_SOCIAL_REVIEWS_SYNC: &str = "social-reviews-sync";
 
@@ -2704,6 +2706,9 @@ pub const MAIL_CAPTURE: attome_jobs::JobType = attome_jobs::JobType::new("mail_c
 
 /// J2-T2: shared mailboxes routed into cases, leads and contacts.
 pub const INBOUND_MAIL: attome_jobs::JobType = attome_jobs::JobType::new("inbound_mail", 1);
+
+/// G1-T3: a case's summary made for its assignee once its thread is quiet.
+pub const CASE_SUMMARY: attome_jobs::JobType = attome_jobs::JobType::new("case_summary", 1);
 
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
@@ -2773,6 +2778,20 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(?summary, "inbound mail: run complete");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CASE_SUMMARY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let made = attome_ai::case_summary::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if made > 0 {
+                    tracing::info!(made, "case summary: run complete");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -2956,6 +2975,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
         EngineJob::Registered(job) if job.name == MAIL_CAPTURE.name => DEDUP_KEY_MAIL_CAPTURE,
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
+        EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
         EngineJob::Registered(job) if job.name == SOCIAL_REVIEWS_SYNC.name => {
             DEDUP_KEY_SOCIAL_REVIEWS_SYNC
         }
@@ -3387,6 +3407,19 @@ pub fn spawn_inbound_mail_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_INBOUND_MAIL, "inbound mail");
+}
+
+/// G1-T3: every minute, summaries for case threads gone quiet.
+pub fn spawn_case_summary_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(CASE_SUMMARY.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "case summary: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_CASE_SUMMARY, "case summary");
 }
 
 /// J8-T1: every 15 minutes, new Google reviews.

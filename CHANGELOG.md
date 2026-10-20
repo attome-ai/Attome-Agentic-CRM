@@ -132,6 +132,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Case summaries (G1-T3): two minutes after a case's thread goes quiet, the `case_summary` job runs
+  `record.summarize` for the case as its assignee (through the AI gate, read ceiling, the assignee's
+  own grants and budget), so the workspace's new Summary panel opens on a ready summary.
 - Shared mailboxes (J2-T2): every two minutes the `inbound_mail` job reads each active
   `kind = "mailbox"` integration system and routes each message once: onto the case it threads to,
   else by the mailbox's `config.routing` (`create`: `case`, `lead` or `none`; `unknown_sender`:

@@ -63,6 +63,8 @@ pub mod budget_guard;
 /// `allowed_action_ids` snapshot a hand-picked list produces; nothing at
 /// dispatch time reads a pack.
 pub mod capability_pack;
+/// G1-T3: case summaries made when a thread goes quiet.
+pub mod case_summary;
 /// C7 — the read projections the copilot panel renders (citations and
 /// grounding, tool calls) and the record-context fold, over the C2 ledger.
 pub mod chat_view;

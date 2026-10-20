@@ -1747,6 +1747,12 @@ export const xrmEn = {
     separator: ', ',
     saveFailed: 'Your presence could not be saved.',
   },
+  serviceCaseSummary: {
+    title: 'Summary',
+    loading: 'Summarising the case…',
+    none: 'No summary yet.',
+    refresh: 'Refresh',
+  },
   serviceCatalog: {
     title: 'Service catalog',
     subtitle: 'Find what you need, add it to your cart and order it.',
