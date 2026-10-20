@@ -94,6 +94,12 @@ pub enum MutationMode {
     /// `Strict` applies; only the id is the caller's, and
     /// [`crate::entity_crud::create_record_with_id_for`] checks it first.
     ClientId(Uuid),
+    /// D23-T4: the owning engine's own write of a field it declared
+    /// engine-managed (`EngineModel::engine_managed_fields`), after its own
+    /// route checked the caller. Every check of `Strict` applies except the
+    /// engine-managed refusal itself, which exists to send callers to that
+    /// route. Never reachable from the generic record API.
+    EngineManaged,
 }
 
 impl MutationMode {
@@ -105,13 +111,14 @@ impl MutationMode {
                 | Self::BundleRecordSet(_)
                 | Self::ApprovalFlow(_)
                 | Self::ClientId(_)
+                | Self::EngineManaged
         )
     }
 
     fn enforce_file_session_ownership(&self) -> bool {
         matches!(
             self,
-            Self::Strict | Self::ApprovedStagedImport | Self::ClientId(_)
+            Self::Strict | Self::ApprovedStagedImport | Self::ClientId(_) | Self::EngineManaged
         )
     }
 }

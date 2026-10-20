@@ -48,6 +48,9 @@ impl EngineModel for SalesModel {
             ("opportunity", "one_time_total"),
             ("opportunity", "recurring_annual"),
             ("opportunity", "total_contract_value"),
+            // D23-T4: reporting lines change only through the org chart route.
+            ("contact", "reports_to"),
+            ("contact", "dotted_line_ref"),
         ]
     }
 
@@ -146,6 +149,10 @@ impl EngineModel for SalesModel {
             .route(
                 "/api/v1/sales/opportunities/{id}/plays",
                 get(crate::plays::get_sales_plays),
+            )
+            .route(
+                "/api/v1/sales/contacts/{id}/manager",
+                put(crate::orgchart::put_sales_contact_manager),
             )
             .route(
                 "/api/v1/sales/competitors/{id}/head-to-head",
