@@ -1,0 +1,102 @@
+/* U10-T3 — the admin console. Logical properties only (RTL). */
+
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.console {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr;
+  gap: 16px;
+}
+
+.console-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.console-area {
+  padding-block: 6px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.console-area.active {
+  background: var(--color-bg-alt, #f1f5f9);
+  font-weight: 600;
+}
+
+.console-search input {
+  inline-size: 100%;
+  max-inline-size: 480px;
+  padding-block: 6px;
+  padding-inline: 10px;
+}
+
+.console-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.console-list li {
+  padding-block: 4px;
+}
+
+.console-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.console-desc {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.console-history {
+  margin-block-start: 16px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 6px;
+}
+
+.console-error {
+  color: var(--color-danger, #dc2626);
+}
+
+.mono {
+  font-family: var(--font-mono, monospace);
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 720px) {
+  .console {
+    grid-template-columns: 1fr;
+  }
+
+  .console-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

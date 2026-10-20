@@ -27,6 +27,8 @@ export { SidebarManagerComponent }    from './sidebar-manager/sidebar-manager.co
 export { SystemSettingsComponent }    from './system-settings/system-settings.component';
 // Z1-T14: the secret inventory and the configuration history.
 export { CachesComponent }             from './caches/caches.component';
+export { AdminConsoleComponent, ADMIN_AREAS, ADMIN_SCREENS } from './console/admin-console.component';
+export type { AdminArea, AdminScreen } from './console/admin-console.component';
 export { SecretsInventoryComponent }  from './secrets-inventory/secrets-inventory.component';
 export { ConfigStartsComponent }      from './config-starts/config-starts.component';
 export { CalendarManagerComponent }   from './calendar-manager/calendar-manager.component';
