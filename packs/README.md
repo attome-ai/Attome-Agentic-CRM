@@ -173,6 +173,9 @@ requests only) and Contract Viewer roles; a confidential contract is read by Leg
 condition on the other roles, so lists, search and reports agree), and contract value, current
 terms and clause text are sensitive behind the Contract terms profile managers and legal hold. Boot
 adds a retention rule that proposes each contract for review seven years after its end date.
+Its `0004` (W1-T13) records where a draft contract came from (`source_kind`, `source_id`): the
+contract engine drafts one sales contract per accepted quote or confirmed order, gives each contract
+type an intake offering, and drafts a contract of that type from each request filed under it.
 
 ## regions
 

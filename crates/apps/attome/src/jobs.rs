@@ -1446,6 +1446,18 @@ async fn dispatch_platform_job(
                 tracing::info!(created, "recurring tasks: next tasks created");
             }
         }
+        // W1-T13: contracts drafted from quotes, orders and intake requests.
+        EngineJob::ContractLinkSweep => {
+            let run = attome_contract::links::run(&attome_state).await?;
+            if run.drafts > 0 || run.offerings > 0 {
+                tracing::info!(
+                    events = run.events,
+                    drafts = run.drafts,
+                    offerings = run.offerings,
+                    "contract links: run finished"
+                );
+            }
+        }
         // W1-T3: counterparty match proposals, on demand.
         EngineJob::ContractCounterpartyMatch => {
             let run = attome_contract::counterparty::run_match(&db).await?;
@@ -2542,6 +2554,7 @@ const DEDUP_KEY_BIN_DELETE_ALERT: &str = "bin-delete-alert";
 const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
+const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
 const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
@@ -2805,6 +2818,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::TagExpirySweep => DEDUP_KEY_TAG_EXPIRY,
         EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
+        EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
         EngineJob::PointsScoring => DEDUP_KEY_POINTS_SCORING,
         EngineJob::DealRiskEvaluation => DEDUP_KEY_DEAL_RISK,
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
@@ -3598,6 +3612,17 @@ pub fn spawn_recurring_task_roll_scheduler(db: DbPool, interval: std::time::Dura
         EngineJob::RecurringTaskRoll,
         DEDUP_KEY_RECURRING_TASK_ROLL,
         "recurring task roll",
+    );
+}
+
+/// W1-T13: every quarter hour, contracts drafted from their sources.
+pub fn spawn_contract_link_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::ContractLinkSweep,
+        DEDUP_KEY_CONTRACT_LINK_SWEEP,
+        "contract links",
     );
 }
 

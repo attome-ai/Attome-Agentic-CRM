@@ -1,0 +1,108 @@
+{
+  "author": "packs",
+  "checksum": "sha256:c4884bc17de2cc9717eccbb1f1877f49e10da50a4090b8a73275c4908bf88e95",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Contract links (W1-T13): the source a draft contract came from (an accepted quote, a confirmed order or an intake request) and that record, the key that keeps one draft per source.",
+  "format": "attome-changeset/v1",
+  "id": "01a15839-e822-71e8-bb3b-bf9d063e2c32",
+  "layer": "product",
+  "name": "contract-management-links",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "quote",
+              "order",
+              "intake"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract",
+        "field": "source_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source Record",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_id",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contract",
+        "field": "source_id"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract.source_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سجل المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract.source_id",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "contract-management",
+  "seq": 4,
+  "title": "Pack: contract sources"
+}

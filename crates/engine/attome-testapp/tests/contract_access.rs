@@ -67,7 +67,7 @@ async fn user_with_role(app: &TestApp, label: &str, role: &str) -> TestUser {
 async fn contract(app: &TestApp, title: &str, confidential: bool, owner: Option<Uuid>) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO contract (id, title, contract_value, current_terms, is_confidential, owner_id, \
+        "INSERT INTO contract (id, title, contract_value, current_terms, is_confidential, owner_ref, \
              is_active, row_version) \
          VALUES ($1, $2, 987654, 'net 30 secret terms', $3, $4, true, 0)",
     )
