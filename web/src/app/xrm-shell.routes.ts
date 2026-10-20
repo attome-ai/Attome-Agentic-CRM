@@ -415,6 +415,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.NewRequestPickerComponent),
           },
           {
+            // D23-T11: an account's org chart (drag to change who reports to whom).
+            path: 'sales/org-chart/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/sales/orgchart').then(m => m.OrgChartComponent),
+          },
+          {
             // D21-T11: the power dialer for one call list.
             path: 'sales/dialer/:id',
             canActivate: [authGuard],
