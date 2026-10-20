@@ -2078,6 +2078,7 @@ dependencies = [
  "attome-auth",
  "attome-billing",
  "attome-cache",
+ "attome-commission",
  "attome-compliance",
  "attome-config",
  "attome-contract",

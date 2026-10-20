@@ -1,4 +1,6 @@
-//! Commission credits from won deals (roadmap F10-T3, the won-deal source).
+//! Commission credits (roadmap F10-T3): from won deals, confirmed orders,
+//! issued invoices and received payments, and clawbacks from credit notes
+//! and refunds.
 //!
 //! [`sweep_won_deals`] reads opportunity changes off the change feed (its
 //! own cursor, `attome-commission/credits`). For a deal at `closed_won` it
@@ -13,6 +15,16 @@
 //! approved or locked it lands in the next open one, with a zero
 //! `comp_adjustment` naming the locked period it belonged to (F10-T7).
 //! Amounts stay in the deal's currency: no exchange rates exist yet.
+//!
+//! The same sweep credits the other sources, each to the participation
+//! whose plan measures it: a `confirmed` order its owner (`order_amount`,
+//! the grand total); an issued invoice (`invoice_amount`, the net total) and
+//! a `succeeded` customer payment (`payment_amount`) the owner of the
+//! account they belong to. An issued credit note, and a `succeeded` refund,
+//! reverses each credit of the invoice or payment it corrects with a
+//! negative credit (`reverses_credit_ref`), when the original credit is no
+//! older than `commission.clawback_days` (default 180); an older one stands.
+//! Every credit is keyed by its source, so a replay writes nothing twice.
 
 use attome_core::EngineState;
 use attome_types::AppError;
@@ -35,6 +47,8 @@ pub struct CreditSource {
     pub amount: String,
     pub currency: Option<String>,
     pub credited_on: NaiveDate,
+    /// The credit a clawback reverses.
+    pub reverses: Option<Uuid>,
 }
 
 /// The credits a won deal gives: one per revenue split with a member user,
@@ -56,6 +70,7 @@ pub fn won_deal_credits(
                 amount,
                 currency,
                 credited_on,
+                reverses: None,
             }],
             _ => Vec::new(),
         };
@@ -70,6 +85,7 @@ pub fn won_deal_credits(
                 amount: amount.clone()?,
                 currency: currency.clone(),
                 credited_on,
+                reverses: None,
             })
         })
         .collect()
@@ -152,8 +168,8 @@ pub async fn credit_from_source(
     sqlx::query(
         "INSERT INTO comp_credit \
            (participant_ref, period_ref, source_kind, source_id, amount, currency, credited_on, \
-            owner_ref) \
-         VALUES ($1, $2, $3, $4, $5::numeric, $6, $7, $8)",
+            owner_ref, reverses_credit_ref) \
+         VALUES ($1, $2, $3, $4, $5::numeric, $6, $7, $8, $9)",
     )
     .bind(participant)
     .bind(period)
@@ -163,6 +179,7 @@ pub async fn credit_from_source(
     .bind(&source.currency)
     .bind(source.credited_on)
     .bind(source.user)
+    .bind(source.reverses)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -265,20 +282,283 @@ pub async fn sweep_won_deals(state: &EngineState) -> Result<u64, AppError> {
         attome_core::change_feed::advance(&mut conn, CREDIT_CONSUMER, &last).await?;
         return Ok(0);
     }
-    let mut deals: Vec<Uuid> = events
+    let mut changed: Vec<(String, Uuid)> = events
         .iter()
-        .filter(|e| e.entity_logicalname == "opportunity")
-        .map(|e| e.record_id)
+        .filter(|e| {
+            matches!(
+                e.entity_logicalname.as_str(),
+                "opportunity" | "order" | "invoice" | "customer_payment" | "payment_refund"
+            )
+        })
+        .map(|e| (e.entity_logicalname.clone(), e.record_id))
         .collect();
-    deals.sort_unstable();
-    deals.dedup();
+    changed.sort_unstable();
+    changed.dedup();
     let mut written = 0;
-    for deal in deals {
-        written += credit_won_deal(state, deal).await?;
+    for (entity, id) in changed {
+        written += if entity == "opportunity" {
+            credit_won_deal(state, id).await?
+        } else {
+            credit_business_source(state, &entity, id).await?
+        };
     }
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
     attome_core::change_feed::advance(&mut conn, CREDIT_CONSUMER, &last).await?;
     Ok(written)
+}
+
+/// Whether a reversal on `on` still claws back a credit dated `original`,
+/// with a window of `days`. Pure.
+pub fn in_clawback_window(original: NaiveDate, on: NaiveDate, days: i64) -> bool {
+    on >= original && (on - original).num_days() <= days
+}
+
+/// The clawback window, `commission.clawback_days`.
+fn clawback_days(state: &EngineState) -> i64 {
+    let store = state.settings.load();
+    attome_core::setting_registry()
+        .get("commission.clawback_days")
+        .and_then(|d| store.resolve(d, None, None).0.as_i64())
+        .unwrap_or(180)
+}
+
+/// Whether the deployment has `table` (its pack is installed).
+async fn has_table(db: &attome_db::DbPool, table: &str) -> Result<bool, AppError> {
+    sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+        .bind(table)
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// The owner of an account, who takes credit for its invoices and payments.
+async fn account_owner(
+    db: &attome_db::DbPool,
+    account: Option<Uuid>,
+) -> Result<Option<Uuid>, AppError> {
+    let Some(account) = account else {
+        return Ok(None);
+    };
+    let owner: Option<Option<Uuid>> =
+        sqlx::query_scalar("SELECT owner_ref FROM account WHERE id = $1")
+            .bind(account)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(owner.flatten())
+}
+
+/// Writes `source` to the user's participation measuring `measure`.
+async fn credit_measure(
+    state: &EngineState,
+    measure: &str,
+    source: &CreditSource,
+) -> Result<u64, AppError> {
+    let Some(participant) =
+        participant_for(&state.base.db, source.user, measure, source.credited_on).await?
+    else {
+        return Ok(0);
+    };
+    Ok(u64::from(
+        credit_from_source(state, participant, source).await?,
+    ))
+}
+
+type CreditRow = (Uuid, Uuid, Uuid, NaiveDate, Option<String>);
+
+/// Reverses each credit of `original_kind`/`original_id` still inside the
+/// window, with `amount` (positive text) taken off.
+async fn claw_back(
+    state: &EngineState,
+    kind: &'static str,
+    source_id: Uuid,
+    original_kind: &str,
+    original_id: Uuid,
+    amount: &str,
+    on: NaiveDate,
+) -> Result<u64, AppError> {
+    let credits: Vec<CreditRow> = sqlx::query_as(
+        "SELECT id, participant_ref, owner_ref, credited_on, currency FROM comp_credit \
+          WHERE source_kind = $1 AND source_id = $2 AND reverses_credit_ref IS NULL \
+            AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(original_kind)
+    .bind(original_id.to_string())
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let window = clawback_days(state);
+    let mut written = 0;
+    for (credit, participant, user, credited_on, currency) in credits {
+        if !in_clawback_window(credited_on, on, window) {
+            continue;
+        }
+        let source = CreditSource {
+            user,
+            kind,
+            source_id: source_id.to_string(),
+            amount: format!("-{}", amount.trim_start_matches('-')),
+            currency,
+            credited_on: on,
+            reverses: Some(credit),
+        };
+        if credit_from_source(state, participant, &source).await? {
+            written += 1;
+        }
+    }
+    Ok(written)
+}
+
+type OrderRow = (Option<String>, Option<Uuid>, Option<String>, Option<String>);
+type InvoiceRow = (
+    Option<String>,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<String>,
+    Option<String>,
+    Option<NaiveDate>,
+);
+type PaymentRow = (
+    Option<String>,
+    Option<Uuid>,
+    Option<String>,
+    Option<String>,
+    Option<NaiveDate>,
+);
+type RefundRow = (Option<String>, Option<Uuid>, Option<String>);
+
+/// Credits (or claws back) one changed order, invoice, payment or refund;
+/// credits written.
+pub async fn credit_business_source(
+    state: &EngineState,
+    entity: &str,
+    id: Uuid,
+) -> Result<u64, AppError> {
+    let db = &state.base.db;
+    let table = if entity == "order" { "order" } else { entity };
+    if !has_table(db, table).await? {
+        return Ok(0);
+    }
+    let today = Utc::now().date_naive();
+    match entity {
+        "order" => {
+            let row: Option<OrderRow> = sqlx::query_as(
+                "SELECT status, owner_ref, grand_total::text, currency FROM \"order\" \
+                  WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+            )
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+            let Some((Some(status), Some(user), Some(amount), currency)) = row else {
+                return Ok(0);
+            };
+            if status != "confirmed" {
+                return Ok(0);
+            }
+            let source = CreditSource {
+                user,
+                kind: "order",
+                source_id: id.to_string(),
+                amount,
+                currency,
+                credited_on: today,
+                reverses: None,
+            };
+            credit_measure(state, "order_amount", &source).await
+        }
+        "invoice" => {
+            let row: Option<InvoiceRow> = sqlx::query_as(
+                "SELECT kind, status, account_ref, original_invoice_ref, net_total::text, \
+                        currency, issued_date FROM invoice \
+                  WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+            )
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+            let Some((kind, Some(status), account, original, Some(amount), currency, issued)) = row
+            else {
+                return Ok(0);
+            };
+            if !matches!(status.as_str(), "issued" | "sent" | "paid" | "overdue") {
+                return Ok(0);
+            }
+            let on = issued.unwrap_or(today);
+            match kind.as_deref() {
+                Some("credit_note") => match original {
+                    Some(original) => {
+                        claw_back(state, "credit_note", id, "invoice", original, &amount, on).await
+                    }
+                    None => Ok(0),
+                },
+                Some("invoice") | None => {
+                    let Some(user) = account_owner(db, account).await? else {
+                        return Ok(0);
+                    };
+                    let source = CreditSource {
+                        user,
+                        kind: "invoice",
+                        source_id: id.to_string(),
+                        amount,
+                        currency,
+                        credited_on: on,
+                        reverses: None,
+                    };
+                    credit_measure(state, "invoice_amount", &source).await
+                }
+                _ => Ok(0),
+            }
+        }
+        "customer_payment" => {
+            let row: Option<PaymentRow> = sqlx::query_as(
+                "SELECT status, payer_account_ref, amount::text, currency, received_on \
+                   FROM customer_payment WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+            )
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+            let Some((Some(status), account, Some(amount), currency, received)) = row else {
+                return Ok(0);
+            };
+            if status != "succeeded" {
+                return Ok(0);
+            }
+            let Some(user) = account_owner(db, account).await? else {
+                return Ok(0);
+            };
+            let source = CreditSource {
+                user,
+                kind: "payment",
+                source_id: id.to_string(),
+                amount,
+                currency,
+                credited_on: received.unwrap_or(today),
+                reverses: None,
+            };
+            credit_measure(state, "payment_amount", &source).await
+        }
+        "payment_refund" => {
+            let row: Option<RefundRow> = sqlx::query_as(
+                "SELECT status, payment_ref, amount::text FROM payment_refund \
+                  WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+            )
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+            let Some((Some(status), Some(payment), Some(amount))) = row else {
+                return Ok(0);
+            };
+            if status != "succeeded" {
+                return Ok(0);
+            }
+            claw_back(state, "refund", id, "payment", payment, &amount, today).await
+        }
+        _ => Ok(0),
+    }
 }
 
 #[cfg(test)]
@@ -318,6 +598,19 @@ mod tests {
         assert_eq!(credits.len(), 1);
         assert_eq!(credits[0].source_id, format!("{deal}:owner"));
         assert!(won_deal_credits(deal, None, Some("500".into()), None, day(), &[]).is_empty());
+    }
+
+    #[test]
+    fn clawback_outside_window_is_ignored() {
+        let credited = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap_or_default();
+        let inside = NaiveDate::from_ymd_opt(2026, 6, 1).unwrap_or_default();
+        let outside = NaiveDate::from_ymd_opt(2026, 9, 1).unwrap_or_default();
+        assert!(in_clawback_window(credited, inside, 180));
+        assert!(!in_clawback_window(credited, outside, 180));
+        assert!(
+            !in_clawback_window(inside, credited, 180),
+            "a reversal never predates its credit"
+        );
     }
 
     #[test]

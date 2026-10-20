@@ -43,6 +43,7 @@ uuid.workspace            = true
 # The plain test client, so a test can point a gateway adapter at a local fake.
 attome-billing = { workspace = true, features = ["test-support"] }
 attome-integration.workspace = true
+attome-commission.workspace = true
 attome-compliance.workspace = true
 attome-model.workspace = true
 attome-jobs.workspace = true

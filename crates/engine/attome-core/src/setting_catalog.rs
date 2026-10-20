@@ -331,15 +331,26 @@ fn billing_settings() -> Vec<SettingDescriptor> {
 
 /// F10: commission settings.
 fn commission_settings() -> Vec<SettingDescriptor> {
-    vec![SettingDescriptor::new(
-        "commission.adjustment_approval_amount",
-        "Manual commission adjustments larger than this (either way, in the \
+    vec![
+        SettingDescriptor::new(
+            "commission.adjustment_approval_amount",
+            "Manual commission adjustments larger than this (either way, in the \
          deployment's base currency) are written only after an approval.",
-        || json!({"type": "number", "minimum": 0}),
-        &[SettingScope::Deployment],
-        false,
-        || json!(1000),
-    )]
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(1000),
+        ),
+        SettingDescriptor::new(
+            "commission.clawback_days",
+            "Days after a commission credit that a credit note or refund still \
+         takes it back (F10-T3); an older credit stands.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 3650}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(180),
+        ),
+    ]
 }
 
 /// AB5-T6: operating switches.
