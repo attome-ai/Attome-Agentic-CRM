@@ -22,6 +22,7 @@ export type {
 // the component's own doc comment), so it is its own top-level page rather
 // than a Project detail tab, same posture as Resource Capacity below.
 export { ProjectTimesheetListComponent } from './timesheet/list/project-timesheet-list/project-timesheet-list.component';
+export { TimesheetGridComponent } from './timesheet/timesheet-grid.component';
 
 // M72 Resource Management — the capacity heat grid (`GET
 // /api/v1/resources/capacity`). Its own component/service pair, not part of
