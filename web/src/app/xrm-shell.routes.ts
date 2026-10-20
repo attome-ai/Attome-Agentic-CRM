@@ -738,6 +738,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // E10-T2: build a marketing form and copy its embed snippet.
+            path: 'marketing/forms/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/marketing/forms').then(m => m.FormBuilderComponent),
+          },
+          {
             // E29-T1: the marketing calendar with budget against actual.
             path: 'marketing/calendar',
             canActivate: [authGuard],
