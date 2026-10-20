@@ -1,0 +1,78 @@
+{
+  "author": "packs",
+  "checksum": "sha256:86e129189f00d0ca66ac16939e8f74c1767023654162938dd1f361ef5ffeda39",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "E6-T13: the email deliverability dashboard under Marketing, shown where the marketing module is licensed to people who may read deliverability.",
+  "format": "attome-changeset/v1",
+  "id": "01a1593f-e02e-7b0b-93fc-465d8a798c7c",
+  "layer": "product",
+  "name": "marketing-deliverability-dashboard",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 45,
+          "entity": null,
+          "icon": "la-bullhorn",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "marketing",
+          "path": [
+            "Marketing"
+          ],
+          "privileges": [
+            "marketing_deliverability_policy.read"
+          ],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "path": "Marketing"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-envelope-open-text",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "marketing",
+          "path": [
+            "Marketing",
+            "Deliverability"
+          ],
+          "privileges": [
+            "marketing_deliverability_policy.read"
+          ],
+          "route": "/xrm/marketing/deliverability"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "path": "Marketing/Deliverability"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 10,
+  "title": "Pack: deliverability dashboard"
+}

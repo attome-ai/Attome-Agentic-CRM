@@ -756,6 +756,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/marketing/forms').then(m => m.FormBuilderComponent),
           },
           {
+            // E6-T13: the deliverability dashboard, alert guidance and pre-send check.
+            path: 'marketing/deliverability',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/marketing/deliverability')
+              .then(m => m.DeliverabilityDashboardComponent),
+          },
+          {
             // E29-T1: the marketing calendar with budget against actual.
             path: 'marketing/calendar',
             canActivate: [authGuard],

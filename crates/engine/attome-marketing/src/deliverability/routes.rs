@@ -11,7 +11,10 @@
 //! - `POST /api/v1/marketing/address-check` — the address checks (E6-T6),
 //!   limited to 60 a minute per person;
 //! - `POST /api/v1/marketing/precheck` — the pre-send check (E6-T10): a
-//!   score and findings, nothing sent or stored.
+//!   score and findings, nothing sent or stored;
+//! - `GET /api/v1/marketing/deliverability/overview` — the dashboard's
+//!   figures (E6-T13): rates per provider and day, per-send totals, recent
+//!   alerts, blocklist status and the DMARC pass share.
 //!
 //! The policy itself changes through the generic entity API on
 //! `marketing_deliverability_policy` (an audited entity).
@@ -485,8 +488,184 @@ async fn post_precheck(
     )))
 }
 
+/// The overview's window.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct OverviewQuery {
+    /// Days back from today, 1 to 90 (default 30).
+    #[param(minimum = 1, maximum = 90)]
+    pub days: Option<i32>,
+}
+
+/// One provider's totals on one day.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct ProviderDay {
+    pub day: NaiveDate,
+    pub mailbox_provider: String,
+    pub sent: i64,
+    pub delivered: i64,
+    pub bounced: i64,
+    pub complaints: i64,
+}
+
+/// One send's totals over the window.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct SendTotals {
+    pub send_ref: String,
+    pub sent: i64,
+    pub delivered: i64,
+    pub bounced: i64,
+    pub complaints: i64,
+    pub opened: i64,
+    pub clicked: i64,
+}
+
+/// One alert raised by the daily evaluation (E6-T10).
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct AlertView {
+    pub day: NaiveDate,
+    pub subject: String,
+    /// `bounce_rate`, `complaint_rate`, `blocklisted`, `dmarc_failures` or
+    /// `reputation_drop`.
+    pub kind: String,
+    pub value: f64,
+    pub threshold: f64,
+    /// The screens' translation key for what to do (`deliverabilityAlert.<kind>`).
+    pub guidance_key: String,
+}
+
+/// The latest check of one target on one blocklist.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct BlocklistStatus {
+    pub target: String,
+    pub target_kind: String,
+    pub list_name: String,
+    pub listed: bool,
+    pub checked_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// DMARC messages for one domain and how many passed (SPF or DKIM aligned).
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct DmarcShare {
+    pub domain: String,
+    pub messages: i64,
+    pub passed: i64,
+}
+
+/// The deliverability dashboard's figures.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DeliverabilityOverview {
+    pub days: i32,
+    /// The bounce and complaint limits in force, in percent.
+    pub bounce_limit: f64,
+    pub complaint_limit: f64,
+    pub providers: Vec<ProviderDay>,
+    /// The 50 largest sends in the window.
+    pub sends: Vec<SendTotals>,
+    /// The 100 newest alerts in the window.
+    pub alerts: Vec<AlertView>,
+    pub blocklist: Vec<BlocklistStatus>,
+    pub dmarc: Vec<DmarcShare>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/marketing/deliverability/overview",
+    operation_id = "get_deliverability_overview",
+    tag = "marketing",
+    params(OverviewQuery),
+    responses(
+        (status = 200, description = "The dashboard's figures", body = DeliverabilityOverview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks marketing_deliverability_policy.read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// The deliverability dashboard.
+///
+/// Over the last `days` days: sent, delivered, bounced and complaints per
+/// mailbox provider and day, the largest sends, the alerts raised with their
+/// guidance keys, the latest result per target and blocklist, and each
+/// domain's DMARC pass share, with the bounce and complaint limits in force.
+async fn get_overview(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<DeliverabilityRead>>,
+    Query(q): Query<OverviewQuery>,
+) -> Result<Json<DeliverabilityOverview>, AppError> {
+    let days = q.days.unwrap_or(30).clamp(1, 90);
+    let db = &state.base.db;
+    let (bounce_limit, complaint_limit) = crate::alerts::rate_limits(&state).await?;
+    let providers: Vec<ProviderDay> = sqlx::query_as(
+        "SELECT day, mailbox_provider, sum(sent)::int8 AS sent, sum(delivered)::int8 AS delivered, \
+                sum(bounced)::int8 AS bounced, sum(complaints)::int8 AS complaints \
+           FROM marketing_deliverability_daily WHERE day >= current_date - $1 \
+          GROUP BY day, mailbox_provider ORDER BY day, mailbox_provider",
+    )
+    .bind(days)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let sends: Vec<SendTotals> = sqlx::query_as(
+        "SELECT send_ref, sum(sent)::int8 AS sent, sum(delivered)::int8 AS delivered, \
+                sum(bounced)::int8 AS bounced, sum(complaints)::int8 AS complaints, \
+                sum(opened)::int8 AS opened, sum(clicked)::int8 AS clicked \
+           FROM marketing_deliverability_daily WHERE day >= current_date - $1 AND send_ref <> '' \
+          GROUP BY send_ref ORDER BY sum(sent) DESC, send_ref LIMIT 50",
+    )
+    .bind(days)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let alerts: Vec<AlertView> = sqlx::query_as(
+        "SELECT day, subject, kind, COALESCE((detail->>'value')::float8, 0) AS value, \
+                COALESCE((detail->>'threshold')::float8, 0) AS threshold, \
+                'deliverabilityAlert.' || kind AS guidance_key \
+           FROM marketing_deliverability_alert WHERE day >= current_date - $1 \
+          ORDER BY day DESC, kind, subject LIMIT 100",
+    )
+    .bind(days)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let blocklist: Vec<BlocklistStatus> = sqlx::query_as(
+        "SELECT DISTINCT ON (target, list_name) target, target_kind, list_name, listed, checked_at \
+           FROM marketing_blocklist_check WHERE checked_at >= now() - make_interval(days => $1) \
+          ORDER BY target, list_name, checked_at DESC LIMIT 200",
+    )
+    .bind(days)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let dmarc: Vec<DmarcShare> = sqlx::query_as(
+        "SELECT rep.domain, COALESCE(sum(rec.message_count), 0)::int8 AS messages, \
+                COALESCE(sum(rec.message_count) FILTER (WHERE rec.dkim = 'pass' OR rec.spf = 'pass'), 0)::int8 \
+                  AS passed \
+           FROM marketing_dmarc_report rep JOIN marketing_dmarc_record rec ON rec.report_ref = rep.id \
+          WHERE rep.date_end >= now() - make_interval(days => $1) \
+          GROUP BY rep.domain ORDER BY rep.domain",
+    )
+    .bind(days)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(DeliverabilityOverview {
+        days,
+        bounce_limit,
+        complaint_limit,
+        providers,
+        sends,
+        alerts,
+        blocklist,
+        dmarc,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/marketing/deliverability/overview",
+            get(get_overview),
+        )
         .route("/api/v1/marketing/precheck", post(post_precheck))
         .route("/api/v1/marketing/deliverability/daily", get(get_daily))
         .route(
@@ -509,9 +688,16 @@ pub fn routes() -> Router<EngineState> {
         get_dmarc,
         post_dmarc_upload,
         post_address_check,
-        post_precheck
+        post_precheck,
+        get_overview
     ),
     components(schemas(
+        ProviderDay,
+        SendTotals,
+        AlertView,
+        BlocklistStatus,
+        DmarcShare,
+        DeliverabilityOverview,
         PrecheckBody,
         crate::precheck::PrecheckReport,
         crate::precheck::Finding,

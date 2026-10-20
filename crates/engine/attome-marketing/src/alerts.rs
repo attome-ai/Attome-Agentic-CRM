@@ -169,6 +169,13 @@ async fn policy(state: &EngineState) -> Result<Policy, AppError> {
     })
 }
 
+/// The bounce and complaint limits in force, in percent: the policy's, else
+/// 2% and 0.3%.
+pub async fn rate_limits(state: &EngineState) -> Result<(f64, f64), AppError> {
+    let p = policy(state).await?;
+    Ok((p.bounce, p.complaint))
+}
+
 /// Everyone told: the marketing owner role's members and the administrators.
 async fn recipients(state: &EngineState, role: Option<&str>) -> Result<Vec<Uuid>, AppError> {
     sqlx::query_scalar(

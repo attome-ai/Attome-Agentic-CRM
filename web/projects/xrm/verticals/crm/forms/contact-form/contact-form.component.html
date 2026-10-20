@@ -7,7 +7,7 @@
       </div>
       <div class="xf-section-body">
         <div class="xf-grid-2">
-          @for (field of fieldsIn(['account_ref', 'email', 'full_name', 'job_title', 'phone']); track field.id) {
+          @for (field of fieldsIn(['account_ref', 'email', 'email_status', 'email_status_reason', 'full_name', 'job_title', 'phone']); track field.id) {
             <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
           }
         </div>
