@@ -1,0 +1,62 @@
+{
+  "author": "packs",
+  "checksum": "sha256:53fdd0ae830222e823d342f1b320e7dd99f497bdc2831d1c220651804f0c2d06",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Stock ledger (I6-T2): a balance may be allowed to go below zero; otherwise stock leaves only from what is available.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d10-7f12-9a12-16c016c016c0",
+  "layer": "product",
+  "name": "field-service-stock-ledger",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Allow Negative Stock",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "allow_negative",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "stock_balance",
+        "field": "allow_negative"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السماح بالرصيد السالب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "stock_balance.allow_negative",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "field-service",
+  "seq": 5,
+  "title": "Pack: stock ledger"
+}

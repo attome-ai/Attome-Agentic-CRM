@@ -14,6 +14,7 @@ pub mod escalation;
 /// G5-T3: agent presence and record viewers.
 pub mod inbox;
 mod intake;
+pub mod inventory;
 pub mod model;
 pub mod offering;
 pub mod oncall;
@@ -54,5 +55,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(inbox::openapi_fragment());
     doc.merge(status_page::openapi_fragment());
     doc.merge(warranty::openapi_fragment());
+    doc.merge(inventory::openapi_fragment());
     doc
 }

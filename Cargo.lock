@@ -2123,6 +2123,7 @@ dependencies = [
  "attome-sales",
  "attome-security",
  "attome-server",
+ "attome-service",
  "attome-storage",
  "attome-testkit",
  "attome-types",

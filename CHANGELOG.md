@@ -1150,6 +1150,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   transaction, store each line total and the deal's one-time, recurring and contract totals and amount,
   and recalculate the stored split amounts. A product must be on the deal's price list in its currency
   (`product_not_on_price_list`). `opportunity_line` and the deal totals are now engine-managed.
+- Stock ledger (I6-T2, field-service pack `0005`): `POST /api/v1/service/stock/movements`, `POST
+  /api/v1/service/stock/reservations` and `POST /api/v1/service/stock/reservations/{id}/release` write an
+  append-only `stock_movement` (signed quantity) and the `stock_balance` together under a row lock, so
+  concurrent movers never oversell; stock leaves only from what is available unless the balance has
+  `allow_negative`. The `stock_ledger` job reserves part lines of scheduled work orders, issues them on
+  completion and releases them on cancellation.
 - Static status page (H8-T2): when a status record changes, the status notice job writes the public
   status page as one static bilingual `status-page/index.html` (and `status-page/status.json`) to the
   object store, for a bucket or static host. `attome status-page --url <server> --out <dir>` writes the
