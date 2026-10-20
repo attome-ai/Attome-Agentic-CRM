@@ -282,6 +282,19 @@ export const xrmEn = {
     capped_per_deal: 'Capped at {cap} for this deal.',
     capped_per_period: 'Capped at {cap} for this period.',
   },
+  // D11-T3: the forecast grid.
+  forecast: {
+    title: 'Forecast',
+    period: 'Period',
+    owner: 'Who',
+    commit: 'Commit',
+    quota: 'Quota',
+    amount: 'Forecast amount',
+    reason: 'Reason',
+    save: 'Save',
+    cancel: 'Cancel',
+    empty: 'No forecast for this period yet.',
+  },
   // F1-T3: the bundle configurator.
   configurator: {
     title: 'Configure the bundle',

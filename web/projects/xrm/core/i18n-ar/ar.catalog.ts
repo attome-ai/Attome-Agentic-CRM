@@ -261,6 +261,19 @@ export const xrmAr = {
     capped_per_deal: 'بحد أقصى {cap} لهذه الصفقة.',
     capped_per_period: 'بحد أقصى {cap} لهذه الفترة.',
   },
+  // D11-T3: the forecast grid.
+  forecast: {
+    title: 'التوقعات',
+    period: 'الفترة',
+    owner: 'المسؤول',
+    commit: 'الالتزام',
+    quota: 'الحصة',
+    amount: 'مبلغ التوقع',
+    reason: 'السبب',
+    save: 'حفظ',
+    cancel: 'إلغاء',
+    empty: 'لا توجد توقعات لهذه الفترة بعد.',
+  },
   // F1-T3: the bundle configurator.
   configurator: {
     title: 'تهيئة الحزمة',

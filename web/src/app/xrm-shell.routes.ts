@@ -738,6 +738,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // D11-T3: the forecast grid (rows and amounts as the records allow).
+            path: 'sales/forecast',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/sales/forecast').then(m => m.ForecastGridComponent),
+          },
+          {
             // F1-T3: configure a bundle product (?bundleId=&priceListId=).
             path: 'sales/configurator',
             canActivate: [authGuard],
