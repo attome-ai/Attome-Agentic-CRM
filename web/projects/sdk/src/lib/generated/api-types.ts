@@ -9986,6 +9986,197 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Starts a billing run.
+         * @description Requests an invoice from invoicing for each account, billing period and
+         *     currency with planned charges due by `as_of`, in a background job; the
+         *     charges become requested. A run that stops carries on where it stopped.
+         */
+        post: operations["post_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/runs/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Previews a billing run.
+         * @description Lists, per account, billing period and currency, the planned charges a
+         *     run on `as_of` would request from invoicing. Writes nothing.
+         */
+        post: operations["post_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a subscription.
+         * @description By hand from `lines`, or from an accepted quote (`quote_id`), whose lines
+         *     are copied. Each line starts with one dated segment.
+         */
+        post: operations["post_subscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reads a subscription as of a date.
+         * @description The subscription as the caller may read it, with each line's quantity
+         *     and price in force on `as_of` (today when absent).
+         */
+        get: operations["get_subscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/amendments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Amends a subscription from a date.
+         * @description Each changed line's segment in force on `effective` closes and the next
+         *     opens; the rest of that billing period is prorated as a planned charge
+         *     or credit. Changing a price needs `subscription.amend_price`.
+         */
+        post: operations["post_amendment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/amendments/{amendment_id}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverses an amendment.
+         * @description Voids the amendment's segments, lets the segments it closed run on and
+         *     cancels its planned charges. Once any part is invoiced it cannot be
+         *     reversed; amend again instead.
+         */
+        post: operations["post_reverse_amendment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels a subscription.
+         * @description At the end of its term, or on a date: the lines end then. Needs
+         *     `subscription.cancel`.
+         */
+        post: operations["post_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pauses a subscription.
+         * @description From a date, until `resume_on` when given: the lines bill nothing while
+         *     paused.
+         */
+        post: operations["post_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumes a paused subscription.
+         * @description On a date: each line bills at its quantity before the pause again.
+         */
+        post: operations["post_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/usage": {
         parameters: {
             query?: never;
@@ -13410,6 +13601,28 @@ export interface paths {
          */
         put: operations["put_sales_contact_manager"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/cpq/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validates a bundle configuration.
+         * @description Checks the chosen options against the bundle's option groups (minimum
+         *     and maximum) and rules (requires, excludes, expressions), and lists
+         *     every problem. Writes nothing.
+         */
+        post: operations["post_sales_cpq_validate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18669,6 +18882,109 @@ export interface components {
          */
         BatchResult_BulkItemOk: {
             items: components["schemas"]["ItemResult_BulkItemOk"][];
+        };
+        BillingAmended: {
+            /** Format: uuid */
+            amendment_id: string;
+            charges: number;
+            segments_opened: number;
+        };
+        BillingAmendmentBody: {
+            changes: components["schemas"]["BillingLineChangeBody"][];
+            /** Format: date */
+            effective: string;
+        };
+        BillingCancelBody: {
+            /** @description Cancel at the end of the term instead of on `on`. */
+            at_term_end?: boolean;
+            /** Format: date */
+            on?: string | null;
+            /** @description `price`, `product_fit`, `budget`, `switched_vendor` or `other`. */
+            reason: string;
+        };
+        BillingCancelled: {
+            /** Format: date */
+            effective: string;
+        };
+        BillingCreateSubscriptionBody: {
+            /** Format: uuid */
+            account_ref: string;
+            /** @description `anniversary` (the default) or `calendar_month`. */
+            billing_alignment?: string | null;
+            /** @description `monthly` (the default), `quarterly` or `yearly`. */
+            billing_frequency?: string | null;
+            /** @description `advance` (the default) or `arrears`. */
+            billing_timing?: string | null;
+            currency: string;
+            /** Format: date */
+            end_date?: string | null;
+            lines?: components["schemas"]["BillingNewLineBody"][];
+            name: string;
+            /**
+             * Format: uuid
+             * @description From an order (refused until order lines carry a line type).
+             */
+            order_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Copies an accepted quote's lines instead of `lines`.
+             */
+            quote_id?: string | null;
+            /** Format: date */
+            start_date: string;
+            /** Format: int32 */
+            term_months?: number | null;
+        };
+        BillingLineChangeBody: {
+            /** @description `add`, `remove`, `upgrade`, `downgrade` or `price_change`. */
+            kind: string;
+            /** Format: uuid */
+            line_id: string;
+            /** Format: double */
+            quantity: number;
+            /** Format: double */
+            unit_price: number;
+        };
+        BillingNewLineBody: {
+            /**
+             * @description `flat`, `per_unit` (the default), `tiered`, `volume`, `setup_fee` or
+             *     `minimum_commitment`.
+             */
+            charge_model?: string | null;
+            /** Format: uuid */
+            product_ref: string;
+            /** Format: double */
+            quantity: number;
+            /** Format: double */
+            unit_price: number;
+        };
+        BillingPauseBody: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            resume_on?: string | null;
+        };
+        BillingResumeBody: {
+            /** Format: date */
+            on: string;
+        };
+        BillingRunBody: {
+            /**
+             * Format: date
+             * @description Charges due by this day (`YYYY-MM-DD`); today when absent.
+             */
+            as_of?: string | null;
+        };
+        BillingRunStarted: {
+            /** Format: uuid */
+            run_id: string;
+        };
+        BillingSubscriptionChanged: {
+            status: string;
+        };
+        BillingSubscriptionCreated: {
+            /** Format: uuid */
+            id: string;
         };
         /** @description One record to restore. */
         BinItem: {
@@ -25573,6 +25889,21 @@ export interface components {
              */
             warning: boolean;
         };
+        /** @description One line as it stood on a date. */
+        LineAsOf: {
+            change_kind?: string | null;
+            /** Format: uuid */
+            line_id: string;
+            /** Format: uuid */
+            product_ref?: string | null;
+            /**
+             * Format: double
+             * @description `None` when the line had no segment in force that day.
+             */
+            quantity?: number | null;
+            /** Format: double */
+            unit_price?: number | null;
+        };
         /** @enum {string} */
         LineageRelation: "root" | "child" | "formula_input";
         LinkBody: {
@@ -31475,6 +31806,31 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RunGroup: {
+            items: {
+                /** Format: uuid */
+                account_ref: string;
+                /** Format: int64 */
+                charges: number;
+                currency: string;
+                /** Format: date */
+                period_start: string;
+                /** Format: double */
+                total: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SalesBattlecard: {
             items: {
                 /** @description The knowledge article holding the battle card, when one is set. */
@@ -35781,6 +36137,18 @@ export interface components {
             id: string;
             status: string;
         };
+        /** @description One invoice request a run would make. */
+        RunGroup: {
+            /** Format: uuid */
+            account_ref: string;
+            /** Format: int64 */
+            charges: number;
+            currency: string;
+            /** Format: date */
+            period_start: string;
+            /** Format: double */
+            total: number;
+        };
         RunQueued: {
             /** @description False when a run was already queued. */
             queued: boolean;
@@ -35912,6 +36280,40 @@ export interface components {
         SalesCopyAccountTeamBody: {
             /** @description The account team roles to copy, e.g. `["account_manager", "pre_sales"]`. */
             roles: string[];
+        };
+        /** @description One failure, for a person or an agent to act on. */
+        SalesCpqProblem: {
+            /** Format: int32 */
+            chosen?: number | null;
+            /**
+             * @description `not_an_option`, `too_few`, `too_many`, `missing_required`,
+             *     `excluded` or `rule_failed`.
+             */
+            code: string;
+            /** Format: uuid */
+            group_id?: string | null;
+            /** Format: int32 */
+            max?: number | null;
+            /** @description A rule's own message. */
+            message?: string | null;
+            /** Format: int32 */
+            min?: number | null;
+            /** Format: uuid */
+            option_id?: string | null;
+            /** Format: uuid */
+            other_option_id?: string | null;
+            /** Format: uuid */
+            rule_id?: string | null;
+        };
+        SalesCpqValidateBody: {
+            /** Format: uuid */
+            bundle_product_id: string;
+            /** @description The chosen option products. */
+            chosen: string[];
+        };
+        SalesCpqValidation: {
+            problems: components["schemas"]["SalesCpqProblem"][];
+            valid: boolean;
         };
         SalesDealDiscountBody: {
             /** @description Decimal text, 0 to 100; null removes it. */
@@ -37697,6 +38099,16 @@ export interface components {
         Subscription: {
             /** Format: uuid */
             id: string;
+        };
+        /** @description A subscription as it stood on a date. */
+        SubscriptionAsOf: {
+            /** Format: date */
+            as_of: string;
+            /** Format: uuid */
+            id: string;
+            lines: components["schemas"]["LineAsOf"][];
+            /** @description The record as the caller reads it. */
+            subscription: Record<string, never>;
         };
         /**
          * @description Same shape as `attome-s2s`'s `KeyCreatedResponse` — the plaintext secret is
@@ -73525,6 +73937,551 @@ export interface operations {
             };
         };
     };
+    post_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingRunBody"];
+            };
+        };
+        responses: {
+            /** @description The run is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingRunStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not request invoices for subscription charges */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingRunBody"];
+            };
+        };
+        responses: {
+            /** @description The invoice requests a run would make */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RunGroup"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read subscription charges */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_subscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCreateSubscriptionBody"];
+            };
+        };
+        responses: {
+            /** @description The subscription is created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSubscriptionCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create subscriptions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid terms or lines, or a quote not accepted */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_subscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscription */
+                id: string;
+                /** @description The day to read the subscription as of (`YYYY-MM-DD`); today when absent. */
+                as_of: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subscription as of the date */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionAsOf"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read subscription lines */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_amendment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscription */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingAmendmentBody"];
+            };
+        };
+        responses: {
+            /** @description The amendment is made */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingAmended"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not amend, or not change prices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to this subscription is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No change, a line with no segment then, or a closed subscription */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_reverse_amendment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscription */
+                id: string;
+                /** @description The amendment to reverse */
+                amendment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The amendment is reversed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSubscriptionChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not amend subscriptions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such amendment of this subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Part of the amendment is invoiced, or another change is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscription */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCancelBody"];
+            };
+        };
+        responses: {
+            /** @description The subscription is cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingCancelled"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not cancel subscriptions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to this subscription is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No date, no term end, or a date before the start */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_pause: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscription */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingPauseBody"];
+            };
+        };
+        responses: {
+            /** @description The subscription is paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSubscriptionChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change subscriptions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to this subscription is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not active, or a resume before the pause */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscription */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingResumeBody"];
+            };
+        };
+        responses: {
+            /** @description The subscription is active again */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingSubscriptionChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change subscriptions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to this subscription is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The subscription is not paused */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_usage: {
         parameters: {
             query?: never;
@@ -83795,6 +84752,57 @@ export interface operations {
             };
             /** @description Unrelated account, a loop, or a missing If-Match */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_cpq_validate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesCpqValidateBody"];
+            };
+        };
+        responses: {
+            /** @description Whether the configuration is valid, and why not */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesCpqValidation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read products */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such bundle product, or configuration is not installed */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

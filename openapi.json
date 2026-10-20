@@ -55430,6 +55430,913 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/billing/runs": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Starts a billing run.",
+        "description": "Requests an invoice from invoicing for each account, billing period and\ncurrency with planned charges due by `as_of`, in a background job; the\ncharges become requested. A run that stops carries on where it stopped.",
+        "operationId": "post_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The run is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingRunStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not request invoices for subscription charges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/runs/preview": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Previews a billing run.",
+        "description": "Lists, per account, billing period and currency, the planned charges a\nrun on `as_of` would request from invoicing. Writes nothing.",
+        "operationId": "post_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The invoice requests a run would make",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RunGroup"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read subscription charges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "preview writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/subscriptions": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Creates a subscription.",
+        "description": "By hand from `lines`, or from an accepted quote (`quote_id`), whose lines\nare copied. Each line starts with one dated segment.",
+        "operationId": "post_subscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCreateSubscriptionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The subscription is created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSubscriptionCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such quote the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid terms or lines, or a quote not accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/subscriptions/{id}": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Reads a subscription as of a date.",
+        "description": "The subscription as the caller may read it, with each line's quantity\nand price in force on `as_of` (today when absent).",
+        "operationId": "get_subscription",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "path",
+            "description": "The day to read the subscription as of (`YYYY-MM-DD`); today when absent.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The subscription as of the date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionAsOf"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read subscription lines",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/billing/subscriptions/{id}/amendments": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Amends a subscription from a date.",
+        "description": "Each changed line's segment in force on `effective` closes and the next\nopens; the rest of that billing period is prorated as a planned charge\nor credit. Changing a price needs `subscription.amend_price`.",
+        "operationId": "post_amendment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingAmendmentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The amendment is made",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingAmended"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not amend, or not change prices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to this subscription is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No change, a line with no segment then, or a closed subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/subscriptions/{id}/amendments/{amendment_id}/reverse": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Reverses an amendment.",
+        "description": "Voids the amendment's segments, lets the segments it closed run on and\ncancels its planned charges. Once any part is invoiced it cannot be\nreversed; amend again instead.",
+        "operationId": "post_reverse_amendment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "amendment_id",
+            "in": "path",
+            "description": "The amendment to reverse",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The amendment is reversed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSubscriptionChanged"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not amend subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such amendment of this subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Part of the amendment is invoiced, or another change is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/subscriptions/{id}/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Cancels a subscription.",
+        "description": "At the end of its term, or on a date: the lines end then. Needs\n`subscription.cancel`.",
+        "operationId": "post_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCancelBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The subscription is cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCancelled"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not cancel subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to this subscription is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No date, no term end, or a date before the start",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/subscriptions/{id}/pause": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Pauses a subscription.",
+        "description": "From a date, until `resume_on` when given: the lines bill nothing while\npaused.",
+        "operationId": "post_pause",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPauseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The subscription is paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSubscriptionChanged"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to this subscription is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not active, or a resume before the pause",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/billing/subscriptions/{id}/resume": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Resumes a paused subscription.",
+        "description": "On a date: each line bills at its quantity before the pause again.",
+        "operationId": "post_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingResumeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The subscription is active again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSubscriptionChanged"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to this subscription is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The subscription is not paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/billing/usage": {
       "post": {
         "tags": [
@@ -72278,6 +73185,87 @@
             }
           ],
           "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/cpq/validate": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Validates a bundle configuration.",
+        "description": "Checks the chosen options against the bundle's option groups (minimum\nand maximum) and rules (requires, excludes, expressions), and lists\nevery problem. Writes nothing.",
+        "operationId": "post_sales_cpq_validate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesCpqValidateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Whether the configuration is valid, and why not",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesCpqValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such bundle product, or configuration is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "validates a configuration; writes nothing",
+          "reason": "read_only",
+          "via": null
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -96996,6 +97984,299 @@
           }
         }
       },
+      "BillingAmended": {
+        "type": "object",
+        "required": [
+          "amendment_id",
+          "segments_opened",
+          "charges"
+        ],
+        "properties": {
+          "amendment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "charges": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "segments_opened": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "BillingAmendmentBody": {
+        "type": "object",
+        "required": [
+          "effective",
+          "changes"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingLineChangeBody"
+            }
+          },
+          "effective": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "BillingCancelBody": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "at_term_end": {
+            "type": "boolean",
+            "description": "Cancel at the end of the term instead of on `on`."
+          },
+          "on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "description": "`price`, `product_fit`, `budget`, `switched_vendor` or `other`."
+          }
+        }
+      },
+      "BillingCancelled": {
+        "type": "object",
+        "required": [
+          "effective"
+        ],
+        "properties": {
+          "effective": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "BillingCreateSubscriptionBody": {
+        "type": "object",
+        "required": [
+          "name",
+          "account_ref",
+          "currency",
+          "start_date"
+        ],
+        "properties": {
+          "account_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "billing_alignment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`anniversary` (the default) or `calendar_month`."
+          },
+          "billing_frequency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`monthly` (the default), `quarterly` or `yearly`."
+          },
+          "billing_timing": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`advance` (the default) or `arrears`."
+          },
+          "currency": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingNewLineBody"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "From an order (refused until order lines carry a line type)."
+          },
+          "quote_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Copies an accepted quote's lines instead of `lines`."
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "term_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "BillingLineChangeBody": {
+        "type": "object",
+        "required": [
+          "line_id",
+          "quantity",
+          "unit_price",
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`add`, `remove`, `upgrade`, `downgrade` or `price_change`."
+          },
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit_price": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BillingNewLineBody": {
+        "type": "object",
+        "required": [
+          "product_ref",
+          "quantity",
+          "unit_price"
+        ],
+        "properties": {
+          "charge_model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`flat`, `per_unit` (the default), `tiered`, `volume`, `setup_fee` or\n`minimum_commitment`."
+          },
+          "product_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit_price": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BillingPauseBody": {
+        "type": "object",
+        "required": [
+          "from"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "resume_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "BillingResumeBody": {
+        "type": "object",
+        "required": [
+          "on"
+        ],
+        "properties": {
+          "on": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "BillingRunBody": {
+        "type": "object",
+        "properties": {
+          "as_of": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "Charges due by this day (`YYYY-MM-DD`); today when absent."
+          }
+        }
+      },
+      "BillingRunStarted": {
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BillingSubscriptionChanged": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "BillingSubscriptionCreated": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "BinItem": {
         "type": "object",
         "description": "One record to restore.",
@@ -114195,6 +115476,47 @@
           }
         }
       },
+      "LineAsOf": {
+        "type": "object",
+        "description": "One line as it stood on a date.",
+        "required": [
+          "line_id"
+        ],
+        "properties": {
+          "change_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "`None` when the line had no segment in force that day."
+          },
+          "unit_price": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "LineageRelation": {
         "type": "string",
         "enum": [
@@ -129807,6 +131129,72 @@
           }
         }
       },
+      "PaginatedResponse_RunGroup": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One invoice request a run would make.",
+              "required": [
+                "account_ref",
+                "period_start",
+                "currency",
+                "charges",
+                "total"
+              ],
+              "properties": {
+                "account_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "charges": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "period_start": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "total": {
+                  "type": "number",
+                  "format": "double"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SalesBattlecard": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -140569,6 +141957,38 @@
           }
         }
       },
+      "RunGroup": {
+        "type": "object",
+        "description": "One invoice request a run would make.",
+        "required": [
+          "account_ref",
+          "period_start",
+          "currency",
+          "charges",
+          "total"
+        ],
+        "properties": {
+          "account_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "charges": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "RunQueued": {
         "type": "object",
         "required": [
@@ -140987,6 +142407,117 @@
               "type": "string"
             },
             "description": "The account team roles to copy, e.g. `[\"account_manager\", \"pre_sales\"]`."
+          }
+        }
+      },
+      "SalesCpqProblem": {
+        "type": "object",
+        "description": "One failure, for a person or an agent to act on.",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "chosen": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "code": {
+            "type": "string",
+            "description": "`not_an_option`, `too_few`, `too_many`, `missing_required`,\n`excluded` or `rule_failed`."
+          },
+          "group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "max": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A rule's own message."
+          },
+          "min": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "option_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "other_option_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "SalesCpqValidateBody": {
+        "type": "object",
+        "required": [
+          "bundle_product_id",
+          "chosen"
+        ],
+        "properties": {
+          "bundle_product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chosen": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The chosen option products."
+          }
+        }
+      },
+      "SalesCpqValidation": {
+        "type": "object",
+        "required": [
+          "valid",
+          "problems"
+        ],
+        "properties": {
+          "problems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesCpqProblem"
+            }
+          },
+          "valid": {
+            "type": "boolean"
           }
         }
       },
@@ -145712,6 +147243,36 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "SubscriptionAsOf": {
+        "type": "object",
+        "description": "A subscription as it stood on a date.",
+        "required": [
+          "id",
+          "as_of",
+          "subscription",
+          "lines"
+        ],
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineAsOf"
+            }
+          },
+          "subscription": {
+            "type": "object",
+            "description": "The record as the caller reads it."
           }
         }
       },
@@ -151117,7 +152678,6 @@
     }
   ],
   "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -151169,5 +152729,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }
