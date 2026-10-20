@@ -79,6 +79,16 @@ fn service_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(""),
         ),
+        SettingDescriptor::new(
+            "service.email_thread_days",
+            "An inbound email with no case number in its subject and no reply \
+             headers joins its sender's most recent open case updated within this \
+             many days (G1-T2). 0: only the case number or the reply headers join.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 90}),
+            DEPLOYMENT,
+            false,
+            || json!(7),
+        ),
     ]
 }
 

@@ -6,6 +6,8 @@ pub mod clock;
 pub mod cmdb_impact;
 pub mod cmdb_reconcile;
 pub mod convert;
+/// G1-T2: inbound email joins the right case.
+pub mod email_threading;
 pub mod entitlement;
 /// G8-T1: escalation rule sets compiled into M10 timers.
 pub mod escalation;
