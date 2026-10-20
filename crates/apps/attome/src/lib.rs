@@ -32,6 +32,8 @@ pub mod db_role_seed;
 /// rationale).
 #[cfg(debug_assertions)]
 pub mod dev_access_seed;
+/// J2-T2: shared mailboxes routed into cases, leads and contacts.
+pub mod inbound_mail;
 pub mod jobs;
 /// D15-T2: personal emails captured onto matching records.
 pub mod mail_capture;

@@ -132,6 +132,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Shared mailboxes (J2-T2): every two minutes the `inbound_mail` job reads each active
+  `kind = "mailbox"` integration system and routes each message once: onto the case it threads to,
+  else by the mailbox's `config.routing` (`create`: `case`, `lead` or `none`; `unknown_sender`:
+  `create` or `ignore`), as the system's service principal. Automatic, bulk and our own mail is
+  skipped and each sender is limited to 20 routed messages an hour. Migration 0162 adds
+  `inbound_mail_state` and `inbound_mail_message` (where each message went, or why not).
 - Service desk presence (G5-T3): each person sets `service.presence` (available, busy, away) from the
   workspace header; round-robin and least-loaded queues route new work only to available members.
   `POST /api/v1/service/viewing` records that the caller has a record open (a two-minute Redis

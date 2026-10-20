@@ -193,6 +193,54 @@ pub async fn find_case(
     Ok(None)
 }
 
+/// The fields of a case opened from an inbound email: a placeholder number
+/// until an Auto Value rule numbers cases, the subject as title, the text
+/// as description, channel `email`, status `new`. Pure.
+pub fn new_case_body(
+    subject: Option<&str>,
+    text: Option<&str>,
+    requester: Uuid,
+) -> serde_json::Value {
+    let title = subject
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("(no subject)");
+    let mut body = serde_json::json!({
+        "ticket_number": crate::intake::placeholder_number("TKT"),
+        "title": title.chars().take(200).collect::<String>(),
+        "requester_id": requester.to_string(),
+        "channel": "email",
+        "priority": "medium",
+        "status": "new",
+    });
+    if let Some(text) = text.map(str::trim).filter(|t| !t.is_empty()) {
+        body["description"] = serde_json::json!(text.chars().take(10_000).collect::<String>());
+    }
+    body
+}
+
+/// J2-T2: opens a case from an inbound email through the generic create, as
+/// `actor` (the mailbox's service principal). Returns the new case's id.
+pub async fn open_case_from_email(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    actor: Uuid,
+    subject: Option<&str>,
+    text: Option<&str>,
+    requester: Uuid,
+) -> Result<Uuid, AppError> {
+    let (id, _) = attome_records::entity_crud::create_record_with_id_for(
+        state,
+        ctx,
+        actor,
+        CASE_ENTITY,
+        new_case_body(subject, text, requester),
+        Uuid::now_v7(),
+    )
+    .await?;
+    Ok(id)
+}
+
 /// The fields of the `communication` that puts one message on a case's
 /// thread, for the generic create: any channel, either direction.
 pub fn thread_entry(
@@ -268,6 +316,20 @@ mod email_threading {
         };
         assert_eq!(reply_ids(&email), vec!["<c@x>", "<b@x>", "<a@x>"]);
         assert!(reply_ids(&InboundEmail::default()).is_empty());
+    }
+
+    #[test]
+    fn a_case_from_email_carries_subject_text_and_requester() {
+        let requester = Uuid::now_v7();
+        let body = new_case_body(Some("  Printer jam "), Some("It jams."), requester);
+        assert_eq!(body["title"], "Printer jam");
+        assert_eq!(body["description"], "It jams.");
+        assert_eq!(body["requester_id"], requester.to_string());
+        assert_eq!(body["channel"], "email");
+        assert!(body["ticket_number"].as_str().unwrap().starts_with("TKT-"));
+        let blank = new_case_body(None, Some("  "), requester);
+        assert_eq!(blank["title"], "(no subject)");
+        assert!(blank.get("description").is_none());
     }
 
     #[test]
