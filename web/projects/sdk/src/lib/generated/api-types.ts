@@ -7710,6 +7710,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/validation/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Rejections per rule, attribute and channel over the window, and each entity's validity score from the last nightly sweep (A3-T8). */
+        get: operations["validation_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/views": {
         parameters: {
             query?: never;
@@ -25053,6 +25070,32 @@ export interface components {
             plural_name: string;
             relationships: components["schemas"]["RelationshipSchemaEntry"][];
         };
+        /** @description One entity's validity score, as the last nightly sweep computed it. */
+        EntityValidity: {
+            /**
+             * Format: int64
+             * @description Live records checked.
+             */
+            checked: number;
+            /** Format: date-time */
+            computed_at: string;
+            entity: string;
+            /**
+             * Format: int64
+             * @description Records that pass every active check.
+             */
+            passing: number;
+            /**
+             * Format: double
+             * @description `passing / (checked - unknown)`; `None` when nothing was decided.
+             */
+            score?: number | null;
+            /**
+             * Format: int64
+             * @description Records some check could not decide (left out of the score).
+             */
+            unknown: number;
+        };
         /** @description One variable: its definition and this deployment's value. */
         EnvVariable: {
             default: Record<string, never>;
@@ -37929,6 +37972,21 @@ export interface components {
             /** Format: double */
             score: number;
         };
+        /** @description Refusals of one rule on one attribute through one channel. */
+        RuleRejections: {
+            attribute?: string | null;
+            /** @description `staff`, `service`, `portal` or `system`. */
+            channel: string;
+            entity: string;
+            /** Format: date-time */
+            last_rejected_at: string;
+            /** Format: int64 */
+            rejections: number;
+            /** Format: uuid */
+            rule_id: string;
+            /** @description The rule's display name; `None` once the rule is deleted. */
+            rule_name?: string | null;
+        };
         /** @description One role a business rule applies to. */
         RuleRoleRef: {
             /** Format: uuid */
@@ -41742,6 +41800,16 @@ export interface components {
             issues: components["schemas"]["RuleIssue"][];
             valid: boolean;
             warnings: components["schemas"]["RuleEditorWarning"][];
+        };
+        /** @description `GET /api/v1/admin/validation/stats`. */
+        ValidationStats: {
+            entities: components["schemas"]["EntityValidity"][];
+            rejections: components["schemas"]["RuleRejections"][];
+            /**
+             * Format: date-time
+             * @description The start of the rejection window.
+             */
+            since: string;
         };
         VapidKey: {
             /** @description The application server key for `PushManager.subscribe`, base64url. */
@@ -69049,6 +69117,56 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validation_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Days of rejections to count (default 30, at most 365). */
+                days: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejections and validity scores */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationStats"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `days` is out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
