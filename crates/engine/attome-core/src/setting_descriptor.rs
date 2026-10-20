@@ -239,7 +239,7 @@ pub fn area(key: &str) -> &'static str {
         Some("customer_tests") => "data",
         Some("limits") => "operations",
         Some("compliance") => "security",
-        Some("email" | "mail_capture" | "voice" | "service") => "channels",
+        Some("email" | "mail_capture" | "voice" | "service" | "marketing") => "channels",
         Some("scan") => "data",
         _ => "other",
     }
@@ -260,6 +260,12 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "core.time_zone" => "المنطقة الزمنية التي تُعرض بها التواريخ والأوقات، مثل Asia/Riyadh.",
         "service.anonymous_intake.offerings" => {
             "معرّفات عروض الخدمة العامة التي تقبل طلبات مجهولة من نموذج ويب؛ فارغة: لا يقبلها أي عرض."
+        }
+        "marketing.sms_price_per_segment" => {
+            "تكلفة مقطع الرسالة النصية الواحد بعملة النشر الأساسية، لتقدير تكلفة الحملة قبل إرسالها؛ صفر: عدد المقاطع فقط."
+        }
+        "marketing.sms_quiet_hours" => {
+            "الساعات (بتوقيت المستلم المحلي) التي تُؤجَّل فيها رسائل الحملات النصية، لكل دولة برمزها و\"*\" لبقية الدول."
         }
         "service.presence" => {
             "حضور الموظف في مكتب الخدمة: متاح أو مشغول أو غائب؛ توزع قوائم الانتظار التلقائية العمل الجديد على المتاحين فقط."

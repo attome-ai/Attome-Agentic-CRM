@@ -1366,6 +1366,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-html",
+ "attome-integration",
  "attome-modules",
  "attome-notification",
  "attome-records",

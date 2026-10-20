@@ -132,6 +132,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- SMS campaigns (E16-T1): `POST /api/v1/marketing/lists/{id}/sms/estimate` answers who can be texted
+  (a phone and SMS consent for the purpose), the encoding, segments and cost
+  (`marketing.sms_price_per_segment`); `POST /api/v1/marketing/lists/{id}/sms/send` fixes the
+  recipients (refusing an estimate grown past `expected_cost`) and the `sms_campaign` job sends them
+  in batches, holding each until `marketing.sms_quiet_hours` end in the recipient's country, and
+  re-checking consent before each message. Migration 0163.
 - Marketing calendar (E29-T1): `/xrm/marketing/calendar` shows a month of campaign starts and ends and
   marketing events, and each running campaign's budget against actual (its own budget, finance
   budget lines naming it in `campaign_code` as planned, and their actuals).

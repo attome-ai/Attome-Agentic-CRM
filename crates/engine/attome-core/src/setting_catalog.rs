@@ -35,7 +35,48 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(records_settings());
     all.extend(limit_settings());
     all.extend(service_settings());
+    all.extend(marketing_settings());
     all
+}
+
+/// E16-T1: SMS campaigns. The price makes the cost estimate (0: no estimate
+/// in money, segments only); quiet hours hold messages until the recipient's
+/// morning, per country with `*` for the rest, in the country's own time.
+fn marketing_settings() -> Vec<SettingDescriptor> {
+    const DEPLOYMENT: &[SettingScope] = &[SettingScope::Deployment];
+    vec![
+        SettingDescriptor::new(
+            "marketing.sms_price_per_segment",
+            "What one SMS segment costs, in the deployment's base currency, for \
+             the estimate shown before an SMS campaign is sent. 0: segments only.",
+            || json!({"type": "number", "minimum": 0}),
+            DEPLOYMENT,
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
+            "marketing.sms_quiet_hours",
+            "Hours (HH:MM, recipient's local time) when campaign SMS are held, \
+             by country code with \"*\" for every other country, e.g. \
+             {\"*\": {\"start\": \"21:00\", \"end\": \"08:00\"}}.",
+            || {
+                json!({
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "required": ["start", "end"],
+                        "properties": {
+                            "start": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                            "end": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+                        }
+                    }
+                })
+            },
+            DEPLOYMENT,
+            false,
+            || json!({"*": {"start": "21:00", "end": "08:00"}}),
+        ),
+    ]
 }
 
 /// G2-T1: anonymous requests from a public web form. Both settings must be

@@ -20,6 +20,8 @@ pub mod referral;
 pub mod segment;
 pub mod segment_insight;
 pub mod send_time;
+/// E16-T1: SMS campaigns with consent, an estimate and quiet hours.
+pub mod sms_campaign;
 pub mod tracking;
 
 pub use model::MarketingModel;
@@ -33,5 +35,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 34;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <segment_insight::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<events::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<sms_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

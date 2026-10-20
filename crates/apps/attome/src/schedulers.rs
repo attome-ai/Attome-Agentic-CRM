@@ -114,6 +114,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_inbound_mail_scheduler(db.clone(), std::time::Duration::from_secs(120));
     // G1-T3: case summaries for threads quiet two minutes, every minute.
     crate::jobs::spawn_case_summary_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // E16-T1: SMS campaigns, a batch every five minutes.
+    crate::jobs::spawn_sms_campaign_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // J8-T1: new Google reviews, every 15 minutes.
     crate::jobs::spawn_social_reviews_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // D15-T3: meetings and people's own calendars, every five minutes.

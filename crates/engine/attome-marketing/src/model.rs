@@ -63,5 +63,13 @@ impl EngineModel for MarketingModel {
                 "/api/v1/marketing/lists/{id}/members-as-of",
                 get(crate::segment_insight::get_marketing_list_members_as_of),
             )
+            .route(
+                "/api/v1/marketing/lists/{id}/sms/estimate",
+                post(crate::sms_campaign::post_sms_estimate),
+            )
+            .route(
+                "/api/v1/marketing/lists/{id}/sms/send",
+                post(crate::sms_campaign::post_sms_send),
+            )
     }
 }
