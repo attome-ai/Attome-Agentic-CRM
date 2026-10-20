@@ -97,6 +97,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "empty",
     ),
     (
+        "crates/engine/attome-marketing/src/address_check.rs",
+        "marketing:mx:{domain}",
+        "the domain's DNS MX records",
+        "24 h",
+        "none; DNS changes show after the TTL",
+        "a Redis error looks the domain up uncached; an unknown answer is not cached",
+        "empty",
+    ),
+    (
         "crates/engine/attome-portal/src/cache.rs",
         "attome-portal:portal and attome-portal:plan",
         "PostgreSQL portal tables",

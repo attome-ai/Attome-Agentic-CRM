@@ -1359,6 +1359,7 @@ name = "attome-marketing"
 version = "0.1.0"
 dependencies = [
  "attome-audit",
+ "attome-cache",
  "attome-calendar",
  "attome-compliance",
  "attome-config",
@@ -1379,6 +1380,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror 2.0.21",
+ "tokio",
  "tracing",
  "utoipa",
  "uuid",

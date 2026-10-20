@@ -23,6 +23,16 @@ impl EngineModel for MarketingModel {
         &[]
     }
 
+    /// E6-T6: an email address with a syntax error is refused on every
+    /// generic write of a contact or lead; the softer findings are warnings
+    /// from `address_check::check_address`, never a refusal.
+    fn record_validators(&self) -> &'static [(&'static str, attome_core::model::RecordValidator)] {
+        &[
+            ("contact", crate::address_check::validate_email_record),
+            ("lead", crate::address_check::validate_email_record),
+        ]
+    }
+
     fn routes(&self) -> Router<EngineState> {
         Router::new()
             .route(

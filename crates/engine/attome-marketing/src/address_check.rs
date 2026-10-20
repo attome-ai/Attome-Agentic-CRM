@@ -1,14 +1,31 @@
-//! Email address checks (roadmap E6-T6), the parts that need no network:
-//! syntax within the RFC 5321 length limits, role addresses, the shipped
-//! disposable-domain list and typo suggestions for the large providers. The
-//! MX lookup and the record validator that uses these checks build on
-//! [`check_address_offline`].
+//! Email address checks (roadmap E6-T6): syntax within the RFC 5321 length
+//! limits, role addresses, the shipped disposable-domain list, typo
+//! suggestions for the large providers and a cached MX lookup.
 //!
 //! Only a syntax error makes an address invalid; the other findings make it
-//! risky, so a form or import warns instead of refusing.
+//! risky, so a form or import warns instead of refusing. The record
+//! validator on `contact.email` and `lead.email` therefore refuses syntax
+//! errors only: a validator is synchronous and has no network, and the
+//! warnings come from [`check_address`] where the caller (form, import)
+//! shows them.
+//!
+//! The MX lookup goes through [`MxResolver`], so tests and deployments pick
+//! the resolver. No DNS resolver crate ships yet ([`NoMxResolver`] answers
+//! "unknown", which is never a finding); adding one (hickory-resolver,
+//! rustls, no native build) needs a lockfile change made on a build machine.
+//! An unknown answer, including a resolver past its two seconds, never
+//! blocks a save.
 
 use std::collections::HashSet;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::LazyLock;
+use std::time::Duration;
+
+use attome_cache::Store;
+use attome_cache::spec::{CacheSensitivity, CacheSpec, FailureMode, Partition};
+use attome_cache::tiered::TieredCache;
+use attome_types::AppError;
 
 /// The longest address (RFC 5321 path limit less the angle brackets).
 pub const MAX_ADDRESS: usize = 254;
@@ -88,9 +105,12 @@ pub fn check_syntax(address: &str) -> Result<(), AddressIssue> {
         && !local.starts_with('.')
         && !local.ends_with('.')
         && !local.contains("..")
-        && local
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || "!#$%&'*+/=?^_`{|}~.-".contains(c));
+        && local.chars().all(|c| {
+            c.is_ascii_alphanumeric()
+                || "!#$%&'*+/=?^_`{|}~.-".contains(c)
+                // RFC 6531: an internationalised local part.
+                || (!c.is_ascii() && c.is_alphanumeric())
+        });
     if !local_ok {
         return Err(AddressIssue::BadLocal);
     }
@@ -101,7 +121,11 @@ pub fn check_syntax(address: &str) -> Result<(), AddressIssue> {
                 && l.len() <= 63
                 && !l.starts_with('-')
                 && !l.ends_with('-')
-                && l.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+                // An internationalised domain (e.g. Arabic) as typed, not
+                // only its punycode form.
+                && l.chars().all(|c| {
+                    c.is_ascii_alphanumeric() || c == '-' || (!c.is_ascii() && c.is_alphanumeric())
+                })
         });
     if !domain_ok {
         return Err(AddressIssue::BadDomain);
@@ -204,9 +228,204 @@ pub fn check_address_offline(address: &str, has_mx: Option<bool>) -> AddressChec
     }
 }
 
+/// How long one MX lookup may take before its answer counts as unknown.
+pub const MX_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Answers whether a domain has MX records. `None` is unknown (no resolver,
+/// a DNS failure): never a finding and never cached.
+pub trait MxResolver: Send + Sync {
+    fn has_mx<'a>(
+        &'a self,
+        domain: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Option<bool>> + Send + 'a>>;
+}
+
+/// The resolver until a DNS crate ships: every answer is unknown.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct NoMxResolver;
+
+impl MxResolver for NoMxResolver {
+    fn has_mx<'a>(
+        &'a self,
+        _domain: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Option<bool>> + Send + 'a>> {
+        Box::pin(async { None })
+    }
+}
+
+/// The MX answer cache.
+///
+/// - Source of truth: the domain's DNS MX records.
+/// - Key: `marketing:mx:{domain}` (lower case).
+/// - TTL: 24 hours; DNS changes show after it.
+/// - Invalidation: none beyond the TTL.
+/// - Failure: a Redis error looks the domain up uncached; an unknown answer
+///   is an error to the cache, so it is never stored.
+/// - Cold start: empty.
+static MX_SPEC: CacheSpec = CacheSpec {
+    name: "marketing:mx",
+    crate_name: "marketing",
+    purpose: "mx",
+    source_of_truth: "the domain's DNS MX records",
+    ttl: Duration::from_secs(24 * 60 * 60),
+    jitter_pct: 10,
+    l1_capacity: 10_000,
+    partition: Partition::Shared,
+    sensitivity: CacheSensitivity::Plain,
+    failure: FailureMode::FallBackToSource,
+    invalidation: "none; the 24-hour TTL",
+    cold_start: "empty",
+    warm_on_start: false,
+};
+
+/// The cached MX lookup. One per process, over the deployment's store.
+#[derive(Debug)]
+pub struct MxCache {
+    cache: TieredCache<bool>,
+}
+
+impl MxCache {
+    pub fn new(store: Option<Store>) -> Result<Self, AppError> {
+        Ok(Self {
+            cache: TieredCache::new(&MX_SPEC, store)?,
+        })
+    }
+
+    /// Whether `domain` has MX records: the cached answer, else the
+    /// resolver's within [`MX_TIMEOUT`]. Unknown is `None`.
+    pub async fn has_mx(&self, resolver: &dyn MxResolver, domain: &str) -> Option<bool> {
+        let domain = domain.trim().to_lowercase();
+        if domain.is_empty() {
+            return None;
+        }
+        let lookup = async {
+            match tokio::time::timeout(MX_TIMEOUT, resolver.has_mx(&domain)).await {
+                Ok(Some(answer)) => Ok(answer),
+                Ok(None) => Err(AppError::NotFound),
+                Err(_) => {
+                    tracing::debug!(%domain, "mx lookup timed out; unknown");
+                    Err(AppError::NotFound)
+                }
+            }
+        };
+        self.cache.get_or_load(&domain, lookup).await.ok()
+    }
+}
+
+/// Every check, with the MX answer from `cache` and `resolver`. The MX
+/// lookup runs only for an address whose syntax passed.
+pub async fn check_address(
+    address: &str,
+    resolver: &dyn MxResolver,
+    cache: &MxCache,
+) -> AddressCheck {
+    if check_syntax(address).is_err() {
+        return check_address_offline(address, None);
+    }
+    let domain = address
+        .trim()
+        .rsplit_once('@')
+        .map(|(_, d)| d)
+        .unwrap_or_default();
+    let has_mx = cache.has_mx(resolver, domain).await;
+    check_address_offline(address, has_mx)
+}
+
+/// The record validator on `contact.email` and `lead.email`: refuses an
+/// address with a syntax error, accepts a missing or empty one. Warnings
+/// (role, disposable, typo, no MX) are [`check_address`]'s, not a refusal.
+pub fn validate_email_record(
+    record: &serde_json::Map<String, serde_json::Value>,
+    _registry: &attome_core::meta_registry::EntityMetaRegistry,
+) -> Result<(), String> {
+    match record.get("email") {
+        Some(serde_json::Value::String(email)) if !email.trim().is_empty() => check_syntax(email)
+            .map_err(|issue| format!("email: not a valid email address ({})", issue_code(&issue))),
+        _ => Ok(()),
+    }
+}
+
+/// A stable code for an issue, for messages and the wire.
+pub fn issue_code(issue: &AddressIssue) -> &'static str {
+    match issue {
+        AddressIssue::Empty => "empty",
+        AddressIssue::TooLong => "too_long",
+        AddressIssue::LocalTooLong => "local_too_long",
+        AddressIssue::NotOneAt => "not_one_at",
+        AddressIssue::BadLocal => "bad_local",
+        AddressIssue::BadDomain => "bad_domain",
+        AddressIssue::RoleAddress => "role_address",
+        AddressIssue::DisposableDomain => "disposable_domain",
+        AddressIssue::LikelyTypo => "likely_typo",
+        AddressIssue::NoMx => "no_mx",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// Counts its lookups; every domain has MX except `nomx.example`.
+    #[derive(Default)]
+    struct Counting(AtomicUsize);
+
+    impl MxResolver for Counting {
+        fn has_mx<'a>(
+            &'a self,
+            domain: &'a str,
+        ) -> Pin<Box<dyn Future<Output = Option<bool>> + Send + 'a>> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async move { Some(domain != "nomx.example") })
+        }
+    }
+
+    #[tokio::test]
+    async fn cached_mx_needs_no_lookup() {
+        let cache = MxCache::new(None).unwrap();
+        let resolver = Counting::default();
+        let first = check_address("a@Acme.sa", &resolver, &cache).await;
+        let second = check_address("b@acme.sa", &resolver, &cache).await;
+        assert_eq!(first.status, AddressStatus::Valid);
+        assert_eq!(second.status, AddressStatus::Valid);
+        assert_eq!(resolver.0.load(Ordering::SeqCst), 1);
+        let none = check_address("a@nomx.example", &resolver, &cache).await;
+        assert_eq!(none.issues, vec![AddressIssue::NoMx]);
+    }
+
+    #[tokio::test]
+    async fn an_unknown_answer_is_no_finding_and_not_cached() {
+        let cache = MxCache::new(None).unwrap();
+        let c = check_address("a@unknown.sa", &NoMxResolver, &cache).await;
+        assert_eq!(c.status, AddressStatus::Valid);
+        let resolver = Counting::default();
+        check_address("a@unknown.sa", &resolver, &cache).await;
+        assert_eq!(resolver.0.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn syntax_errors_are_invalid() {
+        let cache = MxCache::new(None).unwrap();
+        let resolver = Counting::default();
+        let c = check_address("not an address", &resolver, &cache).await;
+        assert_eq!(c.status, AddressStatus::Invalid);
+        assert_eq!(resolver.0.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn the_validator_refuses_syntax_errors_only() {
+        let registry = attome_core::meta_registry::EntityMetaRegistry::default();
+        let record = |email: &str| {
+            let mut m = serde_json::Map::new();
+            m.insert("email".into(), serde_json::Value::String(email.into()));
+            m
+        };
+        assert!(validate_email_record(&record("a@b@c.com"), &registry).is_err());
+        assert!(validate_email_record(&record("info@mailinator.com"), &registry).is_ok());
+        assert!(validate_email_record(&record(""), &registry).is_ok());
+        assert!(validate_email_record(&serde_json::Map::new(), &registry).is_ok());
+        assert_eq!(check_syntax("سارة@مثال.السعودية"), Ok(()));
+    }
 
     #[test]
     fn syntax_rules() {
