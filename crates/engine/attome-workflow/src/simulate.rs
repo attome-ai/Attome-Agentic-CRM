@@ -139,6 +139,7 @@ pub async fn dry_run_module_steps(
                             config,
                             input: trigger_payload.clone(),
                             simulate: true,
+                            run_as_user: None,
                         },
                     )
                     .await

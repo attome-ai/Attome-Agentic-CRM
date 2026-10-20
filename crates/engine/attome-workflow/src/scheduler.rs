@@ -1404,7 +1404,7 @@ async fn execute_node(
         NodeType::AgentStep => execute_agent_step(state, ctx, node, input, fired, round).await,
         NodeType::Route => execute_route(state, ctx, node, input).await,
         NodeType::ModuleStep => {
-            execute_module_step(state, instance, node, input, fired, round).await
+            execute_module_step(state, ctx, instance, node, input, fired, round).await
         }
     }
 }
@@ -1457,6 +1457,7 @@ pub(crate) fn module_step_handler<'a>(
 /// instance.
 async fn execute_module_step(
     state: &EngineState,
+    ctx: &SecurityContext,
     instance: &InstanceRow,
     node: &GraphNode,
     input: &Value,
@@ -1476,6 +1477,7 @@ async fn execute_module_step(
         config: node.config.get("config").cloned().unwrap_or(Value::Null),
         input: input.get("input").cloned().unwrap_or(Value::Null),
         simulate: false,
+        run_as_user: Some(ctx.user_id),
     };
     use attome_core::workflow_step::StepOutcome;
     Ok(match handler.run(state, invocation).await? {

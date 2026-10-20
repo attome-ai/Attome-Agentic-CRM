@@ -45,6 +45,11 @@ pub struct StepInvocation {
     pub input: serde_json::Value,
     /// A dry run: describe what would happen, change nothing.
     pub simulate: bool,
+    /// E8-T7: the user the run acts as (the flow's run-as identity), for a
+    /// step that changes records through access-checked paths. `None` in a
+    /// dry run.
+    #[serde(default)]
+    pub run_as_user: Option<Uuid>,
 }
 
 /// What a node did.

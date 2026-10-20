@@ -4,6 +4,8 @@
 //! [`guard::JourneyGuard`] checks the exit and goal conditions before every
 //! node of a journey's run.
 
+pub mod action_step;
+pub mod control_step;
 pub mod enrol;
 pub mod guard;
 

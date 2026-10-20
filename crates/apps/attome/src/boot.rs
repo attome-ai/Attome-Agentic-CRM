@@ -1779,6 +1779,25 @@ pub fn register_engines(
         .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
         // E8-T4: a journey's exit and goal conditions, before every node.
         .register_workflow_kind_guard(attome_marketing::journey::guard::JourneyGuard)
+        // E8-T7: the journey control and action steps.
+        .register_workflow_step_handler(attome_marketing::journey::control_step::WaitCalendar)
+        .register_workflow_step_handler(attome_marketing::journey::control_step::Engagement)
+        .register_workflow_step_handler(attome_marketing::journey::control_step::Split)
+        .register_workflow_step_handler(attome_marketing::journey::action_step::ListMembership {
+            add: true,
+        })
+        .register_workflow_step_handler(attome_marketing::journey::action_step::ListMembership {
+            add: false,
+        })
+        .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
+            key: attome_marketing::journey::action_step::UNAVAILABLE[0],
+        })
+        .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
+            key: attome_marketing::journey::action_step::UNAVAILABLE[1],
+        })
+        .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
+            key: attome_marketing::journey::action_step::UNAVAILABLE[2],
+        })
 }
 
 #[cfg(test)]
