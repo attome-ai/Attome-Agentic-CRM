@@ -88,6 +88,7 @@ pub struct InboxQuery {
     /// The shared mailbox (integration system id).
     pub mailbox: Uuid,
     /// One-based page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Conversations per page.
     pub page_size: Option<i64>,

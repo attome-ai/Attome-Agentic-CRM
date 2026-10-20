@@ -68,6 +68,7 @@ pub struct DailyQuery {
     /// Last day, inclusive.
     pub to: Option<NaiveDate>,
     /// One-based page.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
     /// Rows per page.
     pub page_size: Option<i64>,
