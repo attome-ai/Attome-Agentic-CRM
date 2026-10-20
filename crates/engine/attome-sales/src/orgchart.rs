@@ -17,6 +17,9 @@
 //! answer names the previous manager, so the client undoes a change by
 //! setting that one back.
 
+/// D23-T8: people who leave.
+pub mod movers;
+
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, SelfService};
@@ -300,8 +303,60 @@ pub(crate) async fn put_sales_contact_manager(
     ))
 }
 
+/// Records that a contact left their company.
+///
+/// Marks the contact a former employee as of `left_on` (keeping the record
+/// and its history) and lists the contacts who reported to them, for a new
+/// manager. With `new_account_id`, also creates the person's contact at
+/// that account (duplicate rules apply) and links the two with a `moved_to`
+/// relationship. Send the contact's `row_version` in `If-Match`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/sales/contacts/{id}/left",
+    operation_id = "post_sales_contact_left",
+    tag = "sales",
+    params(
+        ("id" = Uuid, Path, description = "The contact who left"),
+        ("If-Match" = String, Header, description = "The contact's row_version"),
+    ),
+    request_body = movers::SalesContactLeftBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Recorded; the reports to reassign are listed", body = movers::SalesContactLeft),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not update the contact", body = ErrorResponse),
+        (status = 404, description = "No such contact or account the caller may read", body = ErrorResponse),
+        (status = 409, description = "The contact changed since it was read, or the new contact looks like a duplicate", body = ErrorResponse),
+        (status = 422, description = "A missing If-Match or an invalid field", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn post_sales_contact_left(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(contact): Path<Uuid>,
+    headers: HeaderMap,
+    Json(body): Json<movers::SalesContactLeftBody>,
+) -> Result<Json<movers::SalesContactLeft>, AppError> {
+    let expected = if_match(&headers)?;
+    Ok(Json(
+        movers::mark_left(
+            &state,
+            &ctx,
+            contact,
+            body.left_on,
+            body.new_account_id,
+            expected,
+        )
+        .await?,
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(put_sales_contact_manager))]
+#[openapi(
+    paths(put_sales_contact_manager, post_sales_contact_left),
+    components(schemas(movers::SalesContactLeftBody, movers::SalesContactLeft))
+)]
 pub(crate) struct ApiDocFragment;
 
 #[cfg(test)]
