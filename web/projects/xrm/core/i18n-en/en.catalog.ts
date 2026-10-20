@@ -1737,6 +1737,16 @@ export const xrmEn = {
     queues: 'Queues',
     noQueues: 'No queues yet.',
   },
+  servicePresence: {
+    label: 'My presence',
+    available: 'Available',
+    busy: 'Busy',
+    away: 'Away',
+    alsoViewing: 'Also viewing:',
+    nobodyElse: 'Nobody else is viewing this.',
+    separator: ', ',
+    saveFailed: 'Your presence could not be saved.',
+  },
   serviceCatalog: {
     title: 'Service catalog',
     subtitle: 'Find what you need, add it to your cart and order it.',

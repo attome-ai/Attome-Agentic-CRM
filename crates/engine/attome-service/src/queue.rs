@@ -249,6 +249,15 @@ async fn member_loads(
     .map_err(AppError::internal)
 }
 
+/// G5-T3: the members automatic distribution may route to — those whose
+/// `service.presence` is not `busy` or `away`.
+fn available_loads(state: &EngineState, loads: Vec<(Uuid, i64)>) -> Vec<(Uuid, i64)> {
+    loads
+        .into_iter()
+        .filter(|(user, _)| crate::presence::is_available(state, *user))
+        .collect()
+}
+
 /// The next unassigned, open ticket in the queue, ordered by
 /// (priority desc, age asc) per the target design's "priority queues"
 /// section — `FOR UPDATE` so a concurrent generic-CRUD update to this exact
@@ -499,7 +508,7 @@ pub async fn assign_ticket(
                         .to_string(),
                 ));
             }
-            let loads = member_loads(&mut tx, queue_id).await?;
+            let loads = available_loads(state, member_loads(&mut tx, queue_id).await?);
             let eligible: Vec<Uuid> = loads
                 .iter()
                 .filter(|(_, count)| queue.capacity.is_none_or(|cap| *count < cap))
@@ -516,7 +525,7 @@ pub async fn assign_ticket(
                         .to_string(),
                 ));
             }
-            let loads = member_loads(&mut tx, queue_id).await?;
+            let loads = available_loads(state, member_loads(&mut tx, queue_id).await?);
             least_loaded_member(&loads, queue.capacity).ok_or(AppError::Conflict(
                 "no active member of this queue currently has spare capacity",
             ))?

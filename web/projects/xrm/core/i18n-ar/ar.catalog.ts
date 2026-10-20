@@ -1659,6 +1659,16 @@ export const xrmAr = {
     queues: 'قوائم الانتظار',
     noQueues: 'لا توجد قوائم انتظار بعد.',
   },
+  servicePresence: {
+    label: 'حضوري',
+    available: 'متاح',
+    busy: 'مشغول',
+    away: 'غائب',
+    alsoViewing: 'يشاهده أيضًا:',
+    nobodyElse: 'لا أحد غيرك يشاهد هذا السجل.',
+    separator: '، ',
+    saveFailed: 'تعذّر حفظ حالة حضورك.',
+  },
   serviceCatalog: {
     title: 'دليل الخدمات',
     subtitle: 'ابحث عمّا تحتاجه وأضفه إلى السلة واطلبه.',

@@ -18,6 +18,8 @@ pub mod oncall;
 /// G3-T2: cart orders.
 pub mod order;
 pub mod portal;
+/// G5-T3: agent presence and record viewers.
+pub mod presence;
 pub mod queue;
 pub mod routing;
 pub mod seed;
@@ -43,5 +45,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(clock::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(queue::openapi_fragment());
+    doc.merge(presence::openapi_fragment());
     doc
 }

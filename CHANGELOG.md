@@ -132,6 +132,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Service desk presence (G5-T3): each person sets `service.presence` (available, busy, away) from the
+  workspace header; round-robin and least-loaded queues route new work only to available members.
+  `POST /api/v1/service/viewing` records that the caller has a record open (a two-minute Redis
+  heartbeat) and answers who else is viewing it; the workspace shows them on each case.
+- Case email threading (G1-T2): `attome_service::email_threading` joins an inbound email to its case by
+  the `[Case #N]` subject token (merged numbers included), its reply headers, or its sender's open case
+  updated within `service.email_thread_days` days (default 7).
+- Email address checks (E6-T6): contacts and leads refuse an email address with a syntax error;
+  internationalised addresses are accepted.
 - Subscriptions (F3-T5, F3-T6): `/api/v1/billing/subscriptions` creates a subscription by hand or from
   an accepted quote, reads it as of a date (`?as_of=`), amends it from a date (closing and opening
   dated segments, with a planned proration charge or credit for the rest of the period), reverses an

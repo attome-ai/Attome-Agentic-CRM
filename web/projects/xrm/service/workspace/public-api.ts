@@ -7,4 +7,7 @@ export type { ArticleSuggestion } from './article-suggest.component';
 export { ComposerComponent, matchTemplates, slashQuery } from './composer/composer.component';
 export type { ComposerChannel, ReplyTemplate } from './composer/composer.component';
 export { WorkspaceService, MAX_SESSIONS, openSession, sessionKey } from './workspace.service';
+// G5-T3: presence and record viewers.
+export { PresenceComponent, PRESENCES, toPresence } from './presence.component';
+export type { Presence, Viewer } from './presence.component';
 export type { WorkItem, QueueSummary, ConversationSummary, RecordView, SessionTab } from './workspace.service';

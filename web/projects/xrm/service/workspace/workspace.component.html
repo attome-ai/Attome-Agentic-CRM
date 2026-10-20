@@ -1,6 +1,8 @@
 <div class="page-header">
   <div>
     <h2>{{ 'serviceWorkspace.title' | translate }}</h2>
+    <!-- G5-T3: my presence. -->
+    <xrm-service-presence />
   </div>
   <nav class="btn-row" [attr.aria-label]="'serviceWorkspace.quickActions' | translate">
     <a class="btn-secondary" routerLink="/xrm/service/new-request">{{ 'serviceWorkspace.newRequest' | translate }}</a>
@@ -48,6 +50,8 @@
     </section>
     <aside class="card ws-context" [attr.aria-label]="'serviceWorkspace.context' | translate">
       <h3>{{ 'serviceWorkspace.context' | translate }}</h3>
+      <!-- G5-T3: colleagues on this record. -->
+      <xrm-service-presence [entity]="tab.entity" [recordId]="tab.recordId" />
       @if (activeRecord(); as record) {
         @if (tab.entity === 'service_ticket') { <xrm-sla-badge [ticket]="record.data" /> }
         <dl>

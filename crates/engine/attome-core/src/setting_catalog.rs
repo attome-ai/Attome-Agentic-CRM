@@ -89,6 +89,16 @@ fn service_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(7),
         ),
+        SettingDescriptor::new(
+            "service.presence",
+            "The person's presence on the service desk (G5-T3): available, busy \
+             or away. Round-robin and least-loaded queues route new work only to \
+             available members; picking work by hand is not affected.",
+            || json!({"type": "string", "enum": ["available", "busy", "away"]}),
+            &[SettingScope::User, SettingScope::Deployment],
+            false,
+            || json!("available"),
+        ),
     ]
 }
 
