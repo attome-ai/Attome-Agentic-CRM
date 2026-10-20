@@ -57556,10 +57556,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Frame"
-                  }
+                  "$ref": "#/components/schemas/CursorPage_Frame"
                 }
               }
             }
@@ -57789,10 +57786,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Frame"
-                  }
+                  "$ref": "#/components/schemas/CursorPage_Frame"
                 }
               }
             }
@@ -64396,7 +64390,7 @@
         "tags": [
           "integration"
         ],
-        "summary": "The caller's mailbox connections.",
+        "summary": "The caller's mailbox connections: at most one per provider, so the whole\nlist is one page.",
         "operationId": "list_connections",
         "responses": {
           "200": {
@@ -64404,10 +64398,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MailConnection"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_MailConnection"
                 }
               }
             }
@@ -104733,6 +104724,63 @@
           }
         }
       },
+      "CursorPage_Frame": {
+        "type": "object",
+        "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A frame as read back.",
+              "required": [
+                "id",
+                "sender",
+                "kind",
+                "payload",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "sender": {
+                  "type": "string",
+                  "description": "`agent` or `customer`."
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Exact size of the whole window, when the route counts it (first page\nonly); absent otherwise."
+          }
+        }
+      },
       "CursorPage_HistoryMatch": {
         "type": "object",
         "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
@@ -125385,6 +125433,72 @@
           }
         }
       },
+      "PaginatedResponse_MailConnection": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A connection, as its owner sees it.",
+              "required": [
+                "id",
+                "provider",
+                "scopes",
+                "connected_at"
+              ],
+              "properties": {
+                "account_email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "connected_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "scopes": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_MatchRuleView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -141740,6 +141854,34 @@
           }
         }
       },
+      "SearchSuggestion": {
+        "type": "object",
+        "required": [
+          "text",
+          "kind",
+          "entity_logicalname"
+        ],
+        "properties": {
+          "entity_logicalname": {
+            "type": "string",
+            "description": "For `\"entity\"`: the entity to route to. For `\"saved_search\"`: always\n`\"saved_search\"` — pair with `record_id` to call `run`."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`\"entity\"` | `\"saved_search\"`."
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
       "SecretInventoryRow": {
         "type": "object",
         "description": "One secret, as an administrator sees it. There is no value field.",
@@ -145075,7 +145217,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Suggestion"
+              "$ref": "#/components/schemas/SearchSuggestion"
             }
           }
         }
@@ -150304,7 +150446,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -150357,5 +150499,5 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-version-adapters": []
 }

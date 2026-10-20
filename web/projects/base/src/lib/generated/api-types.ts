@@ -11829,7 +11829,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The caller's mailbox connections. */
+        /**
+         * The caller's mailbox connections: at most one per provider, so the whole
+         *     list is one page.
+         */
         get: operations["list_connections"];
         put?: never;
         post?: never;
@@ -21751,6 +21754,26 @@ export interface components {
             total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_Frame: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                kind: string;
+                payload: Record<string, never>;
+                /** @description `agent` or `customer`. */
+                sender: string;
+            }[];
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_HistoryMatch: {
             items: {
                 /** Format: uuid */
@@ -29879,6 +29902,29 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MailConnection: {
+            items: {
+                account_email?: string | null;
+                /** Format: date-time */
+                connected_at: string;
+                /** Format: uuid */
+                id: string;
+                provider: string;
+                scopes: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_MatchRuleView: {
             items: {
                 auto_merge: boolean;
@@ -36200,6 +36246,18 @@ export interface components {
             route_hint?: null | components["schemas"]["RouteHintDto"];
             total: components["schemas"]["Total"];
         };
+        SearchSuggestion: {
+            /**
+             * @description For `"entity"`: the entity to route to. For `"saved_search"`: always
+             *     `"saved_search"` — pair with `record_id` to call `run`.
+             */
+            entity_logicalname: string;
+            /** @description `"entity"` | `"saved_search"`. */
+            kind: string;
+            /** Format: uuid */
+            record_id?: string | null;
+            text: string;
+        };
         /** @description One secret, as an administrator sees it. There is no value field. */
         SecretInventoryRow: {
             /** @description A key ring's active key id. */
@@ -37511,7 +37569,7 @@ export interface components {
             target_url?: string | null;
         };
         SuggestResponse: {
-            items: components["schemas"]["Suggestion"][];
+            items: components["schemas"]["SearchSuggestion"][];
         };
         /** @description One suggestion. */
         Suggestion: {
@@ -74542,7 +74600,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Frame"][];
+                    "application/json": components["schemas"]["CursorPage_Frame"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -74685,7 +74743,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Frame"][];
+                    "application/json": components["schemas"]["CursorPage_Frame"];
                 };
             };
             /** @description The token names no open session */
@@ -78721,7 +78779,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MailConnection"][];
+                    "application/json": components["schemas"]["PaginatedResponse_MailConnection"];
                 };
             };
             /** @description Missing or invalid credentials */
