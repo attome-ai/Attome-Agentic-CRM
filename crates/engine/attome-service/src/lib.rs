@@ -25,6 +25,7 @@ pub mod queue;
 pub mod routing;
 pub mod seed;
 pub mod sla;
+pub mod status_page;
 pub mod supplier_sla;
 pub mod timeline;
 pub mod token;
@@ -48,5 +49,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(queue::openapi_fragment());
     doc.merge(presence::openapi_fragment());
     doc.merge(inbox::openapi_fragment());
+    doc.merge(status_page::openapi_fragment());
     doc
 }

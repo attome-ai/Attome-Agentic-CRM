@@ -62,5 +62,6 @@ impl EngineModel for ServiceModel {
             .merge(crate::order::routes())
             .merge(crate::presence::routes())
             .merge(crate::inbox::routes())
+            .merge(crate::status_page::routes())
     }
 }

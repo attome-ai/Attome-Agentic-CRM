@@ -125,6 +125,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_webinar_sync_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // E7-T6: live segments, a tick every five seconds.
     crate::jobs::spawn_segment_live_scheduler(db.clone(), std::time::Duration::from_secs(5));
+    // H8-T1: status page notices, a tick every thirty seconds.
+    crate::jobs::spawn_status_notify_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // D23-T7: deal coverage gaps, a tick every ten seconds.
     crate::jobs::spawn_deal_coverage_scheduler(db.clone(), std::time::Duration::from_secs(10));
     // E8-T5: journey entries, a tick every ten seconds; date sources hourly.

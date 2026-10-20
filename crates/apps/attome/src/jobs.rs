@@ -2687,6 +2687,8 @@ const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 /// E8-T5: the journey entry tick and the date entry (registered job types).
 const DEDUP_KEY_JOURNEY_ENTRY: &str = "marketing-journey-entry";
 const DEDUP_KEY_JOURNEY_DATE_ENTRY: &str = "marketing-journey-date-entry";
+/// H8-T1: status page notices from the change feed (a registered job type).
+const DEDUP_KEY_STATUS_NOTIFY: &str = "status-page-notify";
 /// D23-T7: deal coverage gaps from the change feed (a registered job type).
 const DEDUP_KEY_DEAL_COVERAGE: &str = "sales-deal-coverage";
 /// E23-T1: profile event retention (a registered job type).
@@ -2765,6 +2767,10 @@ pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
 /// read from the change feed.
 pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
+
+/// H8-T1: status page updates emailed to confirmed subscribers, once each.
+pub const STATUS_PAGE_NOTIFY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::status_page::JOB, 1);
 
 /// W1-T7: one contract comparison, computed as its requester (payload
 /// `attome_contract::compare::CompareJob`). Only enqueued.
@@ -3032,6 +3038,23 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            STATUS_PAGE_NOTIFY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let sent = attome_service::status_page::notify_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if sent > 0 {
+                    tracing::info!(sent, "status page updates emailed");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3397,6 +3420,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_REPUTATION_FETCH
         }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
+        EngineJob::Registered(job) if job.name == STATUS_PAGE_NOTIFY.name => {
+            DEDUP_KEY_STATUS_NOTIFY
+        }
         EngineJob::Registered(job) if job.name == SALES_DEAL_COVERAGE.name => {
             DEDUP_KEY_DEAL_COVERAGE
         }
@@ -3923,6 +3949,21 @@ pub fn spawn_segment_live_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SEGMENT_LIVE, "live segments");
+}
+
+/// H8-T1: every thirty seconds, one tick of status page notices.
+pub fn spawn_status_notify_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(STATUS_PAGE_NOTIFY.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_STATUS_NOTIFY,
+            "status page notices",
+        ),
+        Err(error) => tracing::error!(%error, "status page notices: not scheduled"),
+    }
 }
 
 /// D23-T7: every ten seconds, one tick of deal coverage (one pending at most).

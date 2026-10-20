@@ -1,0 +1,1633 @@
+{
+  "author": "packs",
+  "checksum": "sha256:a802e4c49ab370f5d7cf9328917f9d412573939e0c9d32b334f220ef546ce462",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "H8-T1: a public status page: components and their status, incidents and maintenance with their updates, and email subscribers who are told of each published update.",
+  "format": "attome-changeset/v1",
+  "id": "01a15985-88b4-7a8b-8324-090e69461eb7",
+  "layer": "product",
+  "name": "itsm-status-page",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Status Component",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "status_component",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component"
+      },
+      "seq": 1
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component",
+        "field": "name"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component",
+        "field": "name_ar"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Group",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "group_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component",
+        "field": "group_name"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "operational",
+              "degraded",
+              "partial_outage",
+              "major_outage",
+              "maintenance"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component",
+        "field": "status"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Display Order",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "display_order",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component",
+        "field": "display_order"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Public",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_public",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_component",
+        "field": "is_public"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Status Incident",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "status_incident",
+          "primary_name_attribute": "title"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident"
+      },
+      "seq": 8
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "title",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "title"
+      },
+      "seq": 9
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "title_ar",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "title_ar"
+      },
+      "seq": 10
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Impact",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "impact",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "none",
+              "minor",
+              "major",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "impact"
+      },
+      "seq": 11
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "status"
+      },
+      "seq": 12
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Component",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "component_ref",
+          "lookup_entity": "status_component",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "component_ref"
+      },
+      "seq": 13
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Started",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "started_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "started_at"
+      },
+      "seq": 14
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Resolved",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "resolved_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "resolved_at"
+      },
+      "seq": 15
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Public",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_public",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_incident",
+        "field": "is_public"
+      },
+      "seq": 16
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Status Maintenance",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "status_maintenance",
+          "primary_name_attribute": "title"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance"
+      },
+      "seq": 17
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "title",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "title"
+      },
+      "seq": 18
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "title_ar",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "title_ar"
+      },
+      "seq": 19
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Component",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "component_ref",
+          "lookup_entity": "status_component",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "component_ref"
+      },
+      "seq": 20
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "starts_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "starts_at"
+      },
+      "seq": 21
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ends_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "ends_at"
+      },
+      "seq": 22
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "scheduled",
+              "in_progress",
+              "completed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "status"
+      },
+      "seq": 23
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Public",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_public",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_maintenance",
+        "field": "is_public"
+      },
+      "seq": 24
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Status Update",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "status_update",
+          "primary_name_attribute": "body"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update"
+      },
+      "seq": 25
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Incident",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "incident_ref",
+          "lookup_entity": "status_incident",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "incident_ref"
+      },
+      "seq": 26
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Maintenance",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "maintenance_ref",
+          "lookup_entity": "status_maintenance",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "maintenance_ref"
+      },
+      "seq": 27
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "investigating",
+              "identified",
+              "monitoring",
+              "resolved"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "status"
+      },
+      "seq": 28
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Update",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "body",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "body"
+      },
+      "seq": 29
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Update",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "body_ar",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "body_ar"
+      },
+      "seq": 30
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Notify Subscribers",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "notify_subscribers",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "notify_subscribers"
+      },
+      "seq": 31
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Notified At",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "notified_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_update",
+        "field": "notified_at"
+      },
+      "seq": 32
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Status Subscriber",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "status_subscriber",
+          "primary_name_attribute": "email"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "target": {
+        "entity": "status_subscriber"
+      },
+      "seq": 33
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email",
+          "lookup_entity": null,
+          "max_length": 254,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_subscriber",
+        "field": "email"
+      },
+      "seq": 34
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Language",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "language",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "en",
+              "ar"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_subscriber",
+        "field": "language"
+      },
+      "seq": 35
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Confirmed At",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "confirmed_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_subscriber",
+        "field": "confirmed_at"
+      },
+      "seq": 36
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unsubscribed At",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unsubscribed_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "status_subscriber",
+        "field": "unsubscribed_at"
+      },
+      "seq": 37
+    },
+    {
+      "args": {
+        "display_name": "مكوّن صفحة الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component",
+        "object_kind": "entity"
+      },
+      "seq": 38
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component.name",
+        "object_kind": "attribute"
+      },
+      "seq": 39
+    },
+    {
+      "args": {
+        "display_name": "الاسم بالعربية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component.name_ar",
+        "object_kind": "attribute"
+      },
+      "seq": 40
+    },
+    {
+      "args": {
+        "display_name": "المجموعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component.group_name",
+        "object_kind": "attribute"
+      },
+      "seq": 41
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component.status",
+        "object_kind": "attribute"
+      },
+      "seq": 42
+    },
+    {
+      "args": {
+        "display_name": "ترتيب العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component.display_order",
+        "object_kind": "attribute"
+      },
+      "seq": 43
+    },
+    {
+      "args": {
+        "display_name": "عام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_component.is_public",
+        "object_kind": "attribute"
+      },
+      "seq": 44
+    },
+    {
+      "args": {
+        "display_name": "حادثة على صفحة الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident",
+        "object_kind": "entity"
+      },
+      "seq": 45
+    },
+    {
+      "args": {
+        "display_name": "العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.title",
+        "object_kind": "attribute"
+      },
+      "seq": 46
+    },
+    {
+      "args": {
+        "display_name": "العنوان بالعربية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.title_ar",
+        "object_kind": "attribute"
+      },
+      "seq": 47
+    },
+    {
+      "args": {
+        "display_name": "الأثر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.impact",
+        "object_kind": "attribute"
+      },
+      "seq": 48
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.status",
+        "object_kind": "attribute"
+      },
+      "seq": 49
+    },
+    {
+      "args": {
+        "display_name": "المكوّن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.component_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 50
+    },
+    {
+      "args": {
+        "display_name": "البداية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.started_at",
+        "object_kind": "attribute"
+      },
+      "seq": 51
+    },
+    {
+      "args": {
+        "display_name": "الحل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.resolved_at",
+        "object_kind": "attribute"
+      },
+      "seq": 52
+    },
+    {
+      "args": {
+        "display_name": "عام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_incident.is_public",
+        "object_kind": "attribute"
+      },
+      "seq": 53
+    },
+    {
+      "args": {
+        "display_name": "صيانة على صفحة الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance",
+        "object_kind": "entity"
+      },
+      "seq": 54
+    },
+    {
+      "args": {
+        "display_name": "العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.title",
+        "object_kind": "attribute"
+      },
+      "seq": 55
+    },
+    {
+      "args": {
+        "display_name": "العنوان بالعربية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.title_ar",
+        "object_kind": "attribute"
+      },
+      "seq": 56
+    },
+    {
+      "args": {
+        "display_name": "المكوّن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.component_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 57
+    },
+    {
+      "args": {
+        "display_name": "البداية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.starts_at",
+        "object_kind": "attribute"
+      },
+      "seq": 58
+    },
+    {
+      "args": {
+        "display_name": "النهاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.ends_at",
+        "object_kind": "attribute"
+      },
+      "seq": 59
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.status",
+        "object_kind": "attribute"
+      },
+      "seq": 60
+    },
+    {
+      "args": {
+        "display_name": "عام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_maintenance.is_public",
+        "object_kind": "attribute"
+      },
+      "seq": 61
+    },
+    {
+      "args": {
+        "display_name": "تحديث على صفحة الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update",
+        "object_kind": "entity"
+      },
+      "seq": 62
+    },
+    {
+      "args": {
+        "display_name": "الحادثة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.incident_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 63
+    },
+    {
+      "args": {
+        "display_name": "الصيانة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.maintenance_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 64
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.status",
+        "object_kind": "attribute"
+      },
+      "seq": 65
+    },
+    {
+      "args": {
+        "display_name": "التحديث"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.body",
+        "object_kind": "attribute"
+      },
+      "seq": 66
+    },
+    {
+      "args": {
+        "display_name": "التحديث بالعربية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.body_ar",
+        "object_kind": "attribute"
+      },
+      "seq": 67
+    },
+    {
+      "args": {
+        "display_name": "إشعار المشتركين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.notify_subscribers",
+        "object_kind": "attribute"
+      },
+      "seq": 68
+    },
+    {
+      "args": {
+        "display_name": "وقت الإشعار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_update.notified_at",
+        "object_kind": "attribute"
+      },
+      "seq": 69
+    },
+    {
+      "args": {
+        "display_name": "مشترك في صفحة الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_subscriber",
+        "object_kind": "entity"
+      },
+      "seq": 70
+    },
+    {
+      "args": {
+        "display_name": "البريد الإلكتروني"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_subscriber.email",
+        "object_kind": "attribute"
+      },
+      "seq": 71
+    },
+    {
+      "args": {
+        "display_name": "اللغة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_subscriber.language",
+        "object_kind": "attribute"
+      },
+      "seq": 72
+    },
+    {
+      "args": {
+        "display_name": "وقت التأكيد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_subscriber.confirmed_at",
+        "object_kind": "attribute"
+      },
+      "seq": 73
+    },
+    {
+      "args": {
+        "display_name": "وقت إلغاء الاشتراك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "status_subscriber.unsubscribed_at",
+        "object_kind": "attribute"
+      },
+      "seq": 74
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 60,
+          "entity": null,
+          "icon": "la-heartbeat",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "service",
+          "path": [
+            "Status Page"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Status Page"
+      },
+      "seq": 75
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-cubes",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "service",
+          "path": [
+            "Status Page",
+            "Components"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/status_component/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Status Page/Components"
+      },
+      "seq": 76
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-exclamation-triangle",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "service",
+          "path": [
+            "Status Page",
+            "Incidents"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/status_incident/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Status Page/Incidents"
+      },
+      "seq": 77
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-calendar",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "service",
+          "path": [
+            "Status Page",
+            "Maintenance"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/status_maintenance/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Status Page/Maintenance"
+      },
+      "seq": 78
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-comment-dots",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "service",
+          "path": [
+            "Status Page",
+            "Updates"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/status_update/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Status Page/Updates"
+      },
+      "seq": 79
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-users",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "service",
+          "path": [
+            "Status Page",
+            "Subscribers"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/status_subscriber/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "target": {
+        "path": "Status Page/Subscribers"
+      },
+      "seq": 80
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "service"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "itsm",
+  "seq": 2,
+  "title": "Pack: status page"
+}

@@ -72,6 +72,12 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // E12-T1: the same published page as server-rendered HTML, with the
     // same checks and the same identical 404 as `/content/delivery`.
     "/api/v1/content/html",
+    // H8-T1: the public status page and its email subscription (a signed
+    // link, then a button, confirms or stops it).
+    "/api/v1/status",
+    "/api/v1/status/subscribe",
+    "/api/v1/status/confirm",
+    "/api/v1/status/unsubscribe",
     // E12-T2: a site's page by host, its theme stylesheet and its blog's
     // RSS feed: published public content only, the same identical 404.
     "/api/v1/content/site",

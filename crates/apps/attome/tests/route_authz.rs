@@ -153,6 +153,26 @@ const MAX_BARE_RECORD_SCOPED: usize = 5;
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "GET",
+        "/api/v1/status/confirm",
+        "H8-T1: a static page with one button for the token it was given; it reads nothing and changes nothing (a mail scanner fetching the link confirms nothing). Bypass-listed.",
+    ),
+    (
+        "POST",
+        "/api/v1/status/confirm",
+        "H8-T1: the signed link (HMAC under the status-subscriber domain, seven days, over one address) is the credential and confirms only that address's status emails. Bypass-listed.",
+    ),
+    (
+        "GET",
+        "/api/v1/status/unsubscribe",
+        "H8-T1: a static page with one button for the token it was given; it reads nothing and changes nothing. Bypass-listed.",
+    ),
+    (
+        "POST",
+        "/api/v1/status/unsubscribe",
+        "H8-T1: the signed link from a status email is the credential and only stops that address's status emails. Bypass-listed.",
+    ),
+    (
+        "GET",
         "/api/v1/esign/sign/{token}",
         "K4-T1 signer's page: the signed link (HMAC under the esign domain, 30 days, over one signer) is the credential and shows only that envelope's title, documents' names and hashes and the signer's own status; a draft or voided envelope is the same 404. Bypass-listed by an exact single-segment match.",
     ),
