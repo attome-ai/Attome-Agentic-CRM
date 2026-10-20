@@ -9,6 +9,7 @@ pub mod device;
 pub mod document;
 pub mod model;
 pub(crate) mod routes;
+pub mod uae;
 pub mod zatca;
 
 pub use model::EinvoiceModel;
