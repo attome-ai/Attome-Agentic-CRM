@@ -82,6 +82,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   (a line's VAT facts and the tax engine's decision, in Arabic and English) and the draft-only
   `billing.draft_invoice` and `billing.draft_credit_note`, which an agent's call files only after a
   person confirms. Issuing, cancelling, issuing a credit note and writing off stay with people.
+- Subscriptions (reads only): `billing.subscription.read` (a subscription as of a date, each line's
+  quantity and price that day), `billing.usage.read` (metered usage per line and metric between two
+  dates), `billing.amendment.draft` (what an amendment would do, with its proration) and
+  `billing.renewal.draft` (the next term's dates and lines). The drafts change nothing: amending,
+  cancelling, renewing and changing a price stay with people.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
 - Secrets (administrators, reads only): `secrets.list` names every configured secret with the

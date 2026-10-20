@@ -25,9 +25,10 @@
           "options": {
             "choices": [
               "agent.delegate", "agent.kill", "agent.pause", "agent.playground_complete", "agent.resume",
-              "approval.status", "article.draft", "billing.account_balance", "billing.draft_credit_note",
+              "approval.status", "article.draft", "billing.account_balance", "billing.amendment.draft", "billing.draft_credit_note",
               "billing.draft_invoice", "billing.explain_tax", "billing.find_invoices", "billing.payment.lookup",
-              "billing.payment_link.create", "bot.handoff",
+              "billing.payment_link.create", "billing.renewal.draft",
+              "billing.subscription.read", "billing.usage.read", "bot.handoff",
               "code.generate", "commission.draft_plan_from_policy", "commission.explain_line", "document.extract", "duplicates.check",
               "duplicates.list", "duplicates.merge", "duplicates.propose_rules", "email.draft",
               "followup.remind_owner", "followup.send_message", "graph.traverse", "knowledge.answer",

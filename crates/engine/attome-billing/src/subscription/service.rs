@@ -1060,6 +1060,127 @@ pub async fn reverse_amendment(
     Ok(())
 }
 
+/// One line's usage over a range of days.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct UsageTotal {
+    pub line_id: Uuid,
+    pub metric: String,
+    pub quantity: f64,
+}
+
+/// F3-T12: a subscription's metered usage per line and metric over
+/// `[from, to)`, for a subscription the caller may read.
+pub async fn usage_summary(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<UsageTotal>, AppError> {
+    attome_records::entity_crud::read_record(state, ctx, "subscription", subscription).await?;
+    let rows: Vec<(Uuid, String, f64)> = sqlx::query_as(
+        "SELECT d.subscription_line_id, d.metric, SUM(d.quantity)::float8 FROM billing_usage_daily d JOIN subscription_line l ON l.id = d.subscription_line_id WHERE l.subscription_ref = $1 AND d.day >= $2 AND d.day < $3 GROUP BY d.subscription_line_id, d.metric ORDER BY d.subscription_line_id, d.metric",
+    )
+    .bind(subscription)
+    .bind(from)
+    .bind(to)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .map(|(line_id, metric, quantity)| UsageTotal {
+            line_id,
+            metric,
+            quantity,
+        })
+        .collect())
+}
+
+/// What one line of an amendment would do.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct AmendPreviewLine {
+    pub line_id: Uuid,
+    pub quantity_before: f64,
+    pub unit_price_before: f64,
+    pub quantity_after: f64,
+    pub unit_price_after: f64,
+    /// The proration charge (positive) or credit (negative) for the rest of
+    /// the period the change falls in.
+    pub proration: f64,
+    pub changes_price: bool,
+}
+
+/// F3-T12: what [`amend`] would do, changing nothing: each line's values
+/// before and after and the proration it would plan. Read as the caller.
+pub async fn preview_amend(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    amendment: &Amendment,
+) -> Result<Vec<AmendPreviewLine>, AppError> {
+    attome_records::entity_crud::read_record(state, ctx, "subscription", subscription).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let t = terms(&mut tx, subscription).await?;
+    let schedule = periods(
+        t.start_date,
+        t.end_date,
+        Frequency {
+            cadence: cadence_of(t.billing_frequency.as_deref()),
+            hijri: false,
+        },
+        alignment_of(t.billing_alignment.as_deref()),
+        timing_of(t.billing_timing.as_deref()),
+        amendment.effective,
+    )
+    .map_err(|e| AppError::Validation(e.to_string()))?;
+    let period = schedule
+        .into_iter()
+        .find(|p| p.start <= amendment.effective && amendment.effective < p.end);
+    let stored = segments_of(&mut tx, subscription).await?;
+    let models: Vec<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT id, charge_model FROM subscription_line WHERE subscription_ref = $1",
+    )
+    .bind(subscription)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    let mut out = Vec::new();
+    for change in &amendment.changes {
+        let current = in_force(&stored, change.line_id, amendment.effective).ok_or_else(|| {
+            AppError::Validation(format!(
+                "line {} has no segment in force on {}",
+                change.line_id, amendment.effective
+            ))
+        })?;
+        let model = model_of(
+            models
+                .iter()
+                .find(|(id, _)| *id == change.line_id)
+                .and_then(|(_, m)| m.as_deref()),
+        );
+        let amount = period.as_ref().map_or(Decimal::ZERO, |p| {
+            proration(
+                &model,
+                (current.segment.quantity, current.segment.unit_price),
+                (change.quantity, change.unit_price),
+                proration_for_change(p, amendment.effective),
+            )
+        });
+        out.push(AmendPreviewLine {
+            line_id: change.line_id,
+            quantity_before: current.segment.quantity.to_f64().unwrap_or_default(),
+            unit_price_before: current.segment.unit_price.to_f64().unwrap_or_default(),
+            quantity_after: change.quantity.to_f64().unwrap_or_default(),
+            unit_price_after: change.unit_price.to_f64().unwrap_or_default(),
+            proration: amount.to_f64().unwrap_or_default(),
+            changes_price: change.unit_price != current.segment.unit_price,
+        });
+    }
+    Ok(out)
+}
+
 /// One line as it stood on a date.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, utoipa::ToSchema)]
 pub struct LineAsOf {
