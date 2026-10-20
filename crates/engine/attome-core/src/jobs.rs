@@ -474,6 +474,10 @@ pub enum EngineJob {
     /// M10-T1: runs one fired timer's action. Pure pointer; the handler
     /// reads the timer row.
     TimerFire { timer_id: Uuid },
+    /// M12-T2: runs one report schedule's occurrence, which the Z7 ledger
+    /// (`report-schedule:{id}`) claimed once. Pure pointer; the handler reads
+    /// the schedule row.
+    ReportScheduleFire { schedule_id: Uuid },
     /// The nightly marketing pass: loyalty earning and expiry (E30-T1),
     /// referral rewards (E31-T1), target account scores (E20-T1) and bounce
     /// and complaint effects (E6-T5). Bare unit variant.
@@ -1022,6 +1026,7 @@ impl EngineJob {
             | Self::RevalidateFieldSecurityProfiles
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
+            | Self::ReportScheduleFire { .. }
             | Self::WorkflowSlaSweep
             | Self::WorkflowEntityTriggerDispatch
             | Self::ComputeMetricSnapshots
@@ -1186,6 +1191,7 @@ impl EngineJob {
             EngineJob::WebcrawlRecrawlDue => "WebcrawlRecrawlDue",
             EngineJob::TimerSweep => "TimerSweep",
             EngineJob::TimerFire { .. } => "TimerFire",
+            EngineJob::ReportScheduleFire { .. } => "ReportScheduleFire",
             EngineJob::MarketingNightly => "MarketingNightly",
             EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
             EngineJob::MarketingSweep => "MarketingSweep",
@@ -1274,6 +1280,7 @@ impl EngineJob {
             | Self::DocumentTextExtract { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
+            | Self::ReportScheduleFire { .. }
             | Self::FanOutNotification { .. }
             | Self::BackfillRecipientForNewUser { .. }
             | Self::EventsDeliverWebhook { .. }
@@ -1560,6 +1567,7 @@ impl EngineJob {
             | Self::DocumentTextExtract { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
+            | Self::ReportScheduleFire { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
@@ -1950,6 +1958,9 @@ mod tests {
         });
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),
+        });
+        assert_round_trips(EngineJob::ReportScheduleFire {
+            schedule_id: Uuid::now_v7(),
         });
     }
 

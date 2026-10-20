@@ -203,6 +203,14 @@ pub enum Schedule {
         time: NaiveTime,
         calendar: Arc<attome_calendar::BusinessCalendar>,
     },
+    /// M12-T2: an RFC 5545 recurrence rule (`attome_calendar::rrule`,
+    /// without `COUNT`), its occurrences counted from `dtstart`, in UTC.
+    /// `text` is the rule as written, kept for the ledger's description.
+    Rrule {
+        text: String,
+        rule: attome_calendar::rrule::Rrule,
+        dtstart: DateTime<Utc>,
+    },
 }
 
 /// Why a schedule was refused.
@@ -242,6 +250,22 @@ impl Schedule {
         let expr = crate::cron::CronExpr::parse(expr).map_err(|e| ScheduleError(e.to_string()))?;
         let tz = parse_tz(tz)?;
         Ok(Self::Cron { expr, tz })
+    }
+
+    /// M12-T2: a recurrence rule from `dtstart`, refused when it does not
+    /// parse or carries `COUNT` (the ledger keeps no count of runs).
+    pub fn rrule(text: &str, dtstart: DateTime<Utc>) -> Result<Self, ScheduleError> {
+        let rule = attome_calendar::rrule::Rrule::parse(text).map_err(ScheduleError)?;
+        if rule.count().is_some() {
+            return Err(ScheduleError(
+                "COUNT is not supported for a schedule; use UNTIL".into(),
+            ));
+        }
+        Ok(Self::Rrule {
+            text: text.trim().to_owned(),
+            rule,
+            dtstart,
+        })
     }
 
     /// A Hijri-monthly schedule, the day and time zone checked.
@@ -314,6 +338,7 @@ impl Schedule {
                     .filter_map(|date| on_wall_clock(tz, date.and_time(*time)))
                     .find(|at| *at > after)
             }
+            Self::Rrule { rule, dtstart, .. } => rule.next_after(*dtstart, after),
         }
     }
 
@@ -338,6 +363,9 @@ impl Schedule {
             Self::HijriMonthly { day, time, tz } => format!("hijri-monthly {day} {time} {tz}"),
             Self::WorkingDays { time, calendar } => {
                 format!("working-days {time} {}", calendar.canonical_form())
+            }
+            Self::Rrule { text, dtstart, .. } => {
+                format!("rrule {text} from {}", dtstart.to_rfc3339())
             }
         }
     }
@@ -588,6 +616,30 @@ mod tests {
             Some(utc("2026-10-26T05:00:00Z"))
         );
         assert!(s.describe().starts_with("working-days 08:00:00 "));
+    }
+
+    #[test]
+    fn rrule_runs_at_the_rule_s_occurrences() {
+        let dtstart = utc("2026-10-05T09:00:00Z");
+        let text = "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO";
+        let s = Schedule::rrule(text, dtstart).expect("a rule");
+        let rule = attome_calendar::rrule::Rrule::parse(text).expect("parses");
+        let mut at = utc("2026-10-06T00:00:00Z");
+        for _ in 0..5 {
+            let next = s.next_after(at).expect("an occurrence");
+            assert_eq!(Some(next), rule.next_after(dtstart, at));
+            at = next;
+        }
+        assert_eq!(
+            s.next_after(utc("2026-10-06T00:00:00Z")),
+            Some(utc("2026-10-19T09:00:00Z"))
+        );
+        assert!(
+            s.describe()
+                .starts_with("rrule FREQ=WEEKLY;INTERVAL=2;BYDAY=MO from ")
+        );
+        assert!(Schedule::rrule("FREQ=DAILY;COUNT=3", dtstart).is_err());
+        assert!(Schedule::rrule("NOT A RULE", dtstart).is_err());
     }
 
     #[test]

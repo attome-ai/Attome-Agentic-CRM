@@ -143,6 +143,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Report schedules on the job scheduler (M12-T2): job schedules gain a recurrence-rule kind (an
+  RFC 5545 RRULE without `COUNT`, counted from a start time), and each report schedule is now one
+  entry of the job schedule ledger (`report-schedule:{id}`), counted from the schedule's creation, so an
+  occurrence runs once across all workers and restarts. A rule such as `FREQ=WEEKLY` no longer drifts
+  to the time of the last run. The report sweep's own claim is gone.
 - Timers that follow a date (M10-T2): a timer whose payload carries `follow` (an attribute, an offset
   in minutes and an optional rule condition) moves when the record's date changes and is cancelled
   when the record is deleted, clears the date or leaves the condition. The `attome-workflow/timer-follow`

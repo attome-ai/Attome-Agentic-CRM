@@ -1748,6 +1748,10 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // M12-T2: one report schedule occurrence the Z7 ledger claimed.
+        EngineJob::ReportScheduleFire { schedule_id } => {
+            attome_report::scheduler::fire(&attome_state, schedule_id).await?;
+        }
         // M23 Records Management (D-456) — see these variants' doc comments
         // in attome_jobs::job.
         EngineJob::LegalMatterCollect {
