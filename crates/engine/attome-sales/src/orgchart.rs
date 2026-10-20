@@ -21,6 +21,8 @@
 pub mod chart;
 /// D23-T7: the buying committee and its coverage gaps.
 pub mod committee;
+/// D23-T10: proposed reports-to links, accepted or rejected by a person.
+pub mod drafts;
 /// D23-T8: people who leave.
 pub mod movers;
 
@@ -495,6 +497,77 @@ pub(crate) async fn post_sales_org_chart_export(
     ))
 }
 
+/// Proposes reports-to links for an account.
+///
+/// Queues a job that writes open org chart drafts for the account's people
+/// the caller may read, from their titles and departments. Nothing changes a
+/// contact until a person accepts a draft.
+#[utoipa::path(
+    post,
+    path = "/api/v1/sales/accounts/{id}/org-chart/propose",
+    operation_id = "post_sales_org_chart_propose",
+    tag = "sales",
+    params(("id" = Uuid, Path, description = "The account")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 202, description = "The proposal is queued"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such account the caller may read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn post_sales_org_chart_propose(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(account): Path<Uuid>,
+) -> Result<axum::http::StatusCode, AppError> {
+    drafts::queue_propose(&state, &ctx, account).await?;
+    Ok(axum::http::StatusCode::ACCEPTED)
+}
+
+/// Accept or reject an org chart draft.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SalesOrgChartDraftDecision {
+    /// `true` sets the proposed manager (and department); `false` only
+    /// marks the draft rejected.
+    pub accept: bool,
+}
+
+/// Decides an org chart draft.
+///
+/// Accepting sets the contact's manager through the ordinary manager change
+/// (access, group and loop checks) and, when proposed, their department;
+/// the answer names the previous manager, to undo. Rejecting only marks the
+/// draft. A decided draft cannot be decided again.
+#[utoipa::path(
+    post,
+    path = "/api/v1/sales/orgchart-drafts/{id}/decide",
+    operation_id = "post_sales_orgchart_draft_decide",
+    tag = "sales",
+    params(("id" = Uuid, Path, description = "The draft")),
+    request_body = SalesOrgChartDraftDecision,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Decided", body = drafts::SalesOrgChartDraftDecided),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not update the contact", body = ErrorResponse),
+        (status = 404, description = "No such draft the caller may read", body = ErrorResponse),
+        (status = 409, description = "Already decided, or the contact changed", body = ErrorResponse),
+        (status = 422, description = "The proposed manager is at an unrelated account or forms a loop", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn post_sales_orgchart_draft_decide(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(draft): Path<Uuid>,
+    Json(body): Json<SalesOrgChartDraftDecision>,
+) -> Result<Json<drafts::SalesOrgChartDraftDecided>, AppError> {
+    Ok(Json(
+        drafts::decide(&state, &ctx, draft, body.accept).await?,
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(
@@ -502,9 +575,13 @@ pub(crate) async fn post_sales_org_chart_export(
         post_sales_contact_left,
         get_sales_org_chart,
         get_sales_committee_map,
-        post_sales_org_chart_export
+        post_sales_org_chart_export,
+        post_sales_org_chart_propose,
+        post_sales_orgchart_draft_decide
     ),
     components(schemas(
+        SalesOrgChartDraftDecision,
+        drafts::SalesOrgChartDraftDecided,
         SalesOrgChartExportBody,
         SalesOrgChartExport,
         committee::DealMap,

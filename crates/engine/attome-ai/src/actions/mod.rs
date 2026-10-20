@@ -48,6 +48,7 @@ pub mod sales_competitors;
 /// D21-T9: draft call lists, reorder a list, draft call notes. Nothing dials.
 pub mod sales_dialer;
 pub mod sales_lines;
+pub mod sales_orgchart;
 pub mod sales_team;
 /// B16-T13: scan.lookup and code.generate.
 pub mod scan;
@@ -113,6 +114,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(billing_subscription::descriptors());
     all.extend(deliverability::descriptors());
     all.extend(sales_dialer::descriptors());
+    all.extend(sales_orgchart::descriptors());
     all.extend(sales_team::descriptors());
     all.extend(scan::descriptors());
     all
@@ -172,6 +174,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(billing_subscription::executors());
     all.extend(deliverability::executors());
     all.extend(sales_dialer::executors());
+    all.extend(sales_orgchart::executors());
     all.extend(sales_team::executors());
     all.extend(scan::executors());
     all

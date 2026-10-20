@@ -92,6 +92,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   open and complaint rates by mailbox provider and send; `deliverability.propose_segment` drafts a
   segment of people engaged recently and not sunset, saving nothing. Neither lifts a suppression or
   changes DNS or the policy.
+- Org charts (sales; no manager is set): `sales.orgchart.read` reads an account's chart,
+  `sales.committee.read` a deal's buying committee (influence and attitude only through the Deal
+  Attitude profile) and `sales.coverage.gaps` just its gaps; `sales.orgchart.propose` queues
+  proposals for an account's unplaced people, from their titles and departments, written as open
+  drafts a person accepts or rejects (confirmed first).
 - Dialer (sales; nothing dials): `sales.call_list.build` creates a draft call list from a description
   (and a saved view) for a person to fill and activate; `sales.call_list.order` reorders a list's
   waiting members by points score or deal risk, saying which data is missing rather than guessing;

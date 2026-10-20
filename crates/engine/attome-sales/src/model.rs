@@ -187,6 +187,14 @@ impl EngineModel for SalesModel {
                 get(crate::orgchart::get_sales_committee_map),
             )
             .route(
+                "/api/v1/sales/accounts/{id}/org-chart/propose",
+                post(crate::orgchart::post_sales_org_chart_propose),
+            )
+            .route(
+                "/api/v1/sales/orgchart-drafts/{id}/decide",
+                post(crate::orgchart::post_sales_orgchart_draft_decide),
+            )
+            .route(
                 "/api/v1/sales/competitors/{id}/head-to-head",
                 get(crate::competitor_routes::get_sales_head_to_head),
             )

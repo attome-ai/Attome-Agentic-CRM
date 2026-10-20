@@ -2766,6 +2766,11 @@ pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
 pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
 
+/// D23-T10: one account's org chart drafts, written as the requester
+/// (payload `attome_sales::orgchart::drafts::DraftJob`). Only enqueued.
+pub const SALES_ORGCHART_DRAFT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_sales::orgchart::drafts::JOB, 1);
+
 /// D23-T7: deal coverage gaps recomputed for the deals a change-feed batch
 /// touched.
 pub const SALES_DEAL_COVERAGE: attome_jobs::JobType =
@@ -3022,6 +3027,29 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SALES_ORGCHART_DRAFT,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SALES) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_sales::orgchart::drafts::DraftJob = job.payload()?;
+                let ctx = state
+                    .base
+                    .security
+                    .resolve_strict(payload.user_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                let written =
+                    attome_sales::orgchart::drafts::propose(&state, &ctx, payload.account_id)
+                        .await
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(account = %payload.account_id, written, "org chart drafts written");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

@@ -1,0 +1,459 @@
+{
+  "author": "packs",
+  "checksum": "sha256:422ff0d3a671e2e1fb685e7077d0854d4c4fc61957203a32bec3b9e53607dd98",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "D23-T10: org chart drafts, proposed reports-to links and departments a person accepts (which sets the manager) or rejects; nothing changes a contact until then.",
+  "format": "attome-changeset/v1",
+  "id": "01a1595e-d51b-7dd9-b94e-ecd847368250",
+  "layer": "product",
+  "name": "sales-orgchart-drafts",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Org Chart Draft",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "sales_orgchart_draft",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "sales_orgchart_draft"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "name"
+      },
+      "seq": 2
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "account_ref"
+      },
+      "seq": 3
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "contact_ref"
+      },
+      "seq": 4
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Proposed Manager",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "proposed_manager_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "proposed_manager_ref"
+      },
+      "seq": 5
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Proposed Department",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "proposed_department",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "proposed_department"
+      },
+      "seq": 6
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "reason"
+      },
+      "seq": 7
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "title",
+              "signature",
+              "enrichment"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "source"
+      },
+      "seq": 8
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "accepted",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "status"
+      },
+      "seq": 9
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "decided_by"
+      },
+      "seq": 10
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided At",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "target": {
+        "entity": "sales_orgchart_draft",
+        "field": "decided_at"
+      },
+      "seq": 11
+    },
+    {
+      "args": {
+        "display_name": "مسودة الهيكل التنظيمي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft",
+        "object_kind": "entity"
+      },
+      "seq": 12
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.name",
+        "object_kind": "attribute"
+      },
+      "seq": 13
+    },
+    {
+      "args": {
+        "display_name": "الحساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.account_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 14
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.contact_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 15
+    },
+    {
+      "args": {
+        "display_name": "المدير المقترح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.proposed_manager_ref",
+        "object_kind": "attribute"
+      },
+      "seq": 16
+    },
+    {
+      "args": {
+        "display_name": "القسم المقترح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.proposed_department",
+        "object_kind": "attribute"
+      },
+      "seq": 17
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.reason",
+        "object_kind": "attribute"
+      },
+      "seq": 18
+    },
+    {
+      "args": {
+        "display_name": "المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.source",
+        "object_kind": "attribute"
+      },
+      "seq": 19
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.status",
+        "object_kind": "attribute"
+      },
+      "seq": 20
+    },
+    {
+      "args": {
+        "display_name": "قرّر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.decided_by",
+        "object_kind": "attribute"
+      },
+      "seq": 21
+    },
+    {
+      "args": {
+        "display_name": "تاريخ القرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "target": {
+        "locale": "ar",
+        "object_key": "sales_orgchart_draft.decided_at",
+        "object_kind": "attribute"
+      },
+      "seq": 22
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 24,
+  "title": "Pack: org chart drafts"
+}
