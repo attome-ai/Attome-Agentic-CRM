@@ -98,14 +98,61 @@ async fn simulate_version(
     let graph = Graph::parse(&graph_json)
         .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
 
-    let (status, trace) = run_simulation(
+    let module_steps = dry_run_module_steps(&state, &graph, &body.trigger_payload).await;
+    let (status, trace) = run_simulation_with(
         &state,
         &graph,
         body.trigger_payload,
         &body.approval_decisions,
+        &module_steps,
     );
     Ok(Json(SimulateResponse { status, trace }))
 }
+
+/// E8-T2: what each module step's handler says it would do. The handlers
+/// are async and the pass below is not, so they run first, each with
+/// `simulate = true` (it changes nothing) and the trigger payload as its
+/// input. A node whose handler is missing, unlicensed or refuses its
+/// configuration maps to the error the pass reports for it.
+pub async fn dry_run_module_steps(
+    state: &EngineState,
+    graph: &Graph,
+    trigger_payload: &Value,
+) -> ModuleStepDryRuns {
+    let mut out = HashMap::new();
+    for node in &graph.nodes {
+        if NodeType::parse(&node.node_type) != Some(NodeType::ModuleStep) {
+            continue;
+        }
+        let config = node.config.get("config").cloned().unwrap_or(Value::Null);
+        let result = match scheduler::module_step_handler(state, node) {
+            Err(e) => Err(e.to_string()),
+            Ok(handler) => match handler.validate_config(&config) {
+                Err(reason) => Err(reason),
+                Ok(()) => handler
+                    .run(
+                        state,
+                        attome_core::workflow_step::StepInvocation {
+                            instance_id: Uuid::nil(),
+                            node_id: node.id.clone(),
+                            correlation_entity_id: None,
+                            config,
+                            input: trigger_payload.clone(),
+                            simulate: true,
+                        },
+                    )
+                    .await
+                    .map_err(|e| e.to_string()),
+            },
+        };
+        out.insert(node.id.clone(), result);
+    }
+    out
+}
+
+/// Each module step's dry-run outcome, by node id.
+pub type ModuleStepDryRuns =
+    HashMap<String, Result<attome_core::workflow_step::StepOutcome, String>>;
 
 /// A dry-run node outcome — the `simulate_node` counterpart of
 /// `scheduler::NodeOutcome`, minus the wait-resumption metadata a real
@@ -142,15 +189,34 @@ enum SimOutcome {
 /// primitive itself" convention `publish_workflow`'s doc comment in that
 /// file already documents for `graph::validate`/`trigger_index::
 /// rebuild_entry_rows`.
-#[expect(
-    clippy::expect_used,
-    reason = "each expect() here guards an invariant its message states"
-)]
 pub fn run_simulation(
     state: &EngineState,
     graph: &Graph,
     trigger_payload: Value,
     approval_decisions: &HashMap<String, String>,
+) -> (String, Vec<SimulateNodeTrace>) {
+    run_simulation_with(
+        state,
+        graph,
+        trigger_payload,
+        approval_decisions,
+        &HashMap::new(),
+    )
+}
+
+/// [`run_simulation`] with each module step's handler outcome from
+/// [`dry_run_module_steps`]. A module step missing from `module_steps` is
+/// only checked (handler registered, licensed, configuration accepted).
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
+pub fn run_simulation_with(
+    state: &EngineState,
+    graph: &Graph,
+    trigger_payload: Value,
+    approval_decisions: &HashMap<String, String>,
+    module_steps: &ModuleStepDryRuns,
 ) -> (String, Vec<SimulateNodeTrace>) {
     let Some(entry_node) = graph
         .nodes
@@ -240,7 +306,14 @@ pub fn run_simulation(
                 continue;
             };
 
-            match simulate_node(state, node, node_type, &input, approval_decisions) {
+            match simulate_node(
+                state,
+                node,
+                node_type,
+                &input,
+                approval_decisions,
+                module_steps,
+            ) {
                 Ok(SimOutcome::Succeeded { output, would_have }) => {
                     {
                         let entry = node_runs.get_mut(&node_id).expect("inserted above");
@@ -362,6 +435,7 @@ fn simulate_node(
     node_type: NodeType,
     input: &Value,
     approval_decisions: &HashMap<String, String>,
+    module_steps: &ModuleStepDryRuns,
 ) -> Result<SimOutcome, AppError> {
     match node_type {
         // Materialized before the pass loop starts (mirrors
@@ -414,9 +488,53 @@ fn simulate_node(
         NodeType::SubWorkflow => simulate_sub_workflow(node),
         NodeType::AgentStep => simulate_agent_step(node, input),
         NodeType::Route => Ok(simulate_route(node, approval_decisions)),
-        // E8-T2: a dry run checks the step's handler and configuration and
-        // runs nothing (this pass is synchronous; the handler is not).
-        NodeType::ModuleStep => {
+        NodeType::ModuleStep => simulate_module_step(state, node, module_steps),
+    }
+}
+
+/// E8-T2: maps the handler's dry-run outcome the way the live scheduler
+/// maps the real one.
+fn simulate_module_step(
+    state: &EngineState,
+    node: &GraphNode,
+    module_steps: &ModuleStepDryRuns,
+) -> Result<SimOutcome, AppError> {
+    use attome_core::workflow_step::StepOutcome;
+    match module_steps.get(&node.id) {
+        Some(Err(reason)) => Err(AppError::Validation(format!(
+            "module step {:?}: {reason}",
+            node.id
+        ))),
+        Some(Ok(StepOutcome::Done(output))) => Ok(SimOutcome::Succeeded {
+            output: output.clone(),
+            would_have: Some("would run the module step".into()),
+        }),
+        Some(Ok(StepOutcome::Waiting { wait_event, .. })) => Ok(SimOutcome::WouldWait {
+            reason: match wait_event {
+                Some(event) => format!("would wait for {event}"),
+                None => "would wait until the step is due again".into(),
+            },
+            eventual_output: Value::Null,
+        }),
+        Some(Ok(StepOutcome::Blocked {
+            reason,
+            continue_after: true,
+        })) => Ok(SimOutcome::Succeeded {
+            output: serde_json::json!({ "blocked": reason }),
+            would_have: Some(format!("would be blocked ({reason}) and go on")),
+        }),
+        Some(Ok(StepOutcome::Blocked {
+            reason,
+            continue_after: false,
+        })) => Ok(SimOutcome::WouldWait {
+            reason: format!("would be blocked ({reason}) and retry later"),
+            eventual_output: serde_json::json!({ "blocked": reason }),
+        }),
+        Some(Ok(StepOutcome::Exit { reason })) => Ok(SimOutcome::WouldWait {
+            reason: format!("would end the instance: {reason}"),
+            eventual_output: serde_json::json!({ "exit": reason }),
+        }),
+        None => {
             let handler = scheduler::module_step_handler(state, node)?;
             handler
                 .validate_config(node.config.get("config").unwrap_or(&Value::Null))

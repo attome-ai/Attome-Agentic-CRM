@@ -135,6 +135,37 @@ impl std::fmt::Display for ValidationError {
 /// graph, which this pure/synchronous function has no DB access to fetch;
 /// it is checked separately, at the call site in `admin.rs`'s
 /// `publish_version`, against already-loaded ancestry.
+/// E8-T2: every module step names a registered handler whose module is
+/// licensed and which accepts the node's `config.config`. Separate from
+/// [`validate`] because it needs the running deployment (its handlers and
+/// licence); publish calls both.
+pub fn validate_module_steps(
+    state: &attome_core::EngineState,
+    graph: &Graph,
+) -> Result<(), attome_types::AppError> {
+    for node in &graph.nodes {
+        if NodeType::parse(&node.node_type) != Some(NodeType::ModuleStep) {
+            continue;
+        }
+        let handler = crate::scheduler::module_step_handler(state, node).map_err(|e| {
+            attome_types::AppError::Validation(format!("graph validation failed: {e}"))
+        })?;
+        handler
+            .validate_config(
+                node.config
+                    .get("config")
+                    .unwrap_or(&serde_json::Value::Null),
+            )
+            .map_err(|reason| {
+                attome_types::AppError::Validation(format!(
+                    "graph validation failed: module step {:?}: {reason}",
+                    node.id
+                ))
+            })?;
+    }
+    Ok(())
+}
+
 pub fn validate(graph: &Graph) -> Result<String, ValidationError> {
     if graph.nodes.is_empty() {
         return Err(ValidationError("graph has no nodes".into()));

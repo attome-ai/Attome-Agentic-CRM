@@ -4192,3 +4192,199 @@ async fn an_attribute_filtered_update_trigger_starts_only_on_those_attributes() 
         "a write that did not change `stage` starts nothing"
     );
 }
+
+// ---------------------------------------------------------------------------
+// E8-T2: module steps and kind guards.
+// ---------------------------------------------------------------------------
+
+/// Echoes its configuration; refuses a configuration without `"ok": true`.
+struct EchoStep;
+
+impl attome_core::workflow_step::WorkflowStepHandler for EchoStep {
+    fn key(&self) -> &'static str {
+        "test.echo"
+    }
+    fn module_id(&self) -> attome_modules::ModuleId {
+        attome_modules::MODULE_WORKFLOW
+    }
+    fn validate_config(&self, config: &serde_json::Value) -> Result<(), String> {
+        if config.get("ok") == Some(&json!(true)) {
+            Ok(())
+        } else {
+            Err("config.ok must be true".into())
+        }
+    }
+    fn run<'a>(
+        &'a self,
+        _state: &'a EngineState,
+        inv: attome_core::workflow_step::StepInvocation,
+    ) -> attome_core::workflow_step::StepFuture<'a> {
+        Box::pin(async move {
+            Ok(attome_core::workflow_step::StepOutcome::Done(
+                json!({ "ran": inv.config, "simulate": inv.simulate }),
+            ))
+        })
+    }
+}
+
+/// Ends every journey instance before its first node.
+struct GoalGuard;
+
+impl attome_core::workflow_step::WorkflowKindGuard for GoalGuard {
+    fn kind(&self) -> &'static str {
+        "journey"
+    }
+    fn before_node<'a>(
+        &'a self,
+        _state: &'a EngineState,
+        _instance_id: Uuid,
+        _correlation_entity_id: Option<Uuid>,
+        _node_id: &'a str,
+    ) -> attome_core::workflow_step::GuardFuture<'a> {
+        Box::pin(async { Ok(Some("goal reached".to_string())) })
+    }
+}
+
+/// `state` with every module licensed and the test step and guard registered.
+fn with_module_steps(mut state: EngineState) -> EngineState {
+    state
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
+    let handler: std::sync::Arc<dyn attome_core::workflow_step::WorkflowStepHandler> =
+        std::sync::Arc::new(EchoStep);
+    state.workflow_step_handlers =
+        std::sync::Arc::new(std::collections::HashMap::from([("test.echo", handler)]));
+    let guard: std::sync::Arc<dyn attome_core::workflow_step::WorkflowKindGuard> =
+        std::sync::Arc::new(GoalGuard);
+    state.workflow_kind_guards =
+        std::sync::Arc::new(std::collections::HashMap::from([("journey", guard)]));
+    state
+}
+
+fn module_step_graph(handler: &str, config: serde_json::Value) -> serde_json::Value {
+    json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "m", "type": "module_step", "config": {"handler": handler, "config": config}}
+        ],
+        "edges": [
+            {"from_node": "t", "from_port": "out", "to_node": "m", "to_port": "input"}
+        ]
+    })
+}
+
+#[tokio::test]
+async fn module_step_runs_registered_handler() {
+    let state = with_module_steps(skip_if_no_db!(test_state().await));
+    let user_id = seed_user(&state.base.db).await;
+    let graph = module_step_graph("test.echo", json!({"ok": true}));
+    let parsed = attome_workflow::graph::Graph::parse(&graph).expect("graph parses");
+    attome_workflow::graph::validate_module_steps(&state, &parsed).expect("module step is valid");
+
+    // A dry run asks the handler with simulate = true.
+    let dry = attome_workflow::simulate::dry_run_module_steps(&state, &parsed, &json!({})).await;
+    let (sim_status, trace) = attome_workflow::simulate::run_simulation_with(
+        &state,
+        &parsed,
+        json!({}),
+        &std::collections::HashMap::new(),
+        &dry,
+    );
+    assert_eq!(sim_status, "completed", "{trace:?}");
+    let sim = trace
+        .iter()
+        .find(|t| t.node_id == "m")
+        .expect("module step traced");
+    assert_eq!(sim.output["simulate"], json!(true));
+
+    let version_id = publish_workflow(&state.base.db, "module-step-test", graph).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start instance");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "completed");
+
+    let output: serde_json::Value = sqlx::query_scalar(
+        "SELECT output FROM workflow_node_run WHERE instance_id = $1 AND node_id = 'm'",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read the module step's output");
+    assert_eq!(output, json!({"ran": {"ok": true}, "simulate": false}));
+}
+
+#[tokio::test]
+async fn module_step_unknown_handler_rejected_at_publish() {
+    let state = with_module_steps(skip_if_no_db!(test_state().await));
+    let unknown = attome_workflow::graph::Graph::parse(&module_step_graph("test.nope", json!({})))
+        .expect("graph parses");
+    let err = attome_workflow::graph::validate_module_steps(&state, &unknown)
+        .expect_err("an unknown handler is refused");
+    assert!(err.to_string().contains("no engine registered"), "{err}");
+
+    let refused = attome_workflow::graph::Graph::parse(&module_step_graph("test.echo", json!({})))
+        .expect("graph parses");
+    let err = attome_workflow::graph::validate_module_steps(&state, &refused)
+        .expect_err("a configuration the handler refuses is refused");
+    assert!(err.to_string().contains("config.ok must be true"), "{err}");
+}
+
+#[tokio::test]
+async fn kind_guard_exit_cancels_instance() {
+    let state = with_module_steps(skip_if_no_db!(test_state().await));
+    let user_id = seed_user(&state.base.db).await;
+    let version_id = publish_workflow(
+        &state.base.db,
+        "kind-guard-test",
+        module_step_graph("test.echo", json!({"ok": true})),
+    )
+    .await;
+    // Throwaway test database: make the definition a journey.
+    sqlx::query(
+        "UPDATE workflow_definition SET kind = 'journey' \
+         WHERE id = (SELECT definition_id FROM workflow_definition_version WHERE id = $1)",
+    )
+    .bind(version_id)
+    .execute(&state.base.db)
+    .await
+    .expect("mark the definition a journey");
+
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start instance");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "cancelled");
+
+    let reason: Option<String> = sqlx::query_scalar(
+        "SELECT node_data ->> 'exit_reason' FROM workflow_instance WHERE id = $1",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read the exit reason");
+    assert_eq!(reason.as_deref(), Some("goal reached"));
+    let ran: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workflow_node_run WHERE instance_id = $1 AND node_id = 'm' \
+           AND status = 'succeeded'",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("count module step runs");
+    assert_eq!(ran, 0, "the guard ends the instance before the step runs");
+}
