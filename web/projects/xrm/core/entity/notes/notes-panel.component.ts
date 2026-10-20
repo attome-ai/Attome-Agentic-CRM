@@ -301,8 +301,8 @@ export class NotesPanelComponent implements OnInit {
     }
 
     const onRecord = [
-      { field: 'entity_name', op: 'eq', value: eName },
-      { field: 'record_id', op: 'eq', value: rId },
+      { field: 'entity_name', op: 'eq' as const, value: eName },
+      { field: 'record_id', op: 'eq' as const, value: rId },
     ];
     forkJoin({
       notes: this.entityService.list('note', {
