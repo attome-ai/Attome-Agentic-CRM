@@ -1060,6 +1060,211 @@ pub async fn reverse_amendment(
     Ok(())
 }
 
+/// F3-T9: a renewal price: `price` raised by `uplift_percent`, to two
+/// decimals. Pure.
+pub fn uplifted(price: Decimal, uplift_percent: Decimal) -> Decimal {
+    (price * (Decimal::ONE_HUNDRED + uplift_percent) / Decimal::ONE_HUNDRED).round_dp(2)
+}
+
+/// F3-T9: renews a subscription for another term from its end date: each
+/// line still running at the end gets a `renewal` segment at its price
+/// raised by `uplift_percent`, and the subscription and its lines end one
+/// term later. `renewal_handled_for` records the end date renewed, so a
+/// second sweep the same day does nothing. Answers the new end date.
+pub async fn renew(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    uplift_percent: Decimal,
+) -> Result<NaiveDate, AppError> {
+    let w = writer(state, ctx).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    lock(&mut tx, subscription).await?;
+    let t = terms(&mut tx, subscription).await?;
+    let end = t
+        .end_date
+        .ok_or_else(|| AppError::Validation("an evergreen subscription is not renewed".into()))?;
+    let (months, handled): (Option<f64>, Option<NaiveDate>) = sqlx::query_as(
+        "SELECT term_months::float8, renewal_handled_for FROM subscription WHERE id = $1",
+    )
+    .bind(subscription)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if handled == Some(end) {
+        return Ok(end);
+    }
+    let months = months
+        .and_then(|m| u32::try_from(m as i64).ok())
+        .filter(|m| *m > 0)
+        .unwrap_or(12);
+    let new_end = end
+        .checked_add_months(chrono::Months::new(months))
+        .ok_or_else(|| AppError::Validation("the next term is out of range".into()))?;
+    let last_day = end.pred_opt().unwrap_or(end);
+    let stored = segments_of(&mut tx, subscription).await?;
+    let lines: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM subscription_line WHERE subscription_ref = $1 AND (is_active IS NULL OR is_active = true) AND (end_date IS NULL OR end_date >= $2)",
+    )
+    .bind(subscription)
+    .bind(end)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    for line in lines {
+        let Some(current) = in_force(&stored, line, last_day) else {
+            continue;
+        };
+        if current.segment.valid_to.is_some_and(|to| to > end) {
+            // Already runs past the end: nothing to open.
+            continue;
+        }
+        let next = Segment {
+            line_id: line,
+            valid_from: end,
+            valid_to: Some(new_end),
+            quantity: current.segment.quantity,
+            unit_price: uplifted(current.segment.unit_price, uplift_percent),
+            change_kind: ChangeKind::Renewal,
+        };
+        w.create(&mut tx, "subscription_segment", segment_body(&next, None))
+            .await?;
+        let mut obj = Map::new();
+        obj.insert("end_date".into(), date(new_end));
+        w.update(&mut tx, "subscription_line", line, obj).await?;
+    }
+    let mut obj = Map::new();
+    obj.insert("end_date".into(), date(new_end));
+    obj.insert("renewal_handled_for".into(), date(end));
+    w.update(&mut tx, "subscription", subscription, obj).await?;
+    w.event(
+        &mut tx,
+        subscription,
+        attome_audit::AuditOperation::Update,
+        "billing.subscription.renewed",
+        format!("renewed from {end} to {new_end}, uplift {uplift_percent}%"),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(new_end)
+}
+
+/// F3-T9: opens a renewal opportunity for a subscription in
+/// `renewal_quote` mode (name "Renewal: <subscription>", the account, the
+/// end date as the close date, the term's value as the amount) and records
+/// the end date as handled, in one transaction. Answers the opportunity.
+pub async fn renewal_opportunity(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+) -> Result<Option<Uuid>, AppError> {
+    let w = writer(state, ctx).await?;
+    let (_, _, opp_attrs, _) =
+        attome_records::entity_crud::resolve_entity(state, "opportunity").await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    lock(&mut tx, subscription).await?;
+    let t = terms(&mut tx, subscription).await?;
+    let Some(end) = t.end_date else {
+        return Ok(None);
+    };
+    let (name, account, months, handled): (String, Uuid, Option<f64>, Option<NaiveDate>) =
+        sqlx::query_as(
+            "SELECT name, account_ref, term_months::float8, renewal_handled_for FROM subscription WHERE id = $1",
+        )
+        .bind(subscription)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if handled == Some(end) {
+        return Ok(None);
+    }
+    let stored = segments_of(&mut tx, subscription).await?;
+    let last_day = end.pred_opt().unwrap_or(end);
+    let per_period: Decimal = super::segments::as_of(
+        &stored.iter().map(|s| s.segment.clone()).collect::<Vec<_>>(),
+        last_day,
+    )
+    .iter()
+    .map(|s| s.quantity * s.unit_price)
+    .sum();
+    let months = months.map_or(12, |m| m as i64).max(1);
+    let periods_per_term = match cadence_of(t.billing_frequency.as_deref()) {
+        Cadence::Monthly => months,
+        Cadence::Quarterly => (months / 3).max(1),
+        Cadence::Yearly => (months / 12).max(1),
+    };
+    let mut obj = Map::new();
+    obj.insert("name".into(), Value::String(format!("Renewal: {name}")));
+    obj.insert("account_ref".into(), uuid(account));
+    obj.insert("close_date".into(), date(end));
+    obj.insert("stage".into(), Value::String("prospecting".into()));
+    obj.insert(
+        "amount".into(),
+        num(per_period * Decimal::from(periods_per_term)),
+    );
+    let created = attome_records::entity_mutation::create_one_as(
+        &mut tx,
+        state,
+        Principal::Staff(ctx),
+        "opportunity",
+        &opp_attrs,
+        &obj,
+        CreateStamp {
+            created_by: w.stamp.created_by,
+            org_ref: w.stamp.org_ref,
+            owner_ref: w.stamp.owner_ref,
+            owner_type: w.stamp.owner_type,
+        },
+        MutationMode::Strict,
+    )
+    .await?;
+    let mut mark = Map::new();
+    mark.insert("renewal_handled_for".into(), date(end));
+    w.update(&mut tx, "subscription", subscription, mark)
+        .await?;
+    w.event(
+        &mut tx,
+        subscription,
+        attome_audit::AuditOperation::Update,
+        "billing.subscription.renewal_opened",
+        format!(
+            "renewal opportunity {} for the term ending {end}",
+            created.record_id
+        ),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Some(created.record_id))
+}
+
+/// F3-T9: moves a subscription between lifecycle states outside an
+/// amendment (a trial converting or ending), or stamps a field, with its
+/// named event. `fields` are written as given.
+pub async fn set_fields(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    fields: Map<String, Value>,
+    event: &str,
+) -> Result<(), AppError> {
+    let w = writer(state, ctx).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    lock(&mut tx, subscription).await?;
+    let comment = fields.keys().cloned().collect::<Vec<_>>().join(", ");
+    w.update(&mut tx, "subscription", subscription, fields)
+        .await?;
+    w.event(
+        &mut tx,
+        subscription,
+        attome_audit::AuditOperation::Update,
+        event,
+        comment,
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(())
+}
+
 /// One line's usage over a range of days.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct UsageTotal {

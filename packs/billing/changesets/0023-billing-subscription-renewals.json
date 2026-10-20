@@ -1,0 +1,101 @@
+{
+  "author": "packs",
+  "checksum": "sha256:af2e7427686405622a6bac5987b033a7f177c9495890a6a2587000e3e6ae9e19",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Renewals and trials (F3-T9): the end date a renewal or renewal opportunity was handled for, and the day a trial reminder went out, so the nightly sweep handles each once.",
+  "format": "attome-changeset/v1",
+  "id": "01a15859-ffb4-7bf9-b636-ba4a88ea75d0",
+  "layer": "product",
+  "name": "billing-subscription-renewals",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Renewal Handled For",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "renewal_handled_for",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "subscription",
+        "field": "renewal_handled_for"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تجديد عولج لتاريخ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "subscription.renewal_handled_for",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Trial Reminded On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "trial_reminded_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "subscription",
+        "field": "trial_reminded_on"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التذكير بنهاية التجربة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "subscription.trial_reminded_on",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 23,
+  "title": "Pack: subscription renewal markers"
+}

@@ -210,6 +210,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // F3-T11: subscription events to revenue and churn, every minute.
     crate::jobs::spawn_billing_handoff_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // F3-T9: subscription renewals and trials, nightly.
+    crate::jobs::spawn_billing_renewal_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // W1-T13: contracts from accepted quotes, confirmed orders and intake.
     crate::jobs::spawn_contract_link_scheduler(db.clone(), std::time::Duration::from_secs(15 * 60));
     // W1-T4: contract notice deadlines, renewal tasks and obligations, nightly.

@@ -1457,6 +1457,19 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // F3-T9: renewals and trials.
+        EngineJob::BillingRenewalSweep => {
+            let run = attome_billing::renewal::run(&attome_state, chrono::Utc::now().date_naive())
+                .await?;
+            tracing::info!(
+                renewed = run.renewed,
+                opportunities = run.opportunities,
+                reminders = run.reminders,
+                trials_converted = run.trials_converted,
+                trials_ended = run.trials_ended,
+                "billing renewals: run finished"
+            );
+        }
         // W1-T13: contracts drafted from quotes, orders and intake requests.
         EngineJob::ContractLinkSweep => {
             let run = attome_contract::links::run(&attome_state).await?;
@@ -2567,6 +2580,7 @@ const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
+const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
 const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
@@ -2832,6 +2846,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
+        EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
         EngineJob::PointsScoring => DEDUP_KEY_POINTS_SCORING,
         EngineJob::DealRiskEvaluation => DEDUP_KEY_DEAL_RISK,
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
@@ -3636,6 +3651,17 @@ pub fn spawn_billing_handoff_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::BillingHandoffSweep,
         DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         "billing hand-offs",
+    );
+}
+
+/// F3-T9: once a day, renewals and trials.
+pub fn spawn_billing_renewal_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingRenewalSweep,
+        DEDUP_KEY_BILLING_RENEWAL_SWEEP,
+        "billing renewals",
     );
 }
 

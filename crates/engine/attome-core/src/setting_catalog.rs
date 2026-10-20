@@ -162,6 +162,41 @@ fn records_settings() -> Vec<SettingDescriptor> {
             || json!(false),
         ),
         SettingDescriptor::new(
+            "billing.renewal.lead_days",
+            "Days before a subscription ends that it is renewed (auto mode, after \
+             any contract notice deadline) or gets a renewal opportunity (F3-T9).",
+            || json!({"type": "integer", "minimum": 0, "maximum": 365}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(60),
+        ),
+        SettingDescriptor::new(
+            "billing.renewal.uplift_percent",
+            "Percent added to each line's price when a subscription renews \
+             automatically (F3-T9); 0 keeps the prices.",
+            || json!({"type": "number", "minimum": 0, "maximum": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
+        SettingDescriptor::new(
+            "billing.trial.reminder_days",
+            "Days before a trial ends that its owner is reminded (F3-T9).",
+            || json!({"type": "integer", "minimum": 0, "maximum": 90}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(3),
+        ),
+        SettingDescriptor::new(
+            "billing.trial.convert",
+            "Whether a trial becomes an active subscription on its end date \
+             (F3-T9); off ends it instead.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(true),
+        ),
+        SettingDescriptor::new(
             "billing.seller_name",
             "The deployment's legal name, printed as the seller on every invoice.",
             || json!({"type": "string", "maxLength": 200}),

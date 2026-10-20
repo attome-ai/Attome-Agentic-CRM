@@ -17,6 +17,8 @@ pub mod metrics;
 pub mod model;
 pub mod notes;
 pub mod payment;
+/// F3-T9: renewals and trials, swept nightly.
+pub mod renewal;
 pub mod requests;
 pub(crate) mod scope;
 pub mod statements;
