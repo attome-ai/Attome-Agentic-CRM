@@ -51,6 +51,8 @@ pub mod memory;
 /// this crate cannot depend on the entity engine. Change both together.
 pub const POLYMORPHIC_CHILD_ENTITIES: &[&str] = &[
     "note",
+    // C1-T1: a note's replies, on the note's own parent record.
+    "note_reply",
     "communication",
     "tag_item",
     "follow",

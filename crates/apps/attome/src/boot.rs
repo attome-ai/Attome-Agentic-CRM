@@ -1183,6 +1183,10 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // created before migration 0489. Idempotent; runs after `.build()`
     // because it reads the runtime-provisioned `webportal_user` table.
     attome_portal::provision::backfill_login_emails(&system.state().base.db_migrator).await?;
+    // C1-T1: note replies held as JSON on the note become `note_reply`
+    // records. Idempotent; after `.build()` because both tables are
+    // runtime-provisioned.
+    attome_records::note_replies::move_legacy_replies(&system.state().base.db_migrator).await?;
     // Same reason as the second `seed_all` above: `attome_report{,_schedule}`,
     // the bot-analytics bundles  register only after
     // `.build()`'s own backfills ran, so a fresh database's first boot left

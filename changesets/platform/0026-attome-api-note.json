@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:ba3bcbbc201c8e471ef1746fda7f4ac803e7d323fcfb55d87def02a48fc4da38",
+  "checksum": "sha256:f8c20a3e4d2be8a02f7bab66ba4aafab6332048df80e64a38ccaca2f6ae744a9",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-note.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -199,6 +199,166 @@
       "target": {
         "entity": "note",
         "view": "Active Notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Note Reply",
+          "is_append_only": false,
+          "logicalname": "note_reply",
+          "primary_name_attribute": "note_text"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "note_reply"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Attachments",
+          "field_type": "text",
+          "logicalname": "attachments"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "note_reply",
+        "field": "attachments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "note_reply",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Files",
+          "field_type": "file",
+          "logicalname": "files",
+          "options": {
+            "multi": true
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "note_reply",
+        "field": "files"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Note",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "note_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "note_reply",
+        "field": "note_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reply Text",
+          "field_type": "text",
+          "logicalname": "note_text"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "note_reply",
+        "field": "note_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "note_reply",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "note_reply",
+          "entity_mappings": [],
+          "name": "Active Note Replies",
+          "required_privilege": "note_reply.read",
+          "sql": "SELECT id, note_id, entity_name, record_id, note_text, attachments, created_at, modified_at FROM note_reply WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "note_reply",
+        "query": "Active Note Replies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "note_reply",
+          "is_default": true,
+          "name": "Active Note Replies",
+          "query": {
+            "entity": "note_reply",
+            "name": "Active Note Replies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "note_reply",
+        "view": "Active Note Replies"
       }
     }
   ],

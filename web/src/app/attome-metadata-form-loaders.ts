@@ -138,7 +138,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'user_account_mm_team', 'user_account_mm_privilege',
     ]],
     [coreEntity, [
-      'attome_document', 'note', 'api_key', 'authentication_type', 'autovalue',
+      'attome_document', 'note', 'note_reply', 'api_key', 'authentication_type', 'autovalue',
       'docgen_template', 'communication', 'communication_event', 'follow', 'feed_post', 'glossary_term',
       'license', 'profiler_finding', 'record_relationship', 'resource_skill',
       'resource_availability', 'tag_category', 'tag_item', 'reminder', 'activity',

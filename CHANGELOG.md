@@ -132,6 +132,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Note replies are records (C1-T1): a reply is a `note_reply` on the note's parent record (read only
+  by someone who can read that record), with its own files, so replying no longer rewrites the note
+  and two people replying at once both land. At boot, replies still held in a note's `replies` JSON
+  move to `note_reply` records (text, author, time and attachments kept; a list that is not JSON
+  stays on the note). `note.replies` is no longer written and goes in a later release.
 - Case summaries (G1-T3): two minutes after a case's thread goes quiet, the `case_summary` job runs
   `record.summarize` for the case as its assignee (through the AI gate, read ceiling, the assignee's
   own grants and budget), so the workspace's new Summary panel opens on a ready summary.

@@ -9,6 +9,7 @@ import { CommunicationFormComponent } from './forms/communication-form/communica
 import { CommunicationEventFormComponent } from './forms/communication-event-form/communication-event-form.component';
 import { FollowFormComponent } from './forms/follow-form/follow-form.component';
 import { FeedPostFormComponent } from './forms/feed-post-form/feed-post-form.component';
+import { NoteReplyFormComponent } from './forms/note-reply-form/note-reply-form.component';
 import { GlossaryTermFormComponent } from './forms/glossary-term-form/glossary-term-form.component';
 import { CoreLicenseFormComponent } from './forms/core-license-form/core-license-form.component';
 import { ProfilerFindingFormComponent } from './forms/profiler-finding-form/profiler-finding-form.component';
@@ -44,6 +45,7 @@ export function registerCoreEntityForms(registry: EntityRouteRegistry): void {
   registry.register('communication_event', { formComponent: CommunicationEventFormComponent });
   registry.register('follow', { formComponent: FollowFormComponent });
   registry.register('feed_post', { formComponent: FeedPostFormComponent });
+  registry.register('note_reply', { formComponent: NoteReplyFormComponent });
   registry.register('glossary_term', { formComponent: GlossaryTermFormComponent });
   registry.register('license', { formComponent: CoreLicenseFormComponent });
   registry.register('profiler_finding', { formComponent: ProfilerFindingFormComponent });

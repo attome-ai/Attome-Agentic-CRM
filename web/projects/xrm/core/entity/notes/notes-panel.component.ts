@@ -17,14 +17,19 @@ import { TranslateTextComponent } from '../translate/translate-text.component';
 
 /**
  * `note`'s multi-`file` field (`platform-bundles/attome-api-note.json`).
- * Attachment bytes — the note's own and its replies' — go through the D-144
- * upload pipeline into this field; `attachments`/`replies` keep only display
- * metadata plus the resulting object `key`, which is what `openAttachment`
- * exchanges for a presigned download URL. The server only presigns a key the
- * record's `files` array actually holds, so every save rewrites `files` from
- * the keys the note and its replies still reference.
+ * Attachment bytes go through the D-144 upload pipeline into this field;
+ * `attachments` keeps only display metadata plus the resulting object `key`,
+ * which is what `openAttachment` exchanges for a presigned download URL. The
+ * server only presigns a key the record's `files` array actually holds, so
+ * every save rewrites `files` from the keys the note still references —
+ * including those of replies moved from the old JSON list (C1-T1), whose
+ * files stayed on the note.
+ *
+ * C1-T1: a reply is a `note_reply` record on the note's parent record, with
+ * its own `files` field (the same name), so replying never rewrites the note.
  */
 const NOTE_FILES_FIELD = 'files';
+const REPLY_ENTITY = 'note_reply';
 
 export interface NoteAttachment {
   name: string;
@@ -43,6 +48,23 @@ export interface NoteReply {
   note_text: string;
   created_at: string;
   attachments?: NoteAttachment[];
+  /** The reply record's own file keys; an attachment key not here lives on the note. */
+  files?: string[];
+  row_version?: number;
+}
+
+/** A list of attachments from a stored value (JSON text or an array). Pure. */
+export function parseAttachments(value: unknown): NoteAttachment[] {
+  if (Array.isArray(value)) return value as NoteAttachment[];
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed as NoteAttachment[] : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 export interface NoteItem {
@@ -278,15 +300,47 @@ export class NotesPanelComponent implements OnInit {
       return;
     }
 
-    this.entityService.list('note', {
-      filters: [
-        { field: 'entity_name', op: 'eq', value: eName },
-        { field: 'record_id', op: 'eq', value: rId },
-      ],
-      sorts: [{ field: 'created_at', dir: 'desc' }],
-      limit: 100,
+    const onRecord = [
+      { field: 'entity_name', op: 'eq', value: eName },
+      { field: 'record_id', op: 'eq', value: rId },
+    ];
+    forkJoin({
+      notes: this.entityService.list('note', {
+        filters: onRecord,
+        sorts: [{ field: 'created_at', dir: 'desc' }],
+        limit: 100,
+      }),
+      // C1-T1: every reply on this record's notes, oldest first. Without
+      // read access to replies the notes still show.
+      replies: this.entityService.list(REPLY_ENTITY, {
+        filters: onRecord,
+        sorts: [{ field: 'created_at', dir: 'asc' }],
+        limit: 500,
+      }).pipe(catchError(() => of(null))),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: res => {
+      next: ({ notes: res, replies }) => {
+        const repliesByNote = new Map<string, NoteReply[]>();
+        for (const item of replies?.data ?? []) {
+          const raw = item.data as Record<string, unknown>;
+          const noteId = String(raw['note_id'] || '');
+          const authorId = (raw['created_by'] as string) || null;
+          const author = authorId && this.userCache.has(authorId)
+            ? this.userCache.get(authorId)!
+            : { name: authorId ? 'User' : 'System', initials: this.calcInitials(authorId ? 'User' : 'System') };
+          const files = Array.isArray(raw['files']) ? (raw['files'] as unknown[]).map(String) : [];
+          const reply: NoteReply = {
+            id: item.id,
+            author_id: authorId,
+            author_name: author.name,
+            author_initials: author.initials,
+            note_text: String(raw['note_text'] ?? ''),
+            created_at: item.created_at || '',
+            attachments: parseAttachments(raw['attachments']),
+            files,
+            row_version: item.row_version,
+          };
+          repliesByNote.set(noteId, [...(repliesByNote.get(noteId) ?? []), reply]);
+        }
         const mapped: NoteItem[] = res.data.map(item => {
           const raw = item.data as Record<string, unknown>;
           const created_by = (raw['created_by'] as string) || null;
@@ -294,53 +348,8 @@ export class NotesPanelComponent implements OnInit {
           const author_name = userMeta ? userMeta.name : (created_by ? 'User' : 'System');
           const author_initials = userMeta ? userMeta.initials : this.calcInitials(author_name);
 
-          let parsedAttachments: NoteAttachment[] = [];
-          if (raw['attachments']) {
-            if (typeof raw['attachments'] === 'string') {
-              try {
-                parsedAttachments = JSON.parse(raw['attachments']);
-              } catch {
-                parsedAttachments = [];
-              }
-            } else if (Array.isArray(raw['attachments'])) {
-              parsedAttachments = raw['attachments'] as NoteAttachment[];
-            }
-          }
-
-          let parsedReplies: NoteReply[] = [];
-          if (raw['replies']) {
-            if (typeof raw['replies'] === 'string') {
-              try {
-                parsedReplies = JSON.parse(raw['replies']);
-              } catch {
-                parsedReplies = [];
-              }
-            } else if (Array.isArray(raw['replies'])) {
-              parsedReplies = raw['replies'] as NoteReply[];
-            }
-          }
-
-          // Remap old "You" / "ME" to actual user name and initials
-          parsedReplies = parsedReplies.map(r => {
-            let rName = r.author_name;
-            let rInitials = r.author_initials;
-
-            if (r.author_id && this.userCache.has(r.author_id)) {
-              const u = this.userCache.get(r.author_id)!;
-              rName = u.name;
-              rInitials = u.initials;
-            } else if (rName === 'You' || rInitials === 'ME' || !rName) {
-              const currentUser = this.getCurrentUserInfo();
-              rName = currentUser.name;
-              rInitials = currentUser.initials;
-            }
-
-            return {
-              ...r,
-              author_name: rName,
-              author_initials: rInitials || this.calcInitials(rName),
-            };
-          });
+          const parsedAttachments = parseAttachments(raw['attachments']);
+          const parsedReplies = repliesByNote.get(item.id) ?? [];
 
           const title = String(raw['title'] || '');
           const noteText = String(raw['note_text'] || '');
@@ -489,7 +498,7 @@ export class NotesPanelComponent implements OnInit {
     const activeNote = this.selectedNote();
     // No `await` runs before `update` when there is nothing to upload.
     const { uploaded, failures } = files.length > 0
-      ? await this.uploadFiles(noteId, files)
+      ? await this.uploadFiles('note', noteId, files)
       : { uploaded: [], failures: [] };
     const allAttachments = [...this.existingAttachments(), ...uploaded];
 
@@ -543,7 +552,7 @@ export class NotesPanelComponent implements OnInit {
   }
 
   private async attachToNewNote(noteId: string, rowVersion: number, files: File[]): Promise<void> {
-    const { uploaded, failures } = await this.uploadFiles(noteId, files);
+    const { uploaded, failures } = await this.uploadFiles('note', noteId, files);
     if (uploaded.length === 0) {
       this.saving.set(false);
       this.refreshAfterSave(noteId, failures);
@@ -571,13 +580,13 @@ export class NotesPanelComponent implements OnInit {
    * and one scan poll in flight, as `MultiAttachmentComponent` does). A file
    * that is rejected or fails does not stop the rest.
    */
-  private async uploadFiles(noteId: string, files: File[]): Promise<{ uploaded: NoteAttachment[]; failures: string[] }> {
+  private async uploadFiles(entityName: string, recordId: string, files: File[]): Promise<{ uploaded: NoteAttachment[]; failures: string[] }> {
     const uploaded: NoteAttachment[] = [];
     const failures: string[] = [];
     for (const file of files) {
       this.uploadingFile.set(file.name);
       const result = await this.uploadPipeline.run(
-        { entityName: 'note', recordId: noteId, fieldName: NOTE_FILES_FIELD },
+        { entityName, recordId, fieldName: NOTE_FILES_FIELD },
         file,
       );
       if (result.kind === 'clean') {
@@ -596,12 +605,18 @@ export class NotesPanelComponent implements OnInit {
     return { uploaded, failures };
   }
 
-  /** Every object key the note and its replies still reference — the value `files` must hold. */
+  /**
+   * Every object key the note still references — the value `files` must
+   * hold: its own attachments', and those of replies moved from the old JSON
+   * list, whose files stayed on the note (a reply's own keys are on it).
+   */
   private noteFileKeys(attachments: NoteAttachment[] | undefined, replies: NoteReply[] | undefined): string[] {
     const keys = new Set<string>();
     for (const att of attachments ?? []) if (att.key) keys.add(att.key);
     for (const reply of replies ?? []) {
-      for (const att of reply.attachments ?? []) if (att.key) keys.add(att.key);
+      for (const att of reply.attachments ?? []) {
+        if (att.key && !reply.files?.includes(att.key)) keys.add(att.key);
+      }
     }
     return [...keys];
   }
@@ -665,69 +680,60 @@ export class NotesPanelComponent implements OnInit {
     if (!text && files.length === 0) return;
 
     this.sendingReply.set(true);
-    void this.postReply(activeNote, text, files);
+    this.postReply(activeNote, text, files);
   }
 
-  private async postReply(activeNote: NoteItem, text: string, files: File[]): Promise<void> {
-    // Reply files live in the parent note's `files` field (a reply is not a
-    // record of its own). No `await` runs before `update` without files.
-    const { uploaded: attachmentsMeta, failures } = files.length > 0
-      ? await this.uploadFiles(activeNote.id, files)
-      : { uploaded: [] as NoteAttachment[], failures: [] as string[] };
-
-    if (!text && attachmentsMeta.length === 0) {
-      this.sendingReply.set(false);
-      this.errorMessage.set(`Some files were not attached — ${failures.join('; ')}`);
-      return;
-    }
-
-    const user = this.getCurrentUserInfo();
-
-    const newReply: NoteReply = {
-      id: crypto.randomUUID(),
-      author_id: this.authService.userId(),
-      author_name: user.name,
-      author_initials: user.initials,
+  private postReply(activeNote: NoteItem, text: string, files: File[]): void {
+    // C1-T1: a reply is its own `note_reply` record on the note's parent
+    // record, so replying never rewrites the note and two people replying
+    // at once both land. Its files go to its own `files` field, once it
+    // exists.
+    this.entityService.create(REPLY_ENTITY, {
+      note_id: activeNote.id,
+      entity_name: activeNote.entity_name,
+      record_id: activeNote.record_id,
       note_text: text,
-      created_at: new Date().toISOString(),
-      attachments: attachmentsMeta.length > 0 ? attachmentsMeta : undefined,
-    };
-
-    const currentReplies = activeNote.replies ? [...activeNote.replies] : [];
-    const updatedReplies = [...currentReplies, newReply];
-    const replyPatch: Record<string, unknown> = { replies: JSON.stringify(updatedReplies) };
-    if (attachmentsMeta.length > 0) {
-      replyPatch[NOTE_FILES_FIELD] = this.noteFileKeys(activeNote.attachments, updatedReplies);
-    }
-
-    this.entityService.update('note', activeNote.id, replyPatch, activeNote.row_version ?? 0).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: created => {
         this.notifyMentions(text);
         this.replyText = '';
         this.replyPendingFiles.set([]);
-        this.sendingReply.set(false);
-        this.refreshAfterSave(activeNote.id, failures);
+        if (files.length === 0) {
+          this.sendingReply.set(false);
+          this.refreshAfterSave(activeNote.id, []);
+          return;
+        }
+        void this.attachReplyFiles(activeNote.id, created.id, created.row_version, files);
       },
       error: (err: ApiError) => {
-        // C-29 (M01 §7) — `replies` is a `row_version`-guarded field
-        // (`If-Match`, D-037), not last-writer-wins: a concurrent reply from
-        // another tab/user makes this `update` 409 (`version_conflict`)
-        // rather than silently clobbering it. Previously this handler
-        // swallowed that conflict — the composer cleared nothing, but the
-        // reply was never sent and the user got no indication why, and the
-        // stale in-memory `replies` list (from before the other party's
-        // reply landed) stayed on screen. Surface it and refetch so the view
-        // reconciles with what the server actually holds, same recovery
-        // `saveEditReply`/`deleteReply` below now use.
-        //
-        // Deliberately `fetchNotes()` with no `autoSelectId` here: passing
-        // this note's own id (it's already the selected note) would re-run
-        // `selectNote()`, which resets `errorMessage` back to null as one of
-        // its normal "starting a fresh view" side effects — clobbering the
-        // message this very branch just set. No `autoSelectId` still
-        // reconciles `notes()` with the server, and the existing "still on
-        // this note, still in detail view" fallback in `fetchNotes` leaves
-        // the selection untouched when the note is still there.
+        // Deliberately `fetchNotes()` with no `autoSelectId`: passing this
+        // note's own id would re-run `selectNote()`, which clears the
+        // message this branch just set.
+        this.sendingReply.set(false);
+        this.errorMessage.set(this.conflictMessage(err));
+        this.fetchNotes();
+      },
+    });
+  }
+
+  /** Uploads a new reply's files to the reply record and records them on it. */
+  private async attachReplyFiles(noteId: string, replyId: string, rowVersion: number, files: File[]): Promise<void> {
+    const { uploaded, failures } = await this.uploadFiles(REPLY_ENTITY, replyId, files);
+    if (uploaded.length === 0) {
+      this.sendingReply.set(false);
+      this.refreshAfterSave(noteId, failures);
+      return;
+    }
+    const patch: Record<string, unknown> = {
+      attachments: JSON.stringify(uploaded),
+      [NOTE_FILES_FIELD]: uploaded.map(a => a.key).filter((k): k is string => !!k),
+    };
+    this.entityService.update(REPLY_ENTITY, replyId, patch, rowVersion).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.sendingReply.set(false);
+        this.refreshAfterSave(noteId, failures);
+      },
+      error: (err: ApiError) => {
         this.sendingReply.set(false);
         this.errorMessage.set(this.conflictMessage(err));
         this.fetchNotes();
@@ -760,10 +766,8 @@ export class NotesPanelComponent implements OnInit {
     const text = this.editingReplyText.trim();
     if (!text) return;
 
-    const currentReplies = note.replies ? [...note.replies] : [];
-    const updatedReplies = currentReplies.map(r => r.id === replyId ? { ...r, note_text: text } : r);
-
-    this.entityService.update('note', note.id, { replies: JSON.stringify(updatedReplies) }, note.row_version ?? 0).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const reply = note.replies?.find(r => r.id === replyId);
+    this.entityService.update(REPLY_ENTITY, replyId, { note_text: text }, reply?.row_version ?? 0).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.editingReplyId.set(null);
         this.editingReplyText = '';
@@ -792,13 +796,7 @@ export class NotesPanelComponent implements OnInit {
       variant: 'danger',
     }).then(ok => {
       if (ok) {
-        const currentReplies = note.replies ? [...note.replies] : [];
-        const updatedReplies = currentReplies.filter(r => r.id !== replyId);
-        const patch: Record<string, unknown> = { replies: JSON.stringify(updatedReplies) };
-        if (currentReplies.some(r => r.id === replyId && r.attachments?.some(a => a.key))) {
-          patch[NOTE_FILES_FIELD] = this.noteFileKeys(note.attachments, updatedReplies);
-        }
-        this.entityService.update('note', note.id, patch, note.row_version ?? 0).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        this.entityService.delete(REPLY_ENTITY, replyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: () => {
             this.fetchNotes(note.id);
           },
@@ -853,14 +851,16 @@ export class NotesPanelComponent implements OnInit {
     });
   }
 
-  openAttachment(noteId: string, att: NoteAttachment): void {
+  openAttachment(noteId: string, att: NoteAttachment, reply?: NoteReply): void {
     if (!att.key) {
       // Attachments saved before uploads were wired up carry only a name and
       // size — their bytes never left the browser, so there is nothing to open.
       this.errorMessage.set(`"${att.name}" was saved without its file content and cannot be opened.`);
       return;
     }
-    this.fileService.getDownloadUrl('note', noteId, NOTE_FILES_FIELD, att.key)
+    // A reply's own file is on the reply; a moved reply's file is on the note.
+    const [entity, id] = reply?.files?.includes(att.key) ? [REPLY_ENTITY, reply.id] : ['note', noteId];
+    this.fileService.getDownloadUrl(entity, id, NOTE_FILES_FIELD, att.key)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: res => window.open(res.download_url, '_blank', 'noopener'),

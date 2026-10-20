@@ -41,19 +41,34 @@ describe('NotesPanelComponent', () => {
           attachments: [
             { name: 'document.pdf', size_bytes: 102400, size_formatted: '100 KB' },
           ],
-          replies: [
-            {
-              id: 'reply-1',
-              author_name: 'dev-agent',
-              author_initials: 'DA',
-              note_text: 'First reply',
-              created_at: '2026-08-14T11:00:00Z',
-            },
-          ],
         },
       },
     ],
     meta: { total: 1, limit: 50, offset: 0 },
+  };
+
+  // C1-T1: replies are `note_reply` records on the note's parent record.
+  const sampleReplies = {
+    data: [
+      {
+        id: 'reply-1',
+        created_at: '2026-08-14T11:00:00Z',
+        updated_at: '2026-08-14T11:00:00Z',
+        row_version: 2,
+        data: {
+          id: 'reply-1',
+          note_id: 'note-1',
+          entity_name: 'user_account',
+          record_id: 'user-1',
+          note_text: 'First reply',
+          created_by: 'user-2',
+          // A reply moved from the old JSON list: its file is on the note.
+          attachments: JSON.stringify([{ name: 'old.pdf', key: 'note/note-1/files/old' }]),
+          files: [],
+        },
+      },
+    ],
+    meta: { total: 1, limit: 500, offset: 0 },
   };
 
   const sampleUsers = {
@@ -82,9 +97,12 @@ describe('NotesPanelComponent', () => {
         if (entityName === 'note') {
           return of(sampleNotes);
         }
+        if (entityName === 'note_reply') {
+          return of(sampleReplies);
+        }
         return of({ data: [], meta: { total: 0, limit: 50, offset: 0 } });
       }),
-      create: vi.fn().mockReturnValue(of({ id: 'note-2' })),
+      create: vi.fn().mockReturnValue(of({ id: 'note-2', row_version: 0 })),
       update: vi.fn().mockReturnValue(of({ id: 'note-1' })),
       delete: vi.fn().mockReturnValue(of(undefined)),
     };
@@ -114,6 +132,19 @@ describe('NotesPanelComponent', () => {
     fixture.componentRef.setInput('entityName', 'user_account');
     fixture.componentRef.setInput('recordId', 'user-1');
     fixture.detectChanges();
+  });
+
+  it('reads each note\'s replies from its reply records', () => {
+    const replies = component.notes()[0].replies ?? [];
+    expect(replies.map(r => r.note_text)).toEqual(['First reply']);
+    expect(replies[0].author_name).toBe('Jane Smith');
+    expect(replies[0].row_version).toBe(2);
+    expect(entityService.list).toHaveBeenCalledWith('note_reply', expect.objectContaining({
+      filters: [
+        { field: 'entity_name', op: 'eq', value: 'user_account' },
+        { field: 'record_id', op: 'eq', value: 'user-1' },
+      ],
+    }));
   });
 
   it('renders notes history and opens create view by default when no note selected', () => {
@@ -184,8 +215,8 @@ describe('NotesPanelComponent', () => {
       title: 'Updated Document Title',
       note_text: 'Updated note text',
       attachments: JSON.stringify([{ name: 'document.pdf', size_bytes: 102400, size_formatted: '100 KB' }]),
-      // The legacy attachment has no object key, so the note holds no files.
-      files: [],
+      // The legacy attachment has no object key; the moved reply's file stays on the note.
+      files: ['note/note-1/files/old'],
     }, 0);
   });
 
@@ -239,17 +270,32 @@ describe('NotesPanelComponent', () => {
       expect(component.errorMessage()).toContain('contract.pdf: infected');
     });
 
-    it("uploads a reply's files into the parent note and adds their keys to files", async () => {
-      stubPipeline(vi.fn().mockResolvedValue({ kind: 'clean', finalKey: 'note/note-1/files/r1' }));
+    it("uploads a reply's files to the reply record and records their keys on it", async () => {
+      const run = vi.fn().mockResolvedValue({ kind: 'clean', finalKey: 'note_reply/reply-9/files/r1' });
+      stubPipeline(run);
+      entityService.create.mockReturnValue(of({ id: 'reply-9', row_version: 1 }));
       component.selectNote('note-1');
       component.replyText = 'See attached';
       component.replyPendingFiles.set([file()]);
       component.sendReply();
 
       await vi.waitFor(() => expect(entityService.update).toHaveBeenCalled());
-      const patch = entityService.update.mock.calls[0][2];
-      expect(patch.files).toEqual(['note/note-1/files/r1']);
-      expect(patch.replies).toContain('note/note-1/files/r1');
+      expect(run).toHaveBeenCalledWith(
+        { entityName: 'note_reply', recordId: 'reply-9', fieldName: 'files' }, expect.any(File));
+      const [entity, id, patch, rowVersion] = entityService.update.mock.calls[0];
+      expect([entity, id, rowVersion]).toEqual(['note_reply', 'reply-9', 1]);
+      expect(patch.files).toEqual(['note_reply/reply-9/files/r1']);
+      expect(JSON.parse(patch.attachments)[0]).toMatchObject({ key: 'note_reply/reply-9/files/r1' });
+    });
+
+    it("opens a moved reply's file through the note and a new reply's through the reply", () => {
+      vi.spyOn(window, 'open').mockReturnValue(null);
+      const moved = component.notes()[0].replies![0];
+      component.openAttachment('note-1', { name: 'old.pdf', key: 'note/note-1/files/old' }, moved);
+      expect(fileService.getDownloadUrl).toHaveBeenLastCalledWith('note', 'note-1', 'files', 'note/note-1/files/old');
+      const fresh = { ...moved, id: 'reply-9', files: ['note_reply/reply-9/files/r1'] };
+      component.openAttachment('note-1', { name: 'r.pdf', key: 'note_reply/reply-9/files/r1' }, fresh);
+      expect(fileService.getDownloadUrl).toHaveBeenLastCalledWith('note_reply', 'reply-9', 'files', 'note_reply/reply-9/files/r1');
     });
 
     it('opens an uploaded attachment through a presigned download URL', () => {
@@ -269,19 +315,18 @@ describe('NotesPanelComponent', () => {
     });
   });
 
-  it('sends thread reply updating parent note without adding sidebar note', () => {
+  it('sends a thread reply as its own record without touching the note', () => {
     component.selectNote('note-1');
     component.replyText = 'A reply to this thread';
     component.sendReply();
 
-    expect(entityService.update).toHaveBeenCalledWith(
-      'note',
-      'note-1',
-      expect.objectContaining({
-        replies: expect.stringContaining('A reply to this thread'),
-      }),
-      0,
-    );
+    expect(entityService.create).toHaveBeenCalledWith('note_reply', {
+      note_id: 'note-1',
+      entity_name: 'user_account',
+      record_id: 'user-1',
+      note_text: 'A reply to this thread',
+    });
+    expect(entityService.update).not.toHaveBeenCalled();
   });
 
   it('edits a reply in the thread', () => {
@@ -290,14 +335,14 @@ describe('NotesPanelComponent', () => {
     component.editingReplyText = 'Updated reply text';
     component.saveEditReply(note, 'reply-1');
 
-    expect(entityService.update).toHaveBeenCalledWith(
-      'note',
-      'note-1',
-      expect.objectContaining({
-        replies: expect.stringContaining('Updated reply text'),
-      }),
-      0,
-    );
+    expect(entityService.update).toHaveBeenCalledWith('note_reply', 'reply-1', { note_text: 'Updated reply text' }, 2);
+  });
+
+  it('deletes a reply record after confirmation', async () => {
+    component.deleteReply(component.notes()[0], 'reply-1');
+    await Promise.resolve();
+
+    expect(entityService.delete).toHaveBeenCalledWith('note_reply', 'reply-1');
   });
 
   it('deletes a note after confirmation', async () => {
@@ -308,18 +353,15 @@ describe('NotesPanelComponent', () => {
     expect(entityService.delete).toHaveBeenCalledWith('note', 'note-1');
   });
 
-  // C-29 (M01 §7) — `replies` is a `row_version`-guarded field (`If-Match`,
-  // D-037): a concurrent reply/edit/delete makes the generic API 409
-  // (`version_conflict`) rather than silently overwriting. These three used
-  // to have no `error` branch (or one that only cleared a loading flag), so
-  // the conflict was swallowed — the user saw no error and the view kept
-  // showing pre-conflict state as if the action had succeeded. All three now
-  // surface a message and refetch to reconcile with the server.
-  describe('reply mutations surface a version_conflict instead of swallowing it', () => {
+  // C-29 (M01 §7) — a reply record is `row_version`-guarded (`If-Match`,
+  // D-037): a concurrent edit makes the generic API 409 (`version_conflict`)
+  // rather than silently overwriting. Every reply mutation surfaces the
+  // failure and refetches to reconcile with the server.
+  describe('reply mutations surface a failure instead of swallowing it', () => {
     const conflict: ApiError = { kind: 'version_conflict', message: 'stale row_version', status: 409 };
 
-    it('sendReply sets errorMessage and refetches on conflict', () => {
-      entityService.update.mockReturnValue(throwError(() => conflict));
+    it('sendReply sets errorMessage and refetches when the create fails', () => {
+      entityService.create.mockReturnValue(throwError(() => conflict));
       component.selectNote('note-1');
       component.replyText = 'A reply that will conflict';
       component.sendReply();
@@ -341,7 +383,7 @@ describe('NotesPanelComponent', () => {
     });
 
     it('deleteReply sets errorMessage and refetches on conflict', async () => {
-      entityService.update.mockReturnValue(throwError(() => conflict));
+      entityService.delete.mockReturnValue(throwError(() => conflict));
       const note = component.notes()[0];
       component.deleteReply(note, 'reply-1');
       await Promise.resolve();

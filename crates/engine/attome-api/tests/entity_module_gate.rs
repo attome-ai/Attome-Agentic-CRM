@@ -62,6 +62,8 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
     ("api_key", "core platform (server apikey_seed)"),
     ("license", "core platform (attome-api license_seed)"),
     ("note", "core platform (attome-api note_seed)"),
+    // C1-T1: note replies ride the note bundle.
+    ("note_reply", "core platform (attome-api note_seed)"),
     ("activity", "core platform (attome-api activity bundle)"),
     ("autovalue", "core platform (attome-metadata autovalue)"),
     ("saved_search", "core platform (saved searches)"),

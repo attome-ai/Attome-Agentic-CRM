@@ -51,6 +51,8 @@ pub mod import_choice_match;
 /// [`mutation_ring::MutationRing`] directly, the same reasoning
 /// `entity_mutation` is already `pub` for.
 pub mod mutation_ring;
+/// C1-T1: note replies moved from the note's JSON to their own records.
+pub mod note_replies;
 pub mod query_admin;
 pub mod query_exec;
 pub mod query_spec;

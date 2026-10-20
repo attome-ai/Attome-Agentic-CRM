@@ -21,6 +21,20 @@
         { "logicalname": "replies", "display_name": "Replies", "field_type": "text" },
         { "logicalname": "is_customer_visible", "display_name": "Customer Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true }
       ]
+    },
+    {
+      "logicalname": "note_reply",
+      "display_name": "Note Reply",
+      "primary_name_attribute": "note_text",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "note_id", "display_name": "Note", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "note_text", "display_name": "Reply Text", "field_type": "text" },
+        { "logicalname": "attachments", "display_name": "Attachments", "field_type": "text" },
+        { "logicalname": "files", "display_name": "Files", "field_type": "file", "options": { "multi": true } }
+      ]
     }
   ],
   "queries": [
@@ -29,6 +43,12 @@
       "name": "Active Notes",
       "sql": "SELECT id, title, note_text, entity_name, record_id, attachments, replies, is_customer_visible, created_at, modified_at FROM note WHERE is_active IS NOT FALSE",
       "required_privilege": "note.read"
+    },
+    {
+      "entity": "note_reply",
+      "name": "Active Note Replies",
+      "sql": "SELECT id, note_id, entity_name, record_id, note_text, attachments, created_at, modified_at FROM note_reply WHERE is_active IS NOT FALSE",
+      "required_privilege": "note_reply.read"
     }
   ],
   "views": [
@@ -36,6 +56,12 @@
       "entity": "note",
       "name": "Active Notes",
       "query": { "entity": "note", "name": "Active Notes" },
+      "is_default": true
+    },
+    {
+      "entity": "note_reply",
+      "name": "Active Note Replies",
+      "query": { "entity": "note_reply", "name": "Active Note Replies" },
       "is_default": true
     }
   ]

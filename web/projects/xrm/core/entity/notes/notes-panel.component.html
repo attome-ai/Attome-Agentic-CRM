@@ -459,7 +459,7 @@
                       @if (reply.attachments && reply.attachments.length > 0) {
                         <div class="xnp-attachments-grid">
                           @for (att of reply.attachments; track att.name) {
-                            <div class="xnp-attachment-tile" role="button" tabindex="0" (click)="openAttachment(activeNote.id, att)">
+                            <div class="xnp-attachment-tile" role="button" tabindex="0" (click)="openAttachment(activeNote.id, att, reply)">
                               <div class="xnp-att-icon-box">
                                 <i [class]="getAttachmentIcon(att.name)"></i>
                               </div>
