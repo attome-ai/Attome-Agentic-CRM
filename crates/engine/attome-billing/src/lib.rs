@@ -8,6 +8,8 @@ pub mod deposit;
 pub mod document;
 pub mod einvoice;
 pub mod gateway;
+/// F3-T11: subscription events handed to revenue and churn after commit.
+pub mod handoff;
 pub mod invoice;
 pub mod issue;
 pub mod lookup;

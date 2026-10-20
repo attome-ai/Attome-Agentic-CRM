@@ -446,6 +446,9 @@ pub enum EngineJob {
     /// W1-T13: drafts contracts from accepted quotes, confirmed orders and
     /// contract intake requests, off the change feed. Bare unit variant.
     ContractLinkSweep,
+    /// F3-T11: hands committed subscription events to revenue and churn,
+    /// off the change feed. Bare unit variant.
+    BillingHandoffSweep,
     /// D18-T1: scores every record of every enabled points model. Bare
     /// unit variant.
     PointsScoring,
@@ -1023,6 +1026,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
+            | Self::BillingHandoffSweep
             | Self::PointsScoring
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
@@ -1160,6 +1164,7 @@ impl EngineJob {
             EngineJob::ContractCounterpartyMatch => "ContractCounterpartyMatch",
             EngineJob::RecurringTaskRoll => "RecurringTaskRoll",
             EngineJob::ContractLinkSweep => "ContractLinkSweep",
+            EngineJob::BillingHandoffSweep => "BillingHandoffSweep",
             EngineJob::PointsScoring => "PointsScoring",
             EngineJob::DealRiskEvaluation => "DealRiskEvaluation",
             EngineJob::ForecastRecompute => "ForecastRecompute",
@@ -1302,6 +1307,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
+            | Self::BillingHandoffSweep
             | Self::PointsScoring
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
@@ -1459,6 +1465,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
+            | Self::BillingHandoffSweep
             | Self::PointsScoring
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
@@ -1866,6 +1873,7 @@ mod tests {
         assert_round_trips(EngineJob::ContractCounterpartyMatch);
         assert_round_trips(EngineJob::RecurringTaskRoll);
         assert_round_trips(EngineJob::ContractLinkSweep);
+        assert_round_trips(EngineJob::BillingHandoffSweep);
         assert_round_trips(EngineJob::PointsScoring);
         assert_round_trips(EngineJob::DealRiskEvaluation);
         assert_round_trips(EngineJob::ForecastRecompute);

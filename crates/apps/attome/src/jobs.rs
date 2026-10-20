@@ -1446,6 +1446,17 @@ async fn dispatch_platform_job(
                 tracing::info!(created, "recurring tasks: next tasks created");
             }
         }
+        // F3-T11: subscription events handed to revenue and churn.
+        EngineJob::BillingHandoffSweep => {
+            let run = attome_billing::handoff::run(&db).await?;
+            if run.churned > 0 || run.revenue_events > 0 {
+                tracing::info!(
+                    churned = run.churned,
+                    revenue_events = run.revenue_events,
+                    "billing hand-offs: run finished"
+                );
+            }
+        }
         // W1-T13: contracts drafted from quotes, orders and intake requests.
         EngineJob::ContractLinkSweep => {
             let run = attome_contract::links::run(&attome_state).await?;
@@ -2555,6 +2566,7 @@ const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
+const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
@@ -2819,6 +2831,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
+        EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::PointsScoring => DEDUP_KEY_POINTS_SCORING,
         EngineJob::DealRiskEvaluation => DEDUP_KEY_DEAL_RISK,
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
@@ -3612,6 +3625,17 @@ pub fn spawn_recurring_task_roll_scheduler(db: DbPool, interval: std::time::Dura
         EngineJob::RecurringTaskRoll,
         DEDUP_KEY_RECURRING_TASK_ROLL,
         "recurring task roll",
+    );
+}
+
+/// F3-T11: every minute, subscription events handed to revenue and churn.
+pub fn spawn_billing_handoff_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingHandoffSweep,
+        DEDUP_KEY_BILLING_HANDOFF_SWEEP,
+        "billing hand-offs",
     );
 }
 
