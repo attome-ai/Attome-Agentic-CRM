@@ -738,6 +738,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // F1-T3: configure a bundle product (?bundleId=&priceListId=).
+            path: 'sales/configurator',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/sales/configurator').then(m => m.ConfiguratorComponent),
+          },
+          {
             // F10-T15: my commission statement (the API answers only the
             // rows and amounts the reader may see).
             path: 'commission/statement',

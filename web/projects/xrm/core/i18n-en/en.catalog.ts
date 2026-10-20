@@ -282,6 +282,21 @@ export const xrmEn = {
     capped_per_deal: 'Capped at {cap} for this deal.',
     capped_per_period: 'Capped at {cap} for this period.',
   },
+  // F1-T3: the bundle configurator.
+  configurator: {
+    title: 'Configure the bundle',
+    pickOne: 'Choose one',
+    pickUpTo: 'Choose {min} to {max}',
+    total: 'List price',
+    problem: {
+      not_an_option: '{option} is not offered in this bundle.',
+      too_few: 'Choose at least {min} in {group}.',
+      too_many: 'Choose at most {max} in {group}.',
+      missing_required: '{option} needs {other}.',
+      excluded: '{option} cannot go with {other}.',
+      rule_failed: 'A configuration rule is not met.',
+    },
+  },
   // D26-T2: the plays panel on a deal.
   plays: {
     title: 'Plays for this deal',

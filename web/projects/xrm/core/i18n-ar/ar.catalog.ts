@@ -261,6 +261,21 @@ export const xrmAr = {
     capped_per_deal: 'بحد أقصى {cap} لهذه الصفقة.',
     capped_per_period: 'بحد أقصى {cap} لهذه الفترة.',
   },
+  // F1-T3: the bundle configurator.
+  configurator: {
+    title: 'تهيئة الحزمة',
+    pickOne: 'اختر واحدًا',
+    pickUpTo: 'اختر من {min} إلى {max}',
+    total: 'سعر القائمة',
+    problem: {
+      not_an_option: '{option} غير متاح في هذه الحزمة.',
+      too_few: 'اختر {min} على الأقل في {group}.',
+      too_many: 'اختر {max} على الأكثر في {group}.',
+      missing_required: '{option} يتطلب {other}.',
+      excluded: 'لا يمكن الجمع بين {option} و{other}.',
+      rule_failed: 'لم تتحقق إحدى قواعد التهيئة.',
+    },
+  },
   // D26-T2: the plays panel on a deal.
   plays: {
     title: 'الخطط المناسبة لهذه الصفقة',
