@@ -429,7 +429,8 @@ async fn oidc_callback_inner(
     let cookies = issue_session_cookies_for(
         state,
         user_id,
-        &AuthContext::federated(identity.auth_time),
+        // Q2-T2: MFA the provider reported counts as this sign-in's second factor.
+        &AuthContext::federated(identity.auth_time).with_idp_mfa(identity.idp_mfa),
         Some((auditor, &method)),
     )
     .await?;

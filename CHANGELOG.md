@@ -133,6 +133,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- MFA done at the identity provider counts (Q2-T2): an `oidc.providers` entry gains `mfa_acr_values`
+  (the `amr` entries or `acr` value that mean MFA, as the provider presets list them) and
+  `trust_idp_mfa` (default `true`). When a verified ID token carries one of the values, the session
+  records `mfa` after `fed` in its `amr`, so a policy that requires MFA can accept it without
+  Attome's own factor. A provider with no values configured, or `trust_idp_mfa: false`, never counts.
 - Recorded model answers for tests (Z9-T7): `FakeModelServer::recorded` answers by the hash of a
   request's messages from a fixture file (`Recordings::load`), tool calls and streamed chunks
   included; an unrecorded request gets a 404 naming its hash. With `ATTOME_TEST_NO_NETWORK=1`, every

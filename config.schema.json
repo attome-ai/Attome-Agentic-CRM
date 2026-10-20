@@ -2110,6 +2110,14 @@
           "description": "Issuer URL, no trailing slash, e.g.\n\"https://login.microsoftonline.com/{tenant}/v2.0\" or\n\"https://accounts.google.com\". `{issuer}/.well-known/openid-configuration`\nMUST resolve (OIDC discovery, RFC 8414).",
           "type": "string"
         },
+        "mfa_acr_values": {
+          "default": [],
+          "description": "Q2-T2: the ID-token `amr` entries or `acr` value that mean the person\npassed multi-factor authentication at the provider (a preset's\n`mfa_acr_values`, e.g. `[\"mfa\"]` for Entra ID). Empty (the default):\nthe provider's MFA is never counted.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "require_email_verified_claim": {
           "default": true,
           "description": "Enterprise-audit remediation (Phase 2.2, revised): when `true`, a\nmissing `email_verified` claim is rejected (`Unauthorized`) instead\nof defaulting to accepted. **On by default** — an omitted\n`email_verified` claim is indistinguishable at the protocol level\nfrom an IdP that never verifies email at all, so defaulting to\n\"accept\" fails open on exactly the ambiguity this flag exists to\nclose. A provider whose IdP is confirmed to reliably omit the claim\nwhile still being fully trustworthy (`verify_claims`'s original\nreasoning) must opt back out explicitly\n(`\"require_email_verified_claim\": false`) rather than relying on a\nsilent default.",
@@ -2125,6 +2133,11 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "trust_idp_mfa": {
+          "default": true,
+          "description": "Q2-T2: whether MFA the provider reports counts as MFA in Attome, so a\npolicy that requires MFA is met without Attome's own factor. Set\n`false` for a provider whose MFA claim is not trusted.",
+          "type": "boolean"
         }
       },
       "required": [

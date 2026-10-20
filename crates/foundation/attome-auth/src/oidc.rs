@@ -135,6 +135,10 @@ pub struct OidcIdentity {
     /// federated step-up, carried back from the single-use server-side
     /// `OidcState` exactly as `linking_user_id` is. Never client input.
     pub step_up: Option<crate::step_up::FederatedStepUp>,
+    /// Q2-T2: the provider reports the person passed MFA there (its `amr` or
+    /// `acr` carries one of the provider's `mfa_acr_values`, and the provider
+    /// is trusted for MFA). The session then records `mfa` in its `amr`.
+    pub idp_mfa: bool,
 }
 
 impl std::fmt::Debug for OidcIdentity {
@@ -143,6 +147,7 @@ impl std::fmt::Debug for OidcIdentity {
             .field("linking_user_id", &self.linking_user_id)
             .field("auth_time", &self.auth_time)
             .field("expires_at", &self.expires_at)
+            .field("idp_mfa", &self.idp_mfa)
             .finish_non_exhaustive()
     }
 }
@@ -967,6 +972,8 @@ fn verify_claims(
         .and_then(|secs| chrono::DateTime::<chrono::Utc>::from_timestamp(secs, 0))
         .ok_or(AppError::Unauthorized)?;
 
+    let idp_mfa = idp_mfa(&claims, provider);
+
     // Overwritten by complete_login right after this returns — this pure
     // half has no `OidcState` (and thus no linking_user_id) to draw from.
     Ok(OidcIdentity {
@@ -976,7 +983,28 @@ fn verify_claims(
         auth_time,
         expires_at,
         step_up: None,
+        idp_mfa,
     })
+}
+
+/// Q2-T2: whether the validated token says the person passed MFA at the
+/// provider: one of the provider's `mfa_acr_values` is among `amr` or equals
+/// `acr`. Always `false` for a provider with `trust_idp_mfa = false` or no
+/// values configured.
+fn idp_mfa(claims: &serde_json::Value, provider: &OidcProviderConfig) -> bool {
+    if !provider.trust_idp_mfa || provider.mfa_acr_values.is_empty() {
+        return false;
+    }
+    let counts = |value: &str| provider.mfa_acr_values.iter().any(|v| v == value);
+    let from_amr = claims
+        .get("amr")
+        .and_then(|v| v.as_array())
+        .is_some_and(|methods| methods.iter().filter_map(|m| m.as_str()).any(counts));
+    let from_acr = claims
+        .get("acr")
+        .and_then(|v| v.as_str())
+        .is_some_and(counts);
+    from_amr || from_acr
 }
 
 mod urlencoding {
@@ -1237,6 +1265,8 @@ mod tests {
             scopes: vec!["openid".into(), "email".into()],
             email_claim: "email".into(),
             require_email_verified_claim: false,
+            mfa_acr_values: Vec::new(),
+            trust_idp_mfa: true,
         }
     }
 
@@ -1344,6 +1374,68 @@ mod tests {
             identity.auth_time, None,
             "a token without auth_time asserts no authentication time"
         );
+    }
+
+    /// Q2-T2: a provider set up from a preset, and a token carrying `extra`.
+    fn idp_mfa_of(provider: &OidcProviderConfig, extra: serde_json::Value) -> bool {
+        let mut claims = serde_json::json!({
+            "iss": provider.issuer,
+            "aud": provider.client_id,
+            "sub": "user-sub-42",
+            "email": "person@example.com",
+            "email_verified": true,
+            "nonce": "expected-nonce",
+            "exp": (chrono::Utc::now().timestamp() + 300),
+            "iat": chrono::Utc::now().timestamp(),
+        });
+        if let (Some(claims), Some(extra)) = (claims.as_object_mut(), extra.as_object()) {
+            claims.extend(extra.clone());
+        }
+        let (token, header, jwks) = sign_test_token(&claims);
+        let jwk = jwks.find(header.kid.as_deref().unwrap()).unwrap();
+        verify_claims(jwk, &header, provider, &token, Some("expected-nonce"))
+            .unwrap()
+            .idp_mfa
+    }
+
+    fn provider_with_mfa_values(values: &[&str]) -> OidcProviderConfig {
+        OidcProviderConfig {
+            mfa_acr_values: values.iter().map(|v| (*v).to_owned()).collect(),
+            ..test_provider()
+        }
+    }
+
+    #[test]
+    fn idp_mfa_from_amr() {
+        let entra = provider_with_mfa_values(&["mfa"]);
+        assert!(idp_mfa_of(
+            &entra,
+            serde_json::json!({"amr": ["pwd", "mfa"]})
+        ));
+        assert!(!idp_mfa_of(&entra, serde_json::json!({"amr": ["pwd"]})));
+        assert!(!idp_mfa_of(&entra, serde_json::json!({})));
+        assert!(
+            !idp_mfa_of(&test_provider(), serde_json::json!({"amr": ["mfa"]})),
+            "a provider with no MFA values never counts the provider's MFA"
+        );
+    }
+
+    #[test]
+    fn idp_mfa_from_acr() {
+        let keycloak = provider_with_mfa_values(&["2"]);
+        assert!(idp_mfa_of(&keycloak, serde_json::json!({"acr": "2"})));
+        assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": "1"})));
+        assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": 2})));
+    }
+
+    #[test]
+    fn untrusted_provider_ignores_idp_mfa() {
+        let untrusted = OidcProviderConfig {
+            trust_idp_mfa: false,
+            ..provider_with_mfa_values(&["mfa", "2"])
+        };
+        assert!(!idp_mfa_of(&untrusted, serde_json::json!({"amr": ["mfa"]})));
+        assert!(!idp_mfa_of(&untrusted, serde_json::json!({"acr": "2"})));
     }
 
     fn claims_with_auth_time(provider: &OidcProviderConfig, auth_time: i64) -> serde_json::Value {

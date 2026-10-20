@@ -1331,6 +1331,8 @@ fn oidc_provider(client_secret: &str) -> OidcProviderConfig {
         scopes: default_oidc_scopes(),
         email_claim: default_oidc_email_claim(),
         require_email_verified_claim: false,
+        mfa_acr_values: Vec::new(),
+        trust_idp_mfa: true,
     }
 }
 
@@ -1836,6 +1838,8 @@ fn debug_output_never_leaks_a_secret_value() {
             scopes: default_oidc_scopes(),
             email_claim: default_oidc_email_claim(),
             require_email_verified_claim: true,
+            mfa_acr_values: Vec::new(),
+            trust_idp_mfa: true,
         },
     );
 
@@ -3580,6 +3584,8 @@ fn portal_with_oidc(client_secret: &str) -> PortalSection {
             scopes: default_oidc_scopes(),
             email_claim: default_oidc_email_claim(),
             require_email_verified_claim: true,
+            mfa_acr_values: Vec::new(),
+            trust_idp_mfa: true,
         },
     );
     portal

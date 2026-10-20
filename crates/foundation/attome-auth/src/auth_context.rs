@@ -22,6 +22,11 @@ pub enum AuthMethod {
     RecoveryCode,
     /// An external identity provider: OIDC or Google (`fed`).
     Federated,
+    /// Multi-factor authentication the identity provider reported and this
+    /// deployment trusts (`mfa`, roadmap Q2-T2). Only after [`Federated`].
+    ///
+    /// [`Federated`]: AuthMethod::Federated
+    IdpMfa,
 }
 
 impl AuthMethod {
@@ -32,6 +37,7 @@ impl AuthMethod {
             AuthMethod::Totp => "otp",
             AuthMethod::RecoveryCode => "rcode",
             AuthMethod::Federated => "fed",
+            AuthMethod::IdpMfa => "mfa",
         }
     }
 }
@@ -93,6 +99,16 @@ impl AuthContext {
         }
     }
 
+    /// Q2-T2: records that the provider reported MFA (`mfa` after `fed`),
+    /// so a policy requiring MFA is met without Attome's own factor. `false`
+    /// leaves the context as it is.
+    pub fn with_idp_mfa(mut self, idp_mfa: bool) -> Self {
+        if idp_mfa && self.amr.contains(&AuthMethod::Federated) {
+            self.amr.push(AuthMethod::IdpMfa);
+        }
+        self
+    }
+
     pub fn auth_time(&self) -> AuthTime {
         self.auth_time
     }
@@ -123,6 +139,20 @@ mod tests {
         let context = AuthContext::federated(None);
         assert_eq!(context.amr(), vec!["fed"]);
         assert_eq!(context.auth_time(), AuthTime::Unknown);
+    }
+
+    #[test]
+    fn idp_mfa_is_recorded_for_a_federated_sign_in_only() {
+        let federated = AuthContext::federated(None).with_idp_mfa(true);
+        assert_eq!(federated.amr(), vec!["fed", "mfa"]);
+        assert_eq!(
+            AuthContext::federated(None).with_idp_mfa(false).amr(),
+            vec!["fed"]
+        );
+        assert_eq!(
+            AuthContext::password().with_idp_mfa(true).amr(),
+            vec!["pwd"]
+        );
     }
 
     #[test]

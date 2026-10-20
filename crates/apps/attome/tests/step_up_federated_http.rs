@@ -287,6 +287,8 @@ fn test_config(issuer: &str, provider: &str) -> AppConfig {
             scopes: vec!["openid".into(), "email".into()],
             email_claim: "email".into(),
             require_email_verified_claim: false,
+            mfa_acr_values: Vec::new(),
+            trust_idp_mfa: true,
         },
     );
     config

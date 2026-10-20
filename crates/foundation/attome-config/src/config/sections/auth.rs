@@ -753,6 +753,17 @@ pub struct OidcProviderConfig {
     /// silent default.
     #[serde(default = "default_true")]
     pub require_email_verified_claim: bool,
+    /// Q2-T2: the ID-token `amr` entries or `acr` value that mean the person
+    /// passed multi-factor authentication at the provider (a preset's
+    /// `mfa_acr_values`, e.g. `["mfa"]` for Entra ID). Empty (the default):
+    /// the provider's MFA is never counted.
+    #[serde(default)]
+    pub mfa_acr_values: Vec<String>,
+    /// Q2-T2: whether MFA the provider reports counts as MFA in Attome, so a
+    /// policy that requires MFA is met without Attome's own factor. Set
+    /// `false` for a provider whose MFA claim is not trusted.
+    #[serde(default = "default_true")]
+    pub trust_idp_mfa: bool,
 }
 
 /// Hand-rolled: `client_secret` is a live OIDC credential — the derived
@@ -771,6 +782,8 @@ impl std::fmt::Debug for OidcProviderConfig {
                 "require_email_verified_claim",
                 &self.require_email_verified_claim,
             )
+            .field("mfa_acr_values", &self.mfa_acr_values)
+            .field("trust_idp_mfa", &self.trust_idp_mfa)
             .finish()
     }
 }
