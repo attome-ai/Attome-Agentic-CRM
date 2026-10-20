@@ -452,6 +452,9 @@ pub enum EngineJob {
     /// F3-T9: renews subscriptions or opens renewal opportunities, and
     /// reminds, converts or ends trials. Bare unit variant.
     BillingRenewalSweep,
+    /// F3-T8: plans subscription charges (recurring, setup and usage) up to
+    /// the horizon. Bare unit variant.
+    BillingGenerateCharges,
     /// D18-T1: scores every record of every enabled points model. Bare
     /// unit variant.
     PointsScoring,
@@ -825,6 +828,9 @@ pub enum EngineJob {
     /// update_record_for`. Never `is_batch`: one record per render, same
     /// shape as `ReportRun`.
     DocgenRender { render_id: Uuid },
+    /// F3-T8: one billing run (`billing_run`): its due charges requested
+    /// from invoicing group by group, resumable. Pure pointer.
+    BillingExecuteRun { run_id: Uuid },
     /// G11-T1 — brings one content page's knowledge item in line with the
     /// page (`attome_content::article::sync`): projects a published article
     /// into `knowledge_data_item`, or sets its item back to draft once it is
@@ -1030,6 +1036,7 @@ impl EngineJob {
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
             | Self::BillingRenewalSweep
+            | Self::BillingGenerateCharges
             | Self::BillingHandoffSweep
             | Self::PointsScoring
             | Self::DealRiskEvaluation
@@ -1085,6 +1092,7 @@ impl EngineJob {
             | Self::TicketSlaSweep
             | Self::ResourceUtilizationSweep
             | Self::DocgenRender { .. }
+            | Self::BillingExecuteRun { .. }
             | Self::ContentArticleIndex { .. }
             | Self::TranscribeRecording { .. }
             | Self::PredictTrainModel { .. }
@@ -1170,6 +1178,7 @@ impl EngineJob {
             EngineJob::ContractLinkSweep => "ContractLinkSweep",
             EngineJob::BillingHandoffSweep => "BillingHandoffSweep",
             EngineJob::BillingRenewalSweep => "BillingRenewalSweep",
+            EngineJob::BillingGenerateCharges => "BillingGenerateCharges",
             EngineJob::PointsScoring => "PointsScoring",
             EngineJob::DealRiskEvaluation => "DealRiskEvaluation",
             EngineJob::ForecastRecompute => "ForecastRecompute",
@@ -1230,6 +1239,7 @@ impl EngineJob {
             EngineJob::CatalogDashboardLineageSweep => "CatalogDashboardLineageSweep",
             EngineJob::CatalogUsageRollup => "CatalogUsageRollup",
             EngineJob::DocgenRender { .. } => "DocgenRender",
+            EngineJob::BillingExecuteRun { .. } => "BillingExecuteRun",
             EngineJob::ContentArticleIndex { .. } => "ContentArticleIndex",
             EngineJob::TranscribeRecording { .. } => "TranscribeRecording",
             EngineJob::PredictTrainModel { .. } => "PredictTrainModel",
@@ -1284,6 +1294,7 @@ impl EngineJob {
             | Self::LegalMatterCollect { .. }
             | Self::LegalMatterRelease { .. }
             | Self::DocgenRender { .. }
+            | Self::BillingExecuteRun { .. }
             | Self::ContentArticleIndex { .. }
             | Self::TranscribeRecording { .. }
             | Self::PredictTrainModel { .. } => JobPriority::High,
@@ -1313,6 +1324,7 @@ impl EngineJob {
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
             | Self::BillingRenewalSweep
+            | Self::BillingGenerateCharges
             | Self::BillingHandoffSweep
             | Self::PointsScoring
             | Self::DealRiskEvaluation
@@ -1472,6 +1484,7 @@ impl EngineJob {
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
             | Self::BillingRenewalSweep
+            | Self::BillingGenerateCharges
             | Self::BillingHandoffSweep
             | Self::PointsScoring
             | Self::DealRiskEvaluation
@@ -1562,6 +1575,7 @@ impl EngineJob {
             | Self::DataBulkTransform(_)
             | Self::ReportRun { .. }
             | Self::DocgenRender { .. }
+            | Self::BillingExecuteRun { .. }
             | Self::ContentArticleIndex { .. }
             | Self::TranscribeRecording { .. }
             | Self::PredictTrainModel { .. } => 10,
@@ -1882,6 +1896,10 @@ mod tests {
         assert_round_trips(EngineJob::ContractLinkSweep);
         assert_round_trips(EngineJob::BillingHandoffSweep);
         assert_round_trips(EngineJob::BillingRenewalSweep);
+        assert_round_trips(EngineJob::BillingGenerateCharges);
+        assert_round_trips(EngineJob::BillingExecuteRun {
+            run_id: Uuid::nil(),
+        });
         assert_round_trips(EngineJob::PointsScoring);
         assert_round_trips(EngineJob::DealRiskEvaluation);
         assert_round_trips(EngineJob::ForecastRecompute);

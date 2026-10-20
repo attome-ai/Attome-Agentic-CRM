@@ -27,6 +27,12 @@ impl EngineModel for BillingModel {
         // F3-T7: metered usage ingest.
         Router::new()
             .route("/api/v1/billing/usage", post(crate::usage::post_usage))
+            // F3-T8: billing runs.
+            .route(
+                "/api/v1/billing/runs/preview",
+                post(crate::billing_run::post_preview),
+            )
+            .route("/api/v1/billing/runs", post(crate::billing_run::post_run))
             // F3-T6: the subscription service.
             .route(
                 "/api/v1/billing/subscriptions",

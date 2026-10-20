@@ -1457,6 +1457,26 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // F3-T8: subscription charges planned up to the horizon.
+        EngineJob::BillingGenerateCharges => {
+            let run = attome_billing::billing_run::generate_charges(
+                &attome_state,
+                chrono::Utc::now().date_naive(),
+                attome_billing::billing_run::DEFAULT_HORIZON_DAYS,
+            )
+            .await?;
+            if run.charges > 0 {
+                tracing::info!(
+                    subscriptions = run.subscriptions,
+                    charges = run.charges,
+                    "billing: charges planned"
+                );
+            }
+        }
+        // F3-T8: one billing run, resumable.
+        EngineJob::BillingExecuteRun { run_id } => {
+            attome_billing::billing_run::execute_run(&attome_state, run_id).await?;
+        }
         // F3-T9: renewals and trials.
         EngineJob::BillingRenewalSweep => {
             let run = attome_billing::renewal::run(&attome_state, chrono::Utc::now().date_naive())
@@ -2581,6 +2601,7 @@ const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
+const DEDUP_KEY_BILLING_GENERATE_CHARGES: &str = "billing-generate-charges";
 const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
@@ -2847,6 +2868,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
+        EngineJob::BillingGenerateCharges => DEDUP_KEY_BILLING_GENERATE_CHARGES,
         EngineJob::PointsScoring => DEDUP_KEY_POINTS_SCORING,
         EngineJob::DealRiskEvaluation => DEDUP_KEY_DEAL_RISK,
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
@@ -3651,6 +3673,17 @@ pub fn spawn_billing_handoff_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::BillingHandoffSweep,
         DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         "billing hand-offs",
+    );
+}
+
+/// F3-T8: once a day, subscription charges planned.
+pub fn spawn_billing_charges_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BillingGenerateCharges,
+        DEDUP_KEY_BILLING_GENERATE_CHARGES,
+        "billing charges",
     );
 }
 

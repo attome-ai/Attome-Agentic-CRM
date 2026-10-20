@@ -4,6 +4,8 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `billing` module.
 
+/// F3-T8: subscription charges and billing runs.
+pub mod billing_run;
 pub mod deposit;
 pub mod document;
 pub mod einvoice;
@@ -39,6 +41,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 35;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <usage::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<subscription::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<billing_run::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<metrics::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<invoice::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<issue::ApiDocFragment as utoipa::OpenApi>::openapi());
