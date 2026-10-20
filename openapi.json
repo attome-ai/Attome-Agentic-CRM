@@ -66502,6 +66502,87 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/precheck": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Check a message before sending.",
+        "description": "A score from 0 to 100 (70 passes) and the findings behind it: spam\nwording, image-heavy content, links to domains on a blocklist this\ndeployment checked in the last week, a missing unsubscribe link or text\npart, size, and the audience's never-mailed and invalid shares. Each\nfinding names a guidance key; nothing is sent or stored.",
+        "operationId": "post_marketing_precheck",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrecheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The score and findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecheckReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_deliverability_policy.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The message is empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "scores a message; sends and writes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/mcp": {
       "post": {
         "tags": [
@@ -73538,6 +73619,112 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/accounts/{id}/org-chart": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "An account's org chart.",
+        "description": "The account's contacts (or its group's) that the caller may read, by\nwho they report to; a contact whose manager is missing or unreadable is\nlisted as unplaced. Branches deeper than three levels are collapsed to a\ncount unless named in `expand`; at most 500 contacts a call, the rest\nthrough `cursor`.",
+        "operationId": "get_sales_org_chart",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The account",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "description": "The whole group: every account sharing the top of the parent chain.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Comma-separated contact ids whose collapsed branches to open.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The `next_cursor` of the previous call.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The chart",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgChart"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such account the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/sales/call-list-members/{id}/outcome": {
       "post": {
         "tags": [
@@ -74531,6 +74718,132 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/sales/contacts/{id}/left": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Records that a contact left their company.",
+        "description": "Marks the contact a former employee as of `left_on` (keeping the record\nand its history) and lists the contacts who reported to them, for a new\nmanager. With `new_account_id`, also creates the person's contact at\nthat account (duplicate rules apply) and links the two with a `moved_to`\nrelationship. Send the contact's `row_version` in `If-Match`.",
+        "operationId": "post_sales_contact_left",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contact who left",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The contact's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesContactLeftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded; the reports to reassign are listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesContactLeft"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contact or account the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contact changed since it was read, or the new contact looks like a duplicate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing If-Match or an invalid field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/sales/contacts/{id}/manager": {
@@ -76831,6 +77144,325 @@
             {
               "category": "business_event",
               "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/quotes/{id}/primary": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Makes a quote its deal's primary quote.",
+        "description": "Clears the flag on the deal's other quotes, under the deal's lock. The\ndeal's lines follow the primary through the quote sync route. Send the\nquote's `row_version` in `If-Match`.",
+        "operationId": "post_sales_quote_primary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The quote",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The quote's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The quote is the deal's primary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotePrimarySet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update quotes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such quote the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A quote changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The quote is on no deal, or If-Match is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/quotes/{id}/reprice": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Prices a quote's lines.",
+        "description": "Prices every line through the account's prices and the active price\nlist in the quote's currency (with quantity breaks), then writes the\nquote's totals. A product without a price refuses the whole reprice.\nSend the quote's `row_version` in `If-Match`.",
+        "operationId": "post_sales_quote_reprice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The quote",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The quote's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repriced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRepriced"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update quotes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such quote the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The quote or a line changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A product has no price, or If-Match is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/quotes/{id}/versions": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Starts a new version of a quote.",
+        "description": "Copies the quote and its lines into a new draft with the next version\nnumber and the same quote number; it is not primary. The earlier\nversion stays as it was.",
+        "operationId": "post_sales_quote_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The quote to copy",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteVersioned"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create quotes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such quote the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
             }
           ],
           "policy": "entity_policy"
@@ -103630,6 +104262,25 @@
           }
         }
       },
+      "ChartCompany": {
+        "type": "object",
+        "description": "A company in a group chart.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "ChatMessageOut": {
         "type": "object",
         "required": [
@@ -121707,6 +122358,116 @@
           }
         }
       },
+      "OrgChart": {
+        "type": "object",
+        "description": "An account's chart.",
+        "required": [
+          "roots",
+          "unplaced",
+          "companies"
+        ],
+        "properties": {
+          "companies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChartCompany"
+            },
+            "description": "The companies the chart covers (one unless it is a group chart)."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "More contacts follow: pass this as `cursor`."
+          },
+          "roots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgNode"
+            }
+          },
+          "unplaced": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgNode"
+            },
+            "description": "Readable contacts whose manager is missing or not readable."
+          }
+        }
+      },
+      "OrgNode": {
+        "type": "object",
+        "description": "One person on the chart.",
+        "required": [
+          "id",
+          "is_former_employee",
+          "children"
+        ],
+        "properties": {
+          "account_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The company the person works at (several in a group chart)."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgNode"
+            }
+          },
+          "collapsed_children": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "When the branch is collapsed: how many people report to this one.",
+            "minimum": 0
+          },
+          "department": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "department_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dotted_line_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_former_employee": {
+            "type": "boolean"
+          },
+          "job_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "OrganizationItem": {
         "type": "object",
         "required": [
@@ -138648,6 +139409,64 @@
           }
         }
       },
+      "PrecheckBody": {
+        "type": "object",
+        "description": "A message to check before sending.",
+        "required": [
+          "html"
+        ],
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "The rendered HTML body."
+          },
+          "invalid": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "never_mailed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "recipients": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The audience: how many, how many never mailed before, how many with\nan invalid address."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The plain-text part, if the message has one."
+          }
+        }
+      },
+      "PrecheckReport": {
+        "type": "object",
+        "description": "The check's answer.",
+        "required": [
+          "score",
+          "passed",
+          "findings"
+        ],
+        "properties": {
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "PredictionSummary": {
         "type": "object",
         "required": [
@@ -140604,6 +141423,112 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "QuotePrimarySet": {
+        "type": "object",
+        "description": "The primary quote set.",
+        "required": [
+          "quote_id",
+          "opportunity_id",
+          "unset",
+          "row_version"
+        ],
+        "properties": {
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unset": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The deal's quotes that stopped being primary."
+          }
+        }
+      },
+      "QuoteRepriced": {
+        "type": "object",
+        "description": "The result of a reprice.",
+        "required": [
+          "quote_id",
+          "lines",
+          "totals",
+          "row_version"
+        ],
+        "properties": {
+          "lines": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/QuoteTotals"
+          }
+        }
+      },
+      "QuoteTotals": {
+        "type": "object",
+        "description": "The quote's totals from its lines and its own discount percent. Pure.",
+        "required": [
+          "subtotal",
+          "discount_total",
+          "vat_estimate",
+          "grand_total"
+        ],
+        "properties": {
+          "discount_total": {
+            "type": "string"
+          },
+          "grand_total": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "string"
+          },
+          "vat_estimate": {
+            "type": "string"
+          }
+        }
+      },
+      "QuoteVersioned": {
+        "type": "object",
+        "description": "A new version.",
+        "required": [
+          "quote_id",
+          "version",
+          "lines"
+        ],
+        "properties": {
+          "lines": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -144832,6 +145757,62 @@
             ],
             "format": "uuid",
             "description": "Keep the old owner on the team with this team role; absent removes\nthem and their share."
+          }
+        }
+      },
+      "SalesContactLeft": {
+        "type": "object",
+        "description": "What was recorded.",
+        "required": [
+          "contact_id",
+          "row_version",
+          "needs_new_manager"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "needs_new_manager": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The contacts who reported to this one and need a new manager."
+          },
+          "new_contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The new contact at the next account."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SalesContactLeftBody": {
+        "type": "object",
+        "description": "What to record.",
+        "required": [
+          "left_on"
+        ],
+        "properties": {
+          "left_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "new_account_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The account the person joined, if known."
           }
         }
       },
@@ -155306,6 +156287,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -155357,7 +156340,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }

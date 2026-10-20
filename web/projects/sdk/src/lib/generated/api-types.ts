@@ -12275,6 +12275,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/precheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a message before sending.
+         * @description A score from 0 to 100 (70 passes) and the findings behind it: spam
+         *     wording, image-heavy content, links to domains on a blocklist this
+         *     deployment checked in the last week, a missing unsubscribe link or text
+         *     part, size, and the audience's never-mailed and invalid shares. Each
+         *     finding names a guidance key; nothing is sent or stored.
+         */
+        post: operations["post_marketing_precheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -13735,6 +13759,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/accounts/{id}/org-chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An account's org chart.
+         * @description The account's contacts (or its group's) that the caller may read, by
+         *     who they report to; a contact whose manager is missing or unreadable is
+         *     listed as unplaced. Branches deeper than three levels are collapsed to a
+         *     count unless named in `expand`; at most 500 contacts a call, the rest
+         *     through `cursor`.
+         */
+        get: operations["get_sales_org_chart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/call-list-members/{id}/outcome": {
         parameters: {
             query?: never;
@@ -13895,6 +13943,30 @@ export interface paths {
         get: operations["get_sales_head_to_head"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/contacts/{id}/left": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Records that a contact left their company.
+         * @description Marks the contact a former employee as of `left_on` (keeping the record
+         *     and its history) and lists the contacts who reported to them, for a new
+         *     manager. With `new_account_id`, also creates the person's contact at
+         *     that account (duplicate rules apply) and links the two with a `moved_to`
+         *     relationship. Send the contact's `row_version` in `If-Match`.
+         */
+        post: operations["post_sales_contact_left"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14220,6 +14292,73 @@ export interface paths {
         put?: never;
         /** Makes a sent quote's guest link. */
         post: operations["post_guest_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/quotes/{id}/primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Makes a quote its deal's primary quote.
+         * @description Clears the flag on the deal's other quotes, under the deal's lock. The
+         *     deal's lines follow the primary through the quote sync route. Send the
+         *     quote's `row_version` in `If-Match`.
+         */
+        post: operations["post_sales_quote_primary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/quotes/{id}/reprice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prices a quote's lines.
+         * @description Prices every line through the account's prices and the active price
+         *     list in the quote's currency (with quantity breaks), then writes the
+         *     quote's totals. A product without a price refuses the whole reprice.
+         *     Send the quote's `row_version` in `If-Match`.
+         */
+        post: operations["post_sales_quote_reprice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/quotes/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Starts a new version of a quote.
+         * @description Copies the quote and its lines into a new draft with the next version
+         *     number and the same quote number; it is not primary. The earlier
+         *     version stays as it was.
+         */
+        post: operations["post_sales_quote_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20782,6 +20921,12 @@ export interface components {
             channel: string;
             /** @description `true` granted, `false` withdrawn, `null` never asked. */
             granted?: boolean | null;
+        };
+        /** @description A company in a group chart. */
+        ChartCompany: {
+            /** Format: uuid */
+            id: string;
+            name?: string | null;
         };
         ChatMessageOut: {
             body: string;
@@ -27962,6 +28107,39 @@ export interface components {
             /** Format: uuid */
             work_request_id: string;
         };
+        /** @description An account's chart. */
+        OrgChart: {
+            /** @description The companies the chart covers (one unless it is a group chart). */
+            companies: components["schemas"]["ChartCompany"][];
+            /**
+             * Format: uuid
+             * @description More contacts follow: pass this as `cursor`.
+             */
+            next_cursor?: string | null;
+            roots: components["schemas"]["OrgNode"][];
+            /** @description Readable contacts whose manager is missing or not readable. */
+            unplaced: components["schemas"]["OrgNode"][];
+        };
+        /** @description One person on the chart. */
+        OrgNode: {
+            /**
+             * Format: uuid
+             * @description The company the person works at (several in a group chart).
+             */
+            account_id?: string | null;
+            children: components["schemas"]["OrgNode"][];
+            /** @description When the branch is collapsed: how many people report to this one. */
+            collapsed_children?: number | null;
+            department?: string | null;
+            department_ar?: string | null;
+            /** Format: uuid */
+            dotted_line_id?: string | null;
+            full_name?: string | null;
+            /** Format: uuid */
+            id: string;
+            is_former_employee: boolean;
+            job_title?: string | null;
+        };
         OrganizationItem: {
             /** Format: uuid */
             id: string;
@@ -34410,6 +34588,30 @@ export interface components {
             expires_at: number;
             nonce: string;
         };
+        /** @description A message to check before sending. */
+        PrecheckBody: {
+            /** @description The rendered HTML body. */
+            html: string;
+            /** Format: int64 */
+            invalid?: number;
+            /** Format: int64 */
+            never_mailed?: number;
+            /**
+             * Format: int64
+             * @description The audience: how many, how many never mailed before, how many with
+             *     an invalid address.
+             */
+            recipients?: number;
+            /** @description The plain-text part, if the message has one. */
+            text?: string | null;
+        };
+        /** @description The check's answer. */
+        PrecheckReport: {
+            findings: components["schemas"]["Finding"][];
+            passed: boolean;
+            /** Format: int32 */
+            score: number;
+        };
         PredictionSummary: {
             explanation?: unknown;
             /** Format: date-time */
@@ -35241,6 +35443,41 @@ export interface components {
             quantity?: string | null;
             tax_amount?: string | null;
             unit_price?: string | null;
+        };
+        /** @description The primary quote set. */
+        QuotePrimarySet: {
+            /** Format: uuid */
+            opportunity_id: string;
+            /** Format: uuid */
+            quote_id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** @description The deal's quotes that stopped being primary. */
+            unset: string[];
+        };
+        /** @description The result of a reprice. */
+        QuoteRepriced: {
+            lines: number;
+            /** Format: uuid */
+            quote_id: string;
+            /** Format: int64 */
+            row_version: number;
+            totals: components["schemas"]["QuoteTotals"];
+        };
+        /** @description The quote's totals from its lines and its own discount percent. Pure. */
+        QuoteTotals: {
+            discount_total: string;
+            grand_total: string;
+            subtotal: string;
+            vat_estimate: string;
+        };
+        /** @description A new version. */
+        QuoteVersioned: {
+            lines: number;
+            /** Format: uuid */
+            quote_id: string;
+            /** Format: int64 */
+            version: number;
         };
         /** @description A quote as the customer sees it. */
         QuoteView: {
@@ -36942,6 +37179,30 @@ export interface components {
              *     them and their share.
              */
             old_owner_role?: string | null;
+        };
+        /** @description What was recorded. */
+        SalesContactLeft: {
+            /** Format: uuid */
+            contact_id: string;
+            /** @description The contacts who reported to this one and need a new manager. */
+            needs_new_manager: string[];
+            /**
+             * Format: uuid
+             * @description The new contact at the next account.
+             */
+            new_contact_id?: string | null;
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description What to record. */
+        SalesContactLeftBody: {
+            /** Format: date */
+            left_on: string;
+            /**
+             * Format: uuid
+             * @description The account the person joined, if known.
+             */
+            new_account_id?: string | null;
         };
         SalesCopyAccountTeamBody: {
             /** @description The account team roles to copy, e.g. `["account_manager", "pre_sales"]`. */
@@ -81368,6 +81629,57 @@ export interface operations {
             };
         };
     };
+    post_marketing_precheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrecheckBody"];
+            };
+        };
+        responses: {
+            /** @description The score and findings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrecheckReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_deliverability_policy.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The message is empty */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mcp_endpoint: {
         parameters: {
             query?: never;
@@ -85689,6 +86001,63 @@ export interface operations {
             };
         };
     };
+    get_sales_org_chart: {
+        parameters: {
+            query?: {
+                /** @description The whole group: every account sharing the top of the parent chain. */
+                group?: boolean;
+                /** @description Comma-separated contact ids whose collapsed branches to open. */
+                expand?: string;
+                /** @description The `next_cursor` of the previous call. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The account */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The chart */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgChart"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read contacts */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such account the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_call_outcome: {
         parameters: {
             query?: never;
@@ -86294,6 +86663,81 @@ export interface operations {
             };
             /** @description No such competitor, or competitors are not installed */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_contact_left: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The contact's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The contact who left */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesContactLeftBody"];
+            };
+        };
+        responses: {
+            /** @description Recorded; the reports to reassign are listed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesContactLeft"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the contact */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contact or account the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contact changed since it was read, or the new contact looks like a duplicate */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing If-Match or an invalid field */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -87691,6 +88135,198 @@ export interface operations {
             };
             /** @description The quote is not sent, or has expired */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_quote_primary: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The quote's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The quote */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The quote is the deal's primary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotePrimarySet"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update quotes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A quote changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The quote is on no deal, or If-Match is missing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_quote_reprice: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The quote's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The quote */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Repriced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRepriced"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update quotes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The quote or a line changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A product has no price, or If-Match is missing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_quote_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The quote to copy */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteVersioned"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create quotes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote the caller may read */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
