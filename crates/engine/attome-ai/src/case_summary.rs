@@ -139,7 +139,7 @@ async fn summarise_for(state: &EngineState, case: Uuid, assignee: Uuid) -> Resul
 }
 
 #[cfg(test)]
-mod case_summary {
+mod tests {
     use super::*;
 
     fn at(secs: i64) -> DateTime<Utc> {
