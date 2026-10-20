@@ -153,6 +153,16 @@ const MAX_BARE_RECORD_SCOPED: usize = 5;
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "GET",
+        "/api/v1/esign/sign/{token}",
+        "K4-T1 signer's page: the signed link (HMAC under the esign domain, 30 days, over one signer) is the credential and shows only that envelope's title, documents' names and hashes and the signer's own status; a draft or voided envelope is the same 404. Bypass-listed by an exact single-segment match.",
+    ),
+    (
+        "POST",
+        "/api/v1/esign/sign/{token}",
+        "K4-T1 signer's action: the signed link names the signer, and signing or declining also needs the emailed one-time code (peppered hash, five minutes, one use, five tries; at most one code a minute). Bypass-listed by an exact single-segment match; every step is a hash-chained event and an audited business event.",
+    ),
+    (
+        "GET",
         "/.well-known/jwks.json",
         "Z4-T4: the public halves of the Ed25519 token-signing keys, a JSON Web Key Set; publishing them is the point and no secret or customer data is in it. Bypass-listed.",
     ),

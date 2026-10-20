@@ -31,6 +31,7 @@ const SPAM_AR: &str = include_str!("../data/spam_words_ar.txt");
 /// How much a finding costs the score.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[schema(as = PrecheckSeverity)]
 pub enum Severity {
     Error,
     Warning,
@@ -49,6 +50,7 @@ impl Severity {
 
 /// One finding.
 #[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[schema(as = PrecheckFinding)]
 pub struct Finding {
     pub code: &'static str,
     pub severity: Severity,

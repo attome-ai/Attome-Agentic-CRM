@@ -43,6 +43,7 @@
 pub mod checkout;
 pub mod documents_tree;
 pub mod engine;
+pub mod esign;
 pub mod files;
 pub mod files_scan;
 pub mod share;
@@ -71,6 +72,11 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ));
     doc.merge(core(share::openapi_fragment()));
     doc.merge(core(checkout::openapi_fragment()));
+    // K4-T1: e-signature envelopes, under the document module.
+    doc.merge(attome_server::openapi::tag_module(
+        esign::openapi_fragment(),
+        "document",
+    ));
     doc.merge(core(transcribe::openapi_fragment()));
     doc
 }

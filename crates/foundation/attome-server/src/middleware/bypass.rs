@@ -212,6 +212,9 @@ fn is_sms_receipt_path(path: &str) -> bool {
         "/api/v1/social/meta/",
         // D9-T3: a quote's guest link; the signed token is the authority.
         "/api/v1/quote-acceptance/",
+        // K4-T1: a signer's link; the signed token (and the emailed code,
+        // to sign) is the authority.
+        "/api/v1/esign/sign/",
     ]
     .iter()
     .any(|prefix| {
@@ -475,6 +478,9 @@ mod tests {
         assert!(!is_bypass("/api/v1/social/replies"));
         assert!(is_bypass("/api/v1/quote-acceptance/abc.def"));
         assert!(!is_bypass("/api/v1/quote-acceptance/abc/def"));
+        assert!(is_bypass("/api/v1/esign/sign/abc.def"));
+        assert!(!is_bypass("/api/v1/esign/sign/abc/def"));
+        assert!(!is_bypass("/api/v1/esign/envelopes"));
         assert!(!is_bypass(
             "/api/v1/sales/quotes/0198f3a2-1111-7222-8333-444455556666/guest-link"
         ));

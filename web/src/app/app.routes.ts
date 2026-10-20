@@ -1,7 +1,8 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { map } from 'rxjs';
-import { AuthService, authGuard } from '@attome/base';
+import { AuthService, authGuard, layerCatalogsReady } from '@attome/base';
+import { provideXrmI18n } from '@attome/xrm/core/i18n';
 
 // Same rule as `authGuard`: wait for the one session bootstrap before
 // branching, so /xrm never sends a logged-in user to the login page merely
@@ -108,6 +109,14 @@ export const routes: Routes = [
   {
     path: 'book/:slug',
     loadComponent: () => import('@attome/xrm/portal/booking').then(m => m.BookPageComponent),
+  },
+  {
+    // K4-T1: the signer's page an emailed signing link opens. Public, no
+    // session; ahead of the Content Management catch-all below.
+    path: 'esign/:token',
+    providers: [provideXrmI18n()],
+    canActivate: [layerCatalogsReady],
+    loadComponent: () => import('@attome/xrm/portal/esign').then(m => m.SignPageComponent),
   },
   {
     // E26-T2: the contact's preference page from a signed email link.

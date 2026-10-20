@@ -1028,6 +1028,7 @@ dependencies = [
  "attome-config",
  "attome-core",
  "attome-db",
+ "attome-email",
  "attome-inference",
  "attome-jobs",
  "attome-modules",
