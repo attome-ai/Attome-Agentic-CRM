@@ -437,6 +437,8 @@ async fn fixture() -> Option<Fx> {
         .register(attome_predict::PredictModel)
         // D-786: `POST /api/v1/metrics/{id}/compute` is a mandatory mapping.
         .register(attome_metric::MetricModel)
+        // E6-T11: the DMARC upload is a Configuration mapping.
+        .register(attome_marketing::MarketingModel)
         .build()
         .await
         .expect("build EngineSystem");
@@ -1734,6 +1736,35 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 t,
                 None,
             )
+        }
+
+        // ── DMARC upload (E6-T11) ───────────────────────────────────────────
+        // A fresh report id each run: a report already stored writes nothing.
+        "POST /api/v1/marketing/deliverability/dmarc/upload" => {
+            let xml = format!(
+                "<feedback><report_metadata><org_name>emission.test</org_name>\
+                 <report_id>{}</report_id><date_range><begin>1760918400</begin>\
+                 <end>1761004799</end></date_range></report_metadata>\
+                 <policy_published><domain>example.com</domain><p>none</p></policy_published>\
+                 <record><row><source_ip>192.0.2.1</source_ip><count>1</count>\
+                 <policy_evaluated><disposition>none</disposition><dkim>pass</dkim>\
+                 <spf>pass</spf></policy_evaluated></row>\
+                 <identifiers><header_from>example.com</header_from></identifiers></record>\
+                 </feedback>",
+                Uuid::now_v7()
+            );
+            let mut req = request(
+                "POST",
+                "/api/v1/marketing/deliverability/dmarc/upload",
+                t,
+                None,
+            );
+            req.headers_mut().insert(
+                header::CONTENT_TYPE,
+                header::HeaderValue::from_static("application/xml"),
+            );
+            *req.body_mut() = Body::from(xml);
+            req
         }
 
         // ── customer tests (Z15-T13) ────────────────────────────────────────
