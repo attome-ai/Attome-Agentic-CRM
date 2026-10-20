@@ -11845,6 +11845,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/address-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check an email address.
+         * @description Syntax, role address, disposable domain and typo suggestion; a syntax
+         *     error is invalid, the rest are risky.
+         */
+        post: operations["check_email_address"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/deliverability/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the daily deliverability rollup.
+         * @description Sent, delivered, bounced, opened, clicked and complaints per day, sending
+         *     domain, mailbox provider and campaign, newest day first.
+         */
+        get: operations["list_deliverability_daily"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/deliverability/dmarc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Summarise DMARC reports for a domain.
+         * @description Per sending source over the window, the messages reported and how many
+         *     passed SPF and DKIM, and the sources that failed both.
+         */
+        get: operations["get_dmarc_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/deliverability/dmarc/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a DMARC aggregate report.
+         * @description Reads one report (XML, gzip or ZIP) and stores it, once per reporter and
+         *     report id.
+         */
+        post: operations["upload_dmarc_report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/deliverability/sends/{send_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one campaign's deliverability.
+         * @description Its sent, delivered, bounced, opened and clicked totals per mailbox
+         *     provider, over every day of the rollup.
+         */
+        get: operations["get_send_deliverability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/emails/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview an email as one contact or lead.
+         * @description Resolves each dynamic block for the person (their record and lists) and
+         *     renders the design, naming the variant each block chose.
+         */
+        post: operations["preview_marketing_email"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/events/{id}/check-in": {
         parameters: {
             query?: never;
@@ -11893,6 +12019,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/forms/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit a marketing form.
+         * @description Public: a published form's submission, filed as the service account in
+         *     `marketing.form_intake.user`. Every miss (unknown, unpublished, no intake
+         *     account, marketing not licensed) is the same 404. At most five a minute
+         *     from one address and 120 a minute to one form; when the deployment has a
+         *     challenge, `captcha_token` must carry it solved (429 with
+         *     `Attome-Challenge` otherwise).
+         */
+        post: operations["submit_marketing_form"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/landing/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Landing page results.
+         * @description Unique visitors (website tracking page views) and conversions (form
+         *     submissions from the page) for one page path over a period of at most a
+         *     year, 30 days by default.
+         */
+        get: operations["get_marketing_landing_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/lists/{id}/count": {
         parameters: {
             query?: never;
@@ -11925,6 +12098,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/lists/{id}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import people into a static list from a CSV document.
+         * @description Queues the import; its first column is an email or a record id per row.
+         *     Follow it with the import's status route.
+         */
+        post: operations["import_marketing_list_members"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a list import's progress.
+         * @description Rows read, people added and skipped, and whether it finished or failed.
+         */
+        get: operations["get_marketing_list_import"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/imports/{import_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a list import.
+         * @description Removes exactly the people that import added, within seven days of its
+         *     finish.
+         */
+        post: operations["undo_marketing_list_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add people to a static list.
+         * @description By hand or from a view selection; only people the caller may read are
+         *     added, and people already in the list are skipped.
+         */
+        post: operations["add_marketing_list_members"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/lists/{id}/members-as-of": {
         parameters: {
             query?: never;
@@ -11935,6 +12191,26 @@ export interface paths {
         get: operations["get_marketing_list_members_as_of"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/members/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove people from a static list.
+         * @description Each removal is a membership event; people not in the list are skipped.
+         */
+        post: operations["remove_marketing_list_members"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14925,6 +15201,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/track/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Collect tracking events.
+         * @description Public: the tracking script's batches. Queues them and writes nothing
+         *     else; a batch for an unknown or disabled site, from another origin, or
+         *     malformed is dropped with the same 204.
+         */
+        post: operations["collect_tracking_events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/track/open/{token}": {
         parameters: {
             query?: never;
@@ -14934,6 +15232,27 @@ export interface paths {
         };
         /** Counts an open (D16-T1). Always answers the pixel, whatever the token. */
         get: operations["track_open"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/track/script.js": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The website tracking script.
+         * @description The site's configuration and the script, cached for a day. Public: a
+         *     website loads it with a script tag.
+         */
+        get: operations["get_tracking_script"];
         put?: never;
         post?: never;
         delete?: never;
@@ -17797,6 +18116,16 @@ export interface components {
         AddTeamRoleBody: {
             /** Format: uuid */
             role_id: string;
+        };
+        AddressCheckBody: {
+            address: string;
+        };
+        AddressCheckView: {
+            /** @description Stable issue codes (`role_address`, `disposable_domain`, ...). */
+            issues: string[];
+            /** @description `valid`, `risky` or `invalid`. */
+            status: string;
+            suggestion?: string | null;
         };
         /** @description `POST …/adopt`. */
         AdoptResponse: {
@@ -21356,6 +21685,8 @@ export interface components {
             description?: string | null;
             /** Format: uuid */
             id: string;
+            /** @description E11-T1: `standard` or `marketing` (landing pages), set at create. */
+            kind: string;
             name: string;
             /** @description K5-T1: a publish in this space waits for approval. */
             require_approval: boolean;
@@ -21893,6 +22224,11 @@ export interface components {
         };
         CreateSpaceBody: {
             description?: string | null;
+            /**
+             * @description E11-T1: `standard` (the default) or `marketing`; a marketing space
+             *     starts with the landing page templates. Fixed once created.
+             */
+            kind?: string | null;
             name: string;
             /** @description K5-T1: a publish in this space waits for approval. */
             require_approval?: boolean;
@@ -22873,6 +23209,26 @@ export interface components {
             /** @description Why, when a reason was given. */
             reason?: string | null;
         };
+        /** @description One rollup row. */
+        DeliverabilityDay: {
+            /** Format: int64 */
+            bounced: number;
+            /** Format: int64 */
+            clicked: number;
+            /** Format: int64 */
+            complaints: number;
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            delivered: number;
+            mailbox_provider: string;
+            /** Format: int64 */
+            opened: number;
+            send_ref: string;
+            sending_domain: string;
+            /** Format: int64 */
+            sent: number;
+        };
         /** @description One published page for a headless site (K5-T3). */
         DeliveredPage: {
             blocks: Record<string, never>[];
@@ -23163,6 +23519,29 @@ export interface components {
             variables?: {
                 [key: string]: string;
             };
+        };
+        DmarcSourceView: {
+            /** Format: int64 */
+            both_fail: number;
+            /** Format: int64 */
+            dkim_pass: number;
+            /** Format: int64 */
+            messages: number;
+            source_ip: string;
+            /** Format: int64 */
+            spf_pass: number;
+        };
+        DmarcSummaryView: {
+            /** Format: int32 */
+            days: number;
+            domain: string;
+            sources: components["schemas"]["DmarcSourceView"][];
+            /** @description Sources whose every message failed both SPF and DKIM. */
+            unauthorised: string[];
+        };
+        DmarcUploaded: {
+            /** @description False when this reporter's report was already stored. */
+            stored: boolean;
         };
         DocumentFile: {
             /**
@@ -23481,6 +23860,15 @@ export interface components {
             merged: number;
             /** Format: int64 */
             open: number;
+        };
+        /** @description A preview of a design as one contact or lead sees it. */
+        DynamicPreview: {
+            /** @description Block id to the chosen variant id (absent: the default). */
+            choices: {
+                [key: string]: string | null;
+            };
+            html: string;
+            text: string;
         };
         /** @description One change to one attribute. */
         EditOperation: {
@@ -24827,6 +25215,11 @@ export interface components {
              */
             folder: string;
         };
+        /** @description What the browser hears back. */
+        FormAccepted: {
+            redirect_url?: string | null;
+            thank_you?: string | null;
+        };
         FormPlan: {
             /** @description The entity's logical name, as the record API addresses it. */
             entity: string;
@@ -24851,6 +25244,16 @@ export interface components {
         FormPlanSection: {
             fields: components["schemas"]["FormPlanField"][];
             label: string;
+        };
+        /** @description The browser's submission. */
+        FormSubmission: {
+            /** @description The solved challenge, when the deployment asks for one. */
+            captcha_token?: string | null;
+            /**
+             * @description The form's fields, consent checkboxes (`consent_<purpose>`), UTM tags
+             *     and `page_url`, as the form sent them.
+             */
+            fields: Record<string, never>;
         };
         /** @description A frame as read back. */
         Frame: {
@@ -25806,6 +26209,23 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
+        /** @description One landing page's results over a period. */
+        LandingStats: {
+            /**
+             * Format: double
+             * @description Conversions over unique visitors; absent with no visitors.
+             */
+            conversion_rate?: number | null;
+            /** Format: int64 */
+            conversions: number;
+            /** Format: date-time */
+            from: string;
+            path: string;
+            /** Format: date-time */
+            to: string;
+            /** Format: int64 */
+            unique_visitors: number;
+        };
         /** @description `GET /api/v1/admin/latency`. */
         LatencyReport: {
             /** @description Metrics are on in this process (`observability.metrics_port` set). */
@@ -26004,6 +26424,28 @@ export interface components {
             invoice_id?: string | null;
             /** Format: uuid */
             order_id?: string | null;
+        };
+        /** @description An import's state. */
+        ListImport: {
+            /** Format: int32 */
+            added: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            document_id: string;
+            error?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            list_id: string;
+            /** Format: int32 */
+            rows_read: number;
+            /** Format: int32 */
+            skipped: number;
+            /** @description `queued`, `running`, `done`, `failed` or `undone`. */
+            status: string;
         };
         /**
          * @description One field a business rule locks for the writer (D-789 §3.5): `effect` is
@@ -26266,6 +26708,17 @@ export interface components {
             /** Format: date-time */
             start: string;
             subject: string;
+        };
+        /** @description What a change did. */
+        MemberChange: {
+            /** @description People added or removed. */
+            changed: number;
+            /** @description Ids skipped: already in (or not in) the list, or not readable. */
+            skipped: number;
+        };
+        MembersBody: {
+            /** @description The people (records of the list's target entity), at most 1,000. */
+            person_ids: string[];
         };
         MentionBody: {
             /** @description The text that mentions people, with `@[user:<id>]` / `@[team:<id>]`. */
@@ -29267,6 +29720,39 @@ export interface components {
                 operation_kind?: string | null;
                 /** @description Why, when a reason was given. */
                 reason?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DeliverabilityDay: {
+            items: {
+                /** Format: int64 */
+                bounced: number;
+                /** Format: int64 */
+                clicked: number;
+                /** Format: int64 */
+                complaints: number;
+                /** Format: date */
+                day: string;
+                /** Format: int64 */
+                delivered: number;
+                mailbox_provider: string;
+                /** Format: int64 */
+                opened: number;
+                send_ref: string;
+                sending_domain: string;
+                /** Format: int64 */
+                sent: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -33882,6 +34368,14 @@ export interface components {
             /** Format: double */
             threshold?: number | null;
         };
+        PreviewBody: {
+            /** @description The email design (blocks, direction, width, colour). */
+            design: Record<string, never>;
+            /** @description `contact` or `lead`. */
+            entity: string;
+            /** Format: uuid */
+            person_id: string;
+        };
         /** @description A signed preview link. */
         PreviewLink: {
             /** Format: date-time */
@@ -36953,6 +37447,10 @@ export interface components {
             context?: null | components["schemas"]["RecordContext"];
             text: string;
         };
+        SendDeliverability: {
+            providers: components["schemas"]["SendProvider"][];
+            send_ref: string;
+        };
         /** @description One frame. */
         SendFrame: {
             kind: string;
@@ -36982,6 +37480,20 @@ export interface components {
              *     call.
              */
             session_token: string;
+        };
+        /** @description One campaign's totals per provider. */
+        SendProvider: {
+            /** Format: int64 */
+            bounced: number;
+            /** Format: int64 */
+            clicked: number;
+            /** Format: int64 */
+            delivered: number;
+            mailbox_provider: string;
+            /** Format: int64 */
+            opened: number;
+            /** Format: int64 */
+            sent: number;
         };
         /**
          * @description P-session-refresh-hardening (D-129) — `GET /api/v1/auth/session`'s
@@ -77079,6 +77591,13 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveredPage"];
                 };
             };
+            /** @description The page moved; `Location` names its current path */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description The client already holds this version */
             304: {
                 headers: {
@@ -77119,6 +77638,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DeliveredPage"];
                 };
+            };
+            /** @description The page moved; `Location` names its current path */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description The client already holds this version */
             304: {
@@ -77257,6 +77783,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicPageView"];
                 };
+            };
+            /** @description The page moved; `Location` names its current path */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No published page at this path (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed on this deployment) */
             404: {
@@ -79477,6 +80010,295 @@ export interface operations {
             };
         };
     };
+    check_email_address: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddressCheckBody"];
+            };
+        };
+        responses: {
+            /** @description The address's findings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressCheckView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many checks this minute */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_deliverability_daily: {
+        parameters: {
+            query?: {
+                /** @description Only this sending domain. */
+                domain?: string;
+                /** @description Only this mailbox provider (`gmail`, `outlook`, `regional:stc`, ...). */
+                provider?: string;
+                /** @description First day, inclusive. */
+                from?: string;
+                /** @description Last day, inclusive. */
+                to?: string;
+                /** @description One-based page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rollup rows, newest day first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeliverabilityDay"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_deliverability_policy.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_dmarc_summary: {
+        parameters: {
+            query: {
+                /** @description The sending domain. */
+                domain: string;
+                /** @description Days back (default 30, at most 365). */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SPF and DKIM per sending source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmarcSummaryView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Administrators only */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_dmarc_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The report file: XML, gzip or ZIP */
+        requestBody: {
+            content: {
+                "application/octet-stream": number[];
+            };
+        };
+        responses: {
+            /** @description The report was read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmarcUploaded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Administrators only */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a readable aggregate report */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_send_deliverability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The campaign the mail was sent for */
+                send_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The campaign's totals per mailbox provider */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendDeliverability"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_deliverability_policy.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_marketing_email: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewBody"];
+            };
+        };
+        responses: {
+            /** @description The design as the person would receive it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DynamicPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such person, or the caller cannot read them */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The design does not render */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_marketing_check_in: {
         parameters: {
             query?: never;
@@ -79673,6 +80495,105 @@ export interface operations {
             };
         };
     };
+    submit_marketing_form: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The published form */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormSubmission"];
+            };
+        };
+        responses: {
+            /** @description Accepted; what to show next */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormAccepted"];
+                };
+            };
+            /** @description This form takes no submissions (the same answer for every reason) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid email, or a field is not accepted */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many submissions, or the challenge was not solved */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_landing_stats: {
+        parameters: {
+            query: {
+                /** @description The landing page's path (or full URL). */
+                path: string;
+                /** @description The start, inclusive; 30 days before `to` by default. */
+                from?: string;
+                /** @description The end, exclusive; now by default. */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's unique visitors and conversions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LandingStats"];
+                };
+            };
+            /** @description The caller may not read marketing forms */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No path, or the period ends before it starts or spans over a year */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_marketing_list_count: {
         parameters: {
             query?: {
@@ -79780,6 +80701,254 @@ export interface operations {
             };
         };
     };
+    import_marketing_list_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The static list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportBody"];
+            };
+        };
+        responses: {
+            /** @description The import is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListImport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list, or the document is not readable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A segment list */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_list_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The static list */
+                id: string;
+                /** @description The import */
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import's progress */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListImport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    undo_marketing_list_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The static list */
+                id: string;
+                /** @description The import */
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import's members removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not finished, or finished more than seven days ago */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_marketing_list_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The static list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembersBody"];
+            };
+        };
+        responses: {
+            /** @description People added */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The list is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A segment list, or more than 1,000 people */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_marketing_list_members_as_of: {
         parameters: {
             query: {
@@ -79825,6 +80994,78 @@ export interface operations {
             };
             /** @description No such list */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_marketing_list_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The static list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembersBody"];
+            };
+        };
+        responses: {
+            /** @description People removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The list is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A segment list, or more than 1,000 people */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -88956,6 +90197,45 @@ export interface operations {
             };
         };
     };
+    collect_tracking_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The script's batch, as JSON: {site, visitor, session, events} */
+        requestBody: {
+            content: {
+                "text/plain": string;
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not taken (the same answer for every reason) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many batches from this visitor or address */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     track_open: {
         parameters: {
             query?: never;
@@ -88975,6 +90255,38 @@ export interface operations {
                 };
                 content: {
                     "image/gif": unknown;
+                };
+            };
+        };
+    };
+    get_tracking_script: {
+        parameters: {
+            query: {
+                /** @description The tracked site's key. */
+                site: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tracking script for the site */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/javascript": string;
+                };
+            };
+            /** @description No such tracked site (the same answer for every reason) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
