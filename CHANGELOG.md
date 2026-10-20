@@ -132,6 +132,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Dynamic email blocks (E25-T1): an email design's `dynamic` block holds variants (a rule condition over
+  the recipient and/or a list they must be in) and a default; `attome_marketing::dynamic_blocks::resolve`
+  picks the first match per recipient and reports the choice, the renderer refuses an unresolved block,
+  and `POST /api/v1/marketing/emails/preview` shows a design as one contact or lead.
 - Live segments (E7-T6): a segment list with `refresh_mode = live` is re-checked every five seconds for
   only the people a change-feed batch touched (the record, or the target records whose lookup points
   at it), as its owner, with one membership event per change (reason `live`). Its query may read only

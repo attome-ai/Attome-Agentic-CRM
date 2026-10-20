@@ -53,6 +53,26 @@ pub enum EmailBlock {
     Columns {
         columns: Vec<Vec<EmailBlock>>,
     },
+    /// E25-T1: content chosen per recipient (`dynamic_blocks::resolve`);
+    /// the renderer refuses it unresolved.
+    Dynamic {
+        id: String,
+        variants: Vec<DynamicVariant>,
+        #[serde(default)]
+        default: Vec<EmailBlock>,
+    },
+}
+
+/// One variant of a dynamic block: shown when its condition (Z11, over the
+/// recipient's record) is true and, if set, the recipient is in `in_list`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DynamicVariant {
+    pub id: String,
+    #[serde(default)]
+    pub condition: Option<String>,
+    #[serde(default)]
+    pub in_list: Option<uuid::Uuid>,
+    pub blocks: Vec<EmailBlock>,
 }
 
 fn one() -> u8 {
@@ -111,6 +131,8 @@ pub enum EmailRenderError {
     BadColour(String),
     #[error("columns may not hold columns")]
     NestedColumns,
+    #[error("a dynamic block must be resolved for its recipient before rendering")]
+    UnresolvedDynamic,
     #[error("the template does not compile: {0}")]
     Template(String),
 }
@@ -289,6 +311,7 @@ impl Writer<'_> {
                     h = (*height).min(200)
                 );
             }
+            EmailBlock::Dynamic { .. } => return Err(EmailRenderError::UnresolvedDynamic),
             EmailBlock::Columns { columns } => {
                 if nested {
                     return Err(EmailRenderError::NestedColumns);

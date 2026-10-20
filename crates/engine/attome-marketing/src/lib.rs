@@ -11,6 +11,8 @@ pub mod attribution;
 pub mod deliverability;
 /// E6-T7: DMARC aggregate reports.
 pub mod dmarc;
+/// E25-T1: dynamic blocks chosen per recipient.
+pub mod dynamic_blocks;
 /// E2-T2: email designs to email-safe HTML and plain text.
 pub mod email_render;
 pub mod events;
@@ -49,5 +51,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
