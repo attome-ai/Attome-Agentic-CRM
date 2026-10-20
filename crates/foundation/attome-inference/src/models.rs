@@ -73,7 +73,7 @@ pub async fn list_models(
 const LABEL: &str = "model listing";
 
 async fn list_once(
-    http: &reqwest::Client,
+    http: &attome_outbound::http::Outbound,
     base: &reqwest::Url,
     auth: ModelListAuth<'_>,
 ) -> Result<Vec<ModelListing>, InferenceError> {

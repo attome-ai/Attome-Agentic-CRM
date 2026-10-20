@@ -1,0 +1,115 @@
+/* V3-T1 — the weekly timesheet grid. Logical properties only (RTL). */
+
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.ts-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block-end: 12px;
+}
+
+.ts-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.ts-week {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ts-status {
+  margin-inline-start: auto;
+  font-size: 13px;
+}
+
+.ts-wrap {
+  overflow-x: auto;
+}
+
+.ts-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ts-table th,
+.ts-table td {
+  padding-block: 6px;
+  padding-inline: 8px;
+  text-align: start;
+  border-block-end: 1px solid var(--color-border, #334155);
+}
+
+.ts-cell {
+  inline-size: 5em;
+}
+
+.ts-away {
+  background: var(--color-bg-alt, #f1f5f9);
+}
+
+.ts-badge {
+  display: block;
+  font-size: 11px;
+}
+
+.ts-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ts-btn {
+  padding-block: 4px;
+  padding-inline: 10px;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ts-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ts-primary {
+  border-color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2563eb);
+}
+
+.ts-add,
+.ts-actions {
+  margin-block-start: 12px;
+}
+
+.ts-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-inline-size: 360px;
+}
+
+.ts-found {
+  list-style: none;
+  margin-block: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ts-error {
+  color: var(--color-danger, #dc2626);
+}
+
+.ts-note {
+  font-size: 13px;
+}

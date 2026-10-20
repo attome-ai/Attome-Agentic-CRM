@@ -113,9 +113,10 @@ pub(super) async fn place_call(
     .ok_or_else(|| AppError::Validation("agent and number: digits only".into()))?;
     let secret = credential(state, system).await?;
     let (user, password) = secret.split_once(':').unwrap_or((secret.as_str(), ""));
-    let client = reqwest::Client::builder()
-        .timeout(super::TIMEOUT)
-        .build()
+    // Q21-T1: the PBX is the customer's own, so this connector's configured
+    // `base_url` host may be private; nothing else private is reachable.
+    let purpose = attome_outbound::http::Purpose::public("asterisk").with_private_urls([base]);
+    let client = attome_outbound::http::client(purpose, |b| b.timeout(super::TIMEOUT))
         .map_err(AppError::internal)?;
     let url =
         url::Url::parse_with_params(&format!("{}/channels", base.trim_end_matches('/')), &query)

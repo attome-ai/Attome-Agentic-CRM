@@ -41,6 +41,7 @@ attome-integration.workspace    = true
 attome-jobs.workspace           = true
 attome-metadata.workspace       = true
 attome-metric.workspace         = true
+attome-outbound.workspace       = true
 attome-sales.workspace          = true
 attome-callintel.workspace = true
 attome-marketing.workspace = true

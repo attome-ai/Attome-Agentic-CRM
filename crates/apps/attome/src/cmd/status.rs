@@ -80,7 +80,7 @@ pub fn render(nodes: &[NodeStatus]) -> String {
     out
 }
 
-async fn read(client: &reqwest::Client, url: &str) -> NodeStatus {
+async fn read(client: &attome_outbound::http::Outbound, url: &str) -> NodeStatus {
     let get = |path: &'static str| {
         let request = client.get(format!("{url}{path}"));
         async move { request.send().await.ok() }
@@ -134,7 +134,10 @@ pub async fn run(args: &[String]) -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let Ok(client) = reqwest::Client::builder().timeout(TIMEOUT).build() else {
+    // Q21-T1: the nodes are the operator's own servers, named on the command line.
+    let purpose = attome_outbound::http::Purpose::public("cli-status")
+        .with_private_urls(urls.iter().map(String::as_str));
+    let Ok(client) = attome_outbound::http::client(purpose, |b| b.timeout(TIMEOUT)) else {
         println!("attome status: could not build an HTTP client");
         return ExitCode::FAILURE;
     };

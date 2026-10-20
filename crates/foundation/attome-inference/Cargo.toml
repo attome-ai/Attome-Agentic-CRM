@@ -12,6 +12,7 @@ publish.workspace      = true
 
 [dependencies]
 attome-config.workspace = true
+attome-outbound.workspace = true
 attome-types.workspace  = true
 metrics.workspace       = true
 reqwest.workspace       = true

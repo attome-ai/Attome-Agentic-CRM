@@ -1,7 +1,7 @@
 //! Z8-T1: Amazon SES through its v2 HTTPS API (`SendEmail` with raw
 //! content): the message goes out exactly as built for SMTP, its MIME bytes
 //! base64-encoded, and the request is signed with AWS Signature Version 4.
-//! No AWS SDK: one signed `POST`, over the shared rustls `reqwest` client.
+//! No AWS SDK: one signed `POST`, over the shared guarded client.
 
 use attome_config::SesSettings;
 use chrono::{DateTime, Utc};
@@ -59,7 +59,7 @@ impl EmailProvider for Ses<'_> {
         let host = host_of(&endpoint)?.to_string();
         let signed = sign(self.settings, &host, PATH, &body, Utc::now());
 
-        let mut request = http_client()?
+        let mut request = http_client(&endpoint)?
             .post(format!("{endpoint}{PATH}"))
             .header("content-type", "application/json")
             .header("x-amz-date", &signed.amz_date)

@@ -14,7 +14,7 @@
 //! failed is `Unknown`, never retried.
 
 use std::future::Future;
-use std::sync::OnceLock;
+use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use attome_config::EmailSection;
@@ -143,21 +143,31 @@ pub fn select<'a>(cfg: &'a EmailSection, from_address: &str) -> Result<Provider<
     }
 }
 
-/// The one HTTP client the HTTPS providers share, with its own connect and
-/// request timeouts (the whole send also sits under the send deadline).
-pub(crate) fn http_client() -> Result<&'static reqwest::Client, SendError> {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    if let Some(client) = CLIENT.get() {
-        return Ok(client);
+/// The HTTP client the HTTPS providers share, kept while the provider's
+/// endpoint stays the same, with its own connect and request timeouts (the
+/// whole send also sits under the send deadline).
+///
+/// Q21-T1: the endpoint is the operator's configuration (an SES or SendGrid
+/// endpoint override, or the provider's default), so its host may be private
+/// (a VPC endpoint); no other private address is reachable.
+pub(crate) fn http_client(endpoint: &str) -> Result<attome_outbound::http::Outbound, SendError> {
+    static CLIENT: Mutex<Option<(String, attome_outbound::http::Outbound)>> = Mutex::new(None);
+    let mut slot = CLIENT.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some((for_endpoint, client)) = slot.as_ref()
+        && for_endpoint == endpoint
+    {
+        return Ok(client.clone());
     }
-    let client = reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(10))
-        .timeout(Duration::from_secs(60))
-        .build()
-        .map_err(|e| SendError::Config {
-            message: format!("email HTTP client: {e}"),
-        })?;
-    Ok(CLIENT.get_or_init(|| client))
+    let purpose = attome_outbound::http::Purpose::public("email").with_private_urls([endpoint]);
+    let client = attome_outbound::http::client(purpose, |b| {
+        b.connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(60))
+    })
+    .map_err(|e| SendError::Config {
+        message: format!("email HTTP client: {e}"),
+    })?;
+    *slot = Some((endpoint.to_owned(), client.clone()));
+    Ok(client)
 }
 
 /// A provider's non-success answer as a send outcome.

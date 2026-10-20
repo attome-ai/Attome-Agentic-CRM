@@ -106,13 +106,15 @@ pub fn review_message(review: &Review) -> SocialMessage {
     }
 }
 
-fn client() -> &'static reqwest::Client {
-    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+fn client() -> &'static attome_outbound::http::Outbound {
+    // Q21-T1: the provider's public API only.
+    static CLIENT: std::sync::OnceLock<attome_outbound::http::Outbound> =
+        std::sync::OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .timeout(TIMEOUT)
-            .build()
-            .unwrap_or_default()
+        attome_outbound::http::shared(
+            attome_outbound::http::Purpose::public("google-reviews"),
+            |b| b.timeout(TIMEOUT),
+        )
     })
 }
 

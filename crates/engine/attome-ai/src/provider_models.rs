@@ -169,13 +169,15 @@ pub(crate) async fn http_client_for(
     }
 
     if endpoint_is_in_deployment(base_url) {
-        // The self-hosted case. An ordinary client: the SSRF guard's screening
-        // rejects precisely these address classes by design.
-        return reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(timeout_secs))
-            .build()
-            .map(attome_inference::DialClient::unchecked)
-            .map_err(|_| AppError::internal("failed to build the model-discovery HTTP client"));
+        // The self-hosted case: this provider's own private host is listed for
+        // its purpose (Q21-T1), and nothing else private is reachable.
+        let purpose =
+            attome_outbound::http::Purpose::public("model-discovery").with_private_urls([base_url]);
+        return attome_outbound::http::client(purpose, |b| {
+            b.timeout(std::time::Duration::from_secs(timeout_secs))
+        })
+        .map(attome_inference::DialClient::unchecked)
+        .map_err(|_| AppError::internal("failed to build the model-discovery HTTP client"));
     }
 
     if !(provider_allows_external || inference.allow_external_provider) {
@@ -196,16 +198,16 @@ pub(crate) async fn http_client_for(
     guarded_dial_client(timeout_secs)
 }
 
-/// attome-server B5: the external branch dials through `GuardedClient`, whose
-/// literal check `attome_inference` runs before every dial, so a non-routable
-/// IP literal is refused even on a path that skipped `validate_url`.
+/// attome-server B5: the external branch dials through a public purpose, whose
+/// client refuses a non-routable IP literal on every request and screens every
+/// host name it resolves, even on a path that skipped `validate_url`.
 fn guarded_dial_client(timeout_secs: u64) -> Result<attome_inference::DialClient, AppError> {
-    let (http, refuse_literal) = attome_server::ssrf_guard::GuardedClient::new(timeout_secs)
-        .map_err(|_| AppError::internal("failed to build the guarded model-discovery HTTP client"))?
-        .into_parts();
-    Ok(attome_inference::DialClient::checked(http, move |url| {
-        refuse_literal(url).is_ok()
-    }))
+    let purpose = attome_outbound::http::Purpose::public("model-discovery").no_redirects();
+    attome_outbound::http::client(purpose, |b| {
+        b.timeout(std::time::Duration::from_secs(timeout_secs))
+    })
+    .map(attome_inference::DialClient::unchecked)
+    .map_err(|_| AppError::internal("failed to build the guarded model-discovery HTTP client"))
 }
 
 async fn client_for(

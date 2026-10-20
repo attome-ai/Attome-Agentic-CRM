@@ -15,7 +15,7 @@ use crate::client::{CustomerClient, S2sCredential};
 use crate::store::{self, DeploymentRow};
 
 pub struct FleetRuntime {
-    pub http: reqwest::Client,
+    pub http: attome_outbound::http::Outbound,
     ring: KeyRing,
     pub changesets_dir: PathBuf,
 }

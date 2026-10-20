@@ -79,7 +79,7 @@ fn body(event: &AlertEvent, values: &RunbookValues) -> String {
 async fn send_batch(
     db: &DbPool,
     config: &AppConfig,
-    http: &reqwest::Client,
+    http: &attome_outbound::http::Outbound,
 ) -> Result<usize, attome_types::AppError> {
     let node = attome_server::metrics_store::node_name(config.app.port);
     let values = RunbookValues::from_config(config, &node);
@@ -164,7 +164,16 @@ pub fn spawn(db: DbPool, config: AppConfig) {
         return;
     }
     tokio::spawn(async move {
-        let http = reqwest::Client::new();
+        // Q21-T1: the webhooks are the operator's (`observability.alert_webhooks`),
+        // so their hosts may be on the private network (an on-premise chat server).
+        let purpose = attome_outbound::http::Purpose::public("alert-webhook").with_private_urls(
+            config
+                .observability
+                .alert_webhooks
+                .iter()
+                .map(String::as_str),
+        );
+        let http = attome_outbound::http::shared(purpose, |b| b);
         let mut ticker = tokio::time::interval(EVERY);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {

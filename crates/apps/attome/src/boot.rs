@@ -361,6 +361,28 @@ pub async fn init(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Error>
             .map_err(|e| format!("auth.breach_list_file ({path}): {e}"))?;
         tracing::info!(count, "breached password set loaded");
     }
+    // Q21-T1: the operator's proxy for calls to public hosts, before any
+    // client is built (validated with the rest of the configuration).
+    attome_outbound::http::configure_proxy(
+        config
+            .deployment
+            .outbound_proxy
+            .as_ref()
+            .and_then(|proxy| reqwest::Url::parse(proxy.expose()).ok()),
+    );
+    if config.deployment.outbound_proxy.is_some() {
+        tracing::info!("outbound calls to public hosts go through the configured proxy");
+    }
+    // Q21-T1: the configured identity providers may be on the customer's own
+    // network; their issuers' hosts are the only private ones sign-in reaches.
+    attome_auth::oidc::configure_identity_providers(
+        config
+            .oidc
+            .providers
+            .values()
+            .chain(config.portal.oidc_providers.values())
+            .map(|provider| provider.issuer.as_str()),
+    );
     // Z4-T9: the online range check, only when the customer turned it on.
     if config.auth.breach_check_online {
         let url = config

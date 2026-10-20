@@ -20,6 +20,7 @@ attome-core.workspace     = true
 attome-db.workspace       = true
 attome-metadata.workspace = true
 attome-modules.workspace  = true
+attome-outbound.workspace = true
 attome-records.workspace  = true
 attome-security.workspace = true
 attome-server.workspace   = true

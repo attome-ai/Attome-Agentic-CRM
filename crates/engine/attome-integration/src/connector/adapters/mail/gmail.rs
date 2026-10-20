@@ -206,11 +206,12 @@ pub fn parse_history(body: &str) -> Option<(Vec<String>, Option<String>, Option<
     Some((ids, text("nextPageToken"), text("historyId")))
 }
 
-fn client() -> Result<reqwest::Client, AppError> {
-    reqwest::Client::builder()
-        .timeout(TIMEOUT)
-        .build()
-        .map_err(AppError::internal)
+/// Q21-T1: the provider's public API only.
+fn client() -> Result<attome_outbound::http::Outbound, AppError> {
+    attome_outbound::http::client(attome_outbound::http::Purpose::public("gmail"), |b| {
+        b.timeout(TIMEOUT)
+    })
+    .map_err(AppError::internal)
 }
 
 async fn access_token(
@@ -250,7 +251,7 @@ async fn access_token(
 }
 
 async fn get_json(
-    client: &reqwest::Client,
+    client: &attome_outbound::http::Outbound,
     token: &str,
     url: &str,
 ) -> Result<(u16, String), AppError> {

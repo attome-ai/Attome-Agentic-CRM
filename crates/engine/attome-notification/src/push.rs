@@ -262,13 +262,14 @@ async fn provider(state: &EngineState, push: &str) -> Result<Option<Provider>, A
     Ok(Some(Provider { config, secret }))
 }
 
-fn client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+fn client() -> &'static attome_outbound::http::Outbound {
+    // Q21-T1: the push services (browsers', APNs, FCM) are public. A browser
+    // supplies its own endpoint, so a private one must never be dialed.
+    static CLIENT: OnceLock<attome_outbound::http::Outbound> = OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .timeout(SEND_TIMEOUT)
-            .build()
-            .unwrap_or_default()
+        attome_outbound::http::shared(attome_outbound::http::Purpose::public("push"), |b| {
+            b.timeout(SEND_TIMEOUT)
+        })
     })
 }
 

@@ -19,6 +19,8 @@
 pub mod breaker;
 pub mod bulkhead;
 pub mod deadline;
+/// Q21-T1: the one way to build an HTTP client for a call out, behind the SSRF guard.
+pub mod http;
 pub mod retry;
 
 use std::future::Future;

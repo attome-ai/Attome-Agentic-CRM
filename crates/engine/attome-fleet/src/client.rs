@@ -273,14 +273,20 @@ fn is_loopback_host(host: &str) -> bool {
 
 /// Builds the console's HTTP client: bounded by `fleet.request_timeout_secs`,
 /// no redirects (a redirect would re-send a signed request somewhere else).
-pub fn build_http(request_timeout_secs: u64) -> Result<reqwest::Client, AppError> {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(request_timeout_secs))
-        .connect_timeout(Duration::from_secs(request_timeout_secs.min(5)))
-        .redirect(reqwest::redirect::Policy::none())
-        .user_agent(concat!("attome-fleet-console/", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(AppError::internal)
+///
+/// Q21-T1: a customer server is reached at a public address, or on loopback
+/// for local development, the one case [`normalize_base_url`] accepts plain
+/// `http://` for; no other private address is reachable.
+pub fn build_http(request_timeout_secs: u64) -> Result<attome_outbound::http::Outbound, AppError> {
+    let purpose = attome_outbound::http::Purpose::public("fleet-console")
+        .with_private_hosts(["localhost", "127.0.0.1", "::1"])
+        .no_redirects();
+    attome_outbound::http::client(purpose, |b| {
+        b.timeout(Duration::from_secs(request_timeout_secs))
+            .connect_timeout(Duration::from_secs(request_timeout_secs.min(5)))
+            .user_agent(concat!("attome-fleet-console/", env!("CARGO_PKG_VERSION")))
+    })
+    .map_err(AppError::internal)
 }
 
 /// Checks a query value the console builds into a signed path: plain
@@ -296,7 +302,7 @@ pub fn is_safe_query_value(value: &str) -> bool {
 /// One customer server.
 #[derive(Clone)]
 pub struct CustomerClient {
-    http: reqwest::Client,
+    http: attome_outbound::http::Outbound,
     base_url: String,
     credential: Option<S2sCredential>,
 }
@@ -313,7 +319,7 @@ impl std::fmt::Debug for CustomerClient {
 impl CustomerClient {
     /// `base_url` must already be normalized ([`normalize_base_url`]).
     pub fn new(
-        http: reqwest::Client,
+        http: attome_outbound::http::Outbound,
         base_url: impl Into<String>,
         credential: Option<S2sCredential>,
     ) -> Self {

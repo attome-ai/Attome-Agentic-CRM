@@ -121,9 +121,11 @@ async fn fetch_bytes(bundle_ref: &str) -> Result<Vec<u8>, AppError> {
         )));
     }
     if bundle_ref.starts_with("https://") {
-        let client = reqwest::Client::builder()
-            .timeout(FETCH_TIMEOUT)
-            .build()
+        // Q21-T1: `deployment.bundle_ref` is the operator's, so its host may
+        // be private (an artifact store on their network).
+        let purpose =
+            attome_outbound::http::Purpose::public("bundle-pull").with_private_urls([bundle_ref]);
+        let client = attome_outbound::http::client(purpose, |b| b.timeout(FETCH_TIMEOUT))
             .map_err(|e| AppError::internal(format!("building the bundle_ref http client: {e}")))?;
         let resp = client
             .get(bundle_ref)

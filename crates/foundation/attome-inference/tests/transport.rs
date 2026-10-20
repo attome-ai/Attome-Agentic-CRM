@@ -20,6 +20,13 @@ use attome_inference::generate::{GenerationClient, GenerationRequest};
 use attome_inference::testing::{FakeModelServer, Reply, http, json, sse_event, sse_head};
 use attome_inference::{ChatMessage, EmbedKind, EmbeddingClient, InferenceError, UpstreamClass};
 
+/// Q21-T1: a client for the fake model server, which listens on loopback.
+fn loopback_client() -> attome_outbound::http::Outbound {
+    let purpose = attome_outbound::http::Purpose::public("test").with_private_hosts(["127.0.0.1"]);
+    attome_outbound::http::client(purpose, |b| b.timeout(Duration::from_secs(5)))
+        .expect("a loopback client")
+}
+
 /// attome-server B5: a checked client's precheck runs before the listing and
 /// before a caller-built generation client is usable; a refused loopback
 /// literal never reaches the socket.
@@ -31,7 +38,7 @@ async fn a_checked_dial_client_refuses_a_loopback_literal_before_dialing() {
             .and_then(|host| host.parse::<std::net::IpAddr>().ok())
             .is_some_and(|ip| ip.is_loopback())
     };
-    let http = attome_inference::DialClient::checked(reqwest::Client::new(), refuse_loopback);
+    let http = attome_inference::DialClient::checked(loopback_client(), refuse_loopback);
 
     let listing = attome_inference::list_models(
         &http,
@@ -61,12 +68,7 @@ async fn a_checked_dial_client_refuses_a_loopback_literal_before_dialing() {
 async fn a_model_listing_arrives_over_a_socket() {
     let body = "{\"data\":[{\"id\":\"m1\",\"name\":\"Model One\"}]}";
     let server = FakeModelServer::start(vec![json(body)]).await;
-    let http = attome_inference::DialClient::unchecked(
-        reqwest::Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()
-            .expect("a loopback client"),
-    );
+    let http = attome_inference::DialClient::unchecked(loopback_client());
     let listings = attome_inference::list_models(
         &http,
         &server.base_url(),
@@ -84,12 +86,7 @@ async fn a_model_listing_arrives_over_a_socket() {
 #[tokio::test]
 async fn a_failed_model_listing_is_classified() {
     let server = FakeModelServer::start(vec![http(401, "Unauthorized", &[], "no")]).await;
-    let http = attome_inference::DialClient::unchecked(
-        reqwest::Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()
-            .expect("a loopback client"),
-    );
+    let http = attome_inference::DialClient::unchecked(loopback_client());
     let error = attome_inference::list_models(
         &http,
         &server.base_url(),

@@ -87,10 +87,11 @@ pub fn run(args: &[String]) -> Result<(), String> {
     })
 }
 
-fn client() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
+/// Q21-T1: `url` is the operator's own server, named on the command line.
+fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
+    let purpose =
+        attome_outbound::http::Purpose::public("cli-model-files").with_private_urls([url]);
+    attome_outbound::http::client(purpose, |b| b.timeout(std::time::Duration::from_secs(120)))
         .map_err(|error| format!("build the HTTP client: {error}"))
 }
 
@@ -126,7 +127,7 @@ fn safe_relative(path: &str) -> Option<PathBuf> {
 
 async fn export(url: &str, api_key: Option<String>, out: &Path) -> Result<(), String> {
     let response = authorised(
-        client()?.get(format!("{url}/api/v1/admin/model/export")),
+        client(url)?.get(format!("{url}/api/v1/admin/model/export")),
         api_key.as_deref(),
     )
     .send()
@@ -190,7 +191,7 @@ async fn import(url: &str, api_key: Option<String>, dir: &Path) -> Result<(), St
         .collect();
     let count = files.len();
     let response = authorised(
-        client()?
+        client(url)?
             .post(format!("{url}/api/v1/admin/model/import"))
             .json(&json!({ "files": files })),
         api_key.as_deref(),

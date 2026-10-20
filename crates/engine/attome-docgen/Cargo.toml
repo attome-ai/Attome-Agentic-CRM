@@ -20,6 +20,7 @@ attome-html.workspace     = true
 attome-jobs.workspace     = true
 attome-metadata.workspace = true
 attome-modules.workspace  = true
+attome-outbound.workspace = true
 attome-records.workspace  = true
 attome-rules.workspace    = true
 attome-security.workspace = true

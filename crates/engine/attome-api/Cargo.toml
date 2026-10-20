@@ -35,6 +35,7 @@ attome-model.workspace        = true
 attome-metric.workspace       = true
 attome-modules.workspace      = true
 attome-notification.workspace = true
+attome-outbound.workspace     = true
 attome-profiler.workspace     = true
 attome-project.workspace      = true
 attome-billing.workspace = true

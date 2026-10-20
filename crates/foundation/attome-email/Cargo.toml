@@ -14,6 +14,7 @@ publish.workspace      = true
 attome-config.workspace = true
 attome-db.workspace     = true
 attome-html.workspace   = true
+attome-outbound.workspace = true
 attome-rules.workspace  = true
 attome-types.workspace  = true
 base64.workspace        = true

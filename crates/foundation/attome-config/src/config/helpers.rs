@@ -203,6 +203,7 @@ const SECRET_PATHS: &[&str] = &[
     "database.direct_url",
     "database.readonly.password",
     "database.migrator.password",
+    "deployment.outbound_proxy",
     "database.runtime.password",
     "cache.password",
     "cache.sentinel.sentinel_password",

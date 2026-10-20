@@ -73,6 +73,8 @@ pub mod invitation;
 pub mod jwt;
 pub mod mfa;
 pub mod oidc;
+/// Q2-T1: identity provider presets, brokers included.
+pub mod oidc_presets;
 pub mod otp;
 pub mod password;
 /// Q7-T1: breached and reused passwords.

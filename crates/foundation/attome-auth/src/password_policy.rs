@@ -116,7 +116,7 @@ const ONLINE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
 #[derive(Debug)]
 struct OnlineCheck {
     range_url: String,
-    client: reqwest::Client,
+    client: attome_outbound::http::Outbound,
 }
 
 static ONLINE: OnceLock<Option<OnlineCheck>> = OnceLock::new();
@@ -126,7 +126,11 @@ static ONLINE: OnceLock<Option<OnlineCheck>> = OnceLock::new();
 /// fixed.
 pub fn configure_online(range_url: Option<&str>) -> bool {
     let check = range_url.and_then(|url| {
-        match reqwest::Client::builder().timeout(ONLINE_TIMEOUT).build() {
+        // Q21-T1: the range service is public (the default is Have I Been
+        // Pwned); a customer's own mirror may be on their network, so the
+        // configured URL's host may be private.
+        let purpose = attome_outbound::http::Purpose::public("breach-range").with_private_urls([url]);
+        match attome_outbound::http::client(purpose, |b| b.timeout(ONLINE_TIMEOUT)) {
             Ok(client) => Some(OnlineCheck {
                 range_url: url.to_owned(),
                 client,

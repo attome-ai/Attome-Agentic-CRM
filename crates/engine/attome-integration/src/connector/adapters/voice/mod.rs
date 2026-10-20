@@ -219,11 +219,16 @@ pub async fn fetch_recording(
             (u.to_owned(), p.to_owned())
         }
     };
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .redirect(reqwest::redirect::Policy::limited(3))
-        .build()
-        .map_err(AppError::internal)?;
+    // Q21-T1: an Asterisk recording lives on the customer's own PBX, so that
+    // connector's configured `base_url` host may be private; a Twilio one is
+    // on Twilio's public API. Each redirect hop is screened too.
+    let mut purpose = attome_outbound::http::Purpose::public("call-recording").max_redirects(3);
+    if provider == "asterisk" {
+        purpose = purpose.with_private_urls(setting(&cfg, "base_url"));
+    }
+    let client =
+        attome_outbound::http::client(purpose, |b| b.timeout(std::time::Duration::from_secs(120)))
+            .map_err(AppError::internal)?;
     let res = client
         .get(url)
         .basic_auth(user, Some(password))

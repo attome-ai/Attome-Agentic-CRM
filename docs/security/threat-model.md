@@ -72,7 +72,7 @@ service, **E**levation of privilege.
 | | Threat | Mitigation |
 |---|---|---|
 | S / T | Forged or replayed calls | HMAC-signed requests with timestamps and single-use nonces (refused if the coordination store is down: fails closed). |
-| I | Server-side request forgery through connectors or webhooks | Outbound calls go through one guarded client that refuses private and link-local addresses unless allowed by configuration. |
+| I | Server-side request forgery through connectors or webhooks | Outbound calls go through one guarded client that refuses private addresses unless the call's purpose lists the host from configuration, and refuses cloud metadata addresses always ([outbound calls](outbound-calls.md)). |
 | I | Secrets leaking | Secrets are a type with no display or serialisation; encrypted at rest with a key ring; never logged or returned. |
 
 ## Files

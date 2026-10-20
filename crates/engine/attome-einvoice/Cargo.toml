@@ -15,6 +15,7 @@ attome-audit.workspace   = true
 attome-core.workspace    = true
 attome-db.workspace      = true
 attome-modules.workspace = true
+attome-outbound.workspace = true
 attome-server.workspace  = true
 axum.workspace           = true
 sqlx.workspace           = true

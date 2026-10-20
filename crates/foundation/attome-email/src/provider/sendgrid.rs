@@ -87,7 +87,7 @@ impl EmailProvider for SendGrid<'_> {
             .filter(|e| !e.is_empty())
             .unwrap_or(DEFAULT_ENDPOINT)
             .trim_end_matches('/');
-        let response = http_client()?
+        let response = http_client(endpoint)?
             .post(format!("{endpoint}{PATH}"))
             .bearer_auth(self.settings.api_key.expose())
             .json(&request_body(msg))

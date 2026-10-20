@@ -84,13 +84,14 @@ pub struct MeetingReport {
     pub recordings: Vec<Recording>,
 }
 
-pub(crate) fn client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+pub(crate) fn client() -> &'static attome_outbound::http::Outbound {
+    // Q21-T1: the provider's public API only.
+    static CLIENT: OnceLock<attome_outbound::http::Outbound> = OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .timeout(TIMEOUT)
-            .build()
-            .unwrap_or_default()
+        attome_outbound::http::shared(
+            attome_outbound::http::Purpose::public("video-meetings"),
+            |b| b.timeout(TIMEOUT),
+        )
     })
 }
 

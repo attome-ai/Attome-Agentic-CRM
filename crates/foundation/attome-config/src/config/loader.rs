@@ -634,6 +634,14 @@ impl AppConfig {
             "docgen.render_service_url",
             &self.docgen.render_service_url,
         ));
+        // Q21-T1: only the proxy's host, never its URL, which may hold credentials.
+        if let Some(proxy) = &self.deployment.outbound_proxy {
+            let host = url::Url::parse(proxy.expose())
+                .ok()
+                .and_then(|u| u.host_str().map(str::to_owned))
+                .unwrap_or_default();
+            out.extend(check("deployment.outbound_proxy", &host));
+        }
         for (name, provider) in &self.oidc.providers {
             out.extend(check(
                 &format!("oidc.providers.{name}.issuer"),
@@ -1341,6 +1349,17 @@ impl AppConfig {
                 });
             }
             (Some(_), Some(_)) | (None, None) => {}
+        }
+        // Q21-T1: the outbound proxy is an http(s) URL with a host.
+        if let Some(proxy) = &self.deployment.outbound_proxy {
+            let ok = url::Url::parse(proxy.expose())
+                .is_ok_and(|u| matches!(u.scheme(), "http" | "https") && u.host_str().is_some());
+            if !ok {
+                return Err(ConfigError::Invalid {
+                    field: "deployment.outbound_proxy".into(),
+                    reason: "must be an http:// or https:// URL with a host".into(),
+                });
+            }
         }
         // D-352 (TODO-004 / H-1) — shape checks for `audit.anchor_store` that
         // hold in every profile, because a typo'd retention mode or a shared

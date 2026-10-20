@@ -342,9 +342,9 @@ fn parse(args: &[String]) -> Result<Command, String> {
 async fn rewrap(domain: &str, url: &str, api_key: Option<String>) -> Result<(), String> {
     let api_key =
         api_key.ok_or("an administrator's API key is needed: --api-key or ATTOME_API_KEY")?;
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(30))
-        .build()
+    // Q21-T1: `url` is the operator's own server, named on the command line.
+    let purpose = attome_outbound::http::Purpose::public("cli-secrets").with_private_urls([url]);
+    let client = attome_outbound::http::client(purpose, |b| b.timeout(Duration::from_secs(30)))
         .map_err(|e| e.to_string())?;
     let response = client
         .post(format!("{url}/api/v1/admin/security/rewrap/{domain}"))

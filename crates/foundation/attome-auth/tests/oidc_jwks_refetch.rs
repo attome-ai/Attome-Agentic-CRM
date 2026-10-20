@@ -97,6 +97,8 @@ enum Reply {
 
 /// A local JWKS endpoint that counts every request it receives.
 async fn jwks_endpoint(reply: Reply) -> (String, Arc<AtomicUsize>) {
+    // Q21-T1: the test's identity provider listens on loopback.
+    let _ = attome_auth::oidc::configure_identity_providers(["http://127.0.0.1"]);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/jwks", listener.local_addr().unwrap());
     let fetches = Arc::new(AtomicUsize::new(0));

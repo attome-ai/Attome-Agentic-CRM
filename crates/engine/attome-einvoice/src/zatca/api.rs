@@ -50,19 +50,20 @@ pub trait Transport: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = Result<HttpAnswer, TransportError>> + Send + 'a>>;
 }
 
-/// The real transport: reqwest, with an explicit timeout.
+/// The real transport: the guarded client (Q21-T1: ZATCA's public API
+/// only), with an explicit timeout.
 #[derive(Debug, Clone)]
 pub struct HttpTransport {
-    client: reqwest::Client,
+    client: attome_outbound::http::Outbound,
 }
 
 impl HttpTransport {
     pub fn new(timeout: Duration) -> Result<Self, TransportError> {
-        reqwest::Client::builder()
-            .timeout(timeout)
-            .build()
-            .map(|client| Self { client })
-            .map_err(|e| TransportError(e.to_string()))
+        attome_outbound::http::client(attome_outbound::http::Purpose::public("zatca"), |b| {
+            b.timeout(timeout)
+        })
+        .map(|client| Self { client })
+        .map_err(|e| TransportError(e.to_string()))
     }
 }
 

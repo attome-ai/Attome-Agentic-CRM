@@ -68,6 +68,14 @@ pub struct DeploymentSection {
     /// turns read-only, before the disk fills. Absent means no ceiling.
     #[serde(default)]
     pub read_only_at_database_bytes: Option<u64>,
+    /// Q21-T1: an HTTP(S) proxy for calls to public addresses (vendor APIs,
+    /// webhooks), for a network that reaches the internet only through one,
+    /// such as `http://proxy.corp:3128` (credentials may be in the URL).
+    /// Hosts the operator lists as private for a call (a model server, an
+    /// identity provider) are reached directly. `HTTP_PROXY` and the other
+    /// environment variables are never used. Absent means no proxy.
+    #[serde(default)]
+    pub outbound_proxy: Option<crate::Secret>,
 }
 
 impl DeploymentSection {
@@ -158,6 +166,7 @@ impl Default for DeploymentSection {
             sovereign: false,
             sovereign_allowed_hosts: Vec::new(),
             read_only_at_database_bytes: None,
+            outbound_proxy: None,
         }
     }
 }

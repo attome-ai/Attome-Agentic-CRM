@@ -29,7 +29,7 @@ pub async fn verify(config: &CaptchaConfig, token: Option<&str>, remote_ip: Opti
         CaptchaProvider::Hcaptcha => HCAPTCHA_URL,
         CaptchaProvider::Pow => return false,
     };
-    verify_at(url, config, token, remote_ip).await
+    verify_at(crate::oidc::http_client(), url, config, token, remote_ip).await
 }
 
 /// Q20-T3: whether `token` passes the challenge in force
@@ -65,8 +65,10 @@ pub async fn verify_challenge(
     }
 }
 
-/// [`verify`] against `url`, so tests can point it at a local endpoint.
+/// [`verify`] against `url` over `client`, so tests can point it at a local
+/// endpoint (Q21-T1: the production client reaches public addresses only).
 async fn verify_at(
+    client: &attome_outbound::http::Outbound,
     url: &str,
     config: &CaptchaConfig,
     token: Option<&str>,
@@ -87,7 +89,6 @@ async fn verify_at(
     // answered its headers and then stalled held the caller for twice the
     // configured budget. Errors are stripped of their URL (the endpoint is a
     // constant here, but nothing about this path should carry one).
-    let client = crate::oidc::http_client();
     let call = async {
         let response = client
             .post(url)
@@ -116,6 +117,17 @@ async fn verify_at(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::OnceLock;
+
+    /// Q21-T1: the test endpoints listen on loopback.
+    fn loopback() -> &'static attome_outbound::http::Outbound {
+        static CLIENT: OnceLock<attome_outbound::http::Outbound> = OnceLock::new();
+        CLIENT.get_or_init(|| {
+            let purpose =
+                attome_outbound::http::Purpose::public("test").with_private_hosts(["127.0.0.1"]);
+            attome_outbound::http::shared(purpose.no_redirects(), |b| b)
+        })
+    }
 
     #[tokio::test]
     async fn no_provider_passes_and_a_configured_one_needs_a_token() {
@@ -214,7 +226,16 @@ connection: close
     #[tokio::test]
     async fn a_provider_success_passes() {
         let url = endpoint(Some(http("200 OK", "", r#"{"success":true}"#))).await;
-        assert!(verify_at(&url, &configured(2000), Some("token"), Some("203.0.113.9")).await);
+        assert!(
+            verify_at(
+                loopback(),
+                &url,
+                &configured(2000),
+                Some("token"),
+                Some("203.0.113.9")
+            )
+            .await
+        );
     }
 
     #[tokio::test]
@@ -225,14 +246,14 @@ connection: close
             r#"{"success":false,"error-codes":["invalid-input-response"]}"#,
         )))
         .await;
-        assert!(!verify_at(&url, &configured(2000), Some("token"), None).await);
+        assert!(!verify_at(loopback(), &url, &configured(2000), Some("token"), None).await);
     }
 
     #[tokio::test]
     async fn a_stalled_provider_is_refused_within_the_timeout() {
         let url = endpoint(None).await;
         let started = std::time::Instant::now();
-        assert!(!verify_at(&url, &configured(300), Some("token"), None).await);
+        assert!(!verify_at(loopback(), &url, &configured(300), Some("token"), None).await);
         assert!(
             started.elapsed() < Duration::from_secs(5),
             "the timeout bounds the call, took {:?}",
@@ -243,13 +264,14 @@ connection: close
     #[tokio::test]
     async fn a_non_json_answer_is_refused() {
         let url = endpoint(Some(http("200 OK", "", "<html>not json</html>"))).await;
-        assert!(!verify_at(&url, &configured(2000), Some("token"), None).await);
+        assert!(!verify_at(loopback(), &url, &configured(2000), Some("token"), None).await);
     }
 
     #[tokio::test]
     async fn a_refused_connection_is_refused() {
         assert!(
             !verify_at(
+                loopback(),
                 "http://127.0.0.1:1/siteverify",
                 &configured(2000),
                 Some("token"),
@@ -271,6 +293,6 @@ connection: close
             "",
         )))
         .await;
-        assert!(!verify_at(&url, &configured(2000), Some("token"), None).await);
+        assert!(!verify_at(loopback(), &url, &configured(2000), Some("token"), None).await);
     }
 }

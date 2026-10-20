@@ -78,10 +78,14 @@ pub async fn render_pdf_as(
     margin_mm: Option<f64>,
     pdf_a: Option<&str>,
 ) -> Result<Vec<u8>, AppError> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(config.request_timeout_secs))
-        .build()
-        .map_err(|e| AppError::Internal(format!("failed to build render HTTP client: {e}")))?;
+    // Q21-T1: the render sidecar is the operator's (`docgen.render_service_url`),
+    // usually beside Attome, so its host may be private.
+    let purpose = attome_outbound::http::Purpose::public("docgen-render")
+        .with_private_urls([config.render_service_url.as_str()]);
+    let client = attome_outbound::http::client(purpose, |b| {
+        b.timeout(Duration::from_secs(config.request_timeout_secs))
+    })
+    .map_err(|e| AppError::Internal(format!("failed to build render HTTP client: {e}")))?;
 
     let (paper_width_in, paper_height_in) = paper_size_inches(page_size);
     let margin_in = margin_mm.unwrap_or(10.0) / 25.4;

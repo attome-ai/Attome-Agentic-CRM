@@ -488,7 +488,7 @@ impl ResponseUsage {
     }
 }
 
-/// Cheap to clone (BIN-FX1): the inner `reqwest::Client` is an `Arc`, so a
+/// Cheap to clone (BIN-FX1): the inner HTTP client is an `Arc`, so a
 /// caller builds one per endpoint and clones it per turn, keeping the pooled
 /// connection instead of a new TCP/TLS handshake every call.
 #[derive(Clone)]

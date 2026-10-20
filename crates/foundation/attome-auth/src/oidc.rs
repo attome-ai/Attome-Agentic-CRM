@@ -19,6 +19,7 @@
 //! be obtained from cache OR a live fetch, or the signature/claims don't
 //! check out, the login is rejected — never treated as "skip verification."
 
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use attome_cache::Store;
@@ -64,7 +65,7 @@ const TOKEN_RESPONSE_MAX_BYTES: usize = 64 * 1024;
 /// consume the entire budget in the connect phase.
 ///
 /// BAU-6 (G-10, findings BAU-F3/F4):
-/// - `redirect(Policy::none())`. The default policy follows up to ten
+/// - No redirects (`Purpose::no_redirects`). The default policy follows up to ten
 ///   redirects, and on a 307/308 tower-http re-sends the method *and the body*
 ///   — so a redirecting token endpoint would receive `client_secret`, `code`
 ///   and `code_verifier` again at whatever host the redirect names. Nothing
@@ -74,25 +75,34 @@ const TOKEN_RESPONSE_MAX_BYTES: usize = 64 * 1024;
 ///   per-call `tokio::time::timeout` budget.
 ///
 /// `pub(crate)` so `accounts::verify_google_id_token` and `captcha` share the
-/// same pool (attome-auth hardening 1.6, BAU-6).
-#[expect(
-    clippy::expect_used,
-    reason = "a builder with only timeouts and a redirect policy cannot fail; a TLS backend failure is unrecoverable"
-)]
-pub(crate) fn http_client() -> &'static reqwest::Client {
-    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
-    CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .connect_timeout(HTTP_TIMEOUT)
-            .timeout(HTTP_TIMEOUT)
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            // Only timeouts and a redirect policy are configured, none of
-            // which can fail to apply; a builder failure here would mean the
-            // TLS backend itself failed to initialize, which is not
-            // recoverable and must not be silently downgraded to a default
-            // client.
-            .expect("reqwest::Client::builder with only timeouts and a policy set cannot fail")
+/// same pool (attome-auth hardening 1.6, BAU-6). Their endpoints are public,
+/// so this client reaches public addresses only (Q21-T1).
+pub(crate) fn http_client() -> &'static attome_outbound::http::Outbound {
+    static CLIENT: OnceLock<attome_outbound::http::Outbound> = OnceLock::new();
+    CLIENT.get_or_init(|| build_client(attome_outbound::http::Purpose::public("auth-provider")))
+}
+
+/// Q21-T1: the client for the configured OpenID Connect providers. Their
+/// issuers' hosts may be private (an identity provider on the customer's own
+/// network); any other host, such as one a discovery document names, must be
+/// public.
+static IDP_CLIENT: OnceLock<attome_outbound::http::Outbound> = OnceLock::new();
+
+/// Lists the configured identity providers' issuers, whose hosts may be
+/// private. Call once at boot, before the first sign-in; false when the
+/// client was already built.
+pub fn configure_identity_providers<'a>(issuers: impl IntoIterator<Item = &'a str>) -> bool {
+    let purpose = attome_outbound::http::Purpose::public("oidc").with_private_urls(issuers);
+    IDP_CLIENT.set(build_client(purpose)).is_ok()
+}
+
+fn idp_client() -> &'static attome_outbound::http::Outbound {
+    IDP_CLIENT.get_or_init(|| build_client(attome_outbound::http::Purpose::public("oidc")))
+}
+
+fn build_client(purpose: attome_outbound::http::Purpose) -> attome_outbound::http::Outbound {
+    attome_outbound::http::shared(purpose.no_redirects(), |b| {
+        b.connect_timeout(HTTP_TIMEOUT).timeout(HTTP_TIMEOUT)
     })
 }
 
@@ -496,7 +506,7 @@ async fn read_bounded(
 /// long as it liked. Errors carry no URL: `jwks_uri` comes from the provider's
 /// own discovery document, so it is provider-influenced text.
 async fn http_get_text(url: &str, max_bytes: usize) -> Result<String, AppError> {
-    let client = http_client();
+    let client = idp_client();
     let mut request = client.get(url);
     if let Some(traceparent) = traceparent_header() {
         request = request.header("traceparent", traceparent);
@@ -742,7 +752,7 @@ pub async fn complete_login(
         ("client_secret", provider.client_secret.expose()),
         ("code_verifier", state.code_verifier.as_str()),
     ];
-    let client = http_client();
+    let client = idp_client();
     let mut token_request = client.post(&discovery.token_endpoint).form(&params);
     if let Some(traceparent) = traceparent_header() {
         token_request = token_request.header("traceparent", traceparent);
@@ -1015,9 +1025,16 @@ mod tests {
 
     // ── BAU-6 (G-10, findings BAU-F3/F4): bounded outbound calls ──────────
 
+    /// Q21-T1: these tests' identity provider listens on loopback, so it is
+    /// listed as the configured one (the first call in this binary wins).
+    fn allow_loopback_idp() {
+        let _ = configure_identity_providers(["http://127.0.0.1"]);
+    }
+
     /// A one-connection endpoint that reads the request line, writes `reply`,
     /// and then holds the connection open without closing it.
     async fn stalling_endpoint(reply: &'static str) -> String {
+        allow_loopback_idp();
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/document", listener.local_addr().unwrap());
@@ -1098,6 +1115,7 @@ mod tests {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+        allow_loopback_idp();
         // The redirect target: counts every connection it receives.
         let target = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let target_url = format!("http://{}/stolen", target.local_addr().unwrap());

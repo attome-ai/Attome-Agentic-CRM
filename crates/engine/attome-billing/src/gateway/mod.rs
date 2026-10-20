@@ -252,7 +252,7 @@ pub struct GatewayHttp {
 enum HttpClient {
     Guarded(std::sync::Arc<attome_server::ssrf_guard::GuardedClient>),
     #[cfg(any(test, feature = "test-support"))]
-    Plain(reqwest::Client),
+    Plain(attome_outbound::http::Outbound),
 }
 
 impl GatewayHttp {
@@ -266,18 +266,19 @@ impl GatewayHttp {
         })
     }
 
-    /// A plain client for a local fake gateway in tests (the guard refuses
-    /// loopback addresses by design).
+    /// A client for a local fake gateway in tests: the production client
+    /// refuses loopback addresses by design, so this one lists `base_url`'s
+    /// host as private (Q21-T1).
     #[cfg(any(test, feature = "test-support"))]
     pub fn for_tests(base_url: &str) -> Self {
+        let purpose = attome_outbound::http::Purpose::public("payment-gateway-test")
+            .with_private_urls([base_url])
+            .no_redirects();
         Self {
             base_url: base_url.trim_end_matches('/').to_owned(),
-            client: HttpClient::Plain(
-                reqwest::Client::builder()
-                    .timeout(std::time::Duration::from_secs(GATEWAY_TIMEOUT_SECS))
-                    .build()
-                    .unwrap_or_default(),
-            ),
+            client: HttpClient::Plain(attome_outbound::http::shared(purpose, |b| {
+                b.timeout(std::time::Duration::from_secs(GATEWAY_TIMEOUT_SECS))
+            })),
         }
     }
 

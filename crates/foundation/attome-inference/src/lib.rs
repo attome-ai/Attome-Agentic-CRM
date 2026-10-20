@@ -62,16 +62,15 @@ pub use ocr::{OcrClient, OcrText};
 pub use rerank::RerankClient;
 pub use speech::{Segment, SpeechClient, TRANSCRIPTIONS_PATH, Transcript};
 
-/// An HTTP client a caller built, plus the check that caller requires before
-/// every dial (attome-server plan B5).
+/// An HTTP client a caller built, plus any further check that caller
+/// requires before every dial (attome-server plan B5).
 ///
-/// This crate cannot depend on attome-server, so attome-server's SSRF literal
-/// check arrives as a predicate: `GuardedClient::into_parts` supplies both
-/// halves, and a refused URL never reaches the client. The guarded client's
-/// resolver still screens every hostname at connect time.
+/// The client is an [`attome_outbound::http::Outbound`] (Q21-T1), so its
+/// purpose's address screening applies to every dial: hostnames when they
+/// resolve, IP literals on every request. `precheck` narrows that further.
 #[derive(Clone)]
 pub struct DialClient {
-    http: reqwest::Client,
+    http: attome_outbound::http::Outbound,
     precheck: Option<Arc<DialPrecheck>>,
 }
 
@@ -86,9 +85,9 @@ impl std::fmt::Debug for DialClient {
 }
 
 impl DialClient {
-    /// No per-request check: the in-deployment case, where the SSRF guard
-    /// would refuse exactly the addresses the caller has decided to allow.
-    pub fn unchecked(http: reqwest::Client) -> Self {
+    /// No check beyond the client's own purpose: the in-deployment case,
+    /// whose purpose lists the endpoint's private host.
+    pub fn unchecked(http: attome_outbound::http::Outbound) -> Self {
         Self {
             http,
             precheck: None,
@@ -97,7 +96,7 @@ impl DialClient {
 
     /// `precheck` runs on every URL before it is dialled; `false` refuses it.
     pub fn checked(
-        http: reqwest::Client,
+        http: attome_outbound::http::Outbound,
         precheck: impl Fn(&reqwest::Url) -> bool + Send + Sync + 'static,
     ) -> Self {
         Self {
@@ -110,7 +109,7 @@ impl DialClient {
         &self,
         url: &reqwest::Url,
         label: &'static str,
-    ) -> Result<&reqwest::Client, InferenceError> {
+    ) -> Result<&attome_outbound::http::Outbound, InferenceError> {
         match &self.precheck {
             Some(precheck) if !precheck(url) => Err(InferenceError::Transport {
                 endpoint: label,
@@ -407,7 +406,7 @@ pub struct Usage {
 /// Shared HTTP plumbing for both clients.
 #[derive(Clone)]
 pub(crate) struct Transport {
-    http: reqwest::Client,
+    http: attome_outbound::http::Outbound,
     /// The base URL, parsed **once** here so the host that was classified is
     /// the host that is dialled (BIN-A3). Rebuilding it with
     /// `format!("{base}{path}")` was a retargeting hole: `http://h/v1?x`
@@ -561,21 +560,25 @@ impl Transport {
             return Err(InferenceError::ExternalProviderForbidden(label));
         }
         let timeout = Duration::from_secs(endpoint.request_timeout_secs.max(1));
-        let http = reqwest::Client::builder()
-            .timeout(timeout)
-            // Never longer than the request itself, and never a handshake that
-            // outlives the caller's patience (BIN-C1).
-            .connect_timeout(MAX_CONNECT_TIMEOUT.min(timeout))
-            // BIN-C1/BIN-F3: a redirect re-sends method *and body* — a 307 to
-            // an attacker's host would deliver the whole prompt, and an
-            // https→http downgrade would deliver it in clear. A model server
-            // has no legitimate reason to redirect.
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(|_| InferenceError::Transport {
-                endpoint: label,
-                kind: "client build failed",
-            })?;
+        // Q21-T1: the endpoint is the operator's configuration, so its host
+        // may be private (a model server beside Attome).
+        // BIN-C1/BIN-F3: no redirects — a redirect re-sends method *and body*:
+        // a 307 to an attacker's host would deliver the whole prompt, and an
+        // https→http downgrade would deliver it in clear. A model server has
+        // no legitimate reason to redirect.
+        let purpose = attome_outbound::http::Purpose::public(label)
+            .with_private_urls([endpoint.base_url.as_str()])
+            .no_redirects();
+        let http = attome_outbound::http::client(purpose, |b| {
+            b.timeout(timeout)
+                // Never longer than the request itself, and never a handshake
+                // that outlives the caller's patience (BIN-C1).
+                .connect_timeout(MAX_CONNECT_TIMEOUT.min(timeout))
+        })
+        .map_err(|_| InferenceError::Transport {
+            endpoint: label,
+            kind: "client build failed",
+        })?;
         Ok(Self {
             http,
             base_url,

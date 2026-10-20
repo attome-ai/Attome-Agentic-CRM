@@ -1,6 +1,6 @@
 [package]
 name         = "attome-outbound"
-description  = "Attome's calls to outside services: circuit breakers, retry budgets, bulkheads and request deadlines."
+description  = "Attome's calls to outside services: the guarded HTTP client, circuit breakers, retry budgets, bulkheads and request deadlines."
 version.workspace      = true
 edition.workspace      = true
 rust-version.workspace = true
@@ -12,6 +12,8 @@ publish.workspace      = true
 
 [dependencies]
 attome-types.workspace = true
+reqwest.workspace      = true
+thiserror.workspace    = true
 tokio.workspace        = true
 tracing.workspace      = true
 

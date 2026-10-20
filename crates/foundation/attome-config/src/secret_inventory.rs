@@ -100,6 +100,10 @@ pub const SECRETS: &[SecretSpec] = &[
         &["read-only queries and reports"],
     ),
     value("database.runtime.password", &["every request and job"]),
+    value(
+        "deployment.outbound_proxy",
+        &["calls to outside services (proxy)"],
+    ),
     ring(
         "einvoice.key_encryption_key",
         &["e-invoicing signing keys at rest"],

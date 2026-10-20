@@ -35,6 +35,10 @@ use crate::admin::{audit_service, pin_write_best_effort, simple_field_change};
 
 #[derive(Serialize, ToSchema)]
 pub(crate) struct SettingValueView {
+    /// U10-T3: the stored row this value comes from (its audit trail is
+    /// `entity_name = "setting"`, `record_id = id`); `null` while the code
+    /// default applies, or in a user's own view.
+    id: Option<Uuid>,
     key: String,
     description: String,
     /// U10-T1: the admin console area (`general`, `security`, `features`,
@@ -199,6 +203,7 @@ pub(crate) async fn write_setting(
     }
 
     Ok(SettingValueView {
+        id: Some(row_id),
         key: descriptor.key.to_owned(),
         area: attome_core::setting_descriptor::area(descriptor.key).to_owned(),
         description_ar: attome_core::setting_descriptor::description_ar(descriptor.key)
@@ -260,6 +265,7 @@ async fn list_admin_settings(
                 .iter()
                 .find(|r| r.scope == "deployment" && r.scope_ref.is_none());
             SettingValueView {
+                id: row.map(|r| r.id),
                 key: d.key.to_owned(),
                 area: attome_core::setting_descriptor::area(d.key).to_owned(),
                 description_ar: attome_core::setting_descriptor::description_ar(d.key)
@@ -360,6 +366,7 @@ async fn get_my_settings(
                 value,
                 source: source_label(source).to_owned(),
                 updated_at: None,
+                id: None,
             }
         })
         .collect();

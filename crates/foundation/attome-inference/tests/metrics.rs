@@ -23,6 +23,13 @@ use attome_inference::{
     ChatMessage, EmbedKind, EmbeddingClient, GenerationClient, GenerationRequest,
 };
 
+/// Q21-T1: a client for the fake model server, which listens on loopback.
+fn loopback_client() -> attome_outbound::http::Outbound {
+    let purpose = attome_outbound::http::Purpose::public("test").with_private_hosts(["127.0.0.1"]);
+    attome_outbound::http::client(purpose, |b| b.timeout(Duration::from_secs(5)))
+        .expect("a loopback client")
+}
+
 type Store = Arc<Mutex<HashMap<String, u64>>>;
 
 /// Counts counter increments and histogram samples per full key
@@ -358,12 +365,7 @@ async fn every_call_records_one_sample_with_its_outcome() {
     // The listing call is the third endpoint.
     {
         let server = FakeModelServer::start(vec![json("{\"data\":[{\"id\":\"m\"}]}")]).await;
-        let http_client = attome_inference::DialClient::unchecked(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(5))
-                .build()
-                .expect("client"),
-        );
+        let http_client = attome_inference::DialClient::unchecked(loopback_client());
         let before = rec.snapshot();
         let _ = attome_inference::list_models(&http_client, &server.base_url(), Default::default())
             .await;

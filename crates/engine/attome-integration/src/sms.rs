@@ -43,13 +43,13 @@ const SEND_TIMEOUT: Duration = Duration::from_secs(15);
 /// Longest message sent (ten UCS-2 parts).
 pub const MAX_BODY_CHARS: usize = 670;
 
-fn client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+fn client() -> &'static attome_outbound::http::Outbound {
+    // Q21-T1: the provider's public API only.
+    static CLIENT: OnceLock<attome_outbound::http::Outbound> = OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .timeout(SEND_TIMEOUT)
-            .build()
-            .unwrap_or_default()
+        attome_outbound::http::shared(attome_outbound::http::Purpose::public("sms"), |b| {
+            b.timeout(SEND_TIMEOUT)
+        })
     })
 }
 

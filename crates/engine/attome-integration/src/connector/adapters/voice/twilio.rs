@@ -231,9 +231,11 @@ pub(super) async fn place_call(
         AppError::Validation(format!("{}: config has no from_number", system.name))
     })?;
     let token = Secrets::parse(&credential(state, system).await?).auth_token;
-    let client = reqwest::Client::builder()
-        .timeout(super::TIMEOUT)
-        .build()
+    // Q21-T1: Twilio's public API only.
+    let client =
+        attome_outbound::http::client(attome_outbound::http::Purpose::public("twilio"), |b| {
+            b.timeout(super::TIMEOUT)
+        })
         .map_err(AppError::internal)?;
     let res = client
         .post(format!("{API}/Accounts/{sid}/Calls.json"))
@@ -273,9 +275,11 @@ pub(super) async fn play_and_hang_up(
         return Err(AppError::Validation("not a Twilio call".into()));
     }
     let token = Secrets::parse(&credential(state, system).await?).auth_token;
-    let client = reqwest::Client::builder()
-        .timeout(super::TIMEOUT)
-        .build()
+    // Q21-T1: Twilio's public API only.
+    let client =
+        attome_outbound::http::client(attome_outbound::http::Purpose::public("twilio"), |b| {
+            b.timeout(super::TIMEOUT)
+        })
         .map_err(AppError::internal)?;
     let res = client
         .post(format!("{API}/Accounts/{sid}/Calls/{call_sid}.json"))
