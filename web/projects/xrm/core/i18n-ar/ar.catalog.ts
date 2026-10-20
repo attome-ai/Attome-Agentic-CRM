@@ -220,6 +220,14 @@ export const xrmAr = {
     status: { pending: 'بانتظار الهيئة', cleared: 'معتمدة', reported: 'مُبلّغ عنها', rejected: 'مرفوضة', failed: 'فشلت' },
     profile: { standard: 'ضريبية (اعتماد)', simplified: 'مبسطة (إبلاغ)' },
   },
+  billingSubscriptionTimeline: {
+    title: 'البنود عبر الزمن',
+    line: 'البند',
+    quantity: 'الكمية',
+    price: 'السعر',
+    notInForce: 'غير سارٍ في هذا التاريخ',
+    empty: 'لا توجد بنود في هذا الاشتراك.',
+  },
   billingStatement: {
     title: 'كشف حساب العميل',
     from: 'من', to: 'إلى', show: 'عرض', print: 'طباعة',

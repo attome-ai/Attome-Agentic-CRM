@@ -10,5 +10,10 @@ export {
 } from './data/billing.service';
 export { formatAmount, minorUnits } from './data/money';
 export { registerBillingEntityForms } from './provide-billing-entity-forms';
+// F3-T14: a subscription's lines over time, as of a date.
+export {
+  SubscriptionTimelineComponent, axis as timelineAxis, place as timelinePlace,
+} from './subscription-timeline/subscription-timeline.component';
+export type { Placed, TimelineRow, TimelineSegment } from './subscription-timeline/subscription-timeline.component';
 export { ZatcaOnboardingComponent, canOnboard } from './zatca/zatca-onboarding.component';
 export type { EinvoiceDevice, NewEinvoiceDevice } from './zatca/zatca-onboarding.component';

@@ -240,6 +240,14 @@ export const xrmEn = {
     status: { pending: 'Waiting for ZATCA', cleared: 'Cleared', reported: 'Reported', rejected: 'Rejected', failed: 'Failed' },
     profile: { standard: 'Standard (cleared)', simplified: 'Simplified (reported)' },
   },
+  billingSubscriptionTimeline: {
+    title: 'Lines over time',
+    line: 'Line',
+    quantity: 'Quantity',
+    price: 'Price',
+    notInForce: 'Not in force on this date',
+    empty: 'This subscription has no lines.',
+  },
   billingStatement: {
     title: 'Account statement',
     from: 'From', to: 'To', show: 'Show', print: 'Print',

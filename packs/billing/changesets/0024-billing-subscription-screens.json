@@ -1,0 +1,189 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0162fda55d1e5e9a0e7e25503196d102ee094304d91fb0cd80bb376610c6ddf9",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Subscription screens (F3-T14): views of active subscriptions, those renewing in 90 days and trials ending within two weeks, and Billing > Subscriptions in the sidebar for those who read subscriptions.",
+  "format": "attome-changeset/v1",
+  "id": "019a0b1c-c7b3-7e64-9d77-2a3f8b2e9f4a",
+  "layer": "product",
+  "name": "billing-subscription-screens",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active subscriptions",
+          "required_privilege": "subscription.read",
+          "sql": "SELECT id, name, account_ref, status, start_date, end_date, trial_end_date, billing_frequency, renewal_mode, currency FROM \"subscription\" WHERE is_active IS NOT FALSE AND status = 'active' ORDER BY name",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "subscription",
+        "query": "Active subscriptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Renewing in 90 days",
+          "required_privilege": "subscription.read",
+          "sql": "SELECT id, name, account_ref, status, start_date, end_date, trial_end_date, billing_frequency, renewal_mode, currency FROM \"subscription\" WHERE is_active IS NOT FALSE AND status = 'active' AND end_date >= now() AND end_date < now() + interval '90 days' ORDER BY end_date, name",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "subscription",
+        "query": "Renewing in 90 days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Trials ending",
+          "required_privilege": "subscription.read",
+          "sql": "SELECT id, name, account_ref, status, start_date, end_date, trial_end_date, billing_frequency, renewal_mode, currency FROM \"subscription\" WHERE is_active IS NOT FALSE AND status = 'trial' AND trial_end_date < now() + interval '14 days' ORDER BY trial_end_date, name",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "subscription",
+        "query": "Trials ending"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active subscriptions",
+          "query": {
+            "entity": "subscription",
+            "name": "Active subscriptions"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "subscription",
+        "view": "Active subscriptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Renewing in 90 days",
+          "query": {
+            "entity": "subscription",
+            "name": "Renewing in 90 days"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "subscription",
+        "view": "Renewing in 90 days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Trials ending",
+          "query": {
+            "entity": "subscription",
+            "name": "Trials ending"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "subscription",
+        "view": "Trials ending"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-sync",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "billing",
+          "path": [
+            "Billing",
+            "Subscriptions"
+          ],
+          "privileges": [
+            "subscription.read"
+          ],
+          "route": "/xrm/entity/subscription/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "path": "Billing/Subscriptions"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 24,
+  "title": "Pack: subscription views and sidebar"
+}
