@@ -1023,6 +1023,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/business-rules/{id}/cleanup",
             get(crate::validation_simulation::cleanup_queue),
         )
+        .route(
+            "/api/v1/admin/validation/stats",
+            get(crate::validation_stats::validation_stats),
+        )
 }
 
 /// This file's slice of the workspace OpenAPI document.
@@ -1038,7 +1042,8 @@ pub fn routes() -> Router<EngineState> {
     publish_rule,
     explain_rules,
     crate::validation_simulation::simulate_rule,
-    crate::validation_simulation::cleanup_queue
+    crate::validation_simulation::cleanup_queue,
+    crate::validation_stats::validation_stats
 ))]
 struct ApiDocFragment;
 

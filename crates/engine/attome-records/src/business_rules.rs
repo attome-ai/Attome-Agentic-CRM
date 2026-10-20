@@ -99,6 +99,19 @@ pub fn audience<'a>(principal: &Principal<'a>) -> RuleAudience<'a> {
     }
 }
 
+/// A3-T8: the channel a writer came in through, as the rejection log names
+/// it.
+fn channel(audience: &RuleAudience<'_>) -> &'static str {
+    match audience {
+        RuleAudience::System => "system",
+        RuleAudience::Staff {
+            interactive: true, ..
+        } => "staff",
+        RuleAudience::Staff { .. } => "service",
+        RuleAudience::Portal { .. } => "portal",
+    }
+}
+
 /// Compiled conditions (see the module doc for the cache contract).
 static CONDITION_CACHE: LazyLock<HotCache<Arc<CompiledCondition>>> =
     LazyLock::new(|| create_hot_cache(10_000, 24 * 60 * 60));
@@ -237,6 +250,10 @@ pub(crate) struct WritePipeline<'a> {
     /// A3-T4: the refusing checks the last judgement let through on that
     /// reason; each becomes a security event once the record is written.
     overridden: Vec<RuleFailure>,
+    /// A3-T8: how the writer came in, and the staff user, for the
+    /// rejection log.
+    channel: &'static str,
+    user: Option<Uuid>,
 }
 
 /// What step 1 decided: the rules whose `set_value` policies fire.
@@ -276,6 +293,11 @@ impl<'a> WritePipeline<'a> {
             }
             _ => None,
         };
+        pipeline.channel = channel(&pipeline.audience);
+        pipeline.user = match *principal {
+            Principal::Staff(ctx) => Some(ctx.user_id),
+            Principal::Portal(_) => None,
+        };
         Some(pipeline)
     }
 
@@ -299,6 +321,8 @@ impl<'a> WritePipeline<'a> {
             tag_actions: Vec::new(),
             override_reason: None,
             overridden: Vec::new(),
+            channel: "system",
+            user: None,
         }
     }
 
@@ -558,7 +582,8 @@ impl<'a> WritePipeline<'a> {
                 today: self.now.date_naive(),
                 override_reason: self.override_reason.as_deref(),
             },
-        )?;
+        )
+        .inspect_err(|e| self.log_rejection(e))?;
         let warnings = judged.warnings;
         self.overridden = judged.overridden;
         // B4-T3: the tag outcomes of the rules that hold.
@@ -577,6 +602,32 @@ impl<'a> WritePipeline<'a> {
             }
         }
         Ok(warnings)
+    }
+
+    /// A3-T8: hands each check that refused this write to the rejection
+    /// log (batched, off the request path).
+    fn log_rejection(&self, error: &AppError) {
+        let (
+            Some(state),
+            AppError::RuleViolation {
+                details: Some(details),
+                ..
+            },
+        ) = (self.state, error)
+        else {
+            return;
+        };
+        let log = crate::rejection_log::RejectionLog::shared(&state.base.db);
+        for failure in &details.rules {
+            log.record(crate::rejection_log::Rejection {
+                rule_id: failure.rule_id,
+                entity: self.entity.to_owned(),
+                attribute: failure.field.clone(),
+                channel: self.channel,
+                user_ref: self.user,
+                rejected_at: self.now,
+            });
+        }
     }
 
     /// A3-T4: records each refusing check the caller overrode, with the

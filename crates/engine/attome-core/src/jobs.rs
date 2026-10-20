@@ -753,6 +753,10 @@ pub enum EngineJob {
     /// every registered entity's snapshot rather than replaying an
     /// enqueue-time snapshot.
     CatalogUsageRollup,
+    /// A3-T8: nightly; rewrites each entity's validity score (the share of
+    /// its live records passing every active business rule) in
+    /// `validation_score` from a full scan. Pure trigger.
+    ValidationScoreSweep,
     /// Deliberately **not** routed through `attome_compliance::retention`'s
     /// propose/approve/execute ledger (`audit_retention_action`) the way
     /// partition-archive/entity-purge are: that ledger's dedup index
@@ -1095,6 +1099,7 @@ impl EngineJob {
             | Self::CatalogLineageBackfill
             | Self::CatalogDashboardLineageSweep
             | Self::CatalogUsageRollup
+            | Self::ValidationScoreSweep
             | Self::PruneExpiredMemories
             | Self::ProcessExtractionSweep
             | Self::WorkQueueEscalationSweep
@@ -1249,6 +1254,7 @@ impl EngineJob {
             EngineJob::CatalogLineageBackfill => "CatalogLineageBackfill",
             EngineJob::CatalogDashboardLineageSweep => "CatalogDashboardLineageSweep",
             EngineJob::CatalogUsageRollup => "CatalogUsageRollup",
+            EngineJob::ValidationScoreSweep => "ValidationScoreSweep",
             EngineJob::DocgenRender { .. } => "DocgenRender",
             EngineJob::BillingExecuteRun { .. } => "BillingExecuteRun",
             EngineJob::ContentArticleIndex { .. } => "ContentArticleIndex",
@@ -1392,6 +1398,7 @@ impl EngineJob {
             | Self::CatalogLineageBackfill
             | Self::CatalogDashboardLineageSweep
             | Self::CatalogUsageRollup
+            | Self::ValidationScoreSweep
             | Self::PredictScoringSweep
             | Self::PredictOutcomeFillSweep
             | Self::PruneChangeFeed
@@ -1552,6 +1559,7 @@ impl EngineJob {
             | Self::CatalogLineageBackfill
             | Self::CatalogDashboardLineageSweep
             | Self::CatalogUsageRollup
+            | Self::ValidationScoreSweep
             | Self::PredictScoringSweep
             | Self::PredictOutcomeFillSweep
             | Self::PruneChangeFeed
@@ -2600,6 +2608,8 @@ mod tests {
     #[test]
     fn catalog_usage_rollup_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::CatalogUsageRollup);
+        assert_round_trips(EngineJob::ValidationScoreSweep);
+        assert_eq!(EngineJob::ValidationScoreSweep.priority(), JobPriority::Low);
         assert!(!EngineJob::CatalogUsageRollup.is_batch());
         assert_eq!(EngineJob::CatalogUsageRollup.priority(), JobPriority::Low);
     }

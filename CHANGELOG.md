@@ -143,6 +143,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Rejections and validity per entity (A3-T8): every write a check refuses is logged, in batches
+  off the request path, with its rule, field, channel and user (migration 0183); a nightly sweep scores
+  each entity by the share of its stored records passing every active check.
+  `GET /api/v1/admin/validation/stats` returns both.
 - Simulate a check before publishing it (A3-T5): `POST /api/v1/admin/business-rules/{id}/simulate`
   runs the rule over the entity's stored records (up to 10,000) and returns how many it would refuse
   and the first 50 of them. Publishing a rule now queues a full scan that fills its clean-up queue,

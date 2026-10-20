@@ -37,6 +37,7 @@ serde.workspace           = true
 serde_json.workspace      = true
 sha2.workspace            = true
 sqlx.workspace            = true
+tokio.workspace           = true
 tracing.workspace         = true
 utoipa.workspace          = true
 uuid.workspace            = true
@@ -44,7 +45,6 @@ uuid.workspace            = true
 [dev-dependencies]
 attome-storage.workspace = true
 attome-testkit = { workspace = true, features = ["app-config"] }
-tokio.workspace          = true
 tower.workspace          = true
 
 [lints]

@@ -1661,6 +1661,10 @@ async fn dispatch_platform_job(
             }
         }
         // M18 Data Catalog Phase 1 (D-466) — see this variant's doc comment.
+        // A3-T8: nightly validity score per entity.
+        EngineJob::ValidationScoreSweep => {
+            attome_api::validation_stats::run_score_sweep(&attome_state).await?;
+        }
         EngineJob::CatalogUsageRollup => {
             let stats = attome_api::catalog_admin::run_usage_rollup(&db).await?;
             tracing::info!(
@@ -2688,6 +2692,7 @@ const DEDUP_KEY_RESOURCE_UTILIZATION_SWEEP: &str = "resource-utilization-sweep";
 const DEDUP_KEY_CATALOG_LINEAGE_BACKFILL: &str = "catalog-lineage-backfill";
 const DEDUP_KEY_CATALOG_DASHBOARD_LINEAGE_SWEEP: &str = "catalog-dashboard-lineage-sweep";
 const DEDUP_KEY_CATALOG_USAGE_ROLLUP: &str = "catalog-usage-rollup";
+const DEDUP_KEY_VALIDATION_SCORE_SWEEP: &str = "validation-score-sweep";
 const DEDUP_KEY_PREDICT_SCORING_SWEEP: &str = "predict-scoring-sweep";
 const DEDUP_KEY_PREDICT_OUTCOME_FILL_SWEEP: &str = "predict-outcome-fill-sweep";
 const DEDUP_KEY_PRUNE_CHANGE_FEED: &str = "prune-change-feed";
@@ -3533,6 +3538,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::CatalogLineageBackfill => DEDUP_KEY_CATALOG_LINEAGE_BACKFILL,
         EngineJob::CatalogDashboardLineageSweep => DEDUP_KEY_CATALOG_DASHBOARD_LINEAGE_SWEEP,
         EngineJob::CatalogUsageRollup => DEDUP_KEY_CATALOG_USAGE_ROLLUP,
+        EngineJob::ValidationScoreSweep => DEDUP_KEY_VALIDATION_SCORE_SWEEP,
         EngineJob::PredictScoringSweep => DEDUP_KEY_PREDICT_SCORING_SWEEP,
         EngineJob::PredictOutcomeFillSweep => DEDUP_KEY_PREDICT_OUTCOME_FILL_SWEEP,
         EngineJob::FleetPoll => DEDUP_KEY_FLEET_POLL,
@@ -5074,6 +5080,18 @@ pub fn spawn_catalog_usage_rollup_scheduler(db: DbPool, interval: std::time::Dur
         EngineJob::CatalogUsageRollup,
         DEDUP_KEY_CATALOG_USAGE_ROLLUP,
         "catalog usage rollup",
+    );
+}
+
+/// A3-T8 — see `EngineJob::ValidationScoreSweep`'s doc comment. Once/day:
+/// a validity score is a nightly snapshot.
+pub fn spawn_validation_score_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::ValidationScoreSweep,
+        DEDUP_KEY_VALIDATION_SCORE_SWEEP,
+        "validation score sweep",
     );
 }
 

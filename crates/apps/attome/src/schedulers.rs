@@ -507,6 +507,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),
     );
+
+    // A3-T8: nightly validity score per entity.
+    crate::jobs::spawn_validation_score_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // D-792 (FLEET-CONSOLE-DESIGN.md §6.3) — the fleet console's poll, only in
     // a `fleet-console` build whose gate is open in this process (the same
     // pure decision `boot::init` made and logged); never on a customer server.

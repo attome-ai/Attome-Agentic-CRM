@@ -27,6 +27,17 @@ use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// One `note_reply` row as the move test reads it.
+type ReplyRow = (
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    chrono::DateTime<chrono::Utc>,
+);
+
 async fn provision(db: &PgPool, name: &str, fields: &[(&str, &str)]) {
     let id = attome_metadata::provision::ensure_entity(db, name, name, None, false)
         .await
@@ -111,15 +122,7 @@ async fn replies_become_records_and_old_replies_are_kept() {
         .await
         .expect("move replies");
 
-    let rows: Vec<(
-        String,
-        String,
-        String,
-        Option<String>,
-        Option<Uuid>,
-        Option<Uuid>,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let rows: Vec<ReplyRow> = sqlx::query_as(
         "SELECT note_text, entity_name, record_id, attachments, created_by, owner_ref, created_at \
                FROM note_reply WHERE note_id = $1 ORDER BY created_at, note_text",
     )

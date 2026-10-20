@@ -93,14 +93,18 @@ impl Simulation {
 }
 
 /// One live record as the scan reads it.
-struct Stored {
-    id: Uuid,
+pub(crate) struct Stored {
+    pub(crate) id: Uuid,
     owner: Option<Uuid>,
-    data: Map<String, Value>,
+    pub(crate) data: Map<String, Value>,
 }
 
 /// The next batch of the entity's live records after `after`, by id.
-async fn batch(state: &EngineState, entity: &str, after: Uuid) -> Result<Vec<Stored>, AppError> {
+pub(crate) async fn batch(
+    state: &EngineState,
+    entity: &str,
+    after: Uuid,
+) -> Result<Vec<Stored>, AppError> {
     let sql = format!(
         "SELECT to_jsonb(t) FROM {} t WHERE id > $1 AND is_active IS NOT FALSE \
          ORDER BY id LIMIT $2",
