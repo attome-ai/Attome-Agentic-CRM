@@ -220,10 +220,10 @@ pub async fn evaluate(state: &EngineState, day: NaiveDate) -> Result<Vec<Alert>,
 
     let dmarc: Vec<(String, NaiveDate, i64, i64)> = sqlx::query_as(
         "SELECT rep.domain, rep.date_begin::date, \
-                COALESCE(sum(rec.count) FILTER (WHERE COALESCE(rec.dkim_result, '') <> 'pass' \
-                                                  AND COALESCE(rec.spf_result, '') <> 'pass'), 0)::int8, \
-                COALESCE(sum(rec.count), 0)::int8 \
-           FROM marketing_dmarc_report rep JOIN marketing_dmarc_record rec ON rec.report_id = rep.id \
+                COALESCE(sum(rec.message_count) FILTER (WHERE COALESCE(rec.dkim, '') <> 'pass' \
+                                                  AND COALESCE(rec.spf, '') <> 'pass'), 0)::int8, \
+                COALESCE(sum(rec.message_count), 0)::int8 \
+           FROM marketing_dmarc_report rep JOIN marketing_dmarc_record rec ON rec.report_ref = rep.id \
           WHERE rep.date_begin::date IN ($1, $1::date - 1) \
           GROUP BY rep.domain, rep.date_begin::date",
     )
