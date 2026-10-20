@@ -64,6 +64,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<dialer::skip::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::build::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::telephony::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<territory::ApiDocFragment as utoipa::OpenApi>::openapi());

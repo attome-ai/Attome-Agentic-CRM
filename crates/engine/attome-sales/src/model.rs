@@ -82,6 +82,10 @@ impl EngineModel for SalesModel {
                 post(crate::dialer::outcome::post_sales_call_outcome),
             )
             .route(
+                "/api/v1/sales/call-list-members/{id}/skip",
+                post(crate::dialer::skip::post_sales_call_skip),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/splits",
                 put(crate::split_store::put_sales_splits),
             )
