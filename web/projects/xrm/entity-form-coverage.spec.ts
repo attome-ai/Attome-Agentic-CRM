@@ -7,6 +7,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import type { EntityRouteOverride, EntityRouteRegistry } from '@attome/xrm/core/entity';
 import { registerSecurityEntityForms } from '@attome/xrm/core/security/registration';
 import { registerCoreEntityForms } from '@attome/xrm/core/entity/registration';
@@ -114,7 +115,7 @@ describe('entity form coverage (SYSTEM-CHANGES.md Topic 14)', () => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
-        provideAttomeI18n(), provideXrmI18n(),
+        provideAttomeI18n(), provideXrmI18n(xrmEn),
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
       ],
     });

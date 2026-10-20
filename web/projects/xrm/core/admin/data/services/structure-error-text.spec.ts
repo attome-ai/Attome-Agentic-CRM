@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { xrmEn } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { STABLE_ERROR_CODES, stableErrorCode } from './admin-http';
 import { structureErrorText } from './structure-error-text';

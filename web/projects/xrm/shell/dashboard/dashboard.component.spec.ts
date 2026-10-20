@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { AppContextService } from '../services/app-context.service';
 import { DashboardComponent } from './dashboard.component';
 
@@ -62,7 +63,7 @@ describe('DashboardComponent', () => {
       providers: [
         { provide: AppContextService, useValue: appContext },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-        provideAttomeI18n(), provideXrmI18n(),
+        provideAttomeI18n(), provideXrmI18n(xrmEn),
       ],
     });
     const fixture = TestBed.createComponent(DashboardComponent);

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ApiService, ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { DialogService } from '@attome/base/dialog';
 import { EntityRecord } from '@attome/xrm';
 import { EntityRecordResponse, EntityService } from '@attome/xrm/core/entity';
@@ -121,7 +122,7 @@ function setup(options: SetupOptions = {}) {
       { provide: ApiService, useValue: apiService },
       { provide: DialogService, useValue: dialogService },
       ...(options.render
-        ? [{ provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } }, provideAttomeI18n(), provideXrmI18n()]
+        ? [{ provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } }, provideAttomeI18n(), provideXrmI18n(xrmEn)]
         : [{ provide: LangService, useValue: { translate: (key: string) => key } }]),
     ],
   });

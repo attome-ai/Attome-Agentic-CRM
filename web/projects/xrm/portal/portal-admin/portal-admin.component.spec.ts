@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { AdminService } from '@attome/xrm/core/admin/data';
 
 import { AuthPolicy, PortalAdminService, PortalDetail } from '../portal-admin.service';
@@ -67,7 +68,7 @@ function setup(overrides: Partial<Record<keyof PortalAdminService, unknown>> = {
     providers: [
       { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
       provideAttomeI18n(),
-      provideXrmI18n(),
+      provideXrmI18n(xrmEn),
       { provide: PortalAdminService, useValue: service },
       { provide: AdminService, useValue: admin },
       { provide: DialogService, useValue: { confirm: vi.fn(async () => confirm) } },

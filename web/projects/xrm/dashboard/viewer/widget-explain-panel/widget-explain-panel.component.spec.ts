@@ -3,6 +3,7 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { DashboardService, WidgetExplanation } from '@attome/xrm/dashboard/data';
 import { WidgetExplainPanelComponent } from './widget-explain-panel.component';
 
@@ -32,7 +33,7 @@ function render(e: WidgetExplanation): string {
     imports: [WidgetExplainPanelComponent],
     providers: [
       { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-      provideAttomeI18n(), provideXrmI18n(),
+      provideAttomeI18n(), provideXrmI18n(xrmEn),
       { provide: DashboardService, useValue: { widgetExplain: vi.fn(() => of(e)) } },
     ],
   });

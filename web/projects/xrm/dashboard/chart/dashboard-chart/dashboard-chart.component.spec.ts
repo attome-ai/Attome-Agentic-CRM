@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { ChartBucket, ChartCategory, ChartKind, ChartSeries, DashboardChartComponent } from './dashboard-chart.component';
 
 // Dashboard 10/10 Phase 4.1 (R-28) — the chart primitive: text alternative,
@@ -25,7 +26,7 @@ function render(kind: ChartKind, options: { interactive?: boolean; series?: Char
 } {
   TestBed.configureTestingModule({
     imports: [DashboardChartComponent],
-    providers: [{ provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } }, provideAttomeI18n(), provideXrmI18n()],
+    providers: [{ provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } }, provideAttomeI18n(), provideXrmI18n(xrmEn)],
   });
   const fixture = TestBed.createComponent(DashboardChartComponent);
   fixture.componentRef.setInput('kind', kind);

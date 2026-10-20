@@ -1,4 +1,4 @@
-// English catalog for @attome/xrm (NGB-5.2c, D-761). Registered by
+// English catalog for @attome/xrm (NGB-5.2c, D-761), a lazy chunk registered by
 // `provideXrmI18n()` in the xrm route tree; Arabic is the lazy
 // `@attome/xrm/core/i18n-ar` entry point and mirrors this key-for-key.
 

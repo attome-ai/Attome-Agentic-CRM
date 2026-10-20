@@ -3,7 +3,8 @@ import { join, relative, resolve } from 'node:path';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
-import { provideXrmI18n, xrmEn } from '@attome/xrm/core/i18n';
+import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { describe, expect, it } from 'vitest';
 import { hostAr } from './ar.catalog';
@@ -88,7 +89,7 @@ describe('i18n catalog coverage — all layers', () => {
       providers: [
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
         provideAttomeI18n(),
-        provideXrmI18n(),
+        provideXrmI18n(xrmEn),
         provideHostI18n(),
       ],
     });

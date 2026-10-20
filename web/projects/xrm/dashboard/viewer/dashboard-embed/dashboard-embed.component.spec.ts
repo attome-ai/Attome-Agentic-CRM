@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { EntityRecord } from '@attome/xrm';
 import { EntityRecordResponse, EntityService } from '@attome/xrm/core/entity';
 import { DashboardService, PublishedView } from '@attome/xrm/dashboard/data';
@@ -75,7 +76,7 @@ function setup(options: {
       // non-embedded) needs a live `ActivatedRoute` to resolve at all.
       provideRouter([]),
       { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-      provideAttomeI18n(), provideXrmI18n(),
+      provideAttomeI18n(), provideXrmI18n(xrmEn),
       {
         provide: EntityService,
         useValue: {

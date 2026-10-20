@@ -263,9 +263,27 @@ export class LangService {
     return fallbackChain(lang, this.languages).filter(code => code !== BASE_LANGUAGE);
   }
 
+  /**
+   * A layer's English: at once when bundled, otherwise tracked so
+   * `catalogsReady` holds the layer's route until it lands. A failed load is
+   * logged and leaves the layer's keys untranslated until the next mount.
+   */
   private mergeEn(layer: LayerCatalog): void {
-    this.transloco.setTranslation(layer.en, 'en', { merge: true });
-    this.catalogVersion.update(v => v + 1);
+    const en = layer.en;
+    if (typeof en !== 'function') {
+      this.transloco.setTranslation(en, 'en', { merge: true });
+      this.catalogVersion.update(v => v + 1);
+      return;
+    }
+    void this.track(en().then(
+      catalog => {
+        this.transloco.setTranslation(catalog, 'en', { merge: true });
+        this.catalogVersion.update(v => v + 1);
+      },
+      (error: unknown) => {
+        console.error(`[attome] a layer's 'en' catalog failed to load.`, error);
+      },
+    ));
   }
 
   /**

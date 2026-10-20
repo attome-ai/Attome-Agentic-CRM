@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { EntityService } from '@attome/xrm/core/entity';
 import { DashboardService, WidgetRecordsResponse } from '@attome/xrm/dashboard/data';
 import { WidgetRecordsDrawerComponent } from './widget-records-drawer.component';
@@ -42,7 +43,7 @@ function setup(responses: WidgetRecordsResponse[]) {
     imports: [WidgetRecordsDrawerComponent],
     providers: [
       { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-      provideAttomeI18n(), provideXrmI18n(),
+      provideAttomeI18n(), provideXrmI18n(xrmEn),
       { provide: Router, useValue: { navigateByUrl } },
       { provide: DashboardService, useValue: { widgetRecords } },
       { provide: EntityService, useValue: { exportRecords } },

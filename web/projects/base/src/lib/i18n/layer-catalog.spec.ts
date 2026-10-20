@@ -87,4 +87,28 @@ describe('provideLayerCatalog', () => {
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });
+
+  it('a layer whose English is a loader holds its route until the English lands, and loads it once', async () => {
+    setUp(undefined, false);
+    let release!: (c: typeof layerEn) => void;
+    const loadEn = vi.fn(() => new Promise<typeof layerEn>(r => { release = r; }));
+    const lazyLayer = () => createEnvironmentInjector(
+      [provideLayerCatalog(loadEn, () => Promise.resolve(layerAr))],
+      TestBed.inject(EnvironmentInjector),
+    );
+    const route = lazyLayer();
+    lazyLayer();
+    const lang = TestBed.inject(LangService);
+
+    let passed = false;
+    const guard = (runInInjectionContext(route, () => layerCatalogsReady({} as never, {} as never)) as Promise<boolean>)
+      .then(v => { passed = v; });
+    await Promise.resolve();
+    expect(passed).toBe(false);
+    release(layerEn);
+    await guard;
+    expect(passed).toBe(true);
+    expect(lang.translate('layerDemo.title')).toBe('Layer title');
+    expect(loadEn).toHaveBeenCalledTimes(1);
+  });
 });

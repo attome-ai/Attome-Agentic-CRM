@@ -2,12 +2,14 @@ import { Injectable } from '@angular/core';
 import type { Translation } from '@jsverse/transloco';
 
 /**
- * One layer's own strings (NGB-5.2a, D-761): English bundled with the layer,
- * Arabic fetched the first time Arabic is needed. B20-T1: `loaders` adds the
- * layer's catalogue for any other configured language, keyed by its code.
+ * One layer's own strings (NGB-5.2a, D-761): English bundled with the layer
+ * or loaded when the layer mounts, Arabic fetched the first time Arabic is
+ * needed. B20-T1: `loaders` adds the layer's catalogue for any other
+ * configured language, keyed by its code.
  */
 export interface LayerCatalog {
-  readonly en: Translation;
+  /** The catalog itself, or a loader for a layer that keeps it in its own chunk. */
+  readonly en: Translation | (() => Promise<Translation>);
   readonly loadAr: () => Promise<Translation>;
   readonly loaders?: Readonly<Record<string, () => Promise<Translation>>>;
 }
@@ -31,7 +33,7 @@ export class LayerCatalogRegistry {
     return this.all;
   }
 
-  /** Idempotent per English catalog: a layer mounted on two routes registers once. */
+  /** Idempotent per English catalog (or loader): a layer mounted on two routes registers once. */
   add(layer: LayerCatalog): void {
     if (this.all.some(l => l.en === layer.en)) return;
     this.all.push(layer);

@@ -1,4 +1,4 @@
-// Arabic catalog for @attome/xrm — mirrors core/i18n/en.catalog.ts
+// Arabic catalog for @attome/xrm — mirrors core/i18n-en/en.catalog.ts
 // key-for-key (NGB-5.2c, D-761).
 
 export const xrmAr = {

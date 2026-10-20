@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
+import { xrmEn } from '@attome/xrm/core/i18n-en';
 
 import { DeclarativeWidgetRendererComponent } from './declarative-widget-renderer.component';
 import type { DeclarativeWidgetConfig } from './declarative-widget.types';
@@ -31,7 +32,7 @@ describe('DeclarativeWidgetRendererComponent — no HTML injection through confi
       imports: [DeclarativeWidgetRendererComponent],
       providers: [
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-        provideAttomeI18n(), provideXrmI18n(),
+        provideAttomeI18n(), provideXrmI18n(xrmEn),
       ],
     });
     const fixture = TestBed.createComponent(DeclarativeWidgetRendererComponent);
@@ -81,7 +82,7 @@ describe('DeclarativeWidgetRendererComponent — no HTML injection through confi
       imports: [DeclarativeWidgetRendererComponent],
       providers: [
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-        provideAttomeI18n(), provideXrmI18n(),
+        provideAttomeI18n(), provideXrmI18n(xrmEn),
       ],
     });
     const fixture = TestBed.createComponent(DeclarativeWidgetRendererComponent);
