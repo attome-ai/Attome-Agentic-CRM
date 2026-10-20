@@ -132,6 +132,18 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Subscriptions (F3-T5, F3-T6): `/api/v1/billing/subscriptions` creates a subscription by hand or from
+  an accepted quote, reads it as of a date (`?as_of=`), amends it from a date (closing and opening
+  dated segments, with a planned proration charge or credit for the rest of the period), reverses an
+  amendment nothing has invoiced, cancels (at term end or on a date; `subscription.cancel`), pauses
+  and resumes. A new price needs `subscription.amend_price`. Each change holds a per-subscription
+  lock (409 for a second one at the same time) and emits `billing.subscription.*` change events.
+- Reporting lines (D23-T4): a contact's `reports_to` and `dotted_line_ref` change only through
+  `PUT /api/v1/sales/contacts/{id}/manager` (If-Match), which keeps the manager in the contact's
+  account or group and refuses loops; the answer names the previous manager for undo.
+- Plays (D26-T2): `GET /api/v1/sales/opportunities/{id}/plays` lists the playbooks whose condition
+  holds for the deal, and the opportunity form shows them.
+- Dialer (D21-T7): `POST /api/v1/sales/call-list-members/{id}/skip` passes over a claimed member.
 - Contract drafting (W1-T6): `POST /api/v1/contract/contracts/{id}/draft` adds the contract's next
   version and queues a render of its type's draft template (`contract_type.draft_template_ref`, a
   document template) as the caller, in the contract's `language`, with the clauses chosen for it
@@ -1793,6 +1805,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `contact.reports_to` and `contact.dotted_line_ref` are engine-managed (D23-T4): a create or
+  `PATCH /api/v1/contact/{id}` naming them is refused; set them with
+  `PUT /api/v1/sales/contacts/{id}/manager`.
+- `GET /api/v1/cobrowse/sessions/{id}/messages` and `GET /api/v1/cobrowse/visitor/messages` answer a
+  `CursorPage` (`items`, `next_cursor`) instead of a bare array, and `GET /api/v1/me/mail-connections`
+  a `PaginatedResponse`; the co-browse embed reads `items`.
 - `POST /api/v1/admin/content/pages/{id}/publish` (K5-T1): in a space with `require_approval` it
   answers 202 with `status: "pending_approval"`, `published_at: null` and `approval_request_id`;
   every publish result also carries `version_number`.
