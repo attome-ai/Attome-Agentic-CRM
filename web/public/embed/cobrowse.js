@@ -249,7 +249,8 @@
     fetch(url).then(function (r) {
       if (r.status === 404) { stop(t.stopped); return null; }
       return r.ok ? r.json() : null;
-    }).then(function (frames) {
+    }).then(function (page) {
+      var frames = page && page.items;
       if (!frames) return;
       after = lastId(frames, after);
       frames.forEach(function (f) {

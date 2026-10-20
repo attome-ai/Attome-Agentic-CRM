@@ -1,3 +1,3 @@
 # Y13-T3: reviewed exceptions to bounded_state.rs, one per line:
 #   <path from the workspace root> | <text the finding contains> | <why it may be unbounded>
-# None today.
+crates/foundation/attome-cache/src/tiered.rs | Cache::builder() without max_capacity | l1_builder returns the builder unbuilt; both callers (TieredCache::new, with_quota) set max_capacity before build()

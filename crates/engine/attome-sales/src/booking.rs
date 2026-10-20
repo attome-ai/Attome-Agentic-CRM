@@ -566,8 +566,9 @@ async fn prospect(
             continue;
         }
         let found: Result<Option<Uuid>, sqlx::Error> = sqlx::query_scalar(&format!(
-            "SELECT id FROM {entity} WHERE lower(email) = lower($1) AND is_active IS NOT FALSE \
-              ORDER BY id LIMIT 1"
+            "SELECT id FROM {} WHERE lower(email) = lower($1) AND is_active IS NOT FALSE \
+              ORDER BY id LIMIT 1",
+            attome_core::quote_ident(entity)
         ))
         .bind(email)
         .fetch_optional(&state.base.db)

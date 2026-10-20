@@ -18,7 +18,7 @@ use attome_audit::AuditOperation;
 use attome_core::EngineState;
 use attome_server::authz::{Authorized, SelfService};
 use attome_server::security::SecurityContext;
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, CursorPage, ErrorResponse};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
@@ -357,8 +357,8 @@ async fn read(
     session_id: Uuid,
     other: &str,
     after: Option<Uuid>,
-) -> Result<Vec<Frame>, AppError> {
-    sqlx::query_as(
+) -> Result<CursorPage<Frame>, AppError> {
+    let frames: Vec<Frame> = sqlx::query_as(
         "SELECT id, sender, kind, payload, created_at FROM cobrowse_message \
           WHERE session_id = $1 AND sender = $2 AND ($3::uuid IS NULL OR id > $3) \
           ORDER BY id LIMIT $4",
@@ -369,7 +369,12 @@ async fn read(
     .bind(READ_LIMIT)
     .fetch_all(&state.base.db)
     .await
-    .map_err(AppError::internal)
+    .map_err(AppError::internal)?;
+    // A full page may have more behind it: the last id is the next `after`.
+    let next = (i64::try_from(frames.len()).unwrap_or(i64::MAX) >= READ_LIMIT)
+        .then(|| frames.last().map(|f| f.id.to_string()))
+        .flatten();
+    Ok(CursorPage::new(frames, next))
 }
 
 /// Sends an agent frame (J9-T2).
@@ -411,7 +416,7 @@ async fn agent_send(
     tag = "omnichannel",
     params(("id" = Uuid, Path), ReadQuery),
     responses(
-        (status = 200, description = "The customer's frames, oldest first", body = Vec<Frame>),
+        (status = 200, description = "The customer's frames, oldest first", body = CursorPage<Frame>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 404, description = "No such session of yours", body = ErrorResponse),
     ),
@@ -422,7 +427,7 @@ async fn agent_read(
     ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
     Query(query): Query<ReadQuery>,
-) -> Result<Json<Vec<Frame>>, AppError> {
+) -> Result<Json<CursorPage<Frame>>, AppError> {
     agent_session(&state, &ctx, id).await?;
     Ok(Json(read(&state, id, "customer", query.after).await?))
 }
@@ -512,7 +517,7 @@ async fn visitor_send(
     tag = "omnichannel",
     params(ReadQuery),
     responses(
-        (status = 200, description = "The agent's frames, oldest first", body = Vec<Frame>),
+        (status = 200, description = "The agent's frames, oldest first", body = CursorPage<Frame>),
         (status = 404, description = "The token names no open session", body = ErrorResponse),
         (status = 429, description = "Rate limited", body = ErrorResponse),
     ),
@@ -520,7 +525,7 @@ async fn visitor_send(
 async fn visitor_read(
     State(state): State<EngineState>,
     Query(query): Query<ReadQuery>,
-) -> Result<Json<Vec<Frame>>, AppError> {
+) -> Result<Json<CursorPage<Frame>>, AppError> {
     let token = query.token.as_deref().ok_or(AppError::NotFound)?;
     let id = visitor_session(&state, token).await?;
     Ok(Json(read(&state, id, "agent", query.after).await?))

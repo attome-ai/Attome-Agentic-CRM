@@ -202,6 +202,46 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "Public consent-form submission: no session exists for a data subject. Bypass-listed and rate-limited (consent_capture); the purpose key and subject are validated inside the handler.",
     ),
     (
+        "POST",
+        "/api/v1/cobrowse/join",
+        "J9-T2: the customer joins with the six-character code the agent read out; it works once, for ten minutes, and any other code is the same 404. Bypass-listed and rate-limited (portal_status); the join is audited.",
+    ),
+    (
+        "GET",
+        "/api/v1/cobrowse/visitor/messages",
+        "J9-T2: the customer side's frame token, stored only as its SHA-256, is the credential for one open session; it reads only the agent's frames of that session. Bypass-listed and rate-limited (webchat).",
+    ),
+    (
+        "POST",
+        "/api/v1/cobrowse/visitor/messages",
+        "J9-T2: the same customer-side token sends frames into its one open session; the embed masks sensitive fields before sending. Bypass-listed and rate-limited (webchat).",
+    ),
+    (
+        "POST",
+        "/api/v1/cobrowse/visitor/end",
+        "J9-T2: the same customer-side token ends its own session; the end is audited. Bypass-listed and rate-limited (webchat).",
+    ),
+    (
+        "GET",
+        "/api/v1/consents/confirm",
+        "E27-T3 double opt-in: the emailed token, stored only as its hash and expiring, is the credential; the page only shows a confirm button. Bypass-listed and rate-limited (consent_capture).",
+    ),
+    (
+        "POST",
+        "/api/v1/consents/confirm",
+        "E27-T3 double opt-in: the same hashed, expiring token confirms one pending consent once; the grant is audited. Bypass-listed and rate-limited (consent_capture).",
+    ),
+    (
+        "GET",
+        "/api/v1/consents/preferences",
+        "E26-T1 preference centre: the link is signed with the token-signing key and names one subject; it reads only that subject's marketing consents. Bypass-listed and rate-limited (consent_capture).",
+    ),
+    (
+        "POST",
+        "/api/v1/consents/preferences",
+        "E26-T1 preference centre: the same signed link changes only its own subject's marketing consents; each change is audited. Bypass-listed and rate-limited (consent_capture).",
+    ),
+    (
         "GET",
         "/health/ready",
         "Readiness probe: reports whether this node can serve safely (database, cache, registry pre-warm). Public by design so a load balancer can poll it; it returns no data.",
@@ -225,11 +265,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "GET",
         "/metrics",
         "Prometheus scrape, bound to a SEPARATE listener (observability.metrics_port), never merged into the public application router.",
-    ),
-    (
-        "POST",
-        "/api/v1/auth/register",
-        "Public sign-up. The caller has no account yet, so no session or privilege can gate it; seat limits and email uniqueness are enforced in-handler. Bypass-listed.",
     ),
     (
         "GET",

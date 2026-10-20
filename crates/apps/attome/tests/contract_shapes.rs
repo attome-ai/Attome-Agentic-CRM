@@ -29,6 +29,10 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
     ("post_sales_quote_sync", "409"),
     ("reject_tool_call", "409"),
     ("rename_attribute", "409"),
+    // B16-T8: more than one record holds the code; the answer lists them to pick from.
+    ("scan_act", "409"),
+    // D16-T1: a browser follows the tracked link; a bad token is a bare 404, no JSON.
+    ("track_click", "404"),
 ];
 
 /// Operations whose 200 answer is a bare JSON array.

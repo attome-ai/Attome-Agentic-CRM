@@ -172,20 +172,25 @@ async fn matching_records(
         if !has_email || ctx.require(entity, "read").is_err() {
             continue;
         }
-        let account = if has_account {
-            "account_ref"
+        let sql = if has_account {
+            format!(
+                "SELECT id, account_ref FROM {} \
+                  WHERE lower(email) = ANY($1) AND is_active IS NOT FALSE ORDER BY id LIMIT $2",
+                attome_core::quote_ident(entity)
+            )
         } else {
-            "NULL::uuid"
+            format!(
+                "SELECT id, NULL::uuid FROM {} \
+                  WHERE lower(email) = ANY($1) AND is_active IS NOT FALSE ORDER BY id LIMIT $2",
+                attome_core::quote_ident(entity)
+            )
         };
-        let rows: Vec<(Uuid, Option<Uuid>)> = sqlx::query_as(&format!(
-            "SELECT id, {account} FROM {entity} \
-              WHERE lower(email) = ANY($1) AND is_active IS NOT FALSE ORDER BY id LIMIT $2"
-        ))
-        .bind(addresses)
-        .bind(MAX_LINKS as i64)
-        .fetch_all(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
+        let rows: Vec<(Uuid, Option<Uuid>)> = sqlx::query_as(&sql)
+            .bind(addresses)
+            .bind(MAX_LINKS as i64)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
         for (id, account) in rows {
             out.push((entity.to_owned(), id));
             if let Some(account) = account

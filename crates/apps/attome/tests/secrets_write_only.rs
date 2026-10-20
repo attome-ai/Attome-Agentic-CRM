@@ -27,6 +27,36 @@ use serde_json::Value;
 /// `(schema, property, why it may appear in a response)`.
 const ALLOWED: &[(&str, &str, &str)] = &[
     (
+        "AnonymousRequestAccepted",
+        "status_token",
+        "G2-T1: the anonymous submitter's status bearer, generated and shown once; only its hash is stored",
+    ),
+    (
+        "Booked",
+        "manage_token",
+        "the booker's reschedule/cancel link token, generated for them and also emailed",
+    ),
+    (
+        "PreferenceLink",
+        "token",
+        "E26-T1: a signed preference-centre link minted for an admin to send; not a stored secret",
+    ),
+    (
+        "PreviewLink",
+        "token",
+        "a signed content preview link minted on request; not a stored secret",
+    ),
+    (
+        "SessionJoined",
+        "token",
+        "J9-T2: the customer side's co-browse frame token, generated at join and handed to that side",
+    ),
+    (
+        "SoftphoneConfig",
+        "token",
+        "a short-lived Voice SDK access token minted per request for the agent's browser; not a stored secret",
+    ),
+    (
         "ApiKeyCreated",
         "secret",
         "generated API key, shown once at creation",

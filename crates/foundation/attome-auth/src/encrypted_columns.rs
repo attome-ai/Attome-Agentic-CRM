@@ -47,6 +47,8 @@ pub const ENCRYPTED_COLUMNS: &[EncryptedColumn] = &[
     col("recovery_archive", "value_enc", "recovery_archive"),
     col("release_report_item", "values_enc", "release_report"),
     col("s2s_client_key", "secret_encrypted", "s2s"),
+    col("user_mail_connection", "access_token_enc", "integration"),
+    col("user_mail_connection", "refresh_token_enc", "integration"),
     col("user_mfa", "secret_encrypted", "mfa"),
     col(
         "webportal_credential",

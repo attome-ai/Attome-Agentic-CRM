@@ -65,28 +65,23 @@ pub(crate) async fn find_sender(
         if fields.is_empty() {
             continue;
         }
-        let matches = fields
-            .iter()
-            .map(|f| {
-                format!(
-                    "regexp_replace(coalesce({}::text, ''), '\\D', '', 'g') = $1",
-                    attome_core::quote_ident(f)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(" OR ");
-        let sql = format!(
-            "SELECT id FROM {} WHERE (is_active IS NULL OR is_active = true) AND ({matches}) \
-             ORDER BY id LIMIT 1",
-            attome_core::quote_ident(entity)
-        );
-        let found: Option<Uuid> = sqlx::query_scalar(&attome_db::tag_dynamic("sms.inbound", &sql))
-            .bind(&digits)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-        if let Some(id) = found {
-            return Ok(Some(((*entity).to_owned(), id)));
+        for field in &fields {
+            let sql = format!(
+                "SELECT id FROM {} WHERE (is_active IS NULL OR is_active = true) \
+                   AND regexp_replace(coalesce({}::text, ''), '\\D', '', 'g') = $1 \
+                 ORDER BY id LIMIT 1",
+                attome_core::quote_ident(entity),
+                attome_core::quote_ident(field)
+            );
+            let found: Option<Uuid> =
+                sqlx::query_scalar(&attome_db::tag_dynamic("sms.inbound", &sql))
+                    .bind(&digits)
+                    .fetch_optional(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+            if let Some(id) = found {
+                return Ok(Some(((*entity).to_owned(), id)));
+            }
         }
     }
     Ok(None)

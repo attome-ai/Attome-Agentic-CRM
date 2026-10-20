@@ -238,6 +238,9 @@ pub fn area(key: &str) -> &'static str {
         Some("records") => "data",
         Some("customer_tests") => "data",
         Some("limits") => "operations",
+        Some("compliance") => "security",
+        Some("email" | "mail_capture" | "voice" | "service") => "channels",
+        Some("scan") => "data",
         _ => "other",
     }
 }

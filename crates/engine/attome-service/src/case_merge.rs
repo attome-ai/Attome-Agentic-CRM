@@ -137,9 +137,10 @@ async fn apply_case_merge(
         if !exists {
             continue;
         }
-        let mut sql = String::from("UPDATE ");
-        sql.push_str(&quote_ident(child));
-        sql.push_str(" SET record_id = $1 WHERE entity_name = $2 AND record_id = $3");
+        let mut sql = format!(
+            "UPDATE {} SET record_id = $1 WHERE entity_name = $2 AND record_id = $3",
+            quote_ident(child)
+        );
         if *child == "attome_document" {
             // A document mirrored from one of the merged ticket's file
             // fields stays with that field: the survivor's next save would

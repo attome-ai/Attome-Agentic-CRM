@@ -34,7 +34,7 @@ use attome_audit::security::{
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized, SelfService};
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
@@ -373,13 +373,14 @@ fn provider_of(raw: &str) -> Result<Provider, AppError> {
     Provider::parse(raw).ok_or(AppError::NotFound)
 }
 
-/// The caller's mailbox connections.
+/// The caller's mailbox connections: at most one per provider, so the whole
+/// list is one page.
 #[utoipa::path(
     get,
     path = "/api/v1/me/mail-connections",
     tag = "integration",
     responses(
-        (status = 200, description = "Success", body = Vec<MailConnection>),
+        (status = 200, description = "Success", body = PaginatedResponse<MailConnection>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -387,8 +388,8 @@ fn provider_of(raw: &str) -> Result<Provider, AppError> {
 async fn list_connections(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
-) -> Result<Json<Vec<MailConnection>>, AppError> {
-    let rows = sqlx::query_as(
+) -> Result<Json<PaginatedResponse<MailConnection>>, AppError> {
+    let rows: Vec<MailConnection> = sqlx::query_as(
         "SELECT id, provider, account_email, scopes, connected_at FROM user_mail_connection \
           WHERE user_id = $1 ORDER BY provider",
     )
@@ -396,7 +397,8 @@ async fn list_connections(
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    Ok(Json(rows))
+    let total = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(rows, total, 1, total.max(1))))
 }
 
 /// Starts connecting: answers the provider's sign-in URL.

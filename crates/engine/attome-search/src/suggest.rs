@@ -98,6 +98,7 @@ struct RawCandidate {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = SearchSuggestion)]
 pub struct Suggestion {
     pub text: String,
     /// `"entity"` | `"saved_search"`.

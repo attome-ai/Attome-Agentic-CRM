@@ -360,6 +360,27 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمليات التخزين المؤقت على Redis حسب النتيجة.",
     },
     MetricInfo {
+        name: "cache_entries",
+        kind: "gauge",
+        unit: "entries",
+        en: "Entries held in a cache's in-process tier on this node.",
+        ar: "عدد العناصر في الطبقة المحلية لذاكرة التخزين المؤقت على هذه العقدة.",
+    },
+    MetricInfo {
+        name: "cache_evictions_total",
+        kind: "counter",
+        unit: "entries",
+        en: "Entries a cache's in-process tier dropped to stay within its capacity.",
+        ar: "عناصر أسقطتها الطبقة المحلية لذاكرة التخزين المؤقت لتبقى ضمن سعتها.",
+    },
+    MetricInfo {
+        name: "cache_requests_total",
+        kind: "counter",
+        unit: "requests",
+        en: "Cache reads, by cache, tier and hit or miss.",
+        ar: "قراءات ذاكرة التخزين المؤقت حسب الذاكرة والطبقة والإصابة أو الإخفاق.",
+    },
+    MetricInfo {
         name: "capability_rejections_total",
         kind: "counter",
         unit: "requests",

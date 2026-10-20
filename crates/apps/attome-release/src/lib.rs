@@ -1175,10 +1175,15 @@ fn perf_plans_args() -> Vec<&'static str> {
     args
 }
 
-/// Runs the plan guards. A missing test database fails the step rather than
-/// skipping the guards: `ATTOME_TEST_REQUIRE_DB` turns every skip into a
-/// failure.
+/// Runs the plan guards. On a lane with a test database (`DATABASE_URL`)
+/// a skipped guard fails the step: `ATTOME_TEST_REQUIRE_DB` turns every
+/// skip into a failure. A lane without one (the Windows gate) does not run
+/// them, as with the other database steps.
 fn perf_plans(root: &Path) -> Result<(), String> {
+    if std::env::var_os("DATABASE_URL").is_none() {
+        say("    perf_plans: DATABASE_URL is not set; the plan guards need a database; not run");
+        return Ok(());
+    }
     let mut command = Command::new("cargo");
     command
         .args(perf_plans_args())
