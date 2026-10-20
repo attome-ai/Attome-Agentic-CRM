@@ -1186,6 +1186,23 @@ export interface paths {
         patch: operations["update_rule"];
         trace?: never;
     };
+    "/api/v1/admin/business-rules/{id}/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The stored records the published rule refuses, as its last scan found them, newest first (A3-T5). */
+        get: operations["cleanup_queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/business-rules/{id}/publish": {
         parameters: {
             query?: never;
@@ -1196,6 +1213,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["publish_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/business-rules/{id}/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Runs the rule over the entity's stored records (at most 10,000) and returns how many it would refuse and the first 50 of them, without saving anything (A3-T5). */
+        post: operations["simulate_rule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21619,6 +21653,20 @@ export interface components {
             /** Format: int64 */
             sensitive_special_category: number;
         };
+        /** @description One record in a rule's clean-up queue. */
+        CleanupItem: {
+            entity: string;
+            /** Format: date-time */
+            found_at: string;
+            message: string;
+            /**
+             * Format: uuid
+             * @description The record's owner, who is asked to fix it.
+             */
+            owner_ref?: string | null;
+            /** Format: uuid */
+            record_id: string;
+        };
         ClientDetail: {
             allowed_cidrs?: string[] | null;
             /** Format: int32 */
@@ -30227,6 +30275,33 @@ export interface components {
                 /** Format: date-time */
                 started_at: string;
                 surface: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CleanupItem: {
+            items: {
+                entity: string;
+                /** Format: date-time */
+                found_at: string;
+                message: string;
+                /**
+                 * Format: uuid
+                 * @description The record's owner, who is asked to fix it.
+                 */
+                owner_ref?: string | null;
+                /** Format: uuid */
+                record_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -39283,6 +39358,30 @@ export interface components {
             status: string;
             trace: components["schemas"]["SimulateNodeTrace"][];
         };
+        /** @description What a check would do to the stored records. */
+        Simulation: {
+            /**
+             * Format: int64
+             * @description Live records checked.
+             */
+            checked: number;
+            /**
+             * Format: int64
+             * @description Records the check would refuse.
+             */
+            failing: number;
+            /** @description The first failing records, in id order. */
+            failing_ids: string[];
+            /** Format: uuid */
+            rule_id: string;
+            /** @description The preview stopped at its limit before the end of the table. */
+            truncated: boolean;
+            /**
+             * Format: int64
+             * @description Records whose condition could not be decided (an evaluation error).
+             */
+            unknown: number;
+        };
         /**
          * @description Why a member was passed over.
          * @enum {string}
@@ -45888,6 +45987,57 @@ export interface operations {
             };
         };
     };
+    cleanup_queue: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rule's clean-up queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CleanupItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     publish_rule: {
         parameters: {
             query?: never;
@@ -45945,6 +46095,64 @@ export interface operations {
                 };
             };
             /** @description The stored rule no longer validates against the live schema */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    simulate_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the rule would do to the stored records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Simulation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule's entity is not registered */
             422: {
                 headers: {
                     [name: string]: unknown;

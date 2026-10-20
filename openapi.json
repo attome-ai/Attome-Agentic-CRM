@@ -6096,6 +6096,93 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/business-rules/{id}/cleanup": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "description": "The stored records the published rule refuses, as its last scan found them, newest first (A3-T5).",
+        "operationId": "cleanup_queue",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rule's clean-up queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CleanupItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/business-rules/{id}/publish": {
       "post": {
         "tags": [
@@ -6191,6 +6278,97 @@
             }
           ],
           "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/business-rules/{id}/simulate": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "description": "Runs the rule over the entity's stored records (at most 10,000) and returns how many it would refuse and the first 50 of them, without saving anything (A3-T5).",
+        "operationId": "simulate_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the rule would do to the stored records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Simulation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The rule's entity is not registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "evaluates the stored rule over stored records in memory only; writes nothing",
+          "reason": "dry_run",
+          "via": null
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -106874,6 +107052,40 @@
           }
         }
       },
+      "CleanupItem": {
+        "type": "object",
+        "description": "One record in a rule's clean-up queue.",
+        "required": [
+          "record_id",
+          "entity",
+          "message",
+          "found_at"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "found_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string"
+          },
+          "owner_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The record's owner, who is asked to fix it."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ClientDetail": {
         "type": "object",
         "required": [
@@ -128954,6 +129166,74 @@
                 },
                 "surface": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_CleanupItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One record in a rule's clean-up queue.",
+              "required": [
+                "record_id",
+                "entity",
+                "message",
+                "found_at"
+              ],
+              "properties": {
+                "entity": {
+                  "type": "string"
+                },
+                "found_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "owner_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The record's owner, who is asked to fix it."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
@@ -152264,6 +152544,54 @@
           }
         }
       },
+      "Simulation": {
+        "type": "object",
+        "description": "What a check would do to the stored records.",
+        "required": [
+          "rule_id",
+          "checked",
+          "failing",
+          "unknown",
+          "failing_ids",
+          "truncated"
+        ],
+        "properties": {
+          "checked": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Live records checked.",
+            "minimum": 0
+          },
+          "failing": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Records the check would refuse.",
+            "minimum": 0
+          },
+          "failing_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The first failing records, in id order."
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "The preview stopped at its limit before the end of the table."
+          },
+          "unknown": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Records whose condition could not be decided (an evaluation error).",
+            "minimum": 0
+          }
+        }
+      },
       "SkipReason": {
         "type": "string",
         "description": "Why a member was passed over.",
@@ -160146,7 +160474,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -160199,5 +160526,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

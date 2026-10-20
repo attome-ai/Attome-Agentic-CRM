@@ -478,6 +478,9 @@ pub enum EngineJob {
     /// (`report-schedule:{id}`) claimed once. Pure pointer; the handler reads
     /// the schedule row.
     ReportScheduleFire { schedule_id: Uuid },
+    /// A3-T5: rewrites a published business rule's clean-up queue from a
+    /// full scan of its entity's stored records. Pure pointer.
+    ValidationCleanupScan { rule_id: Uuid },
     /// The nightly marketing pass: loyalty earning and expiry (E30-T1),
     /// referral rewards (E31-T1), target account scores (E20-T1) and bounce
     /// and complaint effects (E6-T5). Bare unit variant.
@@ -1027,6 +1030,7 @@ impl EngineJob {
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }
+            | Self::ValidationCleanupScan { .. }
             | Self::WorkflowSlaSweep
             | Self::WorkflowEntityTriggerDispatch
             | Self::ComputeMetricSnapshots
@@ -1192,6 +1196,7 @@ impl EngineJob {
             EngineJob::TimerSweep => "TimerSweep",
             EngineJob::TimerFire { .. } => "TimerFire",
             EngineJob::ReportScheduleFire { .. } => "ReportScheduleFire",
+            EngineJob::ValidationCleanupScan { .. } => "ValidationCleanupScan",
             EngineJob::MarketingNightly => "MarketingNightly",
             EngineJob::SegmentRefreshDue => "SegmentRefreshDue",
             EngineJob::MarketingSweep => "MarketingSweep",
@@ -1281,6 +1286,7 @@ impl EngineJob {
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }
+            | Self::ValidationCleanupScan { .. }
             | Self::FanOutNotification { .. }
             | Self::BackfillRecipientForNewUser { .. }
             | Self::EventsDeliverWebhook { .. }
@@ -1568,6 +1574,7 @@ impl EngineJob {
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }
+            | Self::ValidationCleanupScan { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
@@ -1961,6 +1968,9 @@ mod tests {
         });
         assert_round_trips(EngineJob::ReportScheduleFire {
             schedule_id: Uuid::now_v7(),
+        });
+        assert_round_trips(EngineJob::ValidationCleanupScan {
+            rule_id: Uuid::now_v7(),
         });
     }
 

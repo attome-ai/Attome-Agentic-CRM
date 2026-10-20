@@ -1759,6 +1759,10 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // A3-T5: a published rule's clean-up queue, from a full scan.
+        EngineJob::ValidationCleanupScan { rule_id } => {
+            attome_api::validation_simulation::run_cleanup_scan(&attome_state, rule_id).await?;
+        }
         // M12-T2: one report schedule occurrence the Z7 ledger claimed.
         EngineJob::ReportScheduleFire { schedule_id } => {
             attome_report::scheduler::fire(&attome_state, schedule_id).await?;

@@ -71,6 +71,7 @@ mod autonumber_admin;
 /// D-789 §6.1 — `/api/v1/admin/business-rules` (CRUD, validate, test,
 /// publish). Replaces `/api/v1/admin/rules*` (D-790).
 pub mod business_rule_admin;
+pub mod validation_simulation;
 /// D-789 §8 — the `business_rules` field-reference hook (rename, delete,
 /// retype) registered in `field_hooks`.
 pub mod business_rule_hooks;

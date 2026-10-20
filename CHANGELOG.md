@@ -143,6 +143,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Simulate a check before publishing it (A3-T5): `POST /api/v1/admin/business-rules/{id}/simulate`
+  runs the rule over the entity's stored records (up to 10,000) and returns how many it would refuse
+  and the first 50 of them. Publishing a rule now queues a full scan that fills its clean-up queue,
+  `GET /api/v1/admin/business-rules/{id}/cleanup`: each refused record with its message and owner
+  (migration 0182).
 - Metric lineage and impact (P10-T1): the lineage graph can point at metrics, not only entities
   (migration 0181). A metric records what it reads (its stored query's entities and the metrics its
   formula uses) and a dashboard widget the metrics it shows, kept current by the catalog lineage

@@ -463,7 +463,7 @@ async fn validate_rule(
 /// Who the rule is tested for. Absent: the rule is evaluated as if it
 /// applied, every policy included.
 #[derive(Deserialize, ToSchema, Default)]
-struct TestAudience {
+pub(crate) struct TestAudience {
     /// Staff roles the writer holds.
     #[serde(default)]
     role_ids: Vec<Uuid>,
@@ -481,12 +481,12 @@ struct TestAudience {
 }
 
 #[derive(Deserialize, ToSchema)]
-struct RuleTestRequest {
+pub(crate) struct RuleTestRequest {
     /// The record to evaluate against — no save, no side effects.
     #[serde(default)]
-    record: Map<String, Value>,
+    pub(crate) record: Map<String, Value>,
     #[serde(default, rename = "as")]
-    audience: Option<TestAudience>,
+    pub(crate) audience: Option<TestAudience>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -496,10 +496,10 @@ struct RuleTraceEntryWire {
 }
 
 #[derive(Serialize, ToSchema)]
-struct TestError {
+pub(crate) struct TestError {
     field: Option<String>,
-    message: Option<String>,
-    severity: String,
+    pub(crate) message: Option<String>,
+    pub(crate) severity: String,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -510,7 +510,7 @@ struct TestLock {
 }
 
 #[derive(Serialize, ToSchema)]
-struct RuleTestResponse {
+pub(crate) struct RuleTestResponse {
     /// Whether the rule applies to the tested audience (always `true` when
     /// no audience was given).
     applies: bool,
@@ -521,14 +521,14 @@ struct RuleTestResponse {
     policies_fired: Vec<i32>,
     /// Field → the value each firing `set_value` policy writes.
     set_values: Map<String, Value>,
-    errors: Vec<TestError>,
+    pub(crate) errors: Vec<TestError>,
     locks: Vec<TestLock>,
     trace: Vec<RuleTraceEntryWire>,
     /// Legacy kinds: the expression's raw value.
     result: Option<Value>,
     /// An evaluation failure (budget, divide by zero, a `set_value` that
     /// could not be computed).
-    error: Option<String>,
+    pub(crate) error: Option<String>,
 }
 
 fn outcome_label(o: &ConditionOutcome) -> &'static str {
@@ -676,6 +676,20 @@ async fn explain_rules(
         record_id: query.id,
         rules,
     }))
+}
+
+/// A3-T5: one rule on one record, as `.../{id}/test` evaluates it.
+pub(crate) fn evaluate(
+    rule: &BusinessRule,
+    attrs: &[attome_core::AttrInfo],
+    req: &RuleTestRequest,
+    now: chrono::DateTime<Utc>,
+) -> Result<RuleTestResponse, AppError> {
+    if rule.kind == BUSINESS_KIND {
+        test_business(rule, attrs, req, now)
+    } else {
+        test_legacy(rule, attrs, &req.record, now)
+    }
 }
 
 fn trace_wire(trace: &attome_rules::Trace) -> Vec<RuleTraceEntryWire> {
@@ -971,6 +985,14 @@ async fn publish_rule(
             .record(&mut tx, store::rule_op(Op::PublishRule, &rule)?)
             .await?;
     }
+    // A3-T5: the stored records the published rule refuses go to its
+    // clean-up queue, from a durable full scan, never this request.
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::ValidationCleanupScan { rule_id: id },
+    )
+    .await
+    .map_err(AppError::internal)?;
     tx.commit().await.map_err(AppError::internal)?;
     store::invalidate(&state).await;
     Ok(Json(rule))
@@ -993,6 +1015,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/business-rules/{id}/publish",
             post(publish_rule),
         )
+        .route(
+            "/api/v1/admin/business-rules/{id}/simulate",
+            post(crate::validation_simulation::simulate_rule),
+        )
+        .route(
+            "/api/v1/admin/business-rules/{id}/cleanup",
+            get(crate::validation_simulation::cleanup_queue),
+        )
 }
 
 /// This file's slice of the workspace OpenAPI document.
@@ -1006,7 +1036,9 @@ pub fn routes() -> Router<EngineState> {
     validate_rule,
     test_rule,
     publish_rule,
-    explain_rules
+    explain_rules,
+    crate::validation_simulation::simulate_rule,
+    crate::validation_simulation::cleanup_queue
 ))]
 struct ApiDocFragment;
 
