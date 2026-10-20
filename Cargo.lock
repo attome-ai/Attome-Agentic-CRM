@@ -488,6 +488,7 @@ dependencies = [
  "attome-grc",
  "attome-hr",
  "attome-integration",
+ "attome-marketing",
  "attome-jobs",
  "attome-metadata",
  "attome-metric",
@@ -1360,6 +1361,7 @@ name = "attome-marketing"
 version = "0.1.0"
 dependencies = [
  "attome-audit",
+ "attome-auth",
  "attome-cache",
  "attome-calendar",
  "attome-compliance",

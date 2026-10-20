@@ -55,6 +55,22 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             || json!(0),
         ),
         SettingDescriptor::new(
+            "marketing.form_intake.user",
+            "The service account marketing form submissions are filed as (E10-T1). \
+             It needs create and update on lead or contact and create on \
+             marketing_form_submission; never a person's account. Empty: forms \
+             take no submissions.",
+            || {
+                json!({
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})?$"
+                })
+            },
+            DEPLOYMENT,
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "marketing.sms_quiet_hours",
             "Hours (HH:MM, recipient's local time) when campaign SMS are held, \
              by country code with \"*\" for every other country, e.g. \

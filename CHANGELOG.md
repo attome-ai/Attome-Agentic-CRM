@@ -132,6 +132,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Marketing forms (E10-T1): the marketing pack's `marketing_form` (target lead or contact, field map,
+  consent purposes, UTM capture, publishing) and `marketing_form_submission` (pack changeset 0006);
+  the public `POST /api/v1/marketing/forms/{id}/submit` maps the fields, finds the person by email or
+  creates them, records each ticked consent in the ledger with the form as proof, and keeps the UTM
+  tags — filed as `marketing.form_intake.user` (empty: no submissions), rate-limited, with the
+  deployment's challenge.
 - Deliverability agent tools (E6-T12): `deliverability.explain` and `deliverability.propose_segment`,
   read-only, marketing module, `marketing_deliverability_policy.read`.
 - Static list operations (E7-T5): `POST /api/v1/marketing/lists/{id}/members` and `/members/remove`

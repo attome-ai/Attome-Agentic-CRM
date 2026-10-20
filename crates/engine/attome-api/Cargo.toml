@@ -29,6 +29,7 @@ attome-events.workspace       = true
 attome-field.workspace        = true
 attome-grc.workspace          = true
 attome-integration.workspace  = true
+attome-marketing.workspace    = true
 attome-jobs.workspace         = true
 attome-metadata.workspace     = true
 attome-model.workspace        = true

@@ -246,6 +246,22 @@ fn is_service_intake_path(path: &str) -> bool {
     !id.is_empty() && is_requests && no_trailing_segment
 }
 
+/// E10-T1: a marketing form submission,
+/// `/api/v1/marketing/forms/{id}/submit`: one id segment, the literal
+/// `submit`, nothing after. The handler
+/// (`attome_marketing::forms::post_submit`) checks the form is published,
+/// rate-limits and asks for the challenge.
+fn is_marketing_form_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/v1/marketing/forms/") else {
+        return false;
+    };
+    let mut segments = rest.split('/');
+    let id = segments.next().unwrap_or("");
+    let is_submit = segments.next() == Some("submit");
+    let no_trailing_segment = segments.next().is_none();
+    !id.is_empty() && is_submit && no_trailing_segment
+}
+
 /// The only public route families with intentionally dynamic child segments.
 /// Every entry ends in `/`, so `starts_with` cannot match a sibling such as
 /// `/api/v1/auth/oidc-admin`. (The integrations webhook USED to be a third
@@ -287,6 +303,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_billing_gateway_webhook_path(path)
         || is_payment_link_path(path)
         || is_service_intake_path(path)
+        || is_marketing_form_path(path)
         || is_email_tracking_path(path)
         || is_sms_receipt_path(path)
         || is_booking_path(path)
@@ -351,6 +368,17 @@ mod tests {
         assert!(is_bypass("/version"));
         // U9-T2: the dependency report is for administrators.
         assert!(!is_bypass("/health/dependencies"));
+    }
+
+    #[test]
+    fn only_the_form_submit_shape_is_public() {
+        assert!(is_bypass(
+            "/api/v1/marketing/forms/0192a3b4-0000-7000-8000-000000000001/submit"
+        ));
+        assert!(!is_bypass("/api/v1/marketing/forms/x/submit/more"));
+        assert!(!is_bypass("/api/v1/marketing/forms/x"));
+        assert!(!is_bypass("/api/v1/marketing/forms//submit"));
+        assert!(!is_bypass("/api/v1/marketing/lists/x/members"));
     }
 
     #[test]

@@ -14,6 +14,8 @@ pub mod dmarc;
 /// E2-T2: email designs to email-safe HTML and plain text.
 pub mod email_render;
 pub mod events;
+/// E10-T1: marketing forms and their public submission.
+pub mod forms;
 pub mod handoff_sla;
 pub mod loyalty;
 pub mod model;
@@ -42,5 +44,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<sms_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
