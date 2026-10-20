@@ -29,6 +29,7 @@ pub mod status_page;
 pub mod supplier_sla;
 pub mod timeline;
 pub mod token;
+pub mod warranty;
 
 pub use model::ServiceModel;
 
@@ -50,5 +51,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(presence::openapi_fragment());
     doc.merge(inbox::openapi_fragment());
     doc.merge(status_page::openapi_fragment());
+    doc.merge(warranty::openapi_fragment());
     doc
 }

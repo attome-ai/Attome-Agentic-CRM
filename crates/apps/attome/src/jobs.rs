@@ -2768,6 +2768,11 @@ pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
 pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
 
+/// I10-T1: asset warranty dates filled from warranty entitlements, as the
+/// person who confirmed (payload `attome_service::warranty::BackfillJob`).
+pub const WARRANTY_BACKFILL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::warranty::JOB, 1);
+
 /// H8-T1: status page updates emailed to confirmed subscribers, once each.
 pub const STATUS_PAGE_NOTIFY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::status_page::JOB, 1);
@@ -3038,6 +3043,28 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WARRANTY_BACKFILL,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_service::warranty::BackfillJob = job.payload()?;
+                let ctx = state
+                    .base
+                    .security
+                    .resolve_strict(payload.user_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                let written = attome_service::warranty::run(&state, &ctx)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(written, "asset warranty dates filled");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
