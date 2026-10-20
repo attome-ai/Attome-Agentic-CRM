@@ -2739,6 +2739,12 @@ pub const PROFILE_EVENT_RETENTION: attome_jobs::JobType =
 pub const MARKETING_LIST_IMPORT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::static_list::IMPORT_JOB, 1);
 
+/// E14-T5: writes a queued collection batch into `marketing_web_event` and
+/// upserts `marketing_web_session`; filters bots, staff and office networks
+/// first. Only enqueued (by the collect route), never scheduled.
+pub const MARKETING_WEB_EVENT_BATCH: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::tracking::writer::JOB, 1);
+
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
     attome_jobs::JobType::new("social_reviews_sync", 1);
@@ -2851,6 +2857,32 @@ pub fn register_job_types() {
                 attome_marketing::static_list::run_import(&state, payload.import_id)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MARKETING_WEB_EVENT_BATCH,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let batch: attome_marketing::tracking::writer::WebEventBatch = job.payload()?;
+                let counts =
+                    attome_marketing::tracking::writer::write_batch(&state.base.db, &batch)
+                        .await
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    site = %batch.site_key,
+                    written = counts.written,
+                    duplicates = counts.duplicates,
+                    dropped_bot = counts.dropped_bot,
+                    dropped_staff = counts.dropped_staff,
+                    dropped_office = counts.dropped_office,
+                    dropped_invalid = counts.dropped_invalid,
+                    "web event batch written"
+                );
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

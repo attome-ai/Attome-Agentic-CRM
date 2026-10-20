@@ -2,6 +2,9 @@
 //! custom events and return-visit alerts. Every part sits behind its own
 //! feature flag, off by default (`marketing.tracking*`).
 
+pub mod bots;
+pub mod writer;
+
 /// The flags that switch tracking on, in dependency order.
 pub const TRACKING_FLAGS: &[&str] = &[
     "marketing.tracking",
