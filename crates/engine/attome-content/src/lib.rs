@@ -35,6 +35,7 @@ pub mod article;
 pub mod audience;
 pub mod blocks;
 pub mod hierarchy;
+pub mod landing;
 pub mod model;
 pub mod redirect;
 pub mod scheduling;

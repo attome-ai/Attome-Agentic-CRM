@@ -69,7 +69,15 @@ fn validate_block(block: &Block) -> Result<(), String> {
             }
         }
         BlockKind::DataTable | BlockKind::Chart => require_uuid(&block.props, "query_id"),
-        BlockKind::Form => require_nonempty_str(&block.props, "entity"),
+        // E11-T1: a landing page's form block names a marketing form;
+        // any other form block names the entity it captures.
+        BlockKind::Form => {
+            if block.props.get("marketing_form_id").is_some() {
+                require_uuid(&block.props, "marketing_form_id")
+            } else {
+                require_nonempty_str(&block.props, "entity")
+            }
+        }
         BlockKind::Component => {
             let key = block
                 .props

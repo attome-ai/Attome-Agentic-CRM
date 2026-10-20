@@ -24,7 +24,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 const SPACE_COLUMNS: &str =
-    "id, name, description, require_approval, row_version, created_at, updated_at";
+    "id, name, description, require_approval, kind, row_version, created_at, updated_at";
 
 /// Same `If-Match: "<row_version>"` contract as `content_admin::
 /// expected_row_version` — reimplemented here rather than shared across the
@@ -93,6 +93,10 @@ async fn create_space(
     if name.is_empty() {
         return Err(AppError::Validation("name must not be empty".into()));
     }
+    let kind = body.kind.as_deref().map_or("standard", str::trim);
+    if !crate::landing::SPACE_KINDS.contains(&kind) {
+        return Err(AppError::Validation("kind is standard or marketing".into()));
+    }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 
     // Solution 7 (D-785): content spaces are Phase 3 customer-creatable
@@ -101,8 +105,8 @@ async fn create_space(
     let owner_layer = state.base.config.metadata.changesets.auto_layer;
     let sql = format!(
         "INSERT INTO content_space (name, description, created_by, updated_by, owner_layer, \
-                                    require_approval) \
-         VALUES ($1, $2, $3, $3, $4, $5) RETURNING {SPACE_COLUMNS}"
+                                    require_approval, kind) \
+         VALUES ($1, $2, $3, $3, $4, $5, $6) RETURNING {SPACE_COLUMNS}"
     );
     let row = sqlx::query_as::<_, ContentSpace>(&sql)
         .bind(name)
@@ -115,6 +119,7 @@ async fn create_space(
         .bind(ctx.user_id)
         .bind(owner_layer.as_str())
         .bind(body.require_approval)
+        .bind(kind)
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
@@ -138,6 +143,10 @@ async fn create_space(
         .named("content_space.create"),
     )
     .await?;
+    // E11-T1: a marketing space starts with the landing page templates.
+    if kind == "marketing" {
+        crate::landing::add_templates(&mut tx, row.id, ctx.user_id, owner_layer.as_str()).await?;
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     Ok((StatusCode::CREATED, Json(row)))

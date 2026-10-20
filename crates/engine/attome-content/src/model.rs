@@ -98,6 +98,8 @@ pub struct ContentSpace {
     pub description: Option<String>,
     /// K5-T1: a publish in this space waits for approval.
     pub require_approval: bool,
+    /// E11-T1: `standard` or `marketing` (landing pages), set at create.
+    pub kind: String,
     pub row_version: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -110,6 +112,10 @@ pub struct CreateSpaceBody {
     /// K5-T1: a publish in this space waits for approval.
     #[serde(default)]
     pub require_approval: bool,
+    /// E11-T1: `standard` (the default) or `marketing`; a marketing space
+    /// starts with the landing page templates. Fixed once created.
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

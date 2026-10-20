@@ -19,6 +19,7 @@ pub mod events;
 /// E10-T1: marketing forms and their public submission.
 pub mod forms;
 pub mod handoff_sla;
+pub mod landing;
 pub mod loyalty;
 pub mod model;
 pub mod nurture_tracks;
@@ -56,5 +57,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<tracking::collect::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<landing::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

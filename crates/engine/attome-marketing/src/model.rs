@@ -86,5 +86,6 @@ impl EngineModel for MarketingModel {
             .merge(crate::deliverability::routes::routes())
             .merge(crate::static_list::routes())
             .merge(crate::dynamic_blocks::routes())
+            .merge(crate::landing::routes())
     }
 }
