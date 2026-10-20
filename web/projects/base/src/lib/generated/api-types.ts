@@ -14726,6 +14726,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a shared mailbox's conversations.
+         * @description Each record the mailbox's messages were routed to, with the message
+         *     count and the latest message's time, latest first.
+         */
+        get: operations["list_service_inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/inbox/mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the shared mailboxes.
+         * @description The active shared mailboxes (mailbox integration systems), by name, all
+         *     on one page.
+         */
+        get: operations["list_service_inbox_mailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service/viewing": {
         parameters: {
             query?: never;
@@ -25749,6 +25791,26 @@ export interface components {
             /** Format: int64 */
             imported_count: number;
         };
+        /** @description One conversation: the record a mailbox's messages were routed to. */
+        InboxConversation: {
+            /** @description `service_ticket`, `lead` or `contact`. */
+            entity_name: string;
+            /** Format: date-time */
+            last_message_at: string;
+            /**
+             * Format: int64
+             * @description Messages routed to it from this mailbox.
+             */
+            messages: number;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description One shared mailbox. */
+        InboxMailbox: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         /** @description One event's inclusion proof. */
         InclusionProof: {
             /** @description Where the batch root is anchored when external anchoring is on. */
@@ -30641,6 +30703,52 @@ export interface components {
                 /** Format: uuid */
                 user_id: string;
                 user_name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_InboxConversation: {
+            items: {
+                /** @description `service_ticket`, `lead` or `contact`. */
+                entity_name: string;
+                /** Format: date-time */
+                last_message_at: string;
+                /**
+                 * Format: int64
+                 * @description Messages routed to it from this mailbox.
+                 */
+                messages: number;
+                /** Format: uuid */
+                record_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_InboxMailbox: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                name: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -85809,8 +85917,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller lacks call_list.call */
+            /** @description Caller lacks call_list.call, or the list is someone else's shared list and the caller lacks call_list.share */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such call list */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -88749,6 +88866,89 @@ export interface operations {
             };
             /** @description No such token — identical response whether the token is malformed, unknown, wrong, or the deployment isn't licensed for this module */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_service_inbox: {
+        parameters: {
+            query: {
+                /** @description The shared mailbox (integration system id). */
+                mailbox: string;
+                /** @description One-based page. */
+                page?: number;
+                /** @description Conversations per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailbox's conversations, latest message first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_InboxConversation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_service_inbox_mailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The active shared mailboxes, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_InboxMailbox"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.read */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

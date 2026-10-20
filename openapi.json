@@ -64497,7 +64497,8 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -73904,7 +73905,17 @@
             }
           },
           "403": {
-            "description": "Caller lacks call_list.call",
+            "description": "Caller lacks call_list.call, or the list is someone else's shared list and the caller lacks call_list.share",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such call list",
             "content": {
               "application/json": {
                 "schema": {
@@ -78808,6 +78819,151 @@
         "x-module": "core",
         "x-privilege": "public",
         "x-rate-class": "portal_status",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/service/inbox": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "List a shared mailbox's conversations.",
+        "description": "Each record the mailbox's messages were routed to, with the message\ncount and the latest message's time, latest first.",
+        "operationId": "list_service_inbox",
+        "parameters": [
+          {
+            "name": "mailbox",
+            "in": "query",
+            "description": "The shared mailbox (integration system id).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Conversations per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The mailbox's conversations, latest message first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_InboxConversation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks service_ticket.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/service/inbox/mailboxes": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "List the shared mailboxes.",
+        "description": "The active shared mailboxes (mailbox integration systems), by name, all\non one page.",
+        "operationId": "list_service_inbox_mailboxes",
+        "responses": {
+          "200": {
+            "description": "The active shared mailboxes, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_InboxMailbox"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks service_ticket.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
         "x-risk": "low"
       }
     },
@@ -115820,6 +115976,52 @@
           }
         }
       },
+      "InboxConversation": {
+        "type": "object",
+        "description": "One conversation: the record a mailbox's messages were routed to.",
+        "required": [
+          "entity_name",
+          "record_id",
+          "messages",
+          "last_message_at"
+        ],
+        "properties": {
+          "entity_name": {
+            "type": "string",
+            "description": "`service_ticket`, `lead` or `contact`."
+          },
+          "last_message_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messages": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Messages routed to it from this mailbox."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "InboxMailbox": {
+        "type": "object",
+        "description": "One shared mailbox.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "InclusionProof": {
         "type": "object",
         "description": "One event's inclusion proof.",
@@ -128679,6 +128881,120 @@
                   "format": "uuid"
                 },
                 "user_name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_InboxConversation": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One conversation: the record a mailbox's messages were routed to.",
+              "required": [
+                "entity_name",
+                "record_id",
+                "messages",
+                "last_message_at"
+              ],
+              "properties": {
+                "entity_name": {
+                  "type": "string",
+                  "description": "`service_ticket`, `lead` or `contact`."
+                },
+                "last_message_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "messages": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Messages routed to it from this mailbox."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_InboxMailbox": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One shared mailbox.",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
                   "type": "string"
                 }
               }
