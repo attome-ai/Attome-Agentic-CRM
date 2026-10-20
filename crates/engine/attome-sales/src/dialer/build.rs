@@ -198,6 +198,7 @@ pub async fn build_list(
     list: Uuid,
     body: &SalesBuildListBody,
 ) -> Result<SalesBuildStats, AppError> {
+    super::sharing::require_list_use(state, ctx, list).await?;
     let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
         "SELECT source_kind, view_ref FROM call_list \
          WHERE id = $1 AND (is_active IS NULL OR is_active = true)",

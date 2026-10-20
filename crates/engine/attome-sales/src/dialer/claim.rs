@@ -346,7 +346,8 @@ impl attome_server::authz::PrivilegeKey for CallListCall {
     responses(
         (status = 200, description = "The next callable member, or null when none is left; members passed over are listed with their reasons", body = ClaimResult),
         (status = 401, description = "Missing or invalid credentials", body = attome_types::ErrorResponse),
-        (status = 403, description = "Caller lacks call_list.call", body = attome_types::ErrorResponse),
+        (status = 403, description = "Caller lacks call_list.call, or the list is someone else's shared list and the caller lacks call_list.share", body = attome_types::ErrorResponse),
+        (status = 404, description = "No such call list", body = attome_types::ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
@@ -356,6 +357,7 @@ pub(crate) async fn post_claim(
     ctx: attome_server::authz::Authorized<attome_server::authz::Privilege<CallListCall>>,
     axum::extract::Path(list): axum::extract::Path<Uuid>,
 ) -> Result<axum::Json<ClaimResult>, AppError> {
+    super::sharing::require_list_use(&state, &ctx, list).await?;
     Ok(axum::Json(
         claim_next(&state, ctx.user_id, list, Utc::now()).await?,
     ))

@@ -1,0 +1,334 @@
+{
+  "author": "packs",
+  "checksum": "sha256:fde8df876f1b16f9ad804db9ea9b6f2fbfa53ef50c98be374700a9eee6cf6730",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Dialer privileges (D21-T8): call_list.share to use and edit someone else's shared call list, and the role grants: a Sales Representative reads and creates call lists, calls from them and logs attempts; a Sales Manager also shares lists and manages calling hours and caller-id rules.",
+  "format": "attome-changeset/v1",
+  "id": "019a0b1c-b6a2-7d53-8c66-3e2f7a1d8f39",
+  "layer": "product",
+  "name": "sales-dialer-privileges",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Uses and edits call lists other people shared.",
+          "key": "call_list.share",
+          "name": "Use Shared Call Lists"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "call_list.share"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on call_list",
+          "key": "call_list.read",
+          "name": "call_list.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "call_list.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on call_list",
+          "key": "call_list.create",
+          "name": "call_list.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "call_list.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on call_attempt",
+          "key": "call_attempt.create",
+          "name": "call_attempt.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "call_attempt.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on calling_hours",
+          "key": "calling_hours.create",
+          "name": "calling_hours.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "calling_hours.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on calling_hours",
+          "key": "calling_hours.update",
+          "name": "calling_hours.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "calling_hours.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on calling_hours",
+          "key": "calling_hours.delete",
+          "name": "calling_hours.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "calling_hours.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on caller_id_rule",
+          "key": "caller_id_rule.create",
+          "name": "caller_id_rule.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "caller_id_rule.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on caller_id_rule",
+          "key": "caller_id_rule.update",
+          "name": "caller_id_rule.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "caller_id_rule.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on caller_id_rule",
+          "key": "caller_id_rule.delete",
+          "name": "caller_id_rule.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "caller_id_rule.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Works their own pipeline and calls from their own call lists.",
+          "is_customized": false,
+          "name": "Sales Representative",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "role": "Sales Representative"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "call_list.read",
+        "role": "Sales Representative"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "call_list.create",
+        "role": "Sales Representative"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "call_list.call",
+        "role": "Sales Representative"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "call_attempt.create",
+        "role": "Sales Representative"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "call_list.call",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "call_list.share",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "calling_hours.create",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "calling_hours.update",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "calling_hours.delete",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "caller_id_rule.create",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "caller_id_rule.update",
+        "role": "Sales Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "caller_id_rule.delete",
+        "role": "Sales Manager"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 21,
+  "title": "Pack: dialer privileges"
+}
