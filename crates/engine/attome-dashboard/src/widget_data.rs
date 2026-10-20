@@ -853,7 +853,7 @@ pub(crate) async fn kpi_data(
                     status, computed_at, source_version \
              FROM metric_snapshot \
              WHERE metric_ref = $1 AND ($2::text IS NULL OR source_version = $2) \
-               AND status <> 'failed' \
+               AND status <> 'failed' AND dimension_attribute IS NULL \
              ORDER BY period_start DESC, computed_at DESC, id DESC \
              LIMIT $3",
         )

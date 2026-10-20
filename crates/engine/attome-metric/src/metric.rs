@@ -461,10 +461,95 @@ pub struct SnapshotRow {
     pub superseded_ref: Option<Uuid>,
     pub evaluated_by: Option<Uuid>,
     pub error_message: Option<String>,
+    /// P9-T5: `None` on the total row; on a member row, the dimension
+    /// attribute(s), comma-separated.
+    pub dimension_attribute: Option<String>,
+    /// The member's value (several dimensions' values comma-separated).
+    pub dimension_value: Option<String>,
 }
 
 const SNAPSHOT_COLUMNS: &str = "id, metric_ref, period_start, actual, computed_at, \
-     source_version, status, superseded_ref, evaluated_by, error_message";
+     source_version, status, superseded_ref, evaluated_by, error_message, \
+     dimension_attribute, dimension_value";
+
+/// P9-T5: the most members a dimensioned metric stores per period.
+pub const MAX_MEMBERS: usize = 1_000;
+
+/// One member of a dimensioned metric: its dimension values and its value.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MemberValue {
+    pub dimensions: Vec<Option<String>>,
+    pub value: f64,
+}
+
+/// A metric's dimensions, aggregate and definition version, read without
+/// assuming the governance columns exist (P9-T4 adds them as attributes).
+async fn metric_dimensions(
+    db: &DbPool,
+    metric_id: Uuid,
+) -> Result<(Vec<String>, Option<String>, Option<i32>), AppError> {
+    let row: Option<serde_json::Value> =
+        sqlx::query_scalar("SELECT to_jsonb(d) FROM dashboard_metric_definition d WHERE id = $1")
+            .bind(metric_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let row = row.unwrap_or_default();
+    let dims = parse_dimensions(row.get("dimension_attributes").and_then(|v| v.as_str()));
+    let aggregate = row
+        .get("aggregate")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned);
+    let version = row
+        .get("definition_version")
+        .and_then(serde_json::Value::as_f64)
+        .map(|v| v as i32);
+    Ok((dims, aggregate, version))
+}
+
+/// A metric's dimension attributes: a JSON list or a comma-separated list.
+/// Pure.
+pub fn parse_dimensions(raw: Option<&str>) -> Vec<String> {
+    let Some(raw) = raw.map(str::trim).filter(|r| !r.is_empty()) else {
+        return Vec::new();
+    };
+    let list: Vec<String> = serde_json::from_str::<Vec<String>>(raw)
+        .unwrap_or_else(|_| raw.split(',').map(str::to_owned).collect());
+    list.into_iter()
+        .map(|d| d.trim().to_owned())
+        .filter(|d| !d.is_empty())
+        .collect()
+}
+
+/// The total of a dimensioned result: its total row (every dimension
+/// empty) when the query returned one, else the members' sum for a count or
+/// sum metric. Any other aggregate needs the total row. Pure.
+pub fn dimension_total(
+    rows: &[MemberValue],
+    aggregate: Option<&str>,
+) -> Result<(f64, Vec<MemberValue>), AppError> {
+    let (totals, members): (Vec<&MemberValue>, Vec<&MemberValue>) = rows
+        .iter()
+        .partition(|r| r.dimensions.iter().all(Option::is_none));
+    if members.len() > MAX_MEMBERS {
+        return Err(AppError::Validation(format!(
+            "the metric has more than {MAX_MEMBERS} members; use fewer dimensions"
+        )));
+    }
+    let members: Vec<MemberValue> = members.into_iter().cloned().collect();
+    if let Some(total) = totals.first() {
+        return Ok((total.value, members));
+    }
+    match aggregate {
+        // Counts and sums add up; a stored query with no aggregate set is
+        // read as one.
+        None | Some("count") | Some("sum") => Ok((members.iter().map(|m| m.value).sum(), members)),
+        Some(other) => Err(AppError::Validation(format!(
+            "a {other} metric with dimensions needs its query to return the total row too \
+             (every dimension empty, for example with GROUPING SETS)"
+        ))),
+    }
+}
 
 // `pub` (D-480) — `attome_dashboard::scenario::evaluate` reads the same
 // "current = most recent snapshot" value this module's own routes read,
@@ -476,7 +561,7 @@ pub async fn latest_snapshot(
 ) -> Result<Option<SnapshotRow>, AppError> {
     sqlx::query_as::<_, SnapshotRow>(&format!(
         "SELECT {SNAPSHOT_COLUMNS} FROM metric_snapshot \
-         WHERE metric_ref = $1 AND period_start = $2 \
+         WHERE metric_ref = $1 AND period_start = $2 AND dimension_attribute IS NULL \
          ORDER BY computed_at DESC, id DESC LIMIT 1"
     ))
     .bind(metric_id)
@@ -502,6 +587,9 @@ async fn insert_snapshot(
     status: SnapshotStatus,
     evaluated_by: Option<Uuid>,
     error_message: Option<&str>,
+    members: &[MemberValue],
+    dimension_attribute: Option<&str>,
+    definition_version: Option<i32>,
 ) -> Result<SnapshotRow, AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
@@ -520,6 +608,7 @@ async fn insert_snapshot(
 
     let previous_id: Option<Uuid> = sqlx::query_scalar(
         "SELECT id FROM metric_snapshot WHERE metric_ref = $1 AND period_start = $2 \
+           AND dimension_attribute IS NULL \
          ORDER BY computed_at DESC, id DESC LIMIT 1",
     )
     .bind(metric_id)
@@ -532,8 +621,8 @@ async fn insert_snapshot(
     let row: SnapshotRow = sqlx::query_as(&format!(
         "INSERT INTO metric_snapshot \
          (id, metric_ref, period_start, actual, source_version, status, superseded_ref, \
-          evaluated_by, error_message) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+          evaluated_by, error_message, definition_version) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
          RETURNING {SNAPSHOT_COLUMNS}"
     ))
     .bind(id)
@@ -545,9 +634,46 @@ async fn insert_snapshot(
     .bind(previous_id)
     .bind(evaluated_by)
     .bind(error_message)
+    .bind(definition_version)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+
+    // P9-T5: one row per member, each chained to that member's last row.
+    if let Some(attribute) = dimension_attribute {
+        for member in members {
+            let value = member
+                .dimensions
+                .iter()
+                .map(|d| d.as_deref().unwrap_or(""))
+                .collect::<Vec<_>>()
+                .join(",");
+            sqlx::query(
+                "INSERT INTO metric_snapshot \
+                 (id, metric_ref, period_start, actual, source_version, status, superseded_ref, \
+                  evaluated_by, dimension_attribute, dimension_value, definition_version) \
+                 SELECT $1, $2, $3, $4, $5, $6, \
+                        (SELECT p.id FROM metric_snapshot p \
+                          WHERE p.metric_ref = $2 AND p.period_start = $3 \
+                            AND p.dimension_attribute = $8 AND p.dimension_value = $9 \
+                          ORDER BY p.computed_at DESC, p.id DESC LIMIT 1), \
+                        $7, $8, $9, $10",
+            )
+            .bind(Uuid::now_v7())
+            .bind(metric_id)
+            .bind(period_start)
+            .bind(member.value)
+            .bind(source_version)
+            .bind(SnapshotStatus::Ok.as_str())
+            .bind(evaluated_by)
+            .bind(attribute)
+            .bind(&value)
+            .bind(definition_version)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        }
+    }
 
     tx.commit().await.map_err(AppError::internal)?;
     Ok(row)
@@ -576,6 +702,78 @@ async fn run_query_metric(
     query_ref: &str,
     trigger: crate::principal::Trigger,
 ) -> Result<(f64, String), AppError> {
+    let (response, version) = execute_metric_query(state, query_ref, trigger, 1).await?;
+    let obj = response
+        .pointer("/data/records/0")
+        .and_then(|v| v.as_object().cloned())
+        .ok_or_else(|| AppError::Validation("metric query returned no rows".into()))?;
+    let value = obj
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("value"))
+        .and_then(|(_, v)| v.as_f64())
+        .ok_or_else(|| {
+            AppError::Validation(
+                "metric query result must contain a numeric column named `value`".into(),
+            )
+        })?;
+    Ok((value, version))
+}
+
+/// P9-T5: a dimensioned query metric's rows, each with its dimension
+/// columns and `value`, run once (never once per member), and the version
+/// that produced them. The query groups by the dimensions itself.
+async fn run_query_metric_members(
+    state: &EngineState,
+    query_ref: &str,
+    trigger: crate::principal::Trigger,
+    dimensions: &[String],
+) -> Result<(Vec<MemberValue>, String), AppError> {
+    let page = i64::try_from(MAX_MEMBERS + 2).unwrap_or(i64::MAX);
+    let (response, version) = execute_metric_query(state, query_ref, trigger, page).await?;
+    let records = response
+        .pointer("/data/records")
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default();
+    let mut rows = Vec::with_capacity(records.len());
+    for record in records {
+        let Some(obj) = record.as_object() else {
+            continue;
+        };
+        let field = |name: &str| {
+            obj.iter()
+                .find(|(k, _)| k.eq_ignore_ascii_case(name))
+                .map(|(_, v)| v)
+        };
+        let value = field("value").and_then(|v| v.as_f64()).ok_or_else(|| {
+            AppError::Validation(
+                "metric query result must contain a numeric column named `value`".into(),
+            )
+        })?;
+        let dims = dimensions
+            .iter()
+            .map(|d| match field(d) {
+                None | Some(serde_json::Value::Null) => None,
+                Some(serde_json::Value::String(s)) => Some(s.clone()),
+                Some(other) => Some(other.to_string()),
+            })
+            .collect();
+        rows.push(MemberValue {
+            dimensions: dims,
+            value,
+        });
+    }
+    Ok((rows, version))
+}
+
+/// Runs the metric's stored query (its newest version, pinned) under the
+/// metric service principal and answers the response's wire shape and the
+/// version id. See [`run_query_metric`].
+async fn execute_metric_query(
+    state: &EngineState,
+    query_ref: &str,
+    trigger: crate::principal::Trigger,
+    page_size: i64,
+) -> Result<(serde_json::Value, String), AppError> {
     let db = &state.base.db;
     let query_id: Uuid = query_ref
         .parse()
@@ -626,7 +824,7 @@ async fn run_query_metric(
         "query_id": query_id,
         "query_version_id": version_id,
         "page": 1,
-        "page_size": 1,
+        "page_size": page_size,
         "include_total": true,
     }))
     .map_err(AppError::internal)?;
@@ -659,20 +857,7 @@ async fn run_query_metric(
     // `ExecResponse`'s fields are private to `query_exec`; read the wire shape,
     // exactly as `attome-report/src/run.rs` does.
     let response = serde_json::to_value(&response).map_err(AppError::internal)?;
-    let obj = response
-        .pointer("/data/records/0")
-        .and_then(|v| v.as_object().cloned())
-        .ok_or_else(|| AppError::Validation("metric query returned no rows".into()))?;
-    let value = obj
-        .iter()
-        .find(|(k, _)| k.eq_ignore_ascii_case("value"))
-        .and_then(|(_, v)| v.as_f64())
-        .ok_or_else(|| {
-            AppError::Validation(
-                "metric query result must contain a numeric column named `value`".into(),
-            )
-        })?;
-    Ok((value, version_id.to_string()))
+    Ok((response, version_id.to_string()))
 }
 
 /// See this module's doc comment. `overrides` (metric `key` -> value)
@@ -861,6 +1046,8 @@ pub async fn compute_and_record(
         });
     }
 
+    let (dimensions, aggregate, definition_version) = metric_dimensions(db, metric_id).await?;
+    let mut members: Vec<MemberValue> = Vec::new();
     let (actual, source_version, status, error_message): (
         Option<f64>,
         Option<String>,
@@ -885,7 +1072,18 @@ pub async fn compute_and_record(
                 ));
             };
             let trigger = crate::principal::Trigger::from_evaluated_by(evaluated_by);
-            match run_query_metric(state, &query_ref, trigger).await {
+            let ran = if dimensions.is_empty() {
+                run_query_metric(state, &query_ref, trigger).await
+            } else {
+                run_query_metric_members(state, &query_ref, trigger, &dimensions)
+                    .await
+                    .and_then(|(rows, version)| {
+                        let (total, found) = dimension_total(&rows, aggregate.as_deref())?;
+                        members = found;
+                        Ok((total, version))
+                    })
+            };
+            match ran {
                 Ok((actual, version)) => {
                     let target = fetch_target(db, metric_id, period_start).await?;
                     let status = evaluate_status(actual, &metric.direction, target.as_ref());
@@ -960,6 +1158,11 @@ pub async fn compute_and_record(
         status,
         evaluated_by,
         error_message.as_deref(),
+        &members,
+        (!members.is_empty())
+            .then(|| dimensions.join(","))
+            .as_deref(),
+        definition_version,
     )
     .await?;
     // P11-T1: a worse status than the last one notifies the owner, once.
@@ -1204,6 +1407,21 @@ async fn list_metrics(
     )))
 }
 
+/// The snapshot list's page and dimension filters (P9-T5).
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct SnapshotListQuery {
+    #[param(minimum = 1)]
+    pub page: Option<i64>,
+    #[param(minimum = 1)]
+    pub page_size: Option<i64>,
+    /// A dimension attribute (comma-separated for several): its members'
+    /// rows instead of the totals.
+    pub dimension_attribute: Option<String>,
+    /// One member's value, with `dimension_attribute`.
+    pub dimension_value: Option<String>,
+}
+
 /// `GET /api/v1/metrics/{id}/snapshots` — the trend: every snapshot ever
 /// recorded for this metric, newest period first, superseded rows included
 /// (a restatement's whole history is visible, not just the current value).
@@ -1213,7 +1431,7 @@ async fn list_metrics(
     tag = "dashboard",
     params(
         ("id" = Uuid, Path),
-        OnePageQuery,
+        SnapshotListQuery,
     ),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<SnapshotRow>),
@@ -1227,24 +1445,37 @@ async fn list_snapshots(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<MetricRead>>,
     Path(metric_id): Path<Uuid>,
-    Query(q): Query<OnePageQuery>,
+    Query(q): Query<SnapshotListQuery>,
 ) -> Result<Json<PaginatedResponse<SnapshotRow>>, AppError> {
     fetch_metric(&state.base.db, metric_id).await?;
 
-    let window = q.window();
+    let window = OnePageQuery {
+        page: q.page,
+        page_size: q.page_size,
+    }
+    .window();
+    // Totals by default; members of one dimension (and one value) on request.
+    let filter = "metric_ref = $1 \
+         AND (($2::text IS NULL AND dimension_attribute IS NULL) OR dimension_attribute = $2) \
+         AND ($3::text IS NULL OR dimension_value = $3)";
 
-    let total: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM metric_snapshot WHERE metric_ref = $1")
-            .bind(metric_id)
-            .fetch_one(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-
-    let items: Vec<SnapshotRow> = sqlx::query_as(&format!(
-        "SELECT {SNAPSHOT_COLUMNS} FROM metric_snapshot WHERE metric_ref = $1 \
-         ORDER BY period_start DESC, computed_at DESC LIMIT $2 OFFSET $3"
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM metric_snapshot WHERE {filter}"
     ))
     .bind(metric_id)
+    .bind(&q.dimension_attribute)
+    .bind(&q.dimension_value)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let items: Vec<SnapshotRow> = sqlx::query_as(&format!(
+        "SELECT {SNAPSHOT_COLUMNS} FROM metric_snapshot WHERE {filter} \
+         ORDER BY period_start DESC, computed_at DESC LIMIT $4 OFFSET $5"
+    ))
+    .bind(metric_id)
+    .bind(&q.dimension_attribute)
+    .bind(&q.dimension_value)
     .bind(window.page_size)
     .bind(window.offset)
     .fetch_all(&state.base.db)
@@ -1378,6 +1609,42 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn member(dim: Option<&str>, value: f64) -> MemberValue {
+        MemberValue {
+            dimensions: vec![dim.map(str::to_owned)],
+            value,
+        }
+    }
+
+    #[test]
+    fn dimensions_parse_from_a_list_or_commas() {
+        assert_eq!(
+            parse_dimensions(Some(r#"["region", " owner "]"#)),
+            vec!["region", "owner"]
+        );
+        assert_eq!(
+            parse_dimensions(Some("region, owner")),
+            vec!["region", "owner"]
+        );
+        assert!(parse_dimensions(Some("  ")).is_empty());
+        assert!(parse_dimensions(None).is_empty());
+    }
+
+    #[test]
+    fn a_count_total_is_its_members_sum_unless_the_query_gives_it() {
+        let rows = vec![member(Some("east"), 2.0), member(Some("west"), 1.0)];
+        let (total, members) = dimension_total(&rows, Some("count")).unwrap();
+        assert_eq!((total, members.len()), (3.0, 2));
+        let mut with_total = rows.clone();
+        with_total.push(member(None, 10.0));
+        assert_eq!(dimension_total(&with_total, Some("avg")).unwrap().0, 10.0);
+        assert!(dimension_total(&rows, Some("avg")).is_err());
+        let many: Vec<MemberValue> = (0..=MAX_MEMBERS)
+            .map(|i| member(Some(&i.to_string()), 1.0))
+            .collect();
+        assert!(dimension_total(&many, Some("count")).is_err());
+    }
 
     #[test]
     fn period_start_boundaries_are_utc_calendar() {

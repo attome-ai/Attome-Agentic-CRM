@@ -51,6 +51,7 @@ async fn notify_on_crossing(state: &EngineState, metric_id: Uuid) -> Result<(), 
     let statuses: Vec<String> = sqlx::query_scalar(
         "SELECT status FROM metric_snapshot \
          WHERE metric_ref = $1 AND status IN ('ok', 'warn', 'crit') \
+           AND dimension_attribute IS NULL \
          ORDER BY computed_at DESC LIMIT 2",
     )
     .bind(metric_id)

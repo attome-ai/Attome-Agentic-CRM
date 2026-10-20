@@ -670,7 +670,7 @@ async fn pin_metric_dependencies(
                 _ => None,
             };
             let snapshot_id: Option<Uuid> = sqlx::query_scalar(
-                "SELECT id FROM metric_snapshot WHERE metric_ref = $1 ORDER BY period_start DESC, computed_at DESC, id DESC LIMIT 1",
+                "SELECT id FROM metric_snapshot WHERE metric_ref = $1 AND dimension_attribute IS NULL ORDER BY period_start DESC, computed_at DESC, id DESC LIMIT 1",
             )
             .bind(metric_id)
             .fetch_optional(&mut **tx)

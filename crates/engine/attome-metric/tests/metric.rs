@@ -1119,3 +1119,65 @@ async fn the_scheduled_sweep_records_the_principal_as_evaluator() {
     assert_eq!(actual, Some(3.0));
     assert_eq!(evaluated_by, Some(METRIC_PRINCIPAL_ID));
 }
+
+/// P9-T5: a metric with a dimension stores one row per member beside its
+/// total, and the members add up to the total.
+#[tokio::test]
+async fn dimension_members_sum_to_total() {
+    let state = skip_if_no_db!(test_state(None).await);
+    let db = state.base.db.clone();
+    seed_once(&db).await;
+    // The governance attributes (P9-T4) are provisioned by the platform
+    // bundle on a deployment; this throwaway database adds the columns.
+    sqlx::query(
+        "ALTER TABLE dashboard_metric_definition            ADD COLUMN IF NOT EXISTS dimension_attributes text,            ADD COLUMN IF NOT EXISTS aggregate text",
+    )
+    .execute(&db)
+    .await
+    .expect("governance columns");
+
+    // Deals by region: two in the east, one in the west.
+    let (query_id, _) = insert_query(
+        &db,
+        "SELECT region, COUNT(*)::float8 AS value            FROM (VALUES ('east'), ('east'), ('west')) AS deals(region) GROUP BY region",
+        Some(METRIC_SNAPSHOT_PRIVILEGE),
+    )
+    .await;
+    let metric_id = insert_query_metric(&db, query_id).await;
+    sqlx::query(
+        "UPDATE dashboard_metric_definition SET dimension_attributes = 'region', aggregate = 'count'           WHERE id = $1",
+    )
+    .bind(metric_id)
+    .execute(&db)
+    .await
+    .expect("set the dimension");
+
+    let total = compute_query_metric(&state, metric_id).await;
+    assert_eq!(total.status, "ok", "{:?}", total.error_message);
+    assert_eq!(total.actual, Some(3.0));
+    assert_eq!(total.dimension_attribute, None);
+
+    let members: Vec<(String, f64)> = sqlx::query_as(
+        "SELECT dimension_value, actual FROM metric_snapshot           WHERE metric_ref = $1 AND dimension_attribute = 'region' ORDER BY dimension_value",
+    )
+    .bind(metric_id)
+    .fetch_all(&db)
+    .await
+    .expect("member rows");
+    assert_eq!(
+        members,
+        vec![("east".to_owned(), 2.0), ("west".to_owned(), 1.0)]
+    );
+    assert_eq!(members.iter().map(|(_, v)| v).sum::<f64>(), 3.0);
+
+    // The current value is still the total, not a member.
+    let latest = attome_metric::metric::latest_snapshot(
+        &db,
+        metric_id,
+        NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(latest.id, total.id);
+}

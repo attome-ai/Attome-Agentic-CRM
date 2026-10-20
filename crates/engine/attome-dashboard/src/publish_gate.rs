@@ -340,7 +340,8 @@ async fn check_widget(
                 }
                 let has_snapshot: bool = sqlx::query_scalar(
                     "SELECT EXISTS (SELECT 1 FROM metric_snapshot \
-                     WHERE metric_ref = $1 AND status <> 'failed')",
+                     WHERE metric_ref = $1 AND status <> 'failed' \
+                       AND dimension_attribute IS NULL)",
                 )
                 .bind(metric_id)
                 .fetch_one(db)
