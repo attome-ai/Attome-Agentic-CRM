@@ -1777,6 +1777,8 @@ pub fn register_engines(
         // reaches through `attome_core::WorkflowStarter`, since attome-ai
         // cannot depend on attome-workflow (the reverse edge exists).
         .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
+        // E8-T4: a journey's exit and goal conditions, before every node.
+        .register_workflow_kind_guard(attome_marketing::journey::guard::JourneyGuard)
 }
 
 #[cfg(test)]

@@ -2745,6 +2745,12 @@ pub const MARKETING_LIST_IMPORT: attome_jobs::JobType =
 pub const MARKETING_WEB_EVENT_BATCH: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::tracking::writer::JOB, 1);
 
+/// E8-T4: one chunk (at most 1,000 people) of a journey entry. Only
+/// enqueued (`attome_marketing::journey::enrol::queue_enrol`), never
+/// scheduled.
+pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::journey::enrol::JOB, 1);
+
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
     attome_jobs::JobType::new("social_reviews_sync", 1);
@@ -2857,6 +2863,35 @@ pub fn register_job_types() {
                 attome_marketing::static_list::run_import(&state, payload.import_id)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MARKETING_JOURNEY_ENROL,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let chunk: attome_marketing::journey::enrol::EnrolJob = job.payload()?;
+                let outcome = attome_marketing::journey::enrol(
+                    &state,
+                    chunk.journey_id,
+                    chunk.people,
+                    &chunk.source,
+                    chunk.is_test,
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    journey = %chunk.journey_id,
+                    enrolled = outcome.enrolled,
+                    skipped_active = outcome.skipped_active,
+                    skipped_re_entry = outcome.skipped_re_entry,
+                    skipped_cap = outcome.skipped_cap,
+                    "journey enrolment chunk done"
+                );
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

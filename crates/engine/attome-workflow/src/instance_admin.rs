@@ -381,6 +381,179 @@ impl attome_core::WorkflowStarter for PublishedWorkflowStarter {
             .await
         })
     }
+
+    fn start_batch_in_tx<'a, 'c: 'a>(
+        &'a self,
+        state: &'a EngineState,
+        tx: &'a mut attome_db::Tx<'c>,
+        request: attome_core::workflow_start::WorkflowBatchStartRequest,
+    ) -> attome_core::workflow_start::WorkflowBatchStartFuture<'a> {
+        Box::pin(async move {
+            start_instances_in_tx(
+                state,
+                tx,
+                &request.definition_logicalname,
+                request.started_by,
+                request.items,
+            )
+            .await
+        })
+    }
+}
+
+/// E8-T4: starts [`attome_core::workflow_start::MAX_BATCH_START`]-sized
+/// chunks of `items` of the published `definition_logicalname`, each chunk
+/// in its own transaction. Returns each started instance's correlated
+/// record and id.
+pub async fn start_instances_batch(
+    state: &EngineState,
+    definition_logicalname: &str,
+    started_by: Option<Uuid>,
+    items: Vec<(Uuid, serde_json::Value)>,
+) -> Result<Vec<(Uuid, Uuid)>, AppError> {
+    let mut started = Vec::with_capacity(items.len());
+    let mut rest = items;
+    while !rest.is_empty() {
+        let tail = rest.split_off(rest.len().min(attome_core::workflow_start::MAX_BATCH_START));
+        let chunk = std::mem::replace(&mut rest, tail);
+        let mut tx = attome_db::tx::begin(&state.base.db).await?;
+        started.extend(
+            start_instances_in_tx(state, &mut tx, definition_logicalname, started_by, chunk)
+                .await?,
+        );
+        tx.commit().await.map_err(AppError::internal)?;
+    }
+    Ok(started)
+}
+
+/// E8-T4: one chunk of a batched start inside `tx`: the published version
+/// resolved once, every instance in one insert and every entry node run in
+/// another, a run job per running instance (a flow's `max_concurrent_runs`
+/// leaves the rest `queued`, as a single start does), and one audit event
+/// for the chunk. No external I/O.
+pub async fn start_instances_in_tx(
+    state: &EngineState,
+    tx: &mut attome_db::Tx<'_>,
+    definition_logicalname: &str,
+    started_by: Option<Uuid>,
+    items: Vec<(Uuid, serde_json::Value)>,
+) -> Result<Vec<(Uuid, Uuid)>, AppError> {
+    if items.is_empty() {
+        return Ok(Vec::new());
+    }
+    if items.len() > attome_core::workflow_start::MAX_BATCH_START {
+        return Err(AppError::Validation(format!(
+            "a batched start takes at most {} instances",
+            attome_core::workflow_start::MAX_BATCH_START
+        )));
+    }
+    let (version_id, graph_json): (Uuid, serde_json::Value) = sqlx::query_as(
+        "SELECT v.id, v.graph FROM workflow_definition_version v \
+         JOIN workflow_definition d ON d.id = v.definition_id \
+         WHERE d.logicalname = $1 AND v.status = 'published' AND d.is_active = TRUE AND d.is_deleted = FALSE",
+    )
+    .bind(definition_logicalname)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or_else(|| {
+        AppError::Validation(format!(
+            "workflow {definition_logicalname:?} has no published, active version"
+        ))
+    })?;
+    let graph = Graph::parse(&graph_json).map_err(AppError::internal)?;
+    let entry_node_id = crate::node_types::entry_trigger(&graph, None)
+        .ok_or_else(|| AppError::internal("published graph has no Trigger node"))?;
+
+    // As a single start: the definition row lock serializes a capped flow's
+    // starts; the first free slots run, the rest wait `queued`.
+    let slots: i64 = match max_concurrent_runs(&graph_json) {
+        Some(cap) => {
+            sqlx::query(
+                "SELECT d.id FROM workflow_definition d \
+                   JOIN workflow_definition_version v ON v.definition_id = d.id \
+                  WHERE v.id = $1 FOR UPDATE OF d",
+            )
+            .bind(version_id)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            (cap - active_runs(tx, version_id).await?).max(0)
+        }
+        None => i64::MAX,
+    };
+
+    let correlations: Vec<Uuid> = items.iter().map(|(c, _)| *c).collect();
+    let contexts: Vec<String> = items.iter().map(|(_, ctx)| ctx.to_string()).collect();
+    let started: Vec<(Uuid, Uuid, String)> = sqlx::query_as(
+        "INSERT INTO workflow_instance \
+            (definition_version_id, trigger_node_id, correlation_entity_id, status, started_by, \
+             context, node_data, chain_depth) \
+         SELECT $1, $2, i.correlation, CASE WHEN i.ord <= $6 THEN 'running' ELSE 'queued' END, $3, \
+                i.context::jsonb, jsonb_build_object($2::text, i.context::jsonb), 0 \
+           FROM UNNEST($4::uuid[], $5::text[]) WITH ORDINALITY AS i(correlation, context, ord) \
+         RETURNING correlation_entity_id, id, status",
+    )
+    .bind(version_id)
+    .bind(&entry_node_id)
+    .bind(started_by)
+    .bind(&correlations)
+    .bind(&contexts)
+    .bind(slots)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+
+    let ids: Vec<Uuid> = started.iter().map(|(_, id, _)| *id).collect();
+    sqlx::query(
+        "INSERT INTO workflow_node_run (id, instance_id, node_id, status, attempt_count, started_at, completed_at) \
+         SELECT uuidv7(), i, $2, 'succeeded', 1, NOW(), NOW() FROM UNNEST($1::uuid[]) AS i",
+    )
+    .bind(&ids)
+    .bind(&entry_node_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+
+    for (_, instance_id, status) in &started {
+        if status == "running" {
+            attome_jobs::enqueue_in_tx(
+                tx,
+                attome_core::jobs::EngineJob::WorkflowExecute {
+                    instance_id: *instance_id,
+                },
+            )
+            .await
+            .map_err(AppError::internal)?;
+        }
+    }
+
+    // One event for the chunk, on the version it started (a per-instance
+    // event a thousand times over would be the batch's whole cost).
+    let audit = attome_audit::audit_service(state);
+    let event = attome_audit::BusinessEvent::new(
+        "workflow_definition_version",
+        version_id,
+        attome_audit::AuditOperation::Create,
+        "workflow.instances.started",
+        started_by.unwrap_or(Uuid::nil()),
+    )
+    .comment(format!("{} instances started in one batch", started.len()))
+    .attributed(attome_audit::Attribution {
+        acting_user_id: started_by.unwrap_or(Uuid::nil()),
+        initiator: if started_by.is_some() {
+            attome_audit::Initiator::User
+        } else {
+            attome_audit::Initiator::System
+        },
+        agent_session_id: None,
+        agent_action_id: None,
+    });
+    attome_audit::write_business_event_in_tx(tx, &audit, event)
+        .await
+        .map_err(AppError::internal)?;
+
+    Ok(started.into_iter().map(|(c, id, _)| (c, id)).collect())
 }
 
 /// Shared entry-start primitive — used by the manual-start HTTP handler

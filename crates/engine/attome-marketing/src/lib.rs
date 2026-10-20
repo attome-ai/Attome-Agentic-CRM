@@ -19,6 +19,7 @@ pub mod events;
 /// E10-T1: marketing forms and their public submission.
 pub mod forms;
 pub mod handoff_sla;
+pub mod journey;
 pub mod landing;
 pub mod loyalty;
 pub mod model;
