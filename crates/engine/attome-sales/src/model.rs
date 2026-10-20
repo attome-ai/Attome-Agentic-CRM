@@ -163,6 +163,10 @@ impl EngineModel for SalesModel {
                 post(crate::orgchart::post_sales_contact_left),
             )
             .route(
+                "/api/v1/sales/accounts/{id}/org-chart",
+                get(crate::orgchart::get_sales_org_chart),
+            )
+            .route(
                 "/api/v1/sales/competitors/{id}/head-to-head",
                 get(crate::competitor_routes::get_sales_head_to_head),
             )

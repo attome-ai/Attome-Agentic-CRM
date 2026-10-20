@@ -17,6 +17,8 @@
 //! answer names the previous manager, so the client undoes a change by
 //! setting that one back.
 
+/// D23-T5: the chart of an account or its group.
+pub mod chart;
 /// D23-T8: people who leave.
 pub mod movers;
 
@@ -352,10 +354,76 @@ pub(crate) async fn post_sales_contact_left(
     ))
 }
 
+/// The org chart's options.
+#[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct SalesOrgChartQuery {
+    /// The whole group: every account sharing the top of the parent chain.
+    #[serde(default)]
+    pub group: bool,
+    /// Comma-separated contact ids whose collapsed branches to open.
+    pub expand: Option<String>,
+    /// The `next_cursor` of the previous call.
+    pub cursor: Option<Uuid>,
+}
+
+/// An account's org chart.
+///
+/// The account's contacts (or its group's) that the caller may read, by
+/// who they report to; a contact whose manager is missing or unreadable is
+/// listed as unplaced. Branches deeper than three levels are collapsed to a
+/// count unless named in `expand`; at most 500 contacts a call, the rest
+/// through `cursor`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/sales/accounts/{id}/org-chart",
+    operation_id = "get_sales_org_chart",
+    tag = "sales",
+    params(
+        ("id" = Uuid, Path, description = "The account"),
+        SalesOrgChartQuery,
+    ),
+    responses(
+        (status = 200, description = "The chart", body = chart::OrgChart),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not read contacts", body = ErrorResponse),
+        (status = 404, description = "No such account the caller may read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn get_sales_org_chart(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(account): Path<Uuid>,
+    axum::extract::Query(q): axum::extract::Query<SalesOrgChartQuery>,
+) -> Result<Json<chart::OrgChart>, AppError> {
+    let expand: std::collections::HashSet<Uuid> = q
+        .expand
+        .as_deref()
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|s| Uuid::parse_str(s.trim()).ok())
+        .take(200)
+        .collect();
+    Ok(Json(
+        chart::account_chart(&state, &ctx, account, q.group, &expand, q.cursor).await?,
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(put_sales_contact_manager, post_sales_contact_left),
-    components(schemas(movers::SalesContactLeftBody, movers::SalesContactLeft))
+    paths(
+        put_sales_contact_manager,
+        post_sales_contact_left,
+        get_sales_org_chart
+    ),
+    components(schemas(
+        movers::SalesContactLeftBody,
+        movers::SalesContactLeft,
+        chart::OrgChart,
+        chart::OrgNode,
+        chart::ChartCompany
+    ))
 )]
 pub(crate) struct ApiDocFragment;
 
