@@ -9,6 +9,7 @@ pub mod amendment;
 pub mod counterparty;
 pub mod dates;
 pub mod model;
+pub mod retention;
 
 pub use model::ContractModel;
 

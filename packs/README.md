@@ -168,6 +168,11 @@ The asset-management `0003` keys the software catalogue on name and version and 
 end-of-support and end-of-life dates for common operating systems, databases, runtimes and office
 software from endoflife.date (H6-T1); its `0004` reports entitled seats against installs and the
 over-deployed products (H6-T2).
+The contract-management `0003` (W1-T14) adds the Contract Manager, Legal, Contract Requester (own
+requests only) and Contract Viewer roles; a confidential contract is read by Legal only (a grant
+condition on the other roles, so lists, search and reports agree), and contract value, current
+terms and clause text are sensitive behind the Contract terms profile managers and legal hold. Boot
+adds a retention rule that proposes each contract for review seven years after its end date.
 
 ## regions
 

@@ -1240,6 +1240,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // platform's own definitions so their lookups onto platform entities
     // resolve; idempotent through the changeset ledger.
     apply_configured_packs(system.state(), config).await?;
+    // W1-T14: the contract retention rule, once the pack's end date exists.
+    attome_contract::retention::ensure_retention_rule(system.state()).await?;
     platform_seed_lock.release().await;
     replay_erasures(system.state(), config).await?;
     enqueue_lookup_index_backfill(system.state()).await;

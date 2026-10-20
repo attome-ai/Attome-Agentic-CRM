@@ -1,0 +1,1514 @@
+{
+  "author": "packs",
+  "checksum": "sha256:6f66d53e98eb6a349e173db2e3ef2533c3e95eaed4cc0f1009638de9c175e8da",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Contract security (W1-T14): Contract Manager, Legal, Contract Requester (own requests only) and Contract Viewer roles; confidential contracts readable by Legal only, through a grant condition on the other roles; contract value, current terms and clause text sensitive behind the Contract terms field profile held by managers and legal; new contracts default to not confidential.",
+  "format": "attome-changeset/v1",
+  "id": "01a15834-c786-78a1-9888-380ac151ca63",
+  "layer": "product",
+  "name": "contract-management-security",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Confidential",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_confidential",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract",
+        "field": "is_confidential"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contract Value",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "contract_value",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contract",
+        "field": "contract_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Current Terms",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "current_terms",
+          "lookup_entity": null,
+          "max_length": 20000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "contract",
+        "field": "current_terms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Body",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "body",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "clause",
+        "field": "body"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Body",
+          "field_type": "rich_text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "body_html",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "clause",
+        "field": "body_html"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Body",
+          "field_type": "rich_text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "body_ar_html",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "clause",
+        "field": "body_ar_html"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": []
+          },
+          "description": "A new contract is not confidential unless whoever creates it says so.",
+          "display_name": "Contracts are not confidential by default",
+          "display_order": 0,
+          "entity_logicalname": "contract",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "contract_confidential_default",
+          "policies": [
+            {
+              "field": "is_confidential",
+              "mode": "default",
+              "type": "set_value",
+              "value": false
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "contract",
+        "rule": "contract_confidential_default"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Drafts, negotiates and manages contracts, clauses, obligations and amendments; sees value and terms; not confidential contracts.",
+          "is_customized": false,
+          "name": "Contract Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Everything a contract manager does, plus confidential contracts, contract types and playbook rules.",
+          "is_customized": false,
+          "name": "Legal",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Requests contracts and follows their own requests; sees no value or terms and no confidential contract.",
+          "is_customized": false,
+          "name": "Contract Requester",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Reads contracts and their clauses, obligations and amendments; sees no value or terms and no confidential contract.",
+          "is_customized": false,
+          "name": "Contract Viewer",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on amendment",
+          "key": "amendment.create",
+          "name": "amendment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "amendment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on amendment",
+          "key": "amendment.read",
+          "name": "amendment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "amendment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on amendment",
+          "key": "amendment.update",
+          "name": "amendment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "amendment.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on clause",
+          "key": "clause.create",
+          "name": "clause.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "clause.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on clause",
+          "key": "clause.read",
+          "name": "clause.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "clause.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on clause",
+          "key": "clause.update",
+          "name": "clause.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "clause.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on contract",
+          "key": "contract.create",
+          "name": "contract.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "contract.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on contract",
+          "key": "contract.delete",
+          "name": "contract.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "contract.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contract",
+          "key": "contract.read",
+          "name": "contract.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "contract.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on contract",
+          "key": "contract.update",
+          "name": "contract.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "contract.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on contract_comparison",
+          "key": "contract_comparison.create",
+          "name": "contract_comparison.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "contract_comparison.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contract_comparison",
+          "key": "contract_comparison.read",
+          "name": "contract_comparison.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "contract_comparison.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on contract_import",
+          "key": "contract_import.create",
+          "name": "contract_import.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "contract_import.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contract_import",
+          "key": "contract_import.read",
+          "name": "contract_import.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "contract_import.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on contract_playbook_rule",
+          "key": "contract_playbook_rule.create",
+          "name": "contract_playbook_rule.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "contract_playbook_rule.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contract_playbook_rule",
+          "key": "contract_playbook_rule.read",
+          "name": "contract_playbook_rule.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "contract_playbook_rule.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on contract_playbook_rule",
+          "key": "contract_playbook_rule.update",
+          "name": "contract_playbook_rule.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "privilege": "contract_playbook_rule.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on contract_type",
+          "key": "contract_type.create",
+          "name": "contract_type.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "privilege": "contract_type.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contract_type",
+          "key": "contract_type.read",
+          "name": "contract_type.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "privilege": "contract_type.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on contract_type",
+          "key": "contract_type.update",
+          "name": "contract_type.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "privilege": "contract_type.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on contract_version",
+          "key": "contract_version.create",
+          "name": "contract_version.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "privilege": "contract_version.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contract_version",
+          "key": "contract_version.read",
+          "name": "contract_version.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "privilege": "contract_version.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on obligation",
+          "key": "obligation.create",
+          "name": "obligation.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "privilege": "obligation.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on obligation",
+          "key": "obligation.read",
+          "name": "obligation.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "privilege": "obligation.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on obligation",
+          "key": "obligation.update",
+          "name": "obligation.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "privilege": "obligation.update"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "privilege": "contract.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "privilege": "contract.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "privilege": "contract.update",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "privilege": "clause.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "privilege": "clause.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "privilege": "clause.update",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "privilege": "amendment.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "privilege": "amendment.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "privilege": "amendment.update",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "privilege": "obligation.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "privilege": "obligation.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "privilege": "obligation.update",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "privilege": "contract.delete",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "privilege": "contract_type.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "privilege": "contract_playbook_rule.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "privilege": "contract_version.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "privilege": "contract_version.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "privilege": "contract_comparison.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "privilege": "contract_comparison.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "privilege": "contract_import.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "privilege": "contract_import.create",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "privilege": "contract.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "privilege": "contract.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "privilege": "contract.update",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "privilege": "clause.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "privilege": "clause.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "privilege": "clause.update",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "privilege": "amendment.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "privilege": "amendment.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "privilege": "amendment.update",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "privilege": "obligation.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "privilege": "obligation.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "privilege": "obligation.update",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "privilege": "contract.delete",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "privilege": "contract_type.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "privilege": "contract_playbook_rule.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "privilege": "contract_version.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "privilege": "contract_version.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "privilege": "contract_comparison.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "privilege": "contract_comparison.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "privilege": "contract_import.read",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "privilege": "contract_import.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "privilege": "contract_type.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "privilege": "contract_type.update",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "privilege": "contract_playbook_rule.create",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "privilege": "contract_playbook_rule.update",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "privilege": "contract.read",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "privilege": "contract.create",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "privilege": "contract.update",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "privilege": "contract_type.read",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "privilege": "contract.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "privilege": "clause.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "privilege": "amendment.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "privilege": "obligation.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "privilege": "contract_type.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "privilege": "contract_version.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "contract",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "is_confidential",
+          "operator": 0,
+          "value": false
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "condition": "is_confidential|0|false",
+        "privilege": "contract.read",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "is_confidential",
+          "operator": 0,
+          "value": false
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "condition": "is_confidential|0|false",
+        "privilege": "contract.read",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "is_confidential",
+          "operator": 0,
+          "value": false
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "condition": "is_confidential|0|false",
+        "privilege": "contract.read",
+        "role": "Contract Viewer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Contract value, current terms and clause text: contract managers and legal.",
+          "is_customized": false,
+          "name": "Contract terms"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "profile": "Contract terms"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "contract",
+        "field": "contract_value",
+        "profile": "Contract terms"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "contract",
+        "field": "current_terms",
+        "profile": "Contract terms"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "clause",
+        "field": "body",
+        "profile": "Contract terms"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "clause",
+        "field": "body_html",
+        "profile": "Contract terms"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "clause",
+        "field": "body_ar_html",
+        "profile": "Contract terms"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "profile": "Contract terms",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "profile": "Contract terms",
+        "role": "Legal"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "contract-management",
+  "seq": 3,
+  "title": "Pack: contract roles and field security"
+}
