@@ -99,8 +99,9 @@ describe('mention picker', () => {
 
   it('says when nothing matches', () => {
     const { fixture, el, type } = render();
-    fixture.componentInstance.search = vi.fn(() => of([]));
-    fixture.detectChanges();
+    // Change what the bound search answers, not the function itself: a new
+    // function on the plain host property is not seen by the OnPush picker.
+    vi.mocked(fixture.componentInstance.search).mockImplementation(() => of([]));
     type('@zz');
     expect(el.querySelector('[data-testid="mention-none"]')?.textContent).toContain('mentionPicker.none');
   });
