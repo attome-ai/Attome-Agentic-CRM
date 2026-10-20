@@ -62,6 +62,10 @@ impl EngineModel for CommissionModel {
                 post(crate::plan_admin::commission_post_publish),
             )
             .route(
+                "/api/v1/commission/plans/{id}/send-for-acceptance",
+                post(crate::acceptance::commission_post_send_for_acceptance),
+            )
+            .route(
                 "/api/v1/commission/periods/{id}/submit",
                 post(crate::close::commission_post_submit),
             )

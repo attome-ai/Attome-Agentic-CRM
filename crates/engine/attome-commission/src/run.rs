@@ -12,6 +12,13 @@
 //!
 //! A participant's quota is their `revenue` sales quota for the period (none
 //! is zero: attainment is then 0 and band rules see it as such).
+//!
+//! F10-T10: a component with its own `starts_on`/`ends_on` (a spiff) pays
+//! only on credits credited inside that window ([`in_window`]). The payout
+//! keeps what was `earned` and pays it through the participant's draw
+//! ([`crate::draw`]); a participant asked to accept the plan
+//! (`acceptance_status` pending or declined) gets a `held` payout
+//! ([`held`]), released when they sign ([`crate::acceptance`]).
 
 use attome_core::EngineState;
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
@@ -24,6 +31,7 @@ use axum::{
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -115,6 +123,83 @@ pub(crate) async fn components(
     Ok(out)
 }
 
+/// A component's own window (a spiff's `starts_on`/`ends_on`), by id.
+pub(crate) type Windows = HashMap<Uuid, (Option<NaiveDate>, Option<NaiveDate>)>;
+
+/// The plan version's component windows; components without one are absent.
+pub(crate) async fn windows(db: &attome_db::DbPool, version: Uuid) -> Result<Windows, AppError> {
+    let rows: Vec<(Uuid, Option<NaiveDate>, Option<NaiveDate>)> = sqlx::query_as(
+        "SELECT id, starts_on::date, ends_on::date FROM comp_component \
+         WHERE plan_version_ref = $1 AND (is_active IS NULL OR is_active = true) \
+           AND (starts_on IS NOT NULL OR ends_on IS NOT NULL)",
+    )
+    .bind(version)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows.into_iter().map(|(id, s, e)| (id, (s, e))).collect())
+}
+
+/// The day each of the participant's credits in the period was credited.
+pub(crate) async fn credit_dates(
+    db: &attome_db::DbPool,
+    participant: Uuid,
+    period: Uuid,
+) -> Result<HashMap<Uuid, NaiveDate>, AppError> {
+    let rows: Vec<(Uuid, Option<NaiveDate>)> = sqlx::query_as(
+        "SELECT id, credited_on::date FROM comp_credit \
+         WHERE participant_ref = $1 AND period_ref = $2 \
+           AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(participant)
+    .bind(period)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(id, day)| Some((id, day?)))
+        .collect())
+}
+
+/// Whether a credit of `day` counts for a component with `window`: always
+/// without a window; inside it (both ends included) with one; never when it
+/// has a window and the credit no date. Pure.
+pub fn in_window(
+    day: Option<NaiveDate>,
+    window: Option<&(Option<NaiveDate>, Option<NaiveDate>)>,
+) -> bool {
+    let Some((starts, ends)) = window else {
+        return true;
+    };
+    let Some(day) = day else {
+        return false;
+    };
+    starts.is_none_or(|s| day >= s) && ends.is_none_or(|e| day <= e)
+}
+
+/// The credits a component pays on: every credit, or those in its window.
+pub(crate) fn eligible(
+    component: Uuid,
+    windows: &Windows,
+    credits: &[Credit],
+    dates: &HashMap<Uuid, NaiveDate>,
+) -> Vec<Credit> {
+    let window = windows.get(&component);
+    credits
+        .iter()
+        .filter(|c| in_window(dates.get(&c.id).copied(), window))
+        .cloned()
+        .collect()
+}
+
+/// Whether a participant's payout is held: they were asked to accept the
+/// plan and have not (pending or declined). Never asked (no status) is not
+/// held. Pure.
+pub fn held(acceptance_status: Option<&str>) -> bool {
+    matches!(acceptance_status, Some("pending" | "declined"))
+}
+
 async fn set_status(state: &EngineState, run: Uuid, status: &str) -> Result<(), AppError> {
     sqlx::query(
         "UPDATE comp_run SET status = $2, \
@@ -173,14 +258,15 @@ pub async fn execute(state: &EngineState, run: Uuid) -> Result<u64, AppError> {
             return Ok(0);
         }
     };
+    let windows = windows(&state.base.db, version).await?;
     let mut after = cursor
         .as_deref()
         .and_then(|c| Uuid::parse_str(c).ok())
         .unwrap_or(Uuid::nil());
     let mut processed = 0;
     loop {
-        let participants: Vec<(Uuid, Option<Uuid>)> = sqlx::query_as(
-            "SELECT id, user_ref FROM plan_participant \
+        let participants: Vec<(Uuid, Option<Uuid>, Option<String>)> = sqlx::query_as(
+            "SELECT id, user_ref, acceptance_status FROM plan_participant \
              WHERE plan_version_ref = $1 AND id > $2 AND (is_active IS NULL OR is_active = true) \
              ORDER BY id LIMIT $3",
         )
@@ -195,14 +281,16 @@ pub async fn execute(state: &EngineState, run: Uuid) -> Result<u64, AppError> {
         };
         let full = participants.len() as i64 == BATCH;
         after = last.0;
-        for (participant, user) in participants {
+        for (participant, user, acceptance) in participants {
             pay_participant(
                 state,
                 run,
                 period,
                 participant,
                 user,
+                held(acceptance.as_deref()),
                 &components,
+                &windows,
                 starts,
                 ends,
             )
@@ -227,13 +315,22 @@ async fn pay_participant(
     period: Uuid,
     participant: Uuid,
     user: Option<Uuid>,
+    hold: bool,
     components: &[Component],
+    windows: &Windows,
     starts: NaiveDate,
     ends: NaiveDate,
 ) -> Result<(), AppError> {
     let db = &state.base.db;
     let (credits, quota) = inputs(db, participant, user, period, starts, ends).await?;
+    let dates = if windows.is_empty() {
+        HashMap::new()
+    } else {
+        credit_dates(db, participant, period).await?
+    };
     let mut tx = attome_db::tx::begin(db).await?;
+    // A repeated run for the period first undoes the draw it applied.
+    crate::draw::undo_in_tx(&mut tx, period, participant).await?;
     sqlx::query("DELETE FROM comp_statement_line WHERE run_ref = $1 AND participant_ref = $2")
         .bind(run)
         .bind(participant)
@@ -248,6 +345,7 @@ async fn pay_participant(
         .map_err(AppError::internal)?;
     let mut total = Decimal::ZERO;
     for component in components {
+        let credits = eligible(component.id, windows, &credits, &dates);
         for line in evaluate(component, &credits, quota) {
             total += line.payout;
             let explanation: Vec<serde_json::Value> = line
@@ -280,13 +378,26 @@ async fn pay_participant(
             .map_err(AppError::internal)?;
         }
     }
+    let (pay, draw_ref, draw_change) = match crate::draw::lock_in_tx(&mut tx, participant).await? {
+        Some(draw) => {
+            let settled = crate::draw::settle(draw.kind, draw.amount, draw.balance, total);
+            crate::draw::apply_in_tx(&mut tx, draw.id, settled.balance_change).await?;
+            (settled.pay, Some(draw.id), settled.balance_change)
+        }
+        None => (total, None, Decimal::ZERO),
+    };
     sqlx::query(
-        "INSERT INTO comp_payout (run_ref, participant_ref, amount, status, owner_ref) \
-         VALUES ($1, $2, $3::numeric, 'calculated', $4)",
+        "INSERT INTO comp_payout (run_ref, participant_ref, amount, earned, draw_ref, \
+             draw_balance_change, status, owner_ref) \
+         VALUES ($1, $2, $3::numeric, $4::numeric, $5, $6::numeric, $7, $8)",
     )
     .bind(run)
     .bind(participant)
+    .bind(pay.to_string())
     .bind(total.to_string())
+    .bind(draw_ref)
+    .bind(draw_change.to_string())
+    .bind(if hold { "held" } else { "calculated" })
     .bind(user)
     .execute(&mut *tx)
     .await
@@ -463,5 +574,27 @@ mod tests {
         assert_eq!(bands[1].rate_pct, Decimal::new(85, 1));
         assert!(parse_rate_table("[{\"to\": 5}]").is_err());
         assert!(parse_rate_table("not json").is_err());
+    }
+
+    #[test]
+    fn a_spiff_pays_only_inside_its_window() {
+        let day = |d: u32| NaiveDate::from_ymd_opt(2026, 10, d);
+        let window = (day(5), day(10));
+        assert!(in_window(day(1), None));
+        assert!(in_window(None, None));
+        assert!(!in_window(None, Some(&window)));
+        assert!(!in_window(day(4), Some(&window)));
+        assert!(in_window(day(5), Some(&window)));
+        assert!(in_window(day(10), Some(&window)));
+        assert!(!in_window(day(11), Some(&window)));
+        assert!(in_window(day(30), Some(&(day(5), None))));
+    }
+
+    #[test]
+    fn only_asked_and_unsigned_participants_are_held() {
+        assert!(held(Some("pending")));
+        assert!(held(Some("declined")));
+        assert!(!held(Some("accepted")));
+        assert!(!held(None));
     }
 }

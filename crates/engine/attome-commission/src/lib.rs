@@ -4,9 +4,11 @@
 //! crate holds the engine code that acts on them as later tasks add it. Gated on the `commission`
 //! module.
 
+pub mod acceptance;
 pub mod close;
 pub mod credit;
 pub mod dispute;
+pub mod draw;
 pub mod model;
 pub mod plan_admin;
 pub mod recalc;
@@ -29,5 +31,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<close::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<plan_admin::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<recalc::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<acceptance::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

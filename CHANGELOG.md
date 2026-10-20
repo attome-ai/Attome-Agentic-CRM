@@ -1150,6 +1150,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   transaction, store each line total and the deal's one-time, recurring and contract totals and amount,
   and recalculate the stored split amounts. A product must be on the deal's price list in its currency
   (`product_not_on_price_list`). `opportunity_line` and the deal totals are now engine-managed.
+- Commission plan acceptance, spiffs and draws (F10-T10, commission pack `0005`):
+  `POST /api/v1/commission/plans/{id}/send-for-acceptance` renders a K3 plan document per participant of
+  the latest published version and the `commission_acceptance` job sends it as a K4 signature envelope;
+  a completed envelope marks the participant `accepted` and releases their `held` payouts (runs hold the
+  payout of a participant asked to accept who has not). A component with its own `starts_on`/`ends_on`
+  (a spiff) pays only on credits inside that window. Draws: a recoverable draw pays at least the draw
+  and recovers the shortfall from later excess earnings; a non-recoverable one pays the larger of draw
+  and earnings. Payouts keep `earned`, `draw_ref` and `draw_balance_change`; a repeated run for a period
+  undoes its earlier draw change first.
 - Commission recalculation previews (`comp_recalc_preview`, commission pack `0003`): publishing a plan
   or crediting an open period recomputes it into per-participant previews (current and recalculated
   amount) without touching statements; `POST /api/v1/commission/periods/{id}/recalc/apply` starts the

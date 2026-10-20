@@ -71,9 +71,10 @@ pub async fn preview_period(state: &EngineState, period_id: Uuid) -> Result<u64,
                 continue;
             }
         };
+        let windows = crate::run::windows(db, version).await?;
         let participants: Vec<(Uuid, Option<Uuid>, Option<String>)> = sqlx::query_as(
             "SELECT p.id, p.user_ref, \
-                    (SELECT po.amount::text FROM comp_payout po \
+                    (SELECT COALESCE(po.earned, po.amount)::text FROM comp_payout po \
                      JOIN comp_run r ON r.id = po.run_ref \
                      WHERE po.participant_ref = p.id AND r.period_ref = $2 \
                        AND r.plan_version_ref = $1 AND r.status = 'done' \
@@ -90,9 +91,20 @@ pub async fn preview_period(state: &EngineState, period_id: Uuid) -> Result<u64,
         for (participant, user, old) in participants {
             let (credits, quota) =
                 crate::run::inputs(db, participant, user, period_id, starts, ends).await?;
+            let dates = if windows.is_empty() {
+                std::collections::HashMap::new()
+            } else {
+                crate::run::credit_dates(db, participant, period_id).await?
+            };
             let new: Decimal = components
                 .iter()
-                .flat_map(|c| evaluate(c, &credits, quota))
+                .flat_map(|c| {
+                    evaluate(
+                        c,
+                        &crate::run::eligible(c.id, &windows, &credits, &dates),
+                        quota,
+                    )
+                })
                 .map(|l| l.payout)
                 .sum();
             let old: Decimal = old

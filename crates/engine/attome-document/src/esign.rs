@@ -662,6 +662,20 @@ pub async fn send_envelope(
     Ok(())
 }
 
+/// An envelope's status (`draft`, `sent`, `completed`, `declined`,
+/// `voided`), `None` when there is no such envelope. For engines that wait
+/// on a signature (F10-T10 plan acceptance) without reading K4's tables.
+pub async fn envelope_status(
+    state: &EngineState,
+    envelope: Uuid,
+) -> Result<Option<String>, AppError> {
+    sqlx::query_scalar("SELECT status FROM esign_envelope WHERE id = $1")
+        .bind(envelope)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)
+}
+
 /// Voids a draft or sent envelope; its links stop working.
 pub async fn void_envelope(
     state: &EngineState,
