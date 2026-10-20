@@ -1,0 +1,107 @@
+{
+  "author": "packs",
+  "checksum": "sha256:2ef797d34d3a193af98be8ad2e39d364922b7caa783808d7e94332bb0e505c88",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "D21-T13: the per-person calling metrics count each call for the person who made it (call_attempt.owner_ref); the member's claimed_by is cleared when the outcome is saved, so it named no one.",
+  "format": "attome-changeset/v1",
+  "id": "01a1594d-5033-7b74-bf14-35da74223ac1",
+  "layer": "product",
+  "name": "sales-calling-metrics-caller",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Calling: Calls per Person per Day",
+          "required_privilege": "call_attempt.read",
+          "sql": "SELECT a.owner_ref AS user_ref, date_trunc('day', a.created_at)::date AS day, COUNT(*)::bigint AS calls FROM call_attempt a JOIN call_list_member m ON m.id = a.member_ref WHERE a.is_active IS NOT FALSE AND a.created_at >= NOW() - INTERVAL '90 days' GROUP BY a.owner_ref, 2 ORDER BY 2 DESC, calls DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Calling: Calls per Person per Day"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Calling: Connect Rate per Person per Week",
+          "required_privilege": "call_attempt.read",
+          "sql": "SELECT a.owner_ref AS user_ref, date_trunc('week', a.created_at)::date AS week, COUNT(*)::bigint AS calls, ROUND(100.0 * COUNT(*) FILTER (WHERE a.outcome = 'connected') / NULLIF(COUNT(*), 0), 1) AS connect_rate_pct FROM call_attempt a JOIN call_list_member m ON m.id = a.member_ref WHERE a.is_active IS NOT FALSE AND a.created_at >= NOW() - INTERVAL '90 days' GROUP BY a.owner_ref, 2 ORDER BY 2 DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Calling: Connect Rate per Person per Week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Calling: Talk Time per Person per Day",
+          "required_privilege": "call_attempt.read",
+          "sql": "SELECT a.owner_ref AS user_ref, date_trunc('day', a.created_at)::date AS day, COALESCE(SUM(a.duration_seconds), 0)::numeric AS talk_seconds FROM call_attempt a JOIN call_list_member m ON m.id = a.member_ref WHERE a.is_active IS NOT FALSE AND a.created_at >= NOW() - INTERVAL '90 days' GROUP BY a.owner_ref, 2 ORDER BY 2 DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Calling: Talk Time per Person per Day"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Calling: Meetings Booked per Person per Week",
+          "required_privilege": "call_attempt.read",
+          "sql": "SELECT a.owner_ref AS user_ref, date_trunc('week', a.created_at)::date AS week, COUNT(DISTINCT act.id)::bigint AS meetings FROM call_attempt a JOIN call_list_member m ON m.id = a.member_ref JOIN activity act ON act.record_id::text = m.record_id AND act.activity_type = 'meeting' AND act.created_at >= a.created_at AND act.created_at < a.created_at + INTERVAL '1 day' WHERE a.is_active IS NOT FALSE AND a.created_at >= NOW() - INTERVAL '90 days' GROUP BY a.owner_ref, 2 ORDER BY 2 DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Calling: Meetings Booked per Person per Week"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 22,
+  "title": "Pack: calling metrics by caller"
+}
