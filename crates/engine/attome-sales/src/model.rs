@@ -151,6 +151,10 @@ impl EngineModel for SalesModel {
                 get(crate::plays::get_sales_plays),
             )
             .route(
+                "/api/v1/sales/cpq/validate",
+                post(crate::cpq::post_sales_cpq_validate),
+            )
+            .route(
                 "/api/v1/sales/contacts/{id}/manager",
                 put(crate::orgchart::put_sales_contact_manager),
             )

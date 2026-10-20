@@ -72,6 +72,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<territory::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<competitor_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<plays::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<cpq::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<orgchart::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
