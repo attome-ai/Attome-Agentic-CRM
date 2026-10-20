@@ -11,6 +11,9 @@
 //! | after commit, before the doorbell     | a change-log row nobody was told about         | the 5s watermark poll             |
 //! | a subscriber mid-catch-up             | a Redis snapshot behind the change log         | `pre_warm_registry`'s catch-up    |
 //! | Postgres restored under a live Redis  | a Redis snapshot *ahead of* the change log     | `pre_warm_registry`'s inversion   |
+//! | a version switch, before commit       | an uncommitted pointer move                    | Postgres aborts it on socket loss |
+//! | a version switch, without its doorbell| a pointer no node was told about               | the watermark poll follows it     |
+//! | a node mid-artefact load              | a pointer at a version one node cannot load    | not ready, then a retry per tick  |
 //!
 //! # "Kill a node" is simulated at the durable-state level, on purpose
 //!
@@ -813,4 +816,292 @@ async fn snapshot_naming_an_entity_id_postgres_never_had_forces_a_full_rebuild_a
         "the rebuild triggered by the poisoned entry must still recover every entity that \
          really exists, not just discard the bad one and stop"
     );
+}
+
+// ── Crash windows 6–8: a metadata version publish (Y8-T11) ─────────────────
+//
+// A publish or a switch moves `metadata_current` in one transaction that also
+// rings the Postgres doorbell; each node then loads the version's artefacts
+// and swaps them in at once (`attome_model::switch::follow_current`). The
+// cooked registry is one per process (`attome_api::model_admin::cooked()`),
+// so every in-process node here serves the same one; a second node is a
+// `CookedRegistry` that follows the pointer with the same call each node's
+// catch-up makes.
+
+/// One admin request through the full stack; the JSON body, or `null`.
+async fn admin_call(
+    app: &axum::Router,
+    cookie: &str,
+    method: &str,
+    uri: &str,
+    body: Option<serde_json::Value>,
+) -> (StatusCode, serde_json::Value) {
+    let req = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("cookie", cookie)
+        .header("content-type", "application/json")
+        .body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.expect("admin request");
+    let status = res.status();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .expect("read response body");
+    let json = serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null);
+    (status, json)
+}
+
+/// Publishes a new environment variable (one more metadata version); returns
+/// the version and the variable's cooked-artefact key.
+async fn publish_version(
+    app: &axum::Router,
+    cookie: &str,
+    db: &attome_db::DbPool,
+) -> (i64, String) {
+    let id = Uuid::now_v7();
+    let name = format!("y8c_{}", &id.simple().to_string()[..16]);
+    let (status, body) = admin_call(
+        app,
+        cookie,
+        "POST",
+        &format!("/api/v1/admin/model/environment_variable/{id}/commands"),
+        Some(serde_json::json!({
+            "base_hash": "",
+            "name": name,
+            "commands": [{ "op": "set", "path": "/type", "value": "url" }]
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = admin_call(
+        app,
+        cookie,
+        "POST",
+        &format!("/api/v1/admin/model/environment_variable/{id}/publish"),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    (
+        current_pointer(db).await,
+        format!("environment_variable:{id}"),
+    )
+}
+
+async fn current_pointer(db: &attome_db::DbPool) -> i64 {
+    sqlx::query_scalar("SELECT version FROM metadata_current")
+        .fetch_one(db)
+        .await
+        .expect("a publish records the current metadata version")
+}
+
+/// Polls until this process's cooked registry serves `version`.
+async fn wait_until_serving(version: i64, deadline: Duration) -> Option<Duration> {
+    let started = tokio::time::Instant::now();
+    loop {
+        if attome_api::model_admin::cooked().snapshot().version == version {
+            return Some(started.elapsed());
+        }
+        if started.elapsed() >= deadline {
+            return None;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// A switch whose process dies before COMMIT moves nothing: the pointer, the
+/// node serving and a node following all stay on the old version, and the
+/// pointer lock dies with the transaction.
+#[tokio::test]
+async fn publish_crash_before_pointer_commit() {
+    let node_a = skip_if_no_db!(test_node().await);
+    let db = node_a.state().base.db.clone();
+    let cookie = seed_admin(&node_a).await;
+    let app = full_app(node_a);
+    let (older, _) = publish_version(&app, &cookie, &db).await;
+    let (newest, _) = publish_version(&app, &cookie, &db).await;
+    assert_eq!(attome_api::model_admin::cooked().snapshot().version, newest);
+
+    let url =
+        attome_testkit::migrated_db_url().expect("skip_if_no_db already checked DATABASE_URL");
+    let mut victim = PgConnection::connect(&url)
+        .await
+        .expect("open the crashing switcher's own connection");
+    let mut tx = victim
+        .begin()
+        .await
+        .expect("BEGIN on the crashing switcher");
+    let staged = attome_model::switch::set_current(&mut tx, older)
+        .await
+        .expect("stage the pointer move");
+    assert_eq!(staged.to, older);
+    // The crash: no COMMIT, no ROLLBACK, the socket just goes.
+    std::mem::forget(tx);
+    victim.close_hard().await.expect("hard-close the switcher");
+
+    assert_eq!(
+        current_pointer(&db).await,
+        newest,
+        "an uncommitted move is lost"
+    );
+    let node_b = attome_model::runtime::CookedRegistry::default();
+    let followed = attome_model::switch::follow_current(&db, &node_b, "node-chaos-b")
+        .await
+        .expect("follow the pointer");
+    assert_eq!(followed, Some(newest));
+    assert_eq!(
+        attome_api::model_admin::cooked().snapshot().version,
+        newest,
+        "the serving node never saw the aborted move"
+    );
+
+    // The lock went with the aborted transaction: the next switch succeeds.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let (status, body) = admin_call(
+            &app,
+            &cookie,
+            "POST",
+            &format!("/api/v1/admin/metadata/versions/{newest}/switch"),
+            None,
+        )
+        .await;
+        if status == StatusCode::OK {
+            break;
+        }
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "the crashed switcher's pointer lock was never released"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// A pointer move committed without its doorbell (the durable state of a
+/// writer that never rang) still reaches the nodes: the watermark poll
+/// follows the pointer on its next tick.
+#[tokio::test]
+async fn publish_crash_after_commit_before_notify() {
+    let node_a = skip_if_no_db!(test_node().await);
+    let db = node_a.state().base.db.clone();
+    let cookie = seed_admin(&node_a).await;
+    let app = full_app(node_a);
+    let (older, _) = publish_version(&app, &cookie, &db).await;
+    let (newest, _) = publish_version(&app, &cookie, &db).await;
+    let _node_b = skip_if_no_db!(test_node_with(test_config_polling(1)).await);
+    assert_eq!(attome_api::model_admin::cooked().snapshot().version, newest);
+
+    // The pointer move set_current makes, committed with no pg_notify.
+    sqlx::query("UPDATE metadata_current SET version = $1, switched_at = now()")
+        .bind(older)
+        .execute(&db)
+        .await
+        .expect("commit the pointer move without its doorbell");
+
+    // 1s poll + one artefact load + slack.
+    let elapsed = wait_until_serving(older, Duration::from_secs(5))
+        .await
+        .expect("a node must follow a doorbell-less pointer move within the poll bound");
+    eprintln!("the node followed the doorbell-less pointer move after {elapsed:?}");
+
+    let (status, body) = admin_call(
+        &app,
+        &cookie,
+        "POST",
+        &format!("/api/v1/admin/metadata/versions/{newest}/switch"),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+/// A node whose artefact fetch fails keeps serving the old version whole and
+/// reports not ready, then switches on a later retry.
+#[tokio::test]
+async fn publish_crash_mid_artefact_load() {
+    let node_a = skip_if_no_db!(test_node().await);
+    let db = node_a.state().base.db.clone();
+    let cookie = seed_admin(&node_a).await;
+    let app = full_app(node_a);
+    let (older, _) = publish_version(&app, &cookie, &db).await;
+    let (newest, newest_key) = publish_version(&app, &cookie, &db).await;
+    let node_b = skip_if_no_db!(test_node_with(test_config_polling(1)).await);
+    let lagging = node_b.state().base.metadata_lagging.clone();
+
+    let (status, body) = admin_call(
+        &app,
+        &cookie,
+        "POST",
+        &format!("/api/v1/admin/metadata/versions/{older}/switch"),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(attome_api::model_admin::cooked().snapshot().version, older);
+
+    // The fault: the newest variable's artefact cannot be fetched.
+    let manifest_hash: String = sqlx::query_scalar(
+        "SELECT manifest_hash FROM metadata_published_version WHERE version = $1",
+    )
+    .bind(newest)
+    .fetch_one(&db)
+    .await
+    .expect("the newest version's manifest");
+    let manifest = attome_model::switch::load_manifest(&db, &manifest_hash)
+        .await
+        .expect("load the newest manifest");
+    let hidden = manifest.artefacts[&newest_key].content_hash.clone();
+    let (kind, payload): (String, Vec<u8>) = sqlx::query_as(
+        "DELETE FROM metadata_artefact WHERE content_hash = $1 RETURNING kind, payload",
+    )
+    .bind(&hidden)
+    .fetch_one(&db)
+    .await
+    .expect("hide the artefact");
+
+    let mut tx = attome_db::tx::begin(&db).await.expect("BEGIN");
+    attome_model::switch::set_current(&mut tx, newest)
+        .await
+        .expect("move the pointer to the newest version");
+    attome_db::tx::commit(tx).await.expect("COMMIT");
+
+    // Two poll ticks: the load fails, the node stays whole on the old
+    // version and says it is not ready.
+    tokio::time::sleep(Duration::from_millis(2_500)).await;
+    let serving = attome_api::model_admin::cooked().snapshot();
+    assert_eq!(serving.version, older, "a failed load swaps nothing in");
+    assert!(!serving.manifest.artefacts.contains_key(&newest_key));
+    assert!(
+        lagging.load(std::sync::atomic::Ordering::Relaxed),
+        "a node that cannot load the current version reports not ready"
+    );
+
+    // The fault clears; the next tick switches and the node is ready again.
+    sqlx::query("INSERT INTO metadata_artefact (content_hash, kind, payload) VALUES ($1, $2, $3)")
+        .bind(&hidden)
+        .bind(&kind)
+        .bind(&payload)
+        .execute(&db)
+        .await
+        .expect("restore the artefact");
+    wait_until_serving(newest, Duration::from_secs(5))
+        .await
+        .expect("the node switches on retry once the artefact loads");
+    assert!(
+        attome_api::model_admin::cooked()
+            .snapshot()
+            .manifest
+            .artefacts
+            .contains_key(&newest_key)
+    );
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    while lagging.load(std::sync::atomic::Ordering::Relaxed) {
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "the node must report ready once it serves the current version"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
 }

@@ -138,6 +138,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   database clock. `GET /api/v1/admin/metadata/versions/{version}/nodes` lists which nodes serve a
   version and when they switched; the `MetadataSwitchSlow` alert fires when the p95 stays above 30 s
   for 10 minutes.
+- Publish crash points (Y8-T11): a node that cannot load the current metadata version now reports not
+  ready on `/health/ready` until a retry loads it, proven with three publish crash tests in
+  `metadata_chaos`.
 - Server-rendered pages and sites (E12-T1, E12-T2, E13-T6): publishing a page renders its HTML
   once (Open Graph and X cards, hreflang for its translations, JSON-LD for articles), served by
   `GET /api/v1/content/html` (ETag, 304) and, by host, `GET /api/v1/content/site`; a content space

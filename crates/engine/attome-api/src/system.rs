@@ -1440,7 +1440,9 @@ impl EngineSystemBuilder {
                 loop {
                     interval.tick().await;
                     // Y8-T4: the safety net for a lost version-switch doorbell.
-                    crate::model_admin::follow_cooked(&db).await;
+                    // Y8-T11: a node that could not load the current version
+                    // is not ready until a later tick loads it.
+                    let cooked_current = crate::model_admin::follow_cooked(&db).await;
                     let applied = watermark.load(Ordering::Acquire);
                     match attome_core::log_watermark(&db).await {
                         Ok(db_watermark) if db_watermark < applied => {
@@ -1503,7 +1505,7 @@ impl EngineSystemBuilder {
                             } else {
                                 0
                             };
-                            lagging.store(behind_polls >= 2, Ordering::Relaxed);
+                            lagging.store(behind_polls >= 2 || !cooked_current, Ordering::Relaxed);
                         }
                         Err(e) => tracing::warn!(
                             error = %e,

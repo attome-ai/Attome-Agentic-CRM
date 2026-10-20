@@ -108,13 +108,20 @@ pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
 
 /// Loads the deployment's current metadata version on this node when it is
 /// not the one loaded (Y8-T4). The metadata catch-up calls it, so every node
-/// follows a publish, a switch or a rollback made on another.
-pub(crate) async fn follow_cooked(db: &attome_db::DbPool) {
+/// follows a publish, a switch or a rollback made on another. `false` when
+/// the switch failed, so the node is not serving the current version: the
+/// watermark poll then reports the node not ready until a retry succeeds
+/// (Y8-T11).
+pub(crate) async fn follow_cooked(db: &attome_db::DbPool) -> bool {
     match attome_model::switch::follow_current(db, cooked(), node()).await {
-        Ok(Some(version)) => tracing::info!(version, "switched to metadata version"),
-        Ok(None) => {}
+        Ok(Some(version)) => {
+            tracing::info!(version, "switched to metadata version");
+            true
+        }
+        Ok(None) => true,
         Err(error) => {
             tracing::error!(%error, "could not switch to the current metadata version; will retry");
+            false
         }
     }
 }
