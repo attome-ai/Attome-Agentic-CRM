@@ -26857,6 +26857,105 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/metadata/versions/{version}/nodes": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists the nodes serving a metadata version, earliest switch first\n(Y8-T10). A node missing from the list has not loaded the version yet.",
+        "description": "Lists each node's switch to a recorded metadata version, earliest first (Y8-T10).",
+        "operationId": "list_metadata_version_nodes",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "description": "A published metadata version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The nodes that switched to the version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_NodeSwitchView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such published version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/metadata/versions/{version}/switch": {
       "post": {
         "tags": [
@@ -59635,6 +59734,121 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/commission/plans/{id}/send-for-acceptance": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_send_for_acceptance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The compensation plan",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendForAcceptanceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Plan documents are rendering; each goes out for signature when ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptanceRequested"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_plan.update or may not create documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan or template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The plan has no published version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The template is not for plan participants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "commission",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/commission/statements": {
       "get": {
         "tags": [
@@ -60438,6 +60652,70 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/content/html": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A published page as HTML (E12-T1).",
+        "description": "The page's latest published version as a whole HTML document, rendered\nwhen it was published: its text readable without script, interactive\nblocks as `data-hydrate` points the web app fills in. The same ETag as\n`/api/v1/content/delivery`; a client that sends it back gets 304. No\nsign-in; the same 404 for a missing, unpublished or unlicensed page.",
+        "operationId": "page_html",
+        "parameters": [
+          {
+            "name": "space",
+            "in": "path",
+            "description": "The content space's id.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "description": "The page's URL path in that space, e.g. `/pricing`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page's published version as HTML",
+            "content": {
+              "text/html": {}
+            }
+          },
+          "301": {
+            "description": "The page moved; `Location` names its current path"
+          },
+          "304": {
+            "description": "The client already holds this version"
+          },
+          "404": {
+            "description": "No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/content/internal": {
       "get": {
         "tags": [
@@ -60653,6 +60931,161 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/content/rss": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A site's blog as RSS (E12-T2).",
+        "description": "The newest published public pages under the site's blog path, newest\nfirst, as an RSS 2.0 feed with links on the site's domain (else the\ndeployment's public URL).",
+        "operationId": "site_rss",
+        "parameters": [
+          {
+            "name": "space",
+            "in": "path",
+            "description": "The content space (site).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The feed",
+            "content": {
+              "application/rss+xml": {}
+            }
+          },
+          "404": {
+            "description": "No such space, or Content Management isn't licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/content/site": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A page of the site served on this host (E12-T2).",
+        "description": "The space whose domain is the request's host serves the published page\nat `path`, as `/api/v1/content/html` does, with the site's menu. No\nsign-in; the same 404 for an unknown host, a missing or unpublished\npage, or an unlicensed deployment.",
+        "operationId": "site_page",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "description": "The page's URL path on the site, e.g. `/pricing`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page as HTML",
+            "content": {
+              "text/html": {}
+            }
+          },
+          "301": {
+            "description": "The page moved; `Location` names its current path"
+          },
+          "304": {
+            "description": "The client already holds this version"
+          },
+          "404": {
+            "description": "No site on this host, or no published page at this path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/content/theme.css": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A site's theme stylesheet (E12-T2).",
+        "description": "The site's theme as CSS custom properties, linked from every rendered\npage of the space, so a theme change shows without republishing.",
+        "operationId": "site_theme",
+        "parameters": [
+          {
+            "name": "space",
+            "in": "path",
+            "description": "The content space (site).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stylesheet",
+            "content": {
+              "text/css": {}
+            }
+          },
+          "304": {
+            "description": "The client already holds this version"
+          },
+          "404": {
+            "description": "No such space, or Content Management isn't licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/content/view": {
       "get": {
         "tags": [
@@ -60766,6 +61199,113 @@
         "x-idempotent": "key",
         "x-module": "core",
         "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/contracts/{id}/compare": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Compares two versions of a contract.",
+        "description": "Creates a comparison (status `queued`) and queues the work: each\nversion's text split into sections, a word-level diff per section, and\nthe sections that match a library clause but are like neither its\nstandard text nor its fallbacks. Read the stored result from the\n`contract_comparison` record once its status is `done`. The caller needs\nto read the contract and both versions.",
+        "operationId": "post_contract_compare",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractCompareBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The comparison is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractCompareQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not create comparisons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract or version the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The same version twice, or a version of another contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -62734,6 +63274,454 @@
         "x-idempotent": "key",
         "x-module": "billing",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/esign/envelopes": {
+      "post": {
+        "tags": [
+          "document"
+        ],
+        "summary": "Creates a draft envelope from documents the caller may read.",
+        "operationId": "post_esign_envelope",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewEnvelope"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The draft envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A document the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad title, document, signer or file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "document",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/esign/envelopes/{id}": {
+      "get": {
+        "tags": [
+          "document"
+        ],
+        "summary": "An envelope of the caller's (or any, for an administrator).",
+        "operationId": "get_esign_envelope",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The envelope",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The envelope, its signers, events and certificate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No envelope of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "document",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/esign/envelopes/{id}/send": {
+      "post": {
+        "tags": [
+          "document"
+        ],
+        "summary": "Sends a draft envelope to its first signers.",
+        "operationId": "post_esign_envelope_send",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The envelope",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sent; the first signers are emailed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No envelope of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not a draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "document",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/esign/envelopes/{id}/void": {
+      "post": {
+        "tags": [
+          "document"
+        ],
+        "summary": "Voids a draft or sent envelope.",
+        "operationId": "post_esign_envelope_void",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The envelope",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Voided; its links stop working"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No envelope of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already finished",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "document",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/esign/sign/{token}": {
+      "get": {
+        "tags": [
+          "document"
+        ],
+        "summary": "The envelope a signer's link opens. No sign-in: the link is the authority.",
+        "operationId": "get_esign_signer_view",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The signer's link token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the signer signs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignerView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An unknown, expired or voided link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "document",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "document"
+        ],
+        "summary": "A signer asks for a code, signs or declines. No sign-in: the link and\nthe emailed code are the authority.",
+        "operationId": "post_esign_signer_action",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The signer's link token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignerAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignerActionDone"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An unknown, expired or voided link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not this signer's turn, or a code was sent less than a minute ago",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A wrong code, or no typed name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "document",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -68025,7 +69013,6 @@
           {
             "name": "page",
             "in": "query",
-            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -68036,11 +69023,29 @@
           {
             "name": "page_size",
             "in": "query",
-            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "dimension_attribute",
+            "in": "query",
+            "description": "A dimension attribute (comma-separated for several): its members'\nrows instead of the totals.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dimension_value",
+            "in": "query",
+            "description": "One member's value, with `dimension_attribute`.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -73892,6 +74897,76 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/accounts/{id}/org-chart/propose": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Proposes reports-to links for an account.",
+        "description": "Queues a job that writes open org chart drafts for the account's people\nthe caller may read, from their titles and departments. Nothing changes a\ncontact until a person accepts a draft.",
+        "operationId": "post_sales_org_chart_propose",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The account",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The proposal is queued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such account the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/call-list-members/{id}/outcome": {
       "post": {
         "tags": [
@@ -77173,6 +78248,123 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/orgchart-drafts/{id}/decide": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Decides an org chart draft.",
+        "description": "Accepting sets the contact's manager through the ordinary manager change\n(access, group and loop checks) and, when proposed, their department;\nthe answer names the previous manager, to undo. Rejecting only marks the\ndraft. A decided draft cannot be decided again.",
+        "operationId": "post_sales_orgchart_draft_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The draft",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesOrgChartDraftDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesOrgChartDraftDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such draft the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or the contact changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The proposed manager is at an unrelated account or forms a loop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/price-lists/{id}/products": {
       "get": {
         "tags": [
@@ -79834,6 +81026,273 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/service/stock/movements": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Records a stock movement and its balance change.",
+        "operationId": "post_stock_movement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewMovement"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The movement and the balance after it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovementRecorded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks stock_movement.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The same stock is being created by another request; retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not enough stock, or an unknown kind or quantity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/service/stock/reservations": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Holds stock for a reference.",
+        "operationId": "post_stock_reservation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewReservation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The reservation is held",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationHeld"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks stock_reservation.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The same stock is being created by another request; retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not enough stock available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/service/stock/reservations/{id}/release": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Releases a held reservation.",
+        "operationId": "post_stock_reservation_release",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The reservation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Released; its stock is available again"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks stock_reservation.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The reservation is not held",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/service/viewing": {
       "post": {
         "tags": [
@@ -79895,6 +81354,143 @@
         "x-audit-exempt": {
           "note": "a viewing heartbeat kept two minutes in Redis; no business or security effect",
           "reason": "telemetry",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/service/warranty-backfill": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Runs the warranty date backfill once confirmed.",
+        "operationId": "post_warranty_backfill",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WarrantyBackfillBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The backfill is queued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/service/warranty-backfill/preview": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Previews the warranty date backfill.",
+        "operationId": "post_warranty_backfill_preview",
+        "responses": {
+          "200": {
+            "description": "What the backfill would change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarrantyPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "counts the assets the backfill would change; writes nothing",
+          "reason": "read_only",
           "via": null
         },
         "x-cache": "no-store",
@@ -81099,6 +82695,286 @@
         "x-idempotent": "key",
         "x-module": "omnichannel",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "The public status page (no sign-in), rebuilt at most every 30 seconds.",
+        "operationId": "get_status_page",
+        "responses": {
+          "200": {
+            "description": "The status page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The service module is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/status/confirm": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "The confirmation page; its button confirms.",
+        "operationId": "get_status_confirm",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page with a confirm button",
+            "content": {
+              "text/html": {}
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Confirms a subscription.",
+        "operationId": "post_status_confirm",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed",
+            "content": {
+              "text/html": {}
+            }
+          },
+          "404": {
+            "description": "The link is not valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/status/subscribe": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Asks to receive status updates by email: a confirmation link is sent.",
+        "operationId": "post_status_subscribe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusSubscribe"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "A confirmation is on its way (the same answer for any address)"
+          },
+          "404": {
+            "description": "The service module is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not an email address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/status/unsubscribe": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "The unsubscribe page; its button unsubscribes.",
+        "operationId": "get_status_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page with an unsubscribe button",
+            "content": {
+              "text/html": {}
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Stops a subscriber's emails.",
+        "operationId": "post_status_unsubscribe",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Unsubscribed",
+            "content": {
+              "text/html": {}
+            }
+          },
+          "404": {
+            "description": "The link is not valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -97102,6 +98978,35 @@
           }
         }
       },
+      "AcceptanceRequested": {
+        "type": "object",
+        "description": "What was requested.",
+        "required": [
+          "plan_version_id",
+          "participants",
+          "render_ids"
+        ],
+        "properties": {
+          "participants": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Participants asked to accept.",
+            "minimum": 0
+          },
+          "plan_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "render_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The renders, at `GET /api/v1/docgen/renders/{id}`."
+          }
+        }
+      },
       "AccessLogItem": {
         "type": "object",
         "required": [
@@ -106856,11 +108761,20 @@
           "name",
           "require_approval",
           "kind",
+          "theme",
+          "menu",
           "row_version",
           "created_at",
           "updated_at"
         ],
         "properties": {
+          "blog_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pages under this path are the site's blog posts."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -106871,6 +108785,13 @@
               "null"
             ]
           },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "E12-T2: the domain this space is served on."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -106878,6 +108799,12 @@
           "kind": {
             "type": "string",
             "description": "E11-T1: `standard` or `marketing` (landing pages), set at create."
+          },
+          "menu": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuItem"
+            }
           },
           "name": {
             "type": "string"
@@ -106889,6 +108816,16 @@
           "row_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "site_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "theme": {
+            "type": "object",
+            "description": "CSS custom property to value (`--ac-bg`: `#fff`)."
           },
           "updated_at": {
             "type": "string",
@@ -106938,6 +108875,38 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ContractCompareBody": {
+        "type": "object",
+        "description": "Which versions to compare.",
+        "required": [
+          "from_version",
+          "to_version"
+        ],
+        "properties": {
+          "from_version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to_version": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ContractCompareQueued": {
+        "type": "object",
+        "description": "The queued comparison.",
+        "required": [
+          "comparison_id"
+        ],
+        "properties": {
+          "comparison_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The `contract_comparison`; its `status` turns `done` when stored."
           }
         }
       },
@@ -113591,6 +115560,229 @@
           }
         }
       },
+      "EnvelopeCreated": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "EnvelopeDocument": {
+        "type": "object",
+        "description": "A document in an envelope.",
+        "required": [
+          "document_id",
+          "name",
+          "sha256"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          }
+        }
+      },
+      "EnvelopeEvent": {
+        "type": "object",
+        "description": "One stored event.",
+        "required": [
+          "seq",
+          "kind",
+          "at",
+          "detail",
+          "prev_hash",
+          "hash"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "detail": {
+            "type": "object"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "prev_hash": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "signer_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "EnvelopeSigner": {
+        "type": "object",
+        "description": "A signer, as the envelope's owner sees them.",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role",
+          "sign_order",
+          "status"
+        ],
+        "properties": {
+          "decline_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "sign_order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "signed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "typed_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_agent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EnvelopeView": {
+        "type": "object",
+        "description": "An envelope, as its owner sees it.",
+        "required": [
+          "id",
+          "title",
+          "status",
+          "created_at",
+          "documents",
+          "signers",
+          "events",
+          "chain_intact"
+        ],
+        "properties": {
+          "certificate": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "certificate_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "chain_intact": {
+            "type": "boolean",
+            "description": "The events form an unbroken hash chain."
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnvelopeDocument"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnvelopeEvent"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sent_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "signers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnvelopeSigner"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "ErasureDone": {
         "type": "object",
         "required": [
@@ -119786,6 +121978,29 @@
           }
         }
       },
+      "MenuItem": {
+        "type": "object",
+        "description": "One menu link.",
+        "required": [
+          "label",
+          "path"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "A path on the site (`/pricing`) or an absolute http(s) URL."
+          }
+        }
+      },
       "MenuItemOpened": {
         "type": "object",
         "description": "`POST /api/v1/model/navigation/{id}/opened`.",
@@ -121189,6 +123404,34 @@
           }
         }
       },
+      "MovementRecorded": {
+        "type": "object",
+        "description": "A recorded movement and the balance after it.",
+        "required": [
+          "movement_id",
+          "on_hand",
+          "reserved",
+          "available"
+        ],
+        "properties": {
+          "available": {
+            "type": "number",
+            "format": "double"
+          },
+          "movement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "on_hand": {
+            "type": "number",
+            "format": "double"
+          },
+          "reserved": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "Movements": {
         "type": "object",
         "description": "How the recurring revenue moved between two days, in one currency.",
@@ -121490,6 +123733,34 @@
           }
         }
       },
+      "NewEnvelope": {
+        "type": "object",
+        "description": "A new envelope.",
+        "required": [
+          "title",
+          "document_ids",
+          "signers"
+        ],
+        "properties": {
+          "document_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "`attome_document` records the caller may read."
+          },
+          "signers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewSigner"
+            }
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "NewMcpServer": {
         "type": "object",
         "required": [
@@ -121541,6 +123812,54 @@
             ],
             "format": "uuid",
             "description": "The top-level message this answers."
+          }
+        }
+      },
+      "NewMovement": {
+        "type": "object",
+        "description": "One movement to record.",
+        "required": [
+          "product_id",
+          "location_code",
+          "kind",
+          "quantity"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`receipt`, `issue`, `transfer_in`, `transfer_out`, `adjustment`\n(signed) or `return`."
+          },
+          "location_code": {
+            "type": "string"
+          },
+          "lot_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What caused it (an order, a work order line, a count)."
+          },
+          "serial_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -121713,6 +124032,39 @@
           }
         }
       },
+      "NewReservation": {
+        "type": "object",
+        "description": "A reservation to hold.",
+        "required": [
+          "product_id",
+          "location_code",
+          "quantity",
+          "reference"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "location_code": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "reference": {
+            "type": "string"
+          }
+        }
+      },
       "NewRole": {
         "type": "object",
         "required": [
@@ -121721,6 +124073,37 @@
         "properties": {
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "NewSigner": {
+        "type": "object",
+        "description": "A signer to add.",
+        "required": [
+          "name",
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "order": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Signing position, 1 first; equal positions sign in any order."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`signer` (the default), `approver` or `witness`."
           }
         }
       },
@@ -121868,6 +124251,25 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "NodeSwitchView": {
+        "type": "object",
+        "description": "One node's switch to a metadata version (Y8-T10).",
+        "required": [
+          "node_id",
+          "switched_at"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The node, as `host:port`."
+          },
+          "switched_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the node started serving the version."
           }
         }
       },
@@ -132001,6 +134403,59 @@
           }
         }
       },
+      "PaginatedResponse_NodeSwitchView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One node's switch to a metadata version (Y8-T10).",
+              "required": [
+                "node_id",
+                "switched_at"
+              ],
+              "properties": {
+                "node_id": {
+                  "type": "string",
+                  "description": "The node, as `host:port`."
+                },
+                "switched_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When the node started serving the version."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ObjectSummaryView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -135962,6 +138417,20 @@
                 "computed_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "dimension_attribute": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "P9-T5: `None` on the total row; on a member row, the dimension\nattribute(s), comma-separated."
+                },
+                "dimension_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The member's value (several dimensions' values comma-separated)."
                 },
                 "error_message": {
                   "type": [
@@ -139991,6 +142460,34 @@
           }
         }
       },
+      "PrecheckFinding": {
+        "type": "object",
+        "description": "One finding.",
+        "required": [
+          "code",
+          "severity",
+          "guidance_key"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What matched (a phrase, a domain), when there is one."
+          },
+          "guidance_key": {
+            "type": "string",
+            "description": "The screens' translation key for what to do about it."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/PrecheckSeverity"
+          }
+        }
+      },
       "PrecheckReport": {
         "type": "object",
         "description": "The check's answer.",
@@ -140003,7 +142500,7 @@
           "findings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Finding"
+              "$ref": "#/components/schemas/PrecheckFinding"
             }
           },
           "passed": {
@@ -140015,6 +142512,15 @@
             "minimum": 0
           }
         }
+      },
+      "PrecheckSeverity": {
+        "type": "string",
+        "description": "How much a finding costs the score.",
+        "enum": [
+          "error",
+          "warning",
+          "info"
+        ]
       },
       "PredictionSummary": {
         "type": "object",
@@ -144239,6 +146745,19 @@
           }
         }
       },
+      "ReservationHeld": {
+        "type": "object",
+        "description": "The held reservation.",
+        "required": [
+          "reservation_id"
+        ],
+        "properties": {
+          "reservation_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ResetConfirmBody": {
         "type": "object",
         "required": [
@@ -146956,6 +149475,45 @@
           }
         }
       },
+      "SalesOrgChartDraftDecided": {
+        "type": "object",
+        "description": "What deciding a draft did.",
+        "required": [
+          "draft_id",
+          "status"
+        ],
+        "properties": {
+          "draft_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previous_manager_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The contact's manager before an accepted draft set it (to undo)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`accepted` or `rejected`."
+          }
+        }
+      },
+      "SalesOrgChartDraftDecision": {
+        "type": "object",
+        "description": "Accept or reject an org chart draft.",
+        "required": [
+          "accept"
+        ],
+        "properties": {
+          "accept": {
+            "type": "boolean",
+            "description": "`true` sets the proposed manager (and department); `false` only\nmarks the draft rejected."
+          }
+        }
+      },
       "SalesOrgChartExport": {
         "type": "object",
         "description": "The queued render.",
@@ -148265,6 +150823,20 @@
           }
         }
       },
+      "SendForAcceptanceBody": {
+        "type": "object",
+        "description": "The request.",
+        "required": [
+          "template_id"
+        ],
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A K3 `docgen_template` whose entity is `plan_participant`."
+          }
+        }
+      },
       "SendFrame": {
         "type": "object",
         "description": "One frame.",
@@ -149202,6 +151774,93 @@
           }
         }
       },
+      "SignerAction": {
+        "type": "object",
+        "description": "A signer's action.",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "`code` (email me a code), `sign` or `decline`."
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The emailed code, to sign or decline."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why, to decline."
+          },
+          "typed_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The signer's name as they type it, to sign."
+          }
+        }
+      },
+      "SignerActionDone": {
+        "type": "object",
+        "description": "What a signer's action did.",
+        "required": [
+          "result",
+          "envelope_status"
+        ],
+        "properties": {
+          "envelope_status": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string",
+            "description": "`code_sent`, `signed` or `declined`."
+          }
+        }
+      },
+      "SignerView": {
+        "type": "object",
+        "description": "What a signer sees.",
+        "required": [
+          "envelope_title",
+          "envelope_status",
+          "signer_name",
+          "signer_status",
+          "may_sign",
+          "documents"
+        ],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnvelopeDocument"
+            }
+          },
+          "envelope_status": {
+            "type": "string"
+          },
+          "envelope_title": {
+            "type": "string"
+          },
+          "may_sign": {
+            "type": "boolean",
+            "description": "It is this signer's turn."
+          },
+          "signer_name": {
+            "type": "string"
+          },
+          "signer_status": {
+            "type": "string"
+          }
+        }
+      },
       "SignoffVerifyResponse": {
         "type": "object",
         "required": [
@@ -149937,6 +152596,20 @@
           "computed_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "dimension_attribute": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "P9-T5: `None` on the total row; on a member row, the dimension\nattribute(s), comma-separated."
+          },
+          "dimension_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The member's value (several dimensions' values comma-separated)."
           },
           "error_message": {
             "type": [
@@ -150919,6 +153592,162 @@
           }
         }
       },
+      "StatusComponent": {
+        "type": "object",
+        "description": "One component.",
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusEvent": {
+        "type": "object",
+        "description": "An incident or maintenance.",
+        "required": [
+          "id",
+          "title",
+          "updates"
+        ],
+        "properties": {
+          "component_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "impact": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "starts_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "title_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusUpdate"
+            }
+          }
+        }
+      },
+      "StatusGroup": {
+        "type": "object",
+        "description": "A group of components.",
+        "required": [
+          "components"
+        ],
+        "properties": {
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusComponent"
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "StatusPage": {
+        "type": "object",
+        "description": "The public page.",
+        "required": [
+          "overall",
+          "groups",
+          "incidents",
+          "maintenance",
+          "recently_resolved",
+          "generated_at"
+        ],
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusGroup"
+            }
+          },
+          "incidents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusEvent"
+            }
+          },
+          "maintenance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusEvent"
+            }
+          },
+          "overall": {
+            "type": "string"
+          },
+          "recently_resolved": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusEvent"
+            }
+          }
+        }
+      },
       "StatusResponseBody": {
         "type": "object",
         "required": [
@@ -150927,6 +153756,66 @@
         "properties": {
           "enrolled": {
             "type": "boolean"
+          }
+        }
+      },
+      "StatusSubscribe": {
+        "type": "object",
+        "description": "A subscription request.",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`en` (the default) or `ar`: the language of the emails."
+          }
+        }
+      },
+      "StatusToken": {
+        "type": "object",
+        "description": "A link's token (`?token=`, or the page's form field).",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusUpdate": {
+        "type": "object",
+        "description": "One update.",
+        "required": [
+          "body",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "body": {
+            "type": "string"
+          },
+          "body_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -154807,12 +157696,36 @@
       "UpdateSpaceBody": {
         "type": "object",
         "properties": {
+          "blog_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`None` leaves it, `\"\"` clears it."
+          },
           "description": {
             "type": [
               "string",
               "null"
             ],
             "description": "`None` leaves the stored value unchanged, `Some(\"\")` clears it,\n`Some(nonempty)` sets it — same convention as `UpdatePageBody`'s\n`seo_title`/`seo_description`."
+          },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "E12-T2: `None` leaves it, `\"\"` clears it."
+          },
+          "menu": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MenuItem"
+            },
+            "description": "Replaces the menu when present."
           },
           "name": {
             "type": [
@@ -154826,6 +157739,25 @@
               "null"
             ],
             "description": "K5-T1: `None` leaves it unchanged."
+          },
+          "site_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "theme": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Replaces the theme when present.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
           }
         }
       },
@@ -155974,6 +158906,66 @@
           }
         }
       },
+      "WarrantyBackfillBody": {
+        "type": "object",
+        "description": "The confirmation.",
+        "required": [
+          "confirm"
+        ],
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Must be `true`: the person has seen the preview."
+          }
+        }
+      },
+      "WarrantyChange": {
+        "type": "object",
+        "description": "One asset's change.",
+        "required": [
+          "asset_id"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "current": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "new": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "WarrantyPreview": {
+        "type": "object",
+        "description": "What the backfill would do.",
+        "required": [
+          "assets_to_change",
+          "sample"
+        ],
+        "properties": {
+          "assets_to_change": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sample": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarrantyChange"
+            }
+          }
+        }
+      },
       "WebChatMetrics": {
         "type": "object",
         "required": [
@@ -156946,6 +159938,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
@@ -156998,6 +159991,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": []
+  }
 }

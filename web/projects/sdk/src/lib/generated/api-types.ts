@@ -4797,6 +4797,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/versions/{version}/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the nodes serving a metadata version, earliest switch first
+         *     (Y8-T10). A node missing from the list has not loaded the version yet.
+         * @description Lists each node's switch to a recorded metadata version, earliest first (Y8-T10).
+         */
+        get: operations["list_metadata_version_nodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/versions/{version}/switch": {
         parameters: {
             query?: never;
@@ -10781,6 +10802,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commission/plans/{id}/send-for-acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_send_for_acceptance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/commission/statements": {
         parameters: {
             query?: never;
@@ -10997,6 +11034,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A published page as HTML (E12-T1).
+         * @description The page's latest published version as a whole HTML document, rendered
+         *     when it was published: its text readable without script, interactive
+         *     blocks as `data-hydrate` points the web app fills in. The same ETag as
+         *     `/api/v1/content/delivery`; a client that sends it back gets 304. No
+         *     sign-in; the same 404 for a missing, unpublished or unlicensed page.
+         */
+        get: operations["page_html"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/content/internal": {
         parameters: {
             query?: never;
@@ -11061,6 +11122,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content/rss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's blog as RSS (E12-T2).
+         * @description The newest published public pages under the site's blog path, newest
+         *     first, as an RSS 2.0 feed with links on the site's domain (else the
+         *     deployment's public URL).
+         */
+        get: operations["site_rss"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page of the site served on this host (E12-T2).
+         * @description The space whose domain is the request's host serves the published page
+         *     at `path`, as `/api/v1/content/html` does, with the site's menu. No
+         *     sign-in; the same 404 for an unknown host, a missing or unpublished
+         *     page, or an unlicensed deployment.
+         */
+        get: operations["site_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content/theme.css": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's theme stylesheet (E12-T2).
+         * @description The site's theme as CSS custom properties, linked from every rendered
+         *     page of the space, so a theme change shows without republishing.
+         */
+        get: operations["site_theme"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/content/view": {
         parameters: {
             query?: never;
@@ -11087,6 +11214,31 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["vote_on_page"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contract/contracts/{id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compares two versions of a contract.
+         * @description Creates a comparison (status `queued`) and queues the work: each
+         *     version's text split into sections, a word-level diff per section, and
+         *     the sections that match a library clause but are like neither its
+         *     standard text nor its fallbacks. Read the stored result from the
+         *     `contract_comparison` record once its status is `done`. The caller needs
+         *     to read the contract and both versions.
+         */
+        post: operations["post_contract_compare"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11497,6 +11649,95 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_onboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/esign/envelopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Creates a draft envelope from documents the caller may read. */
+        post: operations["post_esign_envelope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/esign/envelopes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An envelope of the caller's (or any, for an administrator). */
+        get: operations["get_esign_envelope"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/esign/envelopes/{id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sends a draft envelope to its first signers. */
+        post: operations["post_esign_envelope_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/esign/envelopes/{id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voids a draft or sent envelope. */
+        post: operations["post_esign_envelope_void"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/esign/sign/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The envelope a signer's link opens. No sign-in: the link is the authority. */
+        get: operations["get_esign_signer_view"];
+        put?: never;
+        /**
+         * A signer asks for a code, signs or declines. No sign-in: the link and
+         *     the emailed code are the authority.
+         */
+        post: operations["post_esign_signer_action"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13828,6 +14069,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/accounts/{id}/org-chart/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proposes reports-to links for an account.
+         * @description Queues a job that writes open org chart drafts for the account's people
+         *     the caller may read, from their titles and departments. Nothing changes a
+         *     contact until a person accepts a draft.
+         */
+        post: operations["post_sales_org_chart_propose"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/call-list-members/{id}/outcome": {
         parameters: {
             query?: never;
@@ -14327,6 +14590,29 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_sales_line_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/orgchart-drafts/{id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decides an org chart draft.
+         * @description Accepting sets the contact's manager through the ordinary manager change
+         *     (access, group and loop checks) and, when proposed, their department;
+         *     the answer names the previous manager, to undo. Rejecting only marks the
+         *     draft. A decided draft cannot be decided again.
+         */
+        post: operations["post_sales_orgchart_draft_decide"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14975,6 +15261,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service/stock/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Records a stock movement and its balance change. */
+        post: operations["post_stock_movement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/stock/reservations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Holds stock for a reference. */
+        post: operations["post_stock_reservation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/stock/reservations/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Releases a held reservation. */
+        post: operations["post_stock_reservation_release"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service/viewing": {
         parameters: {
             query?: never;
@@ -14991,6 +15328,40 @@ export interface paths {
          *     Send it every `heartbeat_secs` while the record is open.
          */
         post: operations["post_viewing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/warranty-backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Runs the warranty date backfill once confirmed. */
+        post: operations["post_warranty_backfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/warranty-backfill/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Previews the warranty date backfill. */
+        post: operations["post_warranty_backfill_preview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15216,6 +15587,76 @@ export interface paths {
         put?: never;
         /** Answers a social message, comment or review through its provider. */
         post: operations["post_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The public status page (no sign-in), rebuilt at most every 30 seconds. */
+        get: operations["get_status_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/status/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The confirmation page; its button confirms. */
+        get: operations["get_status_confirm"];
+        put?: never;
+        /** Confirms a subscription. */
+        post: operations["post_status_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/status/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks to receive status updates by email: a confirmation link is sent. */
+        post: operations["post_status_subscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/status/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The unsubscribe page; its button unsubscribes. */
+        get: operations["get_status_unsubscribe"];
+        put?: never;
+        /** Stops a subscriber's emails. */
+        post: operations["post_status_unsubscribe"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18062,6 +18503,18 @@ export interface components {
             shadow_dropped: boolean;
             /** @description Always `abandoned`. */
             status: string;
+        };
+        /** @description What was requested. */
+        AcceptanceRequested: {
+            /**
+             * Format: int64
+             * @description Participants asked to accept.
+             */
+            participants: number;
+            /** Format: uuid */
+            plan_version_id: string;
+            /** @description The renders, at `GET /api/v1/docgen/renders/{id}`. */
+            render_ids: string[];
         };
         AccessLogItem: {
             correlation_id?: string | null;
@@ -21961,18 +22414,26 @@ export interface components {
          *     D-369). Infra-mutable class (D-005).
          */
         ContentSpace: {
+            /** @description Pages under this path are the site's blog posts. */
+            blog_path?: string | null;
             /** Format: date-time */
             created_at: string;
             description?: string | null;
+            /** @description E12-T2: the domain this space is served on. */
+            domain?: string | null;
             /** Format: uuid */
             id: string;
             /** @description E11-T1: `standard` or `marketing` (landing pages), set at create. */
             kind: string;
+            menu: components["schemas"]["MenuItem"][];
             name: string;
             /** @description K5-T1: a publish in this space waits for approval. */
             require_approval: boolean;
             /** Format: int64 */
             row_version: number;
+            site_title?: string | null;
+            /** @description CSS custom property to value (`--ac-bg`: `#fff`). */
+            theme: Record<string, never>;
             /** Format: date-time */
             updated_at: string;
         };
@@ -21993,6 +22454,21 @@ export interface components {
             row_version: number;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description Which versions to compare. */
+        ContractCompareBody: {
+            /** Format: uuid */
+            from_version: string;
+            /** Format: uuid */
+            to_version: string;
+        };
+        /** @description The queued comparison. */
+        ContractCompareQueued: {
+            /**
+             * Format: uuid
+             * @description The `contract_comparison`; its `status` turns `done` when stored.
+             */
+            comparison_id: string;
         };
         /** @description One pair that reads too faintly, or two status colours too alike. */
         ContrastFailure: {
@@ -24543,6 +25019,68 @@ export interface components {
             is_secret: boolean;
             /** @description The value set; absent for a secret. */
             value: Record<string, never>;
+        };
+        EnvelopeCreated: {
+            /** Format: uuid */
+            id: string;
+        };
+        /** @description A document in an envelope. */
+        EnvelopeDocument: {
+            /** Format: uuid */
+            document_id: string;
+            name: string;
+            sha256: string;
+        };
+        /** @description One stored event. */
+        EnvelopeEvent: {
+            /** Format: date-time */
+            at: string;
+            detail: Record<string, never>;
+            hash: string;
+            ip?: string | null;
+            kind: string;
+            prev_hash: string;
+            /** Format: int32 */
+            seq: number;
+            /** Format: uuid */
+            signer_id?: string | null;
+        };
+        /** @description A signer, as the envelope's owner sees them. */
+        EnvelopeSigner: {
+            decline_reason?: string | null;
+            email: string;
+            /** Format: uuid */
+            id: string;
+            ip?: string | null;
+            name: string;
+            role: string;
+            /** Format: int32 */
+            sign_order: number;
+            /** Format: date-time */
+            signed_at?: string | null;
+            status: string;
+            typed_name?: string | null;
+            user_agent?: string | null;
+        };
+        /** @description An envelope, as its owner sees it. */
+        EnvelopeView: {
+            certificate?: Record<string, never> | null;
+            certificate_hash?: string | null;
+            /** @description The events form an unbroken hash chain. */
+            chain_intact: boolean;
+            /** Format: date-time */
+            completed_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            documents: components["schemas"]["EnvelopeDocument"][];
+            events: components["schemas"]["EnvelopeEvent"][];
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+            signers: components["schemas"]["EnvelopeSigner"][];
+            status: string;
+            title: string;
         };
         ErasureDone: {
             /**
@@ -27110,6 +27648,13 @@ export interface components {
              */
             skipped: number;
         };
+        /** @description One menu link. */
+        MenuItem: {
+            label: string;
+            label_ar?: string | null;
+            /** @description A path on the site (`/pricing`) or an absolute http(s) URL. */
+            path: string;
+        };
         /** @description `POST /api/v1/model/navigation/{id}/opened`. */
         MenuItemOpened: {
             /** @description The item, as `<group label>/<item label>`. */
@@ -27634,6 +28179,17 @@ export interface components {
              */
             refusal?: string | null;
         };
+        /** @description A recorded movement and the balance after it. */
+        MovementRecorded: {
+            /** Format: double */
+            available: number;
+            /** Format: uuid */
+            movement_id: string;
+            /** Format: double */
+            on_hand: number;
+            /** Format: double */
+            reserved: number;
+        };
         /** @description How the recurring revenue moved between two days, in one currency. */
         Movements: {
             arr: string;
@@ -27781,6 +28337,13 @@ export interface components {
             /** @description The branch or unit the device invoices for. */
             organization_unit: string;
         };
+        /** @description A new envelope. */
+        NewEnvelope: {
+            /** @description `attome_document` records the caller may read. */
+            document_ids: string[];
+            signers: components["schemas"]["NewSigner"][];
+            title: string;
+        };
         NewMcpServer: {
             allow_external?: boolean;
             /** @description A bearer token; stored encrypted, never returned. */
@@ -27801,6 +28364,25 @@ export interface components {
              * @description The top-level message this answers.
              */
             thread_root_id?: string | null;
+        };
+        /** @description One movement to record. */
+        NewMovement: {
+            /**
+             * @description `receipt`, `issue`, `transfer_in`, `transfer_out`, `adjustment`
+             *     (signed) or `return`.
+             */
+            kind: string;
+            location_code: string;
+            /** Format: uuid */
+            lot_id?: string | null;
+            /** Format: uuid */
+            product_id: string;
+            /** Format: double */
+            quantity: number;
+            /** @description What caused it (an order, a work order line, a count). */
+            reference?: string | null;
+            /** Format: uuid */
+            serial_id?: string | null;
         };
         /**
          * @description The page fields a caller may set when adding a page. `dashboard_id` is not
@@ -27857,8 +28439,31 @@ export interface components {
             name: string;
             username?: string | null;
         };
+        /** @description A reservation to hold. */
+        NewReservation: {
+            /** Format: date */
+            expires_at?: string | null;
+            location_code: string;
+            /** Format: uuid */
+            product_id: string;
+            /** Format: double */
+            quantity: number;
+            reference: string;
+        };
         NewRole: {
             name: string;
+        };
+        /** @description A signer to add. */
+        NewSigner: {
+            email: string;
+            name: string;
+            /**
+             * Format: int32
+             * @description Signing position, 1 first; equal positions sign in any order.
+             */
+            order?: number | null;
+            /** @description `signer` (the default), `approver` or `witness`. */
+            role?: string | null;
         };
         /** @description `POST /api/v1/push/subscriptions`. */
         NewSubscription: {
@@ -27912,6 +28517,16 @@ export interface components {
             /** Format: date-time */
             started_at?: string | null;
             status: string;
+        };
+        /** @description One node's switch to a metadata version (Y8-T10). */
+        NodeSwitchView: {
+            /** @description The node, as `host:port`. */
+            node_id: string;
+            /**
+             * Format: date-time
+             * @description When the node started serving the version.
+             */
+            switched_at: string;
         };
         /**
          * @description Phase 2/3 route stubs (`/bottlenecks`, `/conformance`, `/findings`) —
@@ -31741,6 +32356,29 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_NodeSwitchView: {
+            items: {
+                /** @description The node, as `host:port`. */
+                node_id: string;
+                /**
+                 * Format: date-time
+                 * @description When the node started serving the version.
+                 */
+                switched_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ObjectSummaryView: {
             items: {
                 app: string;
@@ -33212,6 +33850,13 @@ export interface components {
                 actual?: number | null;
                 /** Format: date-time */
                 computed_at: string;
+                /**
+                 * @description P9-T5: `None` on the total row; on a member row, the dimension
+                 *     attribute(s), comma-separated.
+                 */
+                dimension_attribute?: string | null;
+                /** @description The member's value (several dimensions' values comma-separated). */
+                dimension_value?: string | null;
                 error_message?: string | null;
                 /** Format: uuid */
                 evaluated_by?: string | null;
@@ -34775,13 +35420,27 @@ export interface components {
             /** @description The plain-text part, if the message has one. */
             text?: string | null;
         };
+        /** @description One finding. */
+        PrecheckFinding: {
+            code: string;
+            /** @description What matched (a phrase, a domain), when there is one. */
+            detail?: string | null;
+            /** @description The screens' translation key for what to do about it. */
+            guidance_key: string;
+            severity: components["schemas"]["PrecheckSeverity"];
+        };
         /** @description The check's answer. */
         PrecheckReport: {
-            findings: components["schemas"]["Finding"][];
+            findings: components["schemas"]["PrecheckFinding"][];
             passed: boolean;
             /** Format: int32 */
             score: number;
         };
+        /**
+         * @description How much a finding costs the score.
+         * @enum {string}
+         */
+        PrecheckSeverity: "error" | "warning" | "info";
         PredictionSummary: {
             explanation?: unknown;
             /** Format: date-time */
@@ -36517,6 +37176,11 @@ export interface components {
             /** Format: uuid */
             new_delivery_id: string;
         };
+        /** @description The held reservation. */
+        ReservationHeld: {
+            /** Format: uuid */
+            reservation_id: string;
+        };
         ResetConfirmBody: {
             new_password: string;
             token: string;
@@ -37547,6 +38211,26 @@ export interface components {
             sales_price?: string | null;
             term_months?: string | null;
         };
+        /** @description What deciding a draft did. */
+        SalesOrgChartDraftDecided: {
+            /** Format: uuid */
+            draft_id: string;
+            /**
+             * Format: uuid
+             * @description The contact's manager before an accepted draft set it (to undo).
+             */
+            previous_manager_id?: string | null;
+            /** @description `accepted` or `rejected`. */
+            status: string;
+        };
+        /** @description Accept or reject an org chart draft. */
+        SalesOrgChartDraftDecision: {
+            /**
+             * @description `true` sets the proposed manager (and department); `false` only
+             *     marks the draft rejected.
+             */
+            accept: boolean;
+        };
         /** @description The queued render. */
         SalesOrgChartExport: {
             /**
@@ -38019,6 +38703,14 @@ export interface components {
             providers: components["schemas"]["SendProvider"][];
             send_ref: string;
         };
+        /** @description The request. */
+        SendForAcceptanceBody: {
+            /**
+             * Format: uuid
+             * @description A K3 `docgen_template` whose entity is `plan_participant`.
+             */
+            template_id: string;
+        };
         /** @description One frame. */
         SendFrame: {
             kind: string;
@@ -38396,6 +39088,33 @@ export interface components {
         SignInUrl: {
             url: string;
         };
+        /** @description A signer's action. */
+        SignerAction: {
+            /** @description `code` (email me a code), `sign` or `decline`. */
+            action: string;
+            /** @description The emailed code, to sign or decline. */
+            code?: string | null;
+            /** @description Why, to decline. */
+            reason?: string | null;
+            /** @description The signer's name as they type it, to sign. */
+            typed_name?: string | null;
+        };
+        /** @description What a signer's action did. */
+        SignerActionDone: {
+            envelope_status: string;
+            /** @description `code_sent`, `signed` or `declined`. */
+            result: string;
+        };
+        /** @description What a signer sees. */
+        SignerView: {
+            documents: components["schemas"]["EnvelopeDocument"][];
+            envelope_status: string;
+            envelope_title: string;
+            /** @description It is this signer's turn. */
+            may_sign: boolean;
+            signer_name: string;
+            signer_status: string;
+        };
         SignoffVerifyResponse: {
             /**
              * @description `None` only while the `DecisionDigest` audit event is pending: still in
@@ -38695,6 +39414,13 @@ export interface components {
             actual?: number | null;
             /** Format: date-time */
             computed_at: string;
+            /**
+             * @description P9-T5: `None` on the total row; on a member row, the dimension
+             *     attribute(s), comma-separated.
+             */
+            dimension_attribute?: string | null;
+            /** @description The member's value (several dimensions' values comma-separated). */
+            dimension_value?: string | null;
             error_message?: string | null;
             /** Format: uuid */
             evaluated_by?: string | null;
@@ -39089,8 +39815,65 @@ export interface components {
              */
             reference?: string | null;
         };
+        /** @description One component. */
+        StatusComponent: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            name_ar?: string | null;
+            status: string;
+        };
+        /** @description An incident or maintenance. */
+        StatusEvent: {
+            /** Format: uuid */
+            component_id?: string | null;
+            /** Format: date-time */
+            ends_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            impact?: string | null;
+            /** Format: date-time */
+            starts_at?: string | null;
+            status?: string | null;
+            title: string;
+            title_ar?: string | null;
+            updates: components["schemas"]["StatusUpdate"][];
+        };
+        /** @description A group of components. */
+        StatusGroup: {
+            components: components["schemas"]["StatusComponent"][];
+            name?: string | null;
+        };
+        /** @description The public page. */
+        StatusPage: {
+            /** Format: date-time */
+            generated_at: string;
+            groups: components["schemas"]["StatusGroup"][];
+            incidents: components["schemas"]["StatusEvent"][];
+            maintenance: components["schemas"]["StatusEvent"][];
+            overall: string;
+            recently_resolved: components["schemas"]["StatusEvent"][];
+        };
         StatusResponseBody: {
             enrolled: boolean;
+        };
+        /** @description A subscription request. */
+        StatusSubscribe: {
+            email: string;
+            /** @description `en` (the default) or `ar`: the language of the emails. */
+            language?: string | null;
+        };
+        /** @description A link's token (`?token=`, or the page's form field). */
+        StatusToken: {
+            token: string;
+        };
+        /** @description One update. */
+        StatusUpdate: {
+            /** Format: date-time */
+            at: string;
+            body: string;
+            body_ar?: string | null;
+            status?: string | null;
         };
         /** @description Z10-T2: what a step may add to who decides it and how. */
         StepExtras: {
@@ -40572,15 +41355,26 @@ export interface components {
             skip_if_empty?: boolean | null;
         };
         UpdateSpaceBody: {
+            /** @description `None` leaves it, `""` clears it. */
+            blog_path?: string | null;
             /**
              * @description `None` leaves the stored value unchanged, `Some("")` clears it,
              *     `Some(nonempty)` sets it — same convention as `UpdatePageBody`'s
              *     `seo_title`/`seo_description`.
              */
             description?: string | null;
+            /** @description E12-T2: `None` leaves it, `""` clears it. */
+            domain?: string | null;
+            /** @description Replaces the menu when present. */
+            menu?: components["schemas"]["MenuItem"][] | null;
             name?: string | null;
             /** @description K5-T1: `None` leaves it unchanged. */
             require_approval?: boolean | null;
+            site_title?: string | null;
+            /** @description Replaces the theme when present. */
+            theme?: {
+                [key: string]: string;
+            } | null;
         };
         /**
          * @description Full replacement of the model's mutable fields (`entity_logicalname` is
@@ -41066,6 +41860,26 @@ export interface components {
         Warning: {
             code: string;
             message: string;
+        };
+        /** @description The confirmation. */
+        WarrantyBackfillBody: {
+            /** @description Must be `true`: the person has seen the preview. */
+            confirm: boolean;
+        };
+        /** @description One asset's change. */
+        WarrantyChange: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: date */
+            current?: string | null;
+            /** Format: date */
+            new?: string | null;
+        };
+        /** @description What the backfill would do. */
+        WarrantyPreview: {
+            /** Format: int64 */
+            assets_to_change: number;
+            sample: components["schemas"]["WarrantyChange"][];
         };
         WebChatMetrics: {
             /**
@@ -57638,6 +58452,67 @@ export interface operations {
             };
             /** @description The pulled artifact failed to verify or parse */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_metadata_version_nodes: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description A published metadata version */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The nodes that switched to the version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_NodeSwitchView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such published version */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -77716,6 +78591,78 @@ export interface operations {
             };
         };
     };
+    commission_post_send_for_acceptance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The compensation plan */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendForAcceptanceBody"];
+            };
+        };
+        responses: {
+            /** @description Plan documents are rendering; each goes out for signature when ready */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptanceRequested"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_plan.update or may not create documents */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such plan or template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The plan has no published version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The template is not for plan participants */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     commission_get_statements: {
         parameters: {
             query: {
@@ -78200,6 +79147,54 @@ export interface operations {
             };
         };
     };
+    page_html: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The content space's id. */
+                space: string;
+                /** @description The page's URL path in that space, e.g. `/pricing`. */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page's published version as HTML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+            /** @description The page moved; `Location` names its current path */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The client already holds this version */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     deliver_internal_page: {
         parameters: {
             query?: never;
@@ -78340,6 +79335,123 @@ export interface operations {
             };
         };
     };
+    site_rss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The content space (site). */
+                space: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The feed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/rss+xml": unknown;
+                };
+            };
+            /** @description No such space, or Content Management isn't licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    site_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page's URL path on the site, e.g. `/pricing`. */
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page as HTML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+            /** @description The page moved; `Location` names its current path */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The client already holds this version */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No site on this host, or no published page at this path */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    site_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The content space (site). */
+                space: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stylesheet */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/css": unknown;
+                };
+            };
+            /** @description The client already holds this version */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such space, or Content Management isn't licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     view_page: {
         parameters: {
             query?: never;
@@ -78419,6 +79531,69 @@ export interface operations {
             };
             /** @description Too many votes for this page from this address */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_contract_compare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contract's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractCompareBody"];
+            };
+        };
+        responses: {
+            /** @description The comparison is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractCompareQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not create comparisons */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contract or version the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The same version twice, or a version of another contract */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -79618,6 +80793,280 @@ export interface operations {
                 };
             };
             /** @description A bad OTP, or ZATCA refused a step (the reason is kept on the device) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_esign_envelope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEnvelope"];
+            };
+        };
+        responses: {
+            /** @description The draft envelope */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A document the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad title, document, signer or file */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_esign_envelope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The envelope */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The envelope, its signers, events and certificate */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No envelope of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_esign_envelope_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The envelope */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sent; the first signers are emailed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No envelope of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a draft */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_esign_envelope_void: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The envelope */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Voided; its links stop working */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No envelope of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already finished */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_esign_signer_view: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signer's link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the signer signs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignerView"];
+                };
+            };
+            /** @description An unknown, expired or voided link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_esign_signer_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signer's link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignerAction"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignerActionDone"];
+                };
+            };
+            /** @description An unknown, expired or voided link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not this signer's turn, or a code was sent less than a minute ago */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A wrong code, or no typed name */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -82757,16 +84206,15 @@ export interface operations {
     list_snapshots: {
         parameters: {
             query?: {
-                /**
-                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
-                 *     clamped up to 1 rather than rejected, matching the legacy lists.
-                 */
                 page?: number;
-                /**
-                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
-                 *     `DEFAULT_PAGE_SIZE`.
-                 */
                 page_size?: number;
+                /**
+                 * @description A dimension attribute (comma-separated for several): its members'
+                 *     rows instead of the totals.
+                 */
+                dimension_attribute?: string;
+                /** @description One member's value, with `dimension_attribute`. */
+                dimension_value?: string;
             };
             header?: never;
             path: {
@@ -86368,6 +87816,45 @@ export interface operations {
             };
         };
     };
+    post_sales_org_chart_propose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The account */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The proposal is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such account the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_call_outcome: {
         parameters: {
             query?: never;
@@ -88382,6 +89869,78 @@ export interface operations {
             };
         };
     };
+    post_sales_orgchart_draft_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The draft */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesOrgChartDraftDecision"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrgChartDraftDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the contact */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such draft the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or the contact changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The proposed manager is at an unrelated account or forms a loop */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_sales_price_list_products: {
         parameters: {
             query?: {
@@ -89945,6 +91504,174 @@ export interface operations {
             };
         };
     };
+    post_stock_movement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewMovement"];
+            };
+        };
+        responses: {
+            /** @description The movement and the balance after it */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementRecorded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks stock_movement.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The same stock is being created by another request; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not enough stock, or an unknown kind or quantity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_stock_reservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewReservation"];
+            };
+        };
+        responses: {
+            /** @description The reservation is held */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationHeld"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks stock_reservation.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The same stock is being created by another request; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not enough stock available */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_stock_reservation_release: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The reservation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Released; its stock is available again */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks stock_reservation.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The reservation is not held */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_viewing: {
         parameters: {
             query?: never;
@@ -89978,6 +91705,93 @@ export interface operations {
             };
             /** @description No such record, or the caller cannot read it */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_warranty_backfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyBackfillBody"];
+            };
+        };
+        responses: {
+            /** @description The backfill is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks asset.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not confirmed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_warranty_backfill_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the backfill would change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarrantyPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks asset.update */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -90727,6 +92541,185 @@ export interface operations {
             };
             /** @description Empty or too long, or the provider refused it */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_status_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The status page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusPage"];
+                };
+            };
+            /** @description The service module is not licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_status_confirm: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page with a confirm button */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+        };
+    };
+    post_status_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["StatusToken"];
+            };
+        };
+        responses: {
+            /** @description Confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+            /** @description The link is not valid */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_status_subscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusSubscribe"];
+            };
+        };
+        responses: {
+            /** @description A confirmation is on its way (the same answer for any address) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The service module is not licensed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an email address */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_status_unsubscribe: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page with an unsubscribe button */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+        };
+    };
+    post_status_unsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["StatusToken"];
+            };
+        };
+        responses: {
+            /** @description Unsubscribed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+            /** @description The link is not valid */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

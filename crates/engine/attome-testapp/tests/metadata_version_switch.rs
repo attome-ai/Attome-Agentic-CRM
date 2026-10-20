@@ -190,3 +190,66 @@ fn rollback_needs_no_cook() {
         );
     });
 }
+
+// feature: Y8
+#[test]
+fn node_switch_rows_listed() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        publish_variable(&app).await;
+        let version = current_version(&app).await;
+
+        // A second node follows the pointer; its switch time since the
+        // pointer move is measured on the database clock.
+        let other = CookedRegistry::default();
+        let node = format!("node-y8t10-{}", &Uuid::now_v7().simple().to_string()[..12]);
+        attome_model::switch::follow_current(app.db(), &other, &node)
+            .await
+            .unwrap();
+        let third = format!("{node}-c");
+        let seconds = attome_model::switch::record_node_switch(app.db(), &third, version)
+            .await
+            .unwrap();
+        assert!(
+            seconds.is_some_and(|s| s >= 0.0),
+            "measured from the pointer move: {seconds:?}"
+        );
+        let again = attome_model::switch::record_node_switch(app.db(), &node, version)
+            .await
+            .unwrap();
+        assert_eq!(again, None, "a node's switch is measured once");
+
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/admin/metadata/versions/{version}/nodes?page_size=200"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let items = body["items"].as_array().expect("a paginated list");
+        assert_eq!(body["total"].as_i64(), Some(items.len() as i64));
+        let nodes: Vec<&str> = items
+            .iter()
+            .map(|n| n["node_id"].as_str().expect("node_id"))
+            .collect();
+        assert!(nodes.contains(&node.as_str()), "{body}");
+        assert!(nodes.contains(&third.as_str()), "{body}");
+        assert!(
+            nodes.len() >= 3,
+            "the publishing node and the two others: {body}"
+        );
+        assert!(items.iter().all(|n| n["switched_at"].is_string()));
+
+        let (status, _) = app
+            .request(
+                Method::GET,
+                "/api/v1/admin/metadata/versions/999999999/nodes",
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "a version never published");
+    });
+}

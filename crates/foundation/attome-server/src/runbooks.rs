@@ -50,6 +50,7 @@ runbooks!(
     "JobBacklogOld",
     "JobScheduleStale",
     "JobsInDeadLetter",
+    "MetadataSwitchSlow",
     "NodeStoppedReporting",
     "ObjectStorageDown",
     "ObjectStorageProbeLatencyHigh",

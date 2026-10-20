@@ -1025,6 +1025,27 @@ groups:
             not retried.
           runbook_url: "observability/runbooks/EmailSendSlow.md"
 
+      # ── Metadata version switch (Y8-T10) ────────────────────────────────────
+      # attome-model's switch.rs records metadata_switch_seconds when a node
+      # starts serving a version: the pointer move to the node's switch row,
+      # on the database clock. No labels. Like email_send_duration_seconds it
+      # is a bare histogram, exported as a SUMMARY with `quantile` labels.
+      # GET /api/v1/admin/metadata/versions/{version}/nodes lists which nodes
+      # have switched.
+      - alert: MetadataSwitchSlow
+        expr: max(metadata_switch_seconds{quantile="0.95"}) > 30
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Metadata version switch p95 above 30s"
+          description: >
+            Nodes take {{ $value }}s at p95 to serve a metadata version after
+            it is published, switched to or rolled back to. Until a node
+            switches it serves the previous version.
+          runbook_url: "observability/runbooks/MetadataSwitchSlow.md"
+
       # ── Portal (web-portal-users §5) and event bus (M62 §4.3, M86 O5) ───────
       # Rules on signals built 2026-09-28. Every label is a closed set; none
       # carries a portal, user or subscription id.

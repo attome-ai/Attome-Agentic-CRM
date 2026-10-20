@@ -102,7 +102,8 @@ pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
     let switched = attome_model::switch::record(&mut tx, &hash, None).await?;
     attome_db::tx::commit(tx).await?;
     cooked().load_version(db, switched.to, manifest).await?;
-    attome_model::switch::record_node_switch(db, node(), switched.to).await
+    attome_model::switch::record_node_switch(db, node(), switched.to).await?;
+    Ok(())
 }
 
 /// Loads the deployment's current metadata version on this node when it is
@@ -2113,11 +2114,64 @@ async fn rollback_version(
     .await
 }
 
+/// One node's switch to a metadata version (Y8-T10).
+#[derive(Serialize, ToSchema)]
+pub(crate) struct NodeSwitchView {
+    /// The node, as `host:port`.
+    node_id: String,
+    /// When the node started serving the version.
+    switched_at: DateTime<Utc>,
+}
+
+/// Lists the nodes serving a metadata version, earliest switch first
+/// (Y8-T10). A node missing from the list has not loaded the version yet.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/versions/{version}/nodes",
+    description = "Lists each node's switch to a recorded metadata version, earliest first (Y8-T10).",
+    operation_id = "list_metadata_version_nodes",
+    tag = "admin",
+    params(("version" = i64, Path, description = "A published metadata version"), OnePageQuery),
+    responses(
+        (status = 200, description = "The nodes that switched to the version", body = PaginatedResponse<NodeSwitchView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such published version", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn version_nodes(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(version): Path<i64>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<NodeSwitchView>>, AppError> {
+    let page = attome_model::switch::node_switches(&state.base.db, version, &page).await?;
+    Ok(Json(PaginatedResponse {
+        items: page
+            .items
+            .into_iter()
+            .map(|n| NodeSwitchView {
+                node_id: n.node_id,
+                switched_at: n.switched_at,
+            })
+            .collect(),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+        warnings: page.warnings,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
             "/api/v1/admin/metadata/versions/{version}/switch",
             post(switch_version),
+        )
+        .route(
+            "/api/v1/admin/metadata/versions/{version}/nodes",
+            get(version_nodes),
         )
         .route("/api/v1/admin/metadata/rollback", post(rollback_version))
         .route(
@@ -2182,6 +2236,7 @@ pub fn routes() -> Router<EngineState> {
         apply_commands,
         publish,
         switch_version,
+        version_nodes,
         rollback_version,
         option_merge::merge_values,
         export_files,
@@ -2209,6 +2264,7 @@ pub fn routes() -> Router<EngineState> {
         CommandsResponse,
         ModelPublishResponse,
         VersionSwitchResponse,
+        NodeSwitchView,
         option_merge::MergeValuesRequest,
         option_merge::MergeValuesQueued,
         ModelFile,

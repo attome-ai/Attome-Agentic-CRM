@@ -677,6 +677,30 @@ tests:
               summary: "A workflow entity-trigger event was dead-lettered"
               description: "An entity change event failed workflow dispatch repeatedly and was skipped, so the workflows it matched did not start or resume. GET /api/v1/workflow/trigger-dead-letters names the record and last_error; replay it once the cause is fixed.\n"
 
+  - interval: 1m
+    input_series:
+      # Y8-T10: the switch-time summary quantile sits at 45s.
+      - series: 'metadata_switch_seconds{quantile="0.95"}'
+        values: "45x20"
+      - series: 'metadata_switch_seconds{quantile="0.5"}'
+        values: "1x20"
+
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: MetadataSwitchSlow
+        exp_alerts: [] # inside the 10m for
+
+      - eval_time: 15m
+        alertname: MetadataSwitchSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              summary: "Metadata version switch p95 above 30s"
+              description: "Nodes take 45s at p95 to serve a metadata version after it is published, switched to or rolled back to. Until a node switches it serves the previous version.\n"
+              runbook_url: "observability/runbooks/MetadataSwitchSlow.md"
+
   # ══ SLO burn-rate rules (M86 O1, runtime-performance §1.1) ═══════════════
   # Generated together with the rules (the descriptions are written once), so
   # the rendered text below is the rule text with its labels substituted.

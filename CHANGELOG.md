@@ -133,6 +133,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Metadata switch timing (Y8-T10): each node records `metadata_switch_seconds`, the time from a
+  metadata version becoming current (a publish, switch or rollback) to the node serving it, on the
+  database clock. `GET /api/v1/admin/metadata/versions/{version}/nodes` lists which nodes serve a
+  version and when they switched; the `MetadataSwitchSlow` alert fires when the p95 stays above 30 s
+  for 10 minutes.
 - Server-rendered pages and sites (E12-T1, E12-T2, E13-T6): publishing a page renders its HTML
   once (Open Graph and X cards, hreflang for its translations, JSON-LD for articles), served by
   `GET /api/v1/content/html` (ETag, 304) and, by host, `GET /api/v1/content/site`; a content space

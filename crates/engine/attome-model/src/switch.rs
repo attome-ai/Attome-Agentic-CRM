@@ -18,7 +18,7 @@
 //! one.
 
 use attome_db::{DbPool, Tx};
-use attome_types::AppError;
+use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -220,18 +220,89 @@ pub async fn rollback(tx: &mut Tx<'_>) -> Result<Switched, AppError> {
     })
 }
 
-/// Records that `node` now serves `version` (once per node and version).
-pub async fn record_node_switch(pool: &DbPool, node: &str, version: i64) -> Result<(), AppError> {
-    sqlx::query(
+/// The histogram of how long a node took to serve a version after the
+/// pointer moved to it (Y8-T10): `metadata_current.switched_at` to the node's
+/// switch row, both on the database clock. A publish moves the pointer in
+/// the transaction that records the version, so for a publish this is the
+/// publish-to-switch time; for a switch or a rollback it starts at the
+/// pointer move, not at the version's original publish. No labels.
+pub const SWITCH_SECONDS: &str = "metadata_switch_seconds";
+
+/// Records that `node` now serves `version` (once per node and version), and
+/// its seconds since the pointer moved to `version` in [`SWITCH_SECONDS`].
+/// Returns those seconds; `None` when the row already existed or the pointer
+/// has moved on.
+pub async fn record_node_switch(
+    pool: &DbPool,
+    node: &str,
+    version: i64,
+) -> Result<Option<f64>, AppError> {
+    let seconds: Option<Option<f64>> = sqlx::query_scalar(
         "INSERT INTO metadata_node_switch (node_id, version) VALUES ($1, $2) \
-         ON CONFLICT (node_id, version) DO NOTHING",
+         ON CONFLICT (node_id, version) DO NOTHING \
+         RETURNING (SELECT extract(epoch FROM metadata_node_switch.switched_at - c.switched_at)::float8 \
+                    FROM metadata_current c WHERE c.version = $2)",
     )
     .bind(node)
     .bind(version)
-    .execute(pool)
+    .fetch_optional(pool)
     .await
     .map_err(AppError::internal)?;
-    Ok(())
+    let seconds = seconds.flatten().map(|s| s.max(0.0));
+    if let Some(seconds) = seconds {
+        metrics::histogram!(SWITCH_SECONDS).record(seconds);
+    }
+    Ok(seconds)
+}
+
+/// One node's switch to a version.
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow, serde::Serialize)]
+pub struct NodeSwitch {
+    pub node_id: String,
+    pub switched_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// The nodes that have switched to `version`, earliest first. Not found when
+/// the version was never recorded.
+pub async fn node_switches(
+    pool: &DbPool,
+    version: i64,
+    page: &OnePageQuery,
+) -> Result<PaginatedResponse<NodeSwitch>, AppError> {
+    let known: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM metadata_published_version WHERE version = $1)",
+    )
+    .bind(version)
+    .fetch_one(pool)
+    .await
+    .map_err(AppError::internal)?;
+    if !known {
+        return Err(AppError::NotFound);
+    }
+    let window = page.window();
+    let total: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM metadata_node_switch WHERE version = $1")
+            .bind(version)
+            .fetch_one(pool)
+            .await
+            .map_err(AppError::internal)?;
+    let items: Vec<NodeSwitch> = sqlx::query_as(
+        "SELECT node_id, switched_at FROM metadata_node_switch WHERE version = $1 \
+         ORDER BY switched_at, node_id LIMIT $2 OFFSET $3",
+    )
+    .bind(version)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(pool)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(PaginatedResponse {
+        items,
+        total,
+        page: window.page,
+        page_size: window.page_size,
+        warnings: Vec::new(),
+    })
 }
 
 /// Loads the current version into `registry` when it is not the one loaded,
