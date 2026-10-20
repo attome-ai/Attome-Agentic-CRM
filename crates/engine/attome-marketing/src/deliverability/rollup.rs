@@ -166,6 +166,9 @@ pub async fn rollup_day(db: &DbPool, day: NaiveDate) -> Result<usize, AppError> 
     Ok(folded.len())
 }
 
+/// A totals row: provider, send, then sent, delivered, bounced, opened, clicked, complained.
+type TotalsRow = (String, String, i64, i64, i64, i64, i64, i64);
+
 /// The rollup's totals per mailbox provider and send for `domain` (every
 /// sending domain when `None`) over the days `[from, to]`.
 pub async fn totals(
@@ -174,7 +177,7 @@ pub async fn totals(
     from: NaiveDate,
     to: NaiveDate,
 ) -> Result<Vec<(String, String, RollupCounts)>, AppError> {
-    let rows: Vec<(String, String, i64, i64, i64, i64, i64, i64)> = sqlx::query_as(
+    let rows: Vec<TotalsRow> = sqlx::query_as(
         "SELECT mailbox_provider, send_ref, SUM(sent)::bigint, SUM(delivered)::bigint, \
                 SUM(bounced)::bigint, SUM(opened)::bigint, SUM(clicked)::bigint, \
                 SUM(complaints)::bigint \

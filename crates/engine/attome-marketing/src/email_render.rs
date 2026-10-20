@@ -404,7 +404,7 @@ pub fn personalise(
 }
 
 #[cfg(test)]
-mod email_render {
+mod tests {
     use super::*;
 
     fn design(dir: Direction) -> EmailDesign {

@@ -139,7 +139,8 @@ type OrderRow = (
     Option<Uuid>,
     Option<bool>,
     Option<String>,
-    Option<NaiveDate>,
+    // `COALESCE(completed_at::date, CURRENT_DATE)`: never null.
+    NaiveDate,
     Option<Uuid>,
 );
 
@@ -342,6 +343,17 @@ async fn invoice_one(state: &EngineState, order: OrderRow) -> Result<(), AppErro
     mark(db, id, &format!("request:{}", accepted.request_id)).await
 }
 
+/// A row as read by the query below (clippy::type_complexity).
+type Row1 = Vec<(
+    Uuid,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<String>,
+    Option<NaiveDate>,
+    Option<NaiveDate>,
+)>;
+
 /// The active entitlement for the account that covers the asset on `on`.
 async fn find_entitlement(
     tx: &mut attome_db::Tx<'_>,
@@ -349,15 +361,7 @@ async fn find_entitlement(
     asset: Option<Uuid>,
     on: NaiveDate,
 ) -> Result<Option<Uuid>, AppError> {
-    let rows: Vec<(
-        Uuid,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<String>,
-        Option<NaiveDate>,
-        Option<NaiveDate>,
-    )> = sqlx::query_as(
+    let rows: Row1 = sqlx::query_as(
         "SELECT id, account_ref, asset_ref, product_ref, status, period_start::date, \
                 period_end::date \
            FROM entitlement \

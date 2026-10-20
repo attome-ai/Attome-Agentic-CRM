@@ -115,11 +115,14 @@ pub(crate) async fn undo_in_tx(
 }
 
 /// The participant's draw, locked for the run's transaction.
+/// A draw row as read: id, kind, amount per period, balance.
+type DrawRow = (Uuid, Option<String>, Option<String>, Option<String>);
+
 pub(crate) async fn lock_in_tx(
     tx: &mut attome_db::Tx<'_>,
     participant: Uuid,
 ) -> Result<Option<Draw>, attome_types::AppError> {
-    let row: Option<(Uuid, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+    let row: Option<DrawRow> = sqlx::query_as(
         "SELECT id, kind, amount_per_period::text, balance::text FROM comp_draw \
           WHERE participant_ref = $1 AND (is_active IS NULL OR is_active = true) \
           ORDER BY id LIMIT 1 FOR UPDATE",

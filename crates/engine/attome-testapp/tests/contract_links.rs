@@ -68,6 +68,8 @@ async fn sweep(app: &TestApp) -> u64 {
     drafts
 }
 
+/// A drafted contract as read: title, currency, value, owner.
+type ContractRow = (String, Option<String>, Option<f64>, Option<Uuid>);
 // feature: W1
 #[test]
 fn accepted_quote_creates_one_draft() {
@@ -103,7 +105,7 @@ fn accepted_quote_creates_one_draft() {
         emit(&app, "quote", quote, ChangeOperation::Update).await;
         sweep(&app).await;
 
-        let rows: Vec<(String, Option<String>, Option<f64>, Option<Uuid>)> = sqlx::query_as(
+        let rows: Vec<ContractRow> = sqlx::query_as(
             "SELECT title, currency, contract_value::float8, owner_ref FROM contract \
               WHERE source_kind = 'quote' AND source_id = $1",
         )

@@ -41,7 +41,6 @@ use axum::{
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -159,6 +158,15 @@ type EventRow = (
     Option<DateTime<Utc>>,
 );
 
+/// A row as read by the query below (clippy::type_complexity).
+type Row4 = Vec<(
+    Option<Uuid>,
+    Option<String>,
+    String,
+    Option<String>,
+    DateTime<Utc>,
+)>;
+
 async fn updates_for(
     state: &EngineState,
     column: &str,
@@ -172,13 +180,7 @@ async fn updates_for(
         attome_core::quote_ident(column),
         attome_core::quote_ident(column)
     );
-    let rows: Vec<(
-        Option<Uuid>,
-        Option<String>,
-        String,
-        Option<String>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(&sql)
+    let rows: Row4 = sqlx::query_as(&sql)
         .bind(ids)
         .fetch_all(&state.base.db)
         .await
@@ -222,18 +224,20 @@ fn attach(rows: Vec<EventRow>, updates: &[(Uuid, StatusUpdate)]) -> Vec<StatusEv
         .collect()
 }
 
+/// A row as read by the query below (clippy::type_complexity).
+type Row3 = Vec<(Uuid, String, Option<String>, Option<String>, Option<String>)>;
+
 /// Builds the page from the records.
 pub async fn build(state: &EngineState) -> Result<StatusPage, AppError> {
     let db = &state.base.db;
-    let components: Vec<(Uuid, String, Option<String>, Option<String>, Option<String>)> =
-        sqlx::query_as(
-            "SELECT id, name, name_ar, group_name, status::text FROM status_component \
+    let components: Row3 = sqlx::query_as(
+        "SELECT id, name, name_ar, group_name, status::text FROM status_component \
               WHERE COALESCE(is_public, true) AND (is_active IS NULL OR is_active = true) \
               ORDER BY display_order NULLS LAST, name",
-        )
-        .fetch_all(db)
-        .await
-        .map_err(AppError::internal)?;
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
     let overall = overall(
         components
             .iter()
@@ -437,6 +441,14 @@ pub fn email_ok(email: &str) -> bool {
         && e.len() <= 254
 }
 
+/// A row as read by the query below (clippy::type_complexity).
+type Row2 = Option<(
+    Uuid,
+    Option<DateTime<Utc>>,
+    Option<DateTime<Utc>>,
+    DateTime<Utc>,
+)>;
+
 #[utoipa::path(
     post,
     path = "/api/v1/status/subscribe",
@@ -474,12 +486,7 @@ async fn post_subscribe(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     // One pending request an hour per address; confirmed subscribers are
     // not told again. The answer is the same either way.
-    let existing: Option<(
-        Uuid,
-        Option<DateTime<Utc>>,
-        Option<DateTime<Utc>>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let existing: Row2 = sqlx::query_as(
         "SELECT id, confirmed_at::timestamptz, unsubscribed_at::timestamptz, \
                     COALESCE(modified_at, created_at) \
                FROM status_subscriber WHERE lower(email) = $1 \
@@ -694,11 +701,14 @@ pub fn notice(
 
 type UpdateRow = (Option<String>, Option<String>, String, Option<String>);
 
+/// A row as read by the query below (clippy::type_complexity).
+type Row1 = Option<(Option<Uuid>, Option<Uuid>, String, Option<String>)>;
+
 /// Emails one update to every confirmed subscriber, once.
 async fn notify_update(state: &EngineState, update: Uuid) -> Result<bool, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     // Claim the update: only an unsent one with notices on is sent.
-    let claimed: Option<(Option<Uuid>, Option<Uuid>, String, Option<String>)> = sqlx::query_as(
+    let claimed: Row1 = sqlx::query_as(
         "UPDATE status_update SET notified_at = now() \
           WHERE id = $1 AND notified_at IS NULL AND COALESCE(notify_subscribers, false) \
             AND (is_active IS NULL OR is_active = true) \

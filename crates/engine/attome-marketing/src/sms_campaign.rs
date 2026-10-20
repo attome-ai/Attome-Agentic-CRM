@@ -518,7 +518,7 @@ pub(crate) async fn post_sms_send(
 pub(crate) struct ApiDocFragment;
 
 #[cfg(test)]
-mod sms_campaign {
+mod tests {
     use super::*;
     use chrono::TimeZone;
     use serde_json::json;

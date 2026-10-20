@@ -148,14 +148,17 @@ struct Journey {
     daily_cap: Option<i64>,
 }
 
+/// A journey row as read: workflow, re-entry, cool-off days, daily cap, status.
+type JourneyRow = (
+    String,
+    Option<String>,
+    Option<i64>,
+    Option<i64>,
+    Option<String>,
+);
+
 async fn load(state: &EngineState, journey: Uuid, is_test: bool) -> Result<Journey, AppError> {
-    let row: Option<(
-        String,
-        Option<String>,
-        Option<i64>,
-        Option<i64>,
-        Option<String>,
-    )> = sqlx::query_as(
+    let row: Option<JourneyRow> = sqlx::query_as(
         "SELECT workflow_definition_logicalname, re_entry, cool_off_days::int8, \
                     daily_entry_cap::int8, status \
                FROM marketing_journey WHERE id = $1 AND is_active IS NOT FALSE",

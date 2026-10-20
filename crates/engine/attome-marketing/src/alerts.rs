@@ -195,6 +195,9 @@ async fn recipients(state: &EngineState, role: Option<&str>) -> Result<Vec<Uuid>
     .map_err(AppError::internal)
 }
 
+/// Per domain: (DMARC failed, total) for the day and for the baseline.
+type DomainCounts = ((i64, i64), (i64, i64));
+
 /// Evaluates `day` and notifies each new alert once. Returns the alerts
 /// raised now.
 pub async fn evaluate(state: &EngineState, day: NaiveDate) -> Result<Vec<Alert>, AppError> {
@@ -238,7 +241,7 @@ pub async fn evaluate(state: &EngineState, day: NaiveDate) -> Result<Vec<Alert>,
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
-    let mut by_domain: HashMap<String, ((i64, i64), (i64, i64))> = HashMap::new();
+    let mut by_domain: HashMap<String, DomainCounts> = HashMap::new();
     for (domain, d, fail, total) in dmarc {
         let e = by_domain.entry(domain).or_default();
         if d == day {

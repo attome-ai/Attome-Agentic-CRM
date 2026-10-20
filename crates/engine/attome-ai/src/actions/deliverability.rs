@@ -231,7 +231,7 @@ impl Action for Deliverability {
                 EXPLAIN => {
                     let (from, to) = (date_arg(args, "from")?, date_arg(args, "to")?);
                     let days = (to - from).num_days() + 1;
-                    if days < 1 || days > MAX_DAYS {
+                    if !(1..=MAX_DAYS).contains(&days) {
                         return Err(AppError::Validation(format!(
                             "to is on or after from, at most {MAX_DAYS} days later"
                         )));

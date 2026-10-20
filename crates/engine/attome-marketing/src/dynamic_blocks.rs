@@ -270,7 +270,7 @@ pub fn routes() -> axum::Router<EngineState> {
 pub(crate) struct ApiDocFragment;
 
 #[cfg(test)]
-mod dynamic_blocks {
+mod tests {
     use super::*;
     use attome_core::{AttrInfo, DataClassification, OnTargetDelete};
     use serde_json::json;

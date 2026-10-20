@@ -38,7 +38,6 @@ use axum::{
 };
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 

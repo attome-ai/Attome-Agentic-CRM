@@ -293,7 +293,7 @@ impl Writer<'_> {
         comment: String,
     ) -> Result<(), AppError> {
         attome_core::change_feed::emit_named(
-            &mut **tx,
+            tx,
             "subscription",
             subscription,
             ChangeOperation::Update,
@@ -937,8 +937,7 @@ pub async fn resume(
         let before = stored
             .iter()
             .filter(|s| s.segment.line_id == paused.segment.line_id)
-            .filter(|s| s.segment.valid_to == Some(paused.segment.valid_from))
-            .next_back();
+            .rfind(|s| s.segment.valid_to == Some(paused.segment.valid_from));
         // A planned resume already opened the next segment: drop it, this
         // resume replaces it.
         if let Some(planned) = stored.iter().find(|s| {

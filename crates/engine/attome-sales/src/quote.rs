@@ -68,6 +68,18 @@ type ListRow = (
     Option<Uuid>,
 );
 
+/// An account price row: id, currency, price, valid from, valid to.
+type AccountPriceRow = (
+    Uuid,
+    Option<String>,
+    Option<String>,
+    Option<NaiveDate>,
+    Option<NaiveDate>,
+);
+
+/// A price break row: id, item, minimum quantity, price, discount percent.
+type PriceBreakRow = (Uuid, Uuid, Option<String>, Option<String>, Option<String>);
+
 /// Loads the account's prices, the price lists in `currency` with their
 /// item and breaks for the product, and the units' conversion factors.
 pub async fn load_price_inputs(
@@ -78,7 +90,7 @@ pub async fn load_price_inputs(
 ) -> Result<PriceInputs, AppError> {
     let mut inputs = PriceInputs::default();
     if let Some(account) = account {
-        let rows: Vec<(Uuid, Option<String>, Option<String>, Option<NaiveDate>, Option<NaiveDate>)> =
+        let rows: Vec<AccountPriceRow> =
             sqlx::query_as(
                 "SELECT id, currency, price::text, valid_from::date, valid_to::date FROM account_price \
                   WHERE account_ref = $1 AND product_ref = $2 AND (is_active IS NULL OR is_active = true)",
@@ -112,7 +124,7 @@ pub async fn load_price_inputs(
     .await
     .map_err(AppError::internal)?;
     let item_ids: Vec<Uuid> = lists.iter().filter_map(|l| l.5).collect();
-    let breaks: Vec<(Uuid, Uuid, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+    let breaks: Vec<PriceBreakRow> = sqlx::query_as(
         "SELECT id, price_list_item_ref, min_quantity::text, price::text, discount_percent::text \
                FROM price_break WHERE price_list_item_ref = ANY($1) \
                 AND (is_active IS NULL OR is_active = true)",

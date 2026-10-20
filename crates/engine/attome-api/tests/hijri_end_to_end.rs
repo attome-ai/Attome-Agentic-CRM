@@ -157,7 +157,7 @@ async fn stamp_test_origin(mut req: axum::extract::Request) -> axum::extract::Re
     req
 }
 
-fn full_app(system: &EngineSystem) -> axum::Router {
+fn full_app(system: EngineSystem) -> axum::Router {
     let base_state = system.state().base.clone();
     attome_server::ServerBuilder::new(base_state.clone(), (*base_state.config).clone())
         .add_bundle(system.core_routes())
@@ -380,7 +380,7 @@ async fn autonumber_uses_hijri_year() {
     .execute(&db)
     .await
     .expect("insert autovalue rule");
-    let app = full_app(&system);
+    let app = full_app(system);
     let cookie = session_cookie(seed_admin(&db).await);
 
     // The deployment has no time zone configured: today is a UTC day.
@@ -431,7 +431,7 @@ async fn autonumber_uses_hijri_year() {
 async fn out_of_range_hijri_date_is_422() {
     let system = skip_if_no_db!(test_system().await);
     let db = system.state().base.db.clone();
-    let app = full_app(&system);
+    let app = full_app(system);
     let admin = session_cookie(seed_admin(&db).await);
     let user = session_cookie(seed_user(&db).await);
 

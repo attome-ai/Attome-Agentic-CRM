@@ -164,7 +164,7 @@ pub async fn post_draft(
     ))
 }
 
-#[derive(utoipa::OpenApi)]
+#[derive(Debug, utoipa::OpenApi)]
 #[openapi(paths(post_draft), components(schemas(DraftQueued)))]
 pub struct ApiDocFragment;
 
