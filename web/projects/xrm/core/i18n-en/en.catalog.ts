@@ -257,6 +257,31 @@ export const xrmEn = {
     bucket: { current: 'Not yet due', days_1_30: '1–30 days', days_31_60: '31–60 days', days_61_90: '61–90 days', over_90: 'Over 90 days' },
     empty: 'Nothing is owed.', pages: 'Pages', previous: 'Previous', next: 'Next',
   },
+  // F10-T15: my commission statement and the estimator on a deal. The step
+  // keys (gate_not_met ...) are the commission engine's explanation steps.
+  commission: {
+    statement: {
+      title: 'My commission statement',
+      period: 'Period',
+      noPeriods: 'No commission periods yet.',
+      empty: 'Nothing on this statement yet.',
+      how: 'How it was worked out',
+      hidden: 'Amount hidden',
+      kind: { line: 'Commission', adjustment: 'Adjustment', clawback: 'Clawback' },
+    },
+    estimate: {
+      title: 'My commission',
+      run: 'Estimate what this deal pays me',
+      payout: 'Pays this period',
+      change: 'Change to the period',
+    },
+    gate_not_met: 'Not paid: attainment {attainment}% is below the {gate}% gate.',
+    below_margin_floor: 'Not paid: the margin {margin}% is below the {floor}% floor.',
+    retroactive_rate: 'Attainment {attainment}% pays {rate}% on the whole amount.',
+    marginal_slice: '{slice} paid at {rate}%.',
+    capped_per_deal: 'Capped at {cap} for this deal.',
+    capped_per_period: 'Capped at {cap} for this period.',
+  },
   // D26-T2: the plays panel on a deal.
   plays: {
     title: 'Plays for this deal',

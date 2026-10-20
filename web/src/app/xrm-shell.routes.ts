@@ -738,6 +738,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // F10-T15: my commission statement (the API answers only the
+            // rows and amounts the reader may see).
+            path: 'commission/statement',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/commission').then(m => m.CommissionStatementComponent),
+          },
+          {
             // F4-T16: the receivables ageing and an account's statement (the
             // API answers only accounts the caller may read).
             path: 'billing/ageing',

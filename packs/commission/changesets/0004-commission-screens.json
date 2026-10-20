@@ -1,0 +1,391 @@
+{
+  "author": "packs",
+  "checksum": "sha256:41be1d0cf1ac9417e74092de9bd9a04ab105bebf32a94abf30c455cb45ace07e",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Commission screens (F10-T15): list views of plans, periods, statement lines, open disputes, clawbacks, payouts, adjustments and plan participants; record rules and the Commission Amounts profile decide what each person sees in them.",
+  "format": "attome-changeset/v1",
+  "id": "01a15864-1b2f-795c-91db-27a2d73aaaec",
+  "layer": "product",
+  "name": "commission-screens",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_plan",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Commission plans",
+          "required_privilege": "comp_plan.read",
+          "sql": "SELECT id, name, name_ar, fiscal_year, status FROM \"comp_plan\" WHERE is_active IS NOT FALSE ORDER BY fiscal_year DESC NULLS LAST, name",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "comp_plan",
+        "query": "Commission plans"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_period",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Commission periods",
+          "required_privilege": "comp_period.read",
+          "sql": "SELECT id, fiscal_period, starts_on, ends_on, status FROM \"comp_period\" WHERE is_active IS NOT FALSE ORDER BY starts_on DESC",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "comp_period",
+        "query": "Commission periods"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_statement_line",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Statement lines",
+          "required_privilege": "comp_statement_line.read",
+          "sql": "SELECT id, run_ref, participant_ref, component_ref, credit_ref, amount, rate, tier_reached FROM \"comp_statement_line\" WHERE is_active IS NOT FALSE ORDER BY created_at DESC",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "comp_statement_line",
+        "query": "Statement lines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_dispute",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Open commission disputes",
+          "required_privilege": "comp_dispute.read",
+          "sql": "SELECT id, statement_line_ref, reason, status FROM \"comp_dispute\" WHERE is_active IS NOT FALSE AND (status IS NULL OR status = 'open') ORDER BY created_at",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "comp_dispute",
+        "query": "Open commission disputes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_credit",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Commission clawbacks",
+          "required_privilege": "comp_credit.read",
+          "sql": "SELECT id, participant_ref, period_ref, source_kind, source_id, amount, currency, credited_on, reverses_credit_ref FROM \"comp_credit\" WHERE is_active IS NOT FALSE AND reverses_credit_ref IS NOT NULL ORDER BY credited_on DESC",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "comp_credit",
+        "query": "Commission clawbacks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_payout",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Commission payouts",
+          "required_privilege": "comp_payout.read",
+          "sql": "SELECT id, run_ref, participant_ref, amount, status FROM \"comp_payout\" WHERE is_active IS NOT FALSE ORDER BY created_at DESC",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "comp_payout",
+        "query": "Commission payouts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_adjustment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Commission adjustments",
+          "required_privilege": "comp_adjustment.read",
+          "sql": "SELECT id, participant_ref, period_ref, amount, reason FROM \"comp_adjustment\" WHERE is_active IS NOT FALSE ORDER BY created_at DESC",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "comp_adjustment",
+        "query": "Commission adjustments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "plan_participant",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Plan participants",
+          "required_privilege": "plan_participant.read",
+          "sql": "SELECT id, plan_version_ref, user_ref, partner_account_ref, role, starts_on, ends_on, acceptance_status FROM \"plan_participant\" WHERE is_active IS NOT FALSE ORDER BY starts_on DESC NULLS LAST",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "plan_participant",
+        "query": "Plan participants"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_plan",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Commission plans",
+          "query": {
+            "entity": "comp_plan",
+            "name": "Commission plans"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "comp_plan",
+        "view": "Commission plans"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_period",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Commission periods",
+          "query": {
+            "entity": "comp_period",
+            "name": "Commission periods"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "comp_period",
+        "view": "Commission periods"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_statement_line",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Statement lines",
+          "query": {
+            "entity": "comp_statement_line",
+            "name": "Statement lines"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "comp_statement_line",
+        "view": "Statement lines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_dispute",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Open commission disputes",
+          "query": {
+            "entity": "comp_dispute",
+            "name": "Open commission disputes"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "comp_dispute",
+        "view": "Open commission disputes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_credit",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Commission clawbacks",
+          "query": {
+            "entity": "comp_credit",
+            "name": "Commission clawbacks"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "comp_credit",
+        "view": "Commission clawbacks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_payout",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Commission payouts",
+          "query": {
+            "entity": "comp_payout",
+            "name": "Commission payouts"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "comp_payout",
+        "view": "Commission payouts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "comp_adjustment",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Commission adjustments",
+          "query": {
+            "entity": "comp_adjustment",
+            "name": "Commission adjustments"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "comp_adjustment",
+        "view": "Commission adjustments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "plan_participant",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Plan participants",
+          "query": {
+            "entity": "plan_participant",
+            "name": "Plan participants"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "plan_participant",
+        "view": "Plan participants"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "commission",
+  "seq": 4,
+  "title": "Pack: commission screens"
+}

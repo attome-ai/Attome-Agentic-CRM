@@ -237,6 +237,30 @@ export const xrmAr = {
     bucket: { current: 'لم يستحق بعد', days_1_30: '١–٣٠ يومًا', days_31_60: '٣١–٦٠ يومًا', days_61_90: '٦١–٩٠ يومًا', over_90: 'أكثر من ٩٠ يومًا' },
     empty: 'لا مبالغ مستحقة.', pages: 'الصفحات', previous: 'السابق', next: 'التالي',
   },
+  // F10-T15: my commission statement and the estimator on a deal.
+  commission: {
+    statement: {
+      title: 'كشف عمولتي',
+      period: 'الفترة',
+      noPeriods: 'لا توجد فترات عمولة بعد.',
+      empty: 'لا شيء في هذا الكشف بعد.',
+      how: 'كيف احتُسبت',
+      hidden: 'المبلغ مخفي',
+      kind: { line: 'عمولة', adjustment: 'تسوية', clawback: 'استرداد' },
+    },
+    estimate: {
+      title: 'عمولتي',
+      run: 'قدّر ما تدفعه لي هذه الصفقة',
+      payout: 'المستحق في هذه الفترة',
+      change: 'التغيّر على الفترة',
+    },
+    gate_not_met: 'غير مستحقة: نسبة التحقيق {attainment}% أقل من الحد الأدنى {gate}%.',
+    below_margin_floor: 'غير مستحقة: هامش الربح {margin}% أقل من الحد الأدنى {floor}%.',
+    retroactive_rate: 'نسبة التحقيق {attainment}% تستحق {rate}% على المبلغ كله.',
+    marginal_slice: '{slice} بنسبة {rate}%.',
+    capped_per_deal: 'بحد أقصى {cap} لهذه الصفقة.',
+    capped_per_period: 'بحد أقصى {cap} لهذه الفترة.',
+  },
   // D26-T2: the plays panel on a deal.
   plays: {
     title: 'الخطط المناسبة لهذه الصفقة',

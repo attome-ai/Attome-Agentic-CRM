@@ -10,6 +10,7 @@ import type { FieldSchema } from '@attome/xrm';
 
 type CompetitorsModule = typeof import('@attome/xrm/verticals/sales/competitors');
 type PlaybooksModule = typeof import('@attome/xrm/verticals/sales/playbooks');
+type CommissionModule = typeof import('@attome/xrm/verticals/commission');
 
 /**
  * Hand-coded form for `opportunity`, scaffolded from verticals/crm/bundle.json's
@@ -41,6 +42,9 @@ export class OpportunityFormComponent extends EngineFormBase {
   /** The sales pack's plays panel (D26-T2), loaded the same way; it hides
    *  itself when no play applies to the deal. */
   protected readonly playsPanel = signal<PlaybooksModule | null>(null);
+  /** F10-T15: the commission estimator, loaded the same way; it hides
+   *  itself for a reader on no commission plan. */
+  protected readonly commissionPanel = signal<CommissionModule | null>(null);
   /** The deal's stage as last saved: the plays follow the saved deal, so an
    *  unsaved stage change does not reload them. */
   protected readonly savedStage = signal<string | null>(null);
@@ -54,6 +58,10 @@ export class OpportunityFormComponent extends EngineFormBase {
     import('@attome/xrm/verticals/sales/playbooks').then(
       m => this.playsPanel.set(m),
       () => this.playsPanel.set(null),
+    );
+    import('@attome/xrm/verticals/commission').then(
+      m => this.commissionPanel.set(m),
+      () => this.commissionPanel.set(null),
     );
     effect(() => {
       if (this.dirty()) return;
