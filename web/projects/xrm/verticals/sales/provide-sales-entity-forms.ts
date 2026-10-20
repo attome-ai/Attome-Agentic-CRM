@@ -1,4 +1,7 @@
-import { EntityRouteRegistry } from '@attome/xrm/core/entity';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { EntityRouteRegistry, SelectionAction } from '@attome/xrm/core/entity';
+import { defer } from 'rxjs';
 import { OrderFormComponent } from './forms/order-form/order-form.component';
 import { PriceListFormComponent } from './forms/price-list-form/price-list-form.component';
 import { PriceListItemFormComponent } from './forms/price-list-item-form/price-list-item-form.component';
@@ -27,7 +30,20 @@ import { CallDailyAggregateFormComponent } from './forms/call-daily-aggregate-fo
 //
 // Called from `EntityRouteRegistry.ensureLoaded`'s lazy `import()`, not
 // eagerly — see that class's doc comment for why (260KB lazy-chunk cap).
+/** D21-T11: "Start dialer" on one active call list opens the dialer for it. */
+export function callListActions(): SelectionAction[] {
+  const router = inject(Router);
+  return [{
+    key: 'sales-start-dialer',
+    labelKey: 'salesDialer.start',
+    style: 'primary',
+    isVisible: rows => rows.length === 1 && rows[0]['status'] === 'active',
+    run: id => defer(() => router.navigate(['/xrm/sales/dialer', id])),
+  }];
+}
+
 export function registerSalesEntityForms(registry: EntityRouteRegistry): void {
+  registry.register('call_list', { selectionActions: callListActions() });
   registry.register('order', { formComponent: OrderFormComponent });
   registry.register('price_list', { formComponent: PriceListFormComponent });
   registry.register('price_list_item', { formComponent: PriceListItemFormComponent });

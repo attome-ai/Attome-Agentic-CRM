@@ -415,6 +415,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.NewRequestPickerComponent),
           },
           {
+            // D21-T11: the power dialer for one call list.
+            path: 'sales/dialer/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/verticals/sales/dialer').then(m => m.DialerPanelComponent),
+          },
+          {
             // C8-T1: the shared inbox.
             path: 'service/inbox',
             canActivate: [authGuard],

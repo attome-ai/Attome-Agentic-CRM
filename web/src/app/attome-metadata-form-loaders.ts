@@ -217,6 +217,8 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'call_analysis', 'call_tracker', 'call_finding', 'call_scorecard', 'call_scorecard_answer',
       'call_comment', 'call_library', 'call_library_item', 'call_daily_aggregate',
       'points_model', 'points_rule', 'points_score',
+      // D21-T11: "Start dialer" on the call list's list view.
+      'call_list',
     ]],
     [vendorSupplier, ['vendor', 'vendor_compliance_document', 'vendor_evaluation']],
   ];
