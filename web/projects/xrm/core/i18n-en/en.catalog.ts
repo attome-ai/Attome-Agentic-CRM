@@ -790,6 +790,10 @@ export const xrmEn = {
     },
   },
   notes: {
+    thread: {
+      reactions: 'Reactions', history: 'Edit history', noEdits: 'Not edited.',
+      resolve: 'Resolve', reopen: 'Reopen', resolved: 'Resolved',
+    },
     history: 'Notes History', createNote: 'Create note', loading: 'Loading notes…', empty: 'No notes yet.',
     createFirst: '+ Create first note', attachments: 'Attachments', replies: 'Replies',
     editNoteTitle: 'Edit Note', createNoteTitle: 'Create New Note',

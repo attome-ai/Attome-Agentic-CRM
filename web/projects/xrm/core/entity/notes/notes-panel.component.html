@@ -371,6 +371,10 @@
                         }
                       </div>
                     }
+                    <xrm-note-thread
+                      [item]="{ entity: 'note', id: activeNote.id, reactions: activeNote.reactions, rowVersion: activeNote.row_version, isResolved: activeNote.is_resolved }"
+                      [resolvable]="true"
+                      (changed)="fetchNotes(activeNote.id)" />
                   </div>
                 </div>
 
@@ -471,6 +475,9 @@
                           }
                         </div>
                       }
+                      <xrm-note-thread
+                        [item]="{ entity: 'note_reply', id: reply.id, reactions: reply.reactions, rowVersion: reply.row_version }"
+                        (changed)="fetchNotes(activeNote.id)" />
                     </div>
                   </div>
                 }

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:f8c20a3e4d2be8a02f7bab66ba4aafab6332048df80e64a38ccaca2f6ae744a9",
+  "checksum": "sha256:63d0115e1ae9fd3b5deb084aeb7dfbcd65d586e46bd791dc18a1309b0824d04b",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-note.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -99,6 +99,23 @@
     {
       "args": {
         "definition": {
+          "display_name": "Resolved",
+          "field_type": "bool",
+          "is_filterable": true,
+          "logicalname": "is_resolved"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "note",
+        "field": "is_resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "display_name": "Note Text",
           "field_type": "text",
           "is_required": true,
@@ -107,10 +124,26 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 6,
+      "seq": 7,
       "target": {
         "entity": "note",
         "field": "note_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reactions",
+          "field_type": "text",
+          "logicalname": "reactions"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "note",
+        "field": "reactions"
       }
     },
     {
@@ -124,7 +157,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 7,
+      "seq": 9,
       "target": {
         "entity": "note",
         "field": "record_id"
@@ -140,10 +173,42 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
+      "seq": 10,
       "target": {
         "entity": "note",
         "field": "replies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolved At",
+          "field_type": "date",
+          "logicalname": "resolved_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "note",
+        "field": "resolved_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolved By",
+          "field_type": "text",
+          "logicalname": "resolved_by"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "note",
+        "field": "resolved_by"
       }
     },
     {
@@ -157,7 +222,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 13,
       "target": {
         "entity": "note",
         "field": "title"
@@ -175,7 +240,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 10,
+      "seq": 14,
       "target": {
         "entity": "note",
         "query": "Active Notes"
@@ -195,7 +260,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 11,
+      "seq": 15,
       "target": {
         "entity": "note",
         "view": "Active Notes"
@@ -213,7 +278,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 12,
+      "seq": 16,
       "target": {
         "entity": "note_reply"
       }
@@ -228,7 +293,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 13,
+      "seq": 17,
       "target": {
         "entity": "note_reply",
         "field": "attachments"
@@ -246,7 +311,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 18,
       "target": {
         "entity": "note_reply",
         "field": "entity_name"
@@ -265,7 +330,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 19,
       "target": {
         "entity": "note_reply",
         "field": "files"
@@ -283,7 +348,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 20,
       "target": {
         "entity": "note_reply",
         "field": "note_id"
@@ -299,10 +364,26 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 21,
       "target": {
         "entity": "note_reply",
         "field": "note_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reactions",
+          "field_type": "text",
+          "logicalname": "reactions"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "note_reply",
+        "field": "reactions"
       }
     },
     {
@@ -317,7 +398,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 23,
       "target": {
         "entity": "note_reply",
         "field": "record_id"
@@ -335,7 +416,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 19,
+      "seq": 24,
       "target": {
         "entity": "note_reply",
         "query": "Active Note Replies"
@@ -355,7 +436,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 20,
+      "seq": 25,
       "target": {
         "entity": "note_reply",
         "view": "Active Note Replies"

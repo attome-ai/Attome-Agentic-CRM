@@ -14,6 +14,7 @@ import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
 import { TranslateTextComponent } from '../translate/translate-text.component';
+import { NoteThreadComponent } from './note-thread.component';
 
 /**
  * `note`'s multi-`file` field (`platform-bundles/attome-api-note.json`).
@@ -51,6 +52,8 @@ export interface NoteReply {
   /** The reply record's own file keys; an attachment key not here lives on the note. */
   files?: string[];
   row_version?: number;
+  /** C1-T2: the stored reactions text. */
+  reactions?: unknown;
 }
 
 /** A list of attachments from a stored value (JSON text or an array). Pure. */
@@ -82,6 +85,9 @@ export interface NoteItem {
   attachments?: NoteAttachment[];
   replies?: NoteReply[];
   row_version?: number;
+  /** C1-T2: the stored reactions text and the thread's resolved state. */
+  reactions?: unknown;
+  is_resolved?: boolean;
 }
 
 const EXTENSION_ICONS: Record<string, string> = {
@@ -112,7 +118,7 @@ const EXTENSION_ICONS: Record<string, string> = {
   selector: 'xrm-notes-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent, MentionPickerComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent, MentionPickerComponent, NoteThreadComponent],
   styleUrls: ['./notes-panel.component.css'],
   templateUrl: './notes-panel.component.html',
 })
@@ -338,6 +344,7 @@ export class NotesPanelComponent implements OnInit {
             attachments: parseAttachments(raw['attachments']),
             files,
             row_version: item.row_version,
+            reactions: raw['reactions'],
           };
           repliesByNote.set(noteId, [...(repliesByNote.get(noteId) ?? []), reply]);
         }
@@ -369,6 +376,8 @@ export class NotesPanelComponent implements OnInit {
             attachments: parsedAttachments,
             replies: parsedReplies,
             row_version: item.row_version,
+            reactions: raw['reactions'],
+            is_resolved: raw['is_resolved'] === true,
           };
         });
 

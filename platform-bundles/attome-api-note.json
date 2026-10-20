@@ -19,7 +19,11 @@
         { "logicalname": "attachments", "display_name": "Attachments", "field_type": "text" },
         { "logicalname": "files", "display_name": "Files", "field_type": "file", "options": { "multi": true } },
         { "logicalname": "replies", "display_name": "Replies", "field_type": "text" },
-        { "logicalname": "is_customer_visible", "display_name": "Customer Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "is_customer_visible", "display_name": "Customer Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "is_resolved", "display_name": "Resolved", "field_type": "bool", "is_filterable": true },
+        { "logicalname": "resolved_at", "display_name": "Resolved At", "field_type": "date" },
+        { "logicalname": "resolved_by", "display_name": "Resolved By", "field_type": "text" },
+        { "logicalname": "reactions", "display_name": "Reactions", "field_type": "text" }
       ]
     },
     {
@@ -33,7 +37,8 @@
         { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "note_text", "display_name": "Reply Text", "field_type": "text" },
         { "logicalname": "attachments", "display_name": "Attachments", "field_type": "text" },
-        { "logicalname": "files", "display_name": "Files", "field_type": "file", "options": { "multi": true } }
+        { "logicalname": "files", "display_name": "Files", "field_type": "file", "options": { "multi": true } },
+        { "logicalname": "reactions", "display_name": "Reactions", "field_type": "text" }
       ]
     }
   ],

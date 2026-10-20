@@ -752,6 +752,10 @@ export const xrmAr = {
     },
   },
   notes: {
+    thread: {
+      reactions: 'التفاعلات', history: 'سجل التعديلات', noEdits: 'لم يُعدَّل.',
+      resolve: 'حل', reopen: 'إعادة فتح', resolved: 'محلول',
+    },
     history: 'سجل الملاحظات', createNote: 'إنشاء ملاحظة', loading: 'جاري تحميل الملاحظات…', empty: 'لا توجد ملاحظات بعد.',
     createFirst: '+ أنشئ أول ملاحظة', attachments: 'المرفقات', replies: 'الردود',
     editNoteTitle: 'تعديل الملاحظة', createNoteTitle: 'إنشاء ملاحظة جديدة',
