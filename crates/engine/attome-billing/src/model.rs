@@ -27,6 +27,35 @@ impl EngineModel for BillingModel {
         // F3-T7: metered usage ingest.
         Router::new()
             .route("/api/v1/billing/usage", post(crate::usage::post_usage))
+            // F3-T6: the subscription service.
+            .route(
+                "/api/v1/billing/subscriptions",
+                post(crate::subscription::routes::post_subscription),
+            )
+            .route(
+                "/api/v1/billing/subscriptions/{id}",
+                get(crate::subscription::routes::get_subscription),
+            )
+            .route(
+                "/api/v1/billing/subscriptions/{id}/amendments",
+                post(crate::subscription::routes::post_amendment),
+            )
+            .route(
+                "/api/v1/billing/subscriptions/{id}/amendments/{amendment_id}/reverse",
+                post(crate::subscription::routes::post_reverse_amendment),
+            )
+            .route(
+                "/api/v1/billing/subscriptions/{id}/cancel",
+                post(crate::subscription::routes::post_cancel),
+            )
+            .route(
+                "/api/v1/billing/subscriptions/{id}/pause",
+                post(crate::subscription::routes::post_pause),
+            )
+            .route(
+                "/api/v1/billing/subscriptions/{id}/resume",
+                post(crate::subscription::routes::post_resume),
+            )
             .route(
                 "/api/v1/billing/metrics/recurring",
                 get(crate::metrics::get_recurring),

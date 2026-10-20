@@ -676,6 +676,10 @@ pub async fn amend(
                 change.line_id, amendment.effective
             ))
         })?;
+        // F3-T6: a new price needs its own privilege.
+        if change.unit_price != current.segment.unit_price {
+            ctx.require("subscription", "amend_price")?;
+        }
         let (_, next) = split_at(
             &current.segment,
             amendment.effective,
@@ -760,6 +764,7 @@ pub async fn cancel(
     reason: &str,
 ) -> Result<NaiveDate, AppError> {
     ctx.require("subscription", "update")?;
+    ctx.require("subscription", "cancel")?;
     let w = writer(state, ctx).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, subscription).await?;
@@ -1053,6 +1058,71 @@ pub async fn reverse_amendment(
     .await?;
     attome_db::tx::commit(tx).await?;
     Ok(())
+}
+
+/// One line as it stood on a date.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, utoipa::ToSchema)]
+pub struct LineAsOf {
+    pub line_id: Uuid,
+    pub product_ref: Option<Uuid>,
+    /// `None` when the line had no segment in force that day.
+    pub quantity: Option<f64>,
+    pub unit_price: Option<f64>,
+    pub change_kind: Option<String>,
+}
+
+/// A subscription as it stood on a date.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, utoipa::ToSchema)]
+pub struct SubscriptionAsOf {
+    pub id: Uuid,
+    pub as_of: NaiveDate,
+    /// The record as the caller reads it.
+    #[schema(value_type = Object)]
+    pub subscription: Value,
+    pub lines: Vec<LineAsOf>,
+}
+
+/// Reads a subscription and its lines as they stood on `as_of`: the record
+/// as the caller may read it, and each line's segment in force that day.
+pub async fn read_as_of(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    as_of: NaiveDate,
+) -> Result<SubscriptionAsOf, AppError> {
+    let record =
+        attome_records::entity_crud::read_record(state, ctx, "subscription", subscription).await?;
+    ctx.require("subscription_line", "read")?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let stored = segments_of(&mut tx, subscription).await?;
+    let lines: Vec<(Uuid, Option<Uuid>)> = sqlx::query_as(
+        "SELECT id, product_ref FROM subscription_line WHERE subscription_ref = $1 AND (is_active IS NULL OR is_active = true) ORDER BY created_at, id",
+    )
+    .bind(subscription)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    let segments: Vec<Segment> = stored.into_iter().map(|s| s.segment).collect();
+    let in_force = super::segments::as_of(&segments, as_of);
+    Ok(SubscriptionAsOf {
+        id: subscription,
+        as_of,
+        subscription: record.data().clone(),
+        lines: lines
+            .into_iter()
+            .map(|(line_id, product_ref)| {
+                let segment = in_force.iter().find(|s| s.line_id == line_id);
+                LineAsOf {
+                    line_id,
+                    product_ref,
+                    quantity: segment.and_then(|s| s.quantity.to_f64()),
+                    unit_price: segment.and_then(|s| s.unit_price.to_f64()),
+                    change_kind: segment.map(|s| kind_name(s.change_kind).to_owned()),
+                }
+            })
+            .collect(),
+    })
 }
 
 #[cfg(test)]

@@ -1,0 +1,749 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0c44ae8f38e85a29a02a7cdb236bb227ada1b2e7df09040e08ebabb53a10eace",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "Subscription access (F3-T6): billing clerks, accounts receivable and finance managers create and amend subscriptions, accounts receivable and finance managers cancel them, only finance managers change a price in an amendment (subscription.amend_price), and billing viewers read them.",
+  "format": "attome-changeset/v1",
+  "id": "01a15851-7c5f-7ac1-b942-3473b9601319",
+  "layer": "product",
+  "name": "billing-subscription-access",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Change a subscription line's price in an amendment",
+          "key": "subscription.amend_price",
+          "name": "subscription.amend_price"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "subscription.amend_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Cancel a subscription, at the end of its term or on a date",
+          "key": "subscription.cancel",
+          "name": "subscription.cancel"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "subscription.cancel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on subscription",
+          "key": "subscription.create",
+          "name": "subscription.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "subscription.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on subscription",
+          "key": "subscription.read",
+          "name": "subscription.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "subscription.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on subscription",
+          "key": "subscription.update",
+          "name": "subscription.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "subscription.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on subscription_charge",
+          "key": "subscription_charge.create",
+          "name": "subscription_charge.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "subscription_charge.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on subscription_charge",
+          "key": "subscription_charge.read",
+          "name": "subscription_charge.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "subscription_charge.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on subscription_charge",
+          "key": "subscription_charge.update",
+          "name": "subscription_charge.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "subscription_charge.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on subscription_line",
+          "key": "subscription_line.create",
+          "name": "subscription_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "subscription_line.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on subscription_line",
+          "key": "subscription_line.read",
+          "name": "subscription_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "subscription_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on subscription_line",
+          "key": "subscription_line.update",
+          "name": "subscription_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "subscription_line.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on subscription_segment",
+          "key": "subscription_segment.create",
+          "name": "subscription_segment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "subscription_segment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on subscription_segment",
+          "key": "subscription_segment.read",
+          "name": "subscription_segment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "subscription_segment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on subscription_segment",
+          "key": "subscription_segment.update",
+          "name": "subscription_segment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "subscription_segment.update"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "subscription.read",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "subscription.create",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "subscription.update",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "subscription_line.read",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "subscription_line.create",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "subscription_line.update",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "subscription_segment.read",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "subscription_segment.create",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "subscription_segment.update",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "subscription_charge.read",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "subscription_charge.create",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "subscription_charge.update",
+        "role": "Billing Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "subscription.read",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "privilege": "subscription.create",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "privilege": "subscription.update",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "privilege": "subscription_line.read",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "privilege": "subscription_line.create",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "privilege": "subscription_line.update",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "privilege": "subscription_segment.read",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "privilege": "subscription_segment.create",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "privilege": "subscription_segment.update",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "privilege": "subscription_charge.read",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "privilege": "subscription_charge.create",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "privilege": "subscription_charge.update",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "privilege": "subscription.cancel",
+        "role": "Accounts Receivable"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "privilege": "subscription.read",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "privilege": "subscription.create",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "privilege": "subscription.update",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "privilege": "subscription_line.read",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "privilege": "subscription_line.create",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "privilege": "subscription_line.update",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "privilege": "subscription_segment.read",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "privilege": "subscription_segment.create",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "privilege": "subscription_segment.update",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "privilege": "subscription_charge.read",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "privilege": "subscription_charge.create",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "privilege": "subscription_charge.update",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "privilege": "subscription.cancel",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "privilege": "subscription.amend_price",
+        "role": "Finance Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "privilege": "subscription.read",
+        "role": "Billing Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "privilege": "subscription_line.read",
+        "role": "Billing Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "privilege": "subscription_segment.read",
+        "role": "Billing Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "privilege": "subscription_charge.read",
+        "role": "Billing Viewer"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 22,
+  "title": "Pack: subscription roles and privileges"
+}

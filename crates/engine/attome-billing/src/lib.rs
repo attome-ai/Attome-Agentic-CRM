@@ -34,6 +34,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 35;
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <usage::ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(<subscription::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<metrics::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<invoice::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<issue::ApiDocFragment as utoipa::OpenApi>::openapi());

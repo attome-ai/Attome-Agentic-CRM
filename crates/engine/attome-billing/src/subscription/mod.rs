@@ -3,6 +3,7 @@
 //! that writes them.
 
 pub mod charge_model;
+pub mod routes;
 pub mod schedule;
 pub mod segments;
 pub mod service;
