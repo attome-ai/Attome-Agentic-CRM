@@ -125,6 +125,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_webinar_sync_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // E7-T6: live segments, a tick every five seconds.
     crate::jobs::spawn_segment_live_scheduler(db.clone(), std::time::Duration::from_secs(5));
+    // E8-T5: journey entries, a tick every ten seconds; date sources hourly.
+    crate::jobs::spawn_journey_entry_schedulers(db.clone(), std::time::Duration::from_secs(10));
     // E23-T1: profile event months past retention, daily.
     crate::jobs::spawn_profile_event_retention_scheduler(
         db.clone(),

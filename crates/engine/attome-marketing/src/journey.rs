@@ -7,6 +7,7 @@
 pub mod action_step;
 pub mod control_step;
 pub mod enrol;
+pub mod entry;
 pub mod guard;
 
 pub use enrol::{EnrolOutcome, PersonRef, enrol};

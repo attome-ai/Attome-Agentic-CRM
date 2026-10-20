@@ -113,7 +113,7 @@ pub async fn check(state: &EngineState, instance_id: Uuid) -> Result<Option<Stri
 
 /// True when `source` evaluates to true over the record. Pure apart from
 /// the log line for a condition that does not compile.
-fn holds(
+pub(crate) fn holds(
     source: &str,
     attrs: &[attome_core::AttrInfo],
     record: &Map<String, Value>,

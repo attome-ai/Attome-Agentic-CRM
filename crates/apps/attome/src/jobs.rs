@@ -2684,6 +2684,9 @@ const DEDUP_KEY_REPUTATION_FETCH: &str = "marketing-reputation-fetch";
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
 /// E7-T6: the live segment tick (a registered job type).
 const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
+/// E8-T5: the journey entry tick and the date entry (registered job types).
+const DEDUP_KEY_JOURNEY_ENTRY: &str = "marketing-journey-entry";
+const DEDUP_KEY_JOURNEY_DATE_ENTRY: &str = "marketing-journey-date-entry";
 /// E23-T1: profile event retention (a registered job type).
 const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
@@ -2755,6 +2758,15 @@ pub const MARKETING_WEB_EVENT_BATCH: attome_jobs::JobType =
 /// scheduled.
 pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::enrol::JOB, 1);
+
+/// E8-T5: journey entries from list joins, events and due list_at sources,
+/// read from the change feed.
+pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
+
+/// E8-T5: journey entries from date sources, once a deployment day.
+pub const MARKETING_JOURNEY_DATE_ENTRY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::journey::entry::DATE_JOB, 1);
 
 /// E6-T8: the daily blocklist check of sending domains and IPs.
 pub const BLOCKLIST_CHECK: attome_jobs::JobType =
@@ -3007,6 +3019,31 @@ pub fn register_job_types() {
             },
         ) {
             tracing::error!(%error, "job type registration failed");
+        }
+        for (job_type, date) in [
+            (MARKETING_JOURNEY_ENTRY, false),
+            (MARKETING_JOURNEY_DATE_ENTRY, true),
+        ] {
+            if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+                job_type,
+                move |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                    if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                        return Ok::<(), attome_jobs::registry::BoxError>(());
+                    }
+                    let queued = if date {
+                        attome_marketing::journey::entry::date_entry(&state).await
+                    } else {
+                        attome_marketing::journey::entry::entry_tick(&state).await
+                    }
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                    if queued > 0 {
+                        tracing::info!(queued, date, "journey entries queued");
+                    }
+                    Ok::<(), attome_jobs::registry::BoxError>(())
+                },
+            ) {
+                tracing::error!(%error, "job type registration failed");
+            }
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SEGMENT_LIVE,
@@ -3285,6 +3322,12 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_REPUTATION_FETCH
         }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
+        EngineJob::Registered(job) if job.name == MARKETING_JOURNEY_ENTRY.name => {
+            DEDUP_KEY_JOURNEY_ENTRY
+        }
+        EngineJob::Registered(job) if job.name == MARKETING_JOURNEY_DATE_ENTRY.name => {
+            DEDUP_KEY_JOURNEY_DATE_ENTRY
+        }
         EngineJob::Registered(job) if job.name == PROFILE_EVENT_RETENTION.name => {
             DEDUP_KEY_PROFILE_EVENT_RETENTION
         }
@@ -3802,6 +3845,33 @@ pub fn spawn_segment_live_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SEGMENT_LIVE, "live segments");
+}
+
+/// E8-T5: the journey entry tick (every ten seconds) and the date entry
+/// (hourly; each date source runs once a deployment day), one pending each.
+pub fn spawn_journey_entry_schedulers(db: DbPool, tick: std::time::Duration) {
+    register_job_types();
+    for (job_type, key, interval, label) in [
+        (
+            MARKETING_JOURNEY_ENTRY,
+            DEDUP_KEY_JOURNEY_ENTRY,
+            tick,
+            "journey entry",
+        ),
+        (
+            MARKETING_JOURNEY_DATE_ENTRY,
+            DEDUP_KEY_JOURNEY_DATE_ENTRY,
+            std::time::Duration::from_secs(3_600),
+            "journey date entry",
+        ),
+    ] {
+        match attome_core::jobs::JOB_TYPES.job(job_type.name, &()) {
+            Ok(job) => {
+                spawn_dedup_scheduler(db.clone(), interval, EngineJob::Registered(job), key, label)
+            }
+            Err(error) => tracing::error!(%error, label, "not scheduled"),
+        }
+    }
 }
 
 /// E23-T1: daily, profile event months past retention.
