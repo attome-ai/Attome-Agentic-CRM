@@ -10,6 +10,14 @@
 //!
 //! Every reply closes its connection (`Connection: close`), so one request is
 //! one accept and a retry is visibly a second one.
+//!
+//! [`FakeModelServer::recorded`] answers from recordings instead (Z9-T7):
+//! each request is matched by the hash of its messages ([`messages_hash`]) to
+//! a recorded answer — a completion with its tool calls, or a stream's chunks —
+//! kept in a fixture file ([`Recordings::load`]). To record one, run the test
+//! against an empty set: the `404` names the hash to record under. With
+//! `ATTOME_TEST_NO_NETWORK=1` every inference call to a host other than
+//! loopback fails, so no test reaches a real model.
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -92,6 +100,17 @@ impl FakeModelServer {
     /// Binds `127.0.0.1:0` and answers with `replies` in order; once they run
     /// out, the last one repeats.
     pub async fn start(replies: Vec<Reply>) -> Self {
+        Self::serve_script(Script::Ordered(replies)).await
+    }
+
+    /// Binds `127.0.0.1:0` and answers each request with the recording whose
+    /// [`messages_hash`] matches it, in any order and as often as asked
+    /// (Z9-T7); an unmatched request gets a `404` naming its hash.
+    pub async fn recorded(recordings: Recordings) -> Self {
+        Self::serve_script(Script::Recorded(recordings.recordings)).await
+    }
+
+    async fn serve_script(script: Script) -> Self {
         let listener = match tokio::net::TcpListener::bind("127.0.0.1:0").await {
             Ok(listener) => listener,
             Err(error) => panic!("bind a loopback port: {error}"),
@@ -103,7 +122,7 @@ impl FakeModelServer {
         let requests = Arc::new(Mutex::new(Vec::new()));
         let accepts = Arc::new(AtomicUsize::new(0));
         let peer_closes = Arc::new(AtomicUsize::new(0));
-        let replies = Arc::new(replies);
+        let script = Arc::new(script);
         let cursor = Arc::new(AtomicUsize::new(0));
         let (rq, ac, pc) = (requests.clone(), accepts.clone(), peer_closes.clone());
         tokio::spawn(async move {
@@ -112,12 +131,12 @@ impl FakeModelServer {
                     return;
                 };
                 ac.fetch_add(1, Ordering::SeqCst);
-                let (rq, pc, replies, cursor) =
-                    (rq.clone(), pc.clone(), replies.clone(), cursor.clone());
+                let (rq, pc, script, cursor) =
+                    (rq.clone(), pc.clone(), script.clone(), cursor.clone());
                 // Each connection on its own task, so a held stream does not
                 // block the next accept.
                 tokio::spawn(async move {
-                    serve(socket, rq, pc, &replies, &cursor).await;
+                    serve(socket, rq, pc, &script, &cursor).await;
                 });
             }
         });
@@ -162,21 +181,35 @@ impl FakeModelServer {
     }
 }
 
+/// How a server picks its answers.
+enum Script {
+    /// In order, the last repeating.
+    Ordered(Vec<Reply>),
+    /// By the request's [`messages_hash`] (Z9-T7).
+    Recorded(Vec<Recording>),
+}
+
 async fn serve(
     mut socket: tokio::net::TcpStream,
     requests: Arc<Mutex<Vec<String>>>,
     peer_closes: Arc<AtomicUsize>,
-    replies: &[Reply],
+    script: &Script,
     cursor: &AtomicUsize,
 ) {
     let Some(raw) = read_request(&mut socket).await else {
         return;
     };
+    let reply = match script {
+        Script::Ordered(replies) => {
+            let index = cursor.fetch_add(1, Ordering::SeqCst);
+            replies.get(index).or_else(|| replies.last()).cloned()
+        }
+        Script::Recorded(recordings) => Some(recorded_reply(&raw, recordings)),
+    };
     if let Ok(mut seen) = requests.lock() {
         seen.push(raw);
     }
-    let index = cursor.fetch_add(1, Ordering::SeqCst);
-    match replies.get(index).or_else(|| replies.last()) {
+    match reply.as_ref() {
         Some(Reply::Raw(bytes)) => {
             let _ = socket.write_all(bytes.as_bytes()).await;
         }
@@ -254,4 +287,283 @@ fn content_length_of(headers: &[u8]) -> usize {
                 .flatten()
         })
         .unwrap_or(0)
+}
+
+// ── Recorded answers (Z9-T7) ────────────────────────────────────────────────
+
+/// One recorded model answer, matched to a request by the hash of its
+/// `messages` ([`messages_hash`]), so a test answers the same conversation
+/// the same way whatever order it asks in.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Recording {
+    /// [`messages_hash`] of the request this answers.
+    pub messages_hash: String,
+    /// The JSON body of a non-streamed answer: a chat completion, tool calls
+    /// included, or an embeddings response.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response: Option<serde_json::Value>,
+    /// The `data:` payloads of a streamed answer, in order; `[DONE]` is sent
+    /// after them. Answers a request with `"stream": true`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stream: Vec<serde_json::Value>,
+}
+
+/// A fixture file: `{"recordings": [Recording, ...]}`.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct Recordings {
+    pub recordings: Vec<Recording>,
+}
+
+impl Recordings {
+    /// Reads a fixture file; panics with the path on a missing or malformed
+    /// file, since a test cannot run without its recordings.
+    pub fn load(path: impl AsRef<std::path::Path>) -> Self {
+        let path = path.as_ref();
+        let text = match std::fs::read_to_string(path) {
+            Ok(text) => text,
+            Err(error) => panic!("read recordings {}: {error}", path.display()),
+        };
+        match serde_json::from_str(&text) {
+            Ok(recordings) => recordings,
+            Err(error) => panic!("parse recordings {}: {error}", path.display()),
+        }
+    }
+}
+
+/// The key a request is matched by: FNV-1a 64 over the compact JSON of its
+/// `messages` (`input` for an embeddings request), as 16 hex digits. Stable
+/// across runs and platforms; not a security hash.
+pub fn messages_hash(request: &serde_json::Value) -> String {
+    let key = request
+        .get("messages")
+        .or_else(|| request.get("input"))
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in key.to_string().bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
+}
+
+/// The answer to `raw` (a whole HTTP request) from `recordings`: the
+/// recorded JSON or stream, or a `404` naming the unmatched hash so the test
+/// author can record it.
+fn recorded_reply(raw: &str, recordings: &[Recording]) -> Reply {
+    let body = raw.split_once("\r\n\r\n").map_or("", |(_, body)| body);
+    let request: serde_json::Value = serde_json::from_str(body).unwrap_or_default();
+    let hash = messages_hash(&request);
+    let streamed = request
+        .get("stream")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    let found = recordings.iter().find(|r| {
+        r.messages_hash == hash
+            && if streamed {
+                !r.stream.is_empty()
+            } else {
+                r.response.is_some()
+            }
+    });
+    match found {
+        Some(recording) if streamed => {
+            let mut out = sse_head();
+            for chunk in &recording.stream {
+                out.push_str(&sse_event(&chunk.to_string()));
+            }
+            out.push_str(&sse_event("[DONE]"));
+            Reply::Raw(out)
+        }
+        Some(recording) => json(
+            &recording
+                .response
+                .as_ref()
+                .map(serde_json::Value::to_string)
+                .unwrap_or_default(),
+        ),
+        None => http(
+            404,
+            "Not Found",
+            &[("Content-Type", "application/json")],
+            &serde_json::json!({
+                "error": format!(
+                    "no recorded answer for messages_hash {hash} (stream: {streamed})"
+                )
+            })
+            .to_string(),
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        reason = "test helpers: a failed setup step should panic with its message"
+    )]
+
+    use super::*;
+    use crate::{ChatMessage, GenerationClient, GenerationRequest};
+    use attome_config::{InferenceEndpoint, InferenceSection};
+
+    fn client(server: &FakeModelServer) -> GenerationClient {
+        GenerationClient::new(&InferenceSection {
+            generation: InferenceEndpoint {
+                base_url: server.base_url(),
+                model: "test-model".into(),
+                request_timeout_secs: 5,
+                ..InferenceEndpoint::default()
+            },
+            ..InferenceSection::default()
+        })
+        .expect("a loopback generation client")
+    }
+
+    fn request() -> GenerationRequest {
+        GenerationRequest::new(vec![
+            ChatMessage::system("You look up accounts."),
+            ChatMessage::user("Find Acme"),
+        ])
+    }
+
+    /// The record step: an empty fake refuses with a 404, and the request it
+    /// saw gives the hash to record the answer under.
+    async fn hash_of_request(stream: bool) -> String {
+        let server = FakeModelServer::recorded(Recordings::default()).await;
+        let client = client(&server);
+        if stream {
+            let _ = client
+                .generate_stream(request(), |_| {}, std::future::pending::<()>())
+                .await;
+        } else {
+            let _ = client.generate(request()).await;
+        }
+        let raw = server.last_request();
+        let body = raw.split_once("\r\n\r\n").expect("a request body").1;
+        messages_hash(&serde_json::from_str(body).expect("a JSON request"))
+    }
+
+    #[tokio::test]
+    async fn fake_model_answers_a_recorded_tool_call() {
+        let hash = hash_of_request(false).await;
+        let server = FakeModelServer::recorded(Recordings {
+            recordings: vec![Recording {
+                messages_hash: hash,
+                response: Some(serde_json::json!({
+                    "id": "rec-1",
+                    "object": "chat.completion",
+                    "model": "test-model",
+                    "choices": [{
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": null,
+                            "tool_calls": [{
+                                "id": "call_1",
+                                "type": "function",
+                                "function": { "name": "lookup_account", "arguments": "{\"name\":\"Acme\"}" }
+                            }]
+                        },
+                        "finish_reason": "tool_calls"
+                    }],
+                    "usage": { "prompt_tokens": 12, "completion_tokens": 7, "total_tokens": 19 }
+                })),
+                stream: Vec::new(),
+            }],
+        })
+        .await;
+        let result = client(&server)
+            .generate(request())
+            .await
+            .expect("the recorded answer");
+        assert_eq!(result.tool_calls.len(), 1);
+        assert_eq!(result.tool_calls[0].name, "lookup_account");
+        assert_eq!(result.tool_calls[0].arguments, "{\"name\":\"Acme\"}");
+        // The same conversation is answered the same way again.
+        let again = client(&server).generate(request()).await.expect("again");
+        assert_eq!(again.tool_calls, result.tool_calls);
+    }
+
+    #[tokio::test]
+    async fn fake_model_streams_recorded_chunks() {
+        let hash = hash_of_request(true).await;
+        let server = FakeModelServer::recorded(Recordings {
+            recordings: vec![Recording {
+                messages_hash: hash,
+                response: None,
+                stream: vec![
+                    serde_json::json!({"choices":[{"index":0,"delta":{"content":"Acme "}}]}),
+                    serde_json::json!({"choices":[{"index":0,"delta":{"content":"found"}}]}),
+                    serde_json::json!({"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}),
+                ],
+            }],
+        })
+        .await;
+        let mut deltas = Vec::new();
+        let result = client(&server)
+            .generate_stream(
+                request(),
+                |delta| deltas.push(delta.to_owned()),
+                std::future::pending::<()>(),
+            )
+            .await
+            .expect("the recorded stream");
+        assert_eq!(result.text, "Acme found");
+        assert_eq!(deltas, vec!["Acme ".to_owned(), "found".to_owned()]);
+    }
+
+    #[tokio::test]
+    async fn fake_model_refuses_an_unrecorded_request_naming_its_hash() {
+        let server = FakeModelServer::recorded(Recordings::default()).await;
+        assert!(client(&server).generate(request()).await.is_err());
+        let raw = server.last_request();
+        let body = raw.split_once("\r\n\r\n").expect("a request body").1;
+        let hash = messages_hash(&serde_json::from_str(body).expect("a JSON request"));
+        let Reply::Raw(reply) = recorded_reply(&raw, &[]) else {
+            panic!("a 404 reply");
+        };
+        assert!(reply.starts_with("HTTP/1.1 404"), "{reply}");
+        assert!(reply.contains(&hash), "{reply}");
+    }
+
+    #[test]
+    fn fake_model_hash_ignores_everything_but_the_messages() {
+        let a = serde_json::json!({"model": "a", "messages": [{"role": "user", "content": "hi"}]});
+        let b = serde_json::json!({"model": "b", "temperature": 0.2, "messages": [{"role": "user", "content": "hi"}]});
+        let c =
+            serde_json::json!({"model": "a", "messages": [{"role": "user", "content": "hello"}]});
+        assert_eq!(messages_hash(&a), messages_hash(&b));
+        assert_ne!(messages_hash(&a), messages_hash(&c));
+        assert_eq!(messages_hash(&a).len(), 16);
+    }
+
+    #[test]
+    fn fake_model_recordings_load_from_a_fixture_file() {
+        let dir = std::env::temp_dir().join(format!("attome-z9t7-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("a temp dir");
+        let path = dir.join("recordings.json");
+        let fixtures = Recordings {
+            recordings: vec![Recording {
+                messages_hash: "0123456789abcdef".into(),
+                response: Some(serde_json::json!({"ok": true})),
+                stream: Vec::new(),
+            }],
+        };
+        std::fs::write(&path, serde_json::to_string(&fixtures).expect("JSON")).expect("write");
+        assert_eq!(Recordings::load(&path).recordings, fixtures.recordings);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fake_model_no_network_refuses_a_real_host_only() {
+        let real = reqwest::Url::parse("https://api.openai.com/v1").expect("url");
+        let loopback = reqwest::Url::parse("http://127.0.0.1:9/v1").expect("url");
+        let localhost = reqwest::Url::parse("http://localhost:9/v1").expect("url");
+        assert!(crate::test_network_guard(&real, "generation", true).is_err());
+        assert!(crate::test_network_guard(&loopback, "generation", true).is_ok());
+        assert!(crate::test_network_guard(&localhost, "generation", true).is_ok());
+        assert!(crate::test_network_guard(&real, "generation", false).is_ok());
+    }
 }

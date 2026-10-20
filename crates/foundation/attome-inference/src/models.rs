@@ -64,6 +64,7 @@ pub async fn list_models(
 ) -> Result<Vec<ModelListing>, InferenceError> {
     let base = parse_base_url(base_url, LABEL)?;
     let http = http.admit(&base, LABEL)?;
+    crate::test_network_guard(&base, LABEL, crate::no_network())?;
     let started = std::time::Instant::now();
     let result = list_once(http, &base, auth).await;
     crate::telemetry::record("models", started, &result);

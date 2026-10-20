@@ -129,6 +129,46 @@ pub struct DialResponse {
     pub body: Vec<u8>,
 }
 
+/// Whether `ATTOME_TEST_NO_NETWORK=1` is set (Z9-T7): a test run that must
+/// never reach a real model. Read on every call, so a test may set it late.
+pub(crate) fn no_network() -> bool {
+    std::env::var_os("ATTOME_TEST_NO_NETWORK").is_some_and(|v| v == "1")
+}
+
+/// Refuses a dial to anything but loopback when `no_network` is set, so a
+/// test that would reach a real endpoint fails instead (Z9-T7). Every
+/// inference call passes here before it sends.
+pub(crate) fn test_network_guard(
+    url: &reqwest::Url,
+    label: &'static str,
+    no_network: bool,
+) -> Result<(), InferenceError> {
+    if !no_network {
+        return Ok(());
+    }
+    let host = url
+        .host_str()
+        .unwrap_or_default()
+        .trim_start_matches('[')
+        .trim_end_matches(']');
+    let loopback = host.eq_ignore_ascii_case("localhost")
+        || host
+            .parse::<std::net::IpAddr>()
+            .is_ok_and(|ip| ip.is_loopback());
+    if loopback {
+        return Ok(());
+    }
+    tracing::error!(
+        endpoint = label,
+        host,
+        "ATTOME_TEST_NO_NETWORK=1: refused a call to a real endpoint"
+    );
+    Err(InferenceError::Transport {
+        endpoint: label,
+        kind: "a real endpoint is refused under ATTOME_TEST_NO_NETWORK=1",
+    })
+}
+
 impl DialClient {
     /// One JSON `POST` through the dial guard, for an outbound call that is
     /// not a model call (roadmap N13-T1: an outside MCP server): the same
@@ -146,6 +186,7 @@ impl DialClient {
             kind: "invalid URL",
         })?;
         let http = self.admit(&parsed, LABEL)?;
+        test_network_guard(&parsed, LABEL, no_network())?;
         let mut request = http.post(parsed).json(body);
         for (name, value) in headers {
             request = request.header(*name, value);
@@ -642,6 +683,7 @@ impl Transport {
         &self,
         request: reqwest::RequestBuilder,
     ) -> Result<reqwest::Response, InferenceError> {
+        test_network_guard(&self.base_url, self.label, no_network())?;
         request.send().await.map_err(|e| {
             if e.is_timeout() {
                 InferenceError::Timeout(self.label)

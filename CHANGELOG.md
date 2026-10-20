@@ -133,6 +133,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Recorded model answers for tests (Z9-T7): `FakeModelServer::recorded` answers by the hash of a
+  request's messages from a fixture file (`Recordings::load`), tool calls and streamed chunks
+  included; an unrecorded request gets a 404 naming its hash. With `ATTOME_TEST_NO_NETWORK=1`, every
+  inference call to a host other than loopback is refused, so no test reaches a real model.
 - Metadata switch timing (Y8-T10): each node records `metadata_switch_seconds`, the time from a
   metadata version becoming current (a publish, switch or rollback) to the node serving it, on the
   database clock. `GET /api/v1/admin/metadata/versions/{version}/nodes` lists which nodes serve a
