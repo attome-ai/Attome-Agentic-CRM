@@ -1377,6 +1377,8 @@ dependencies = [
  "axum",
  "chrono",
  "chrono-tz",
+ "flate2",
+ "quick-xml",
  "serde",
  "serde_json",
  "sqlx",

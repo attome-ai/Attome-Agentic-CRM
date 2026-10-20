@@ -9,6 +9,8 @@ pub mod abm;
 pub mod address_check;
 pub mod attribution;
 pub mod deliverability;
+/// E6-T7: DMARC aggregate reports.
+pub mod dmarc;
 /// E2-T2: email designs to email-safe HTML and plain text.
 pub mod email_render;
 pub mod events;

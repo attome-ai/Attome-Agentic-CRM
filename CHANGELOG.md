@@ -132,6 +132,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- DMARC reports (E6-T7): `attome_marketing::dmarc` parses aggregate reports from XML, `.gz` or `.zip`
+  (20 MB cap, no document type declarations), stores each reporter's report once
+  (`marketing_dmarc_report`/`marketing_dmarc_record`, migration 0164) and summarises SPF and DKIM per
+  sending source, naming the sources that fail both. Reading reports from a mailbox waits for
+  attachment fetching in the mail readers.
 - SMS campaigns (E16-T1): `POST /api/v1/marketing/lists/{id}/sms/estimate` answers who can be texted
   (a phone and SMS consent for the purpose), the encoding, segments and cost
   (`marketing.sms_price_per_segment`); `POST /api/v1/marketing/lists/{id}/sms/send` fixes the
