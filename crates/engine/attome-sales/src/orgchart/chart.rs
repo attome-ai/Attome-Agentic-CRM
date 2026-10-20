@@ -297,6 +297,54 @@ pub async fn account_chart(
     })
 }
 
+/// The built-in document template an org chart exports through (sales
+/// pack changeset 0023).
+pub const EXPORT_TEMPLATE: &str = "Account org chart";
+
+/// Queues the account's org chart as a PDF through docgen (K3), rendered
+/// with what `ctx` may read; answers the render's id. The renderer makes
+/// PDFs only, so any other format is refused.
+pub async fn export_chart(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    account: Uuid,
+    format: &str,
+) -> Result<Uuid, AppError> {
+    if !format.trim().eq_ignore_ascii_case("pdf") {
+        return Err(AppError::Validation(
+            "format: only pdf; the document renderer makes PDFs".into(),
+        ));
+    }
+    attome_records::entity_crud::read_record(state, ctx, "account", account).await?;
+    let template: Uuid = sqlx::query_scalar(
+        "SELECT id FROM docgen_template WHERE name = $1 AND entity = 'account' \
+            AND (is_active IS NULL OR is_active = true) ORDER BY id LIMIT 1",
+    )
+    .bind(EXPORT_TEMPLATE)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let render =
+        attome_docgen::render::enqueue_in_tx(state, ctx, &mut tx, template, account, None).await?;
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::BusinessEvent::new(
+            "account",
+            account,
+            attome_audit::AuditOperation::Create,
+            "sales.org_chart_exported",
+            ctx.user_id,
+        )
+        .comment(format!("org chart export, render {render}")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(render)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

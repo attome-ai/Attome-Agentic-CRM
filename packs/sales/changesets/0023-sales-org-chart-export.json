@@ -1,0 +1,48 @@
+{
+  "author": "packs",
+  "checksum": "sha256:649cf1d00bf52f1612e6771138ecf9e23d4cf2b3dbf58a748b27257415585b99",
+  "closed_at": "2026-10-20T00:00:00Z",
+  "description": "D23-T9: the built-in Account org chart document template an account's org chart exports through (a PDF of the account's people, in English and Arabic).",
+  "format": "attome-changeset/v1",
+  "id": "01a15956-bae0-7a27-ae19-61a7e2301c5b",
+  "layer": "product",
+  "name": "sales-org-chart-export",
+  "opened_at": "2026-10-20T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "name": "Account org chart",
+          "entity": "account",
+          "format": "pdf",
+          "body": "<h1>{{ name }}</h1><p class=\"sub\">Org chart &middot; <span dir=\"rtl\" lang=\"ar\">الهيكل التنظيمي</span></p><table><thead><tr><th>Name &middot; <span lang=\"ar\">الاسم</span></th><th>Title &middot; <span lang=\"ar\">المسمى الوظيفي</span></th><th>Department &middot; <span lang=\"ar\">القسم</span></th></tr></thead><tbody>{% for c in contact limit 100 %}<tr><td>{{ c.full_name }}</td><td>{{ c.job_title }}</td><td>{{ c.department }}</td></tr>{% end %}</tbody></table>",
+          "stylesheet": "body{font-family:sans-serif;font-size:11pt}h1{margin-block-end:0}.sub{color:#555;margin-block-start:.25rem}table{inline-size:100%;border-collapse:collapse}th,td{text-align:start;padding:4px 6px;border-block-end:1px solid #ccc}",
+          "page_size": "A4",
+          "pdf_profile": "standard"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "docgen_template",
+        "key": {
+          "name": "Account org chart"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 23,
+  "title": "Pack: org chart export"
+}

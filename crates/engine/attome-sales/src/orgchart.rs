@@ -412,14 +412,106 @@ pub(crate) async fn get_sales_org_chart(
     ))
 }
 
+/// A deal's buying committee.
+///
+/// The account's chart, each contact on the deal with their role (and
+/// their influence and attitude only through the Deal Attitude profile),
+/// the "influences" links between them, the roles the deal's stage
+/// requires and the coverage gaps, as the caller may read them.
+#[utoipa::path(
+    get,
+    path = "/api/v1/sales/opportunities/{id}/committee-map",
+    operation_id = "get_sales_committee_map",
+    tag = "sales",
+    params(("id" = Uuid, Path, description = "The opportunity")),
+    responses(
+        (status = 200, description = "The committee", body = committee::DealMap),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such opportunity the caller may read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn get_sales_committee_map(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(opportunity): Path<Uuid>,
+) -> Result<Json<committee::DealMap>, AppError> {
+    Ok(Json(committee::deal_map(&state, &ctx, opportunity).await?))
+}
+
+/// What to export an org chart as.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SalesOrgChartExportBody {
+    /// `pdf`; the document renderer makes PDFs only.
+    #[serde(default = "pdf")]
+    pub format: String,
+    /// `en` or `ar`; the template shows both languages.
+    #[serde(default)]
+    pub locale: Option<String>,
+}
+
+fn pdf() -> String {
+    "pdf".into()
+}
+
+/// The queued render.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SalesOrgChartExport {
+    /// The docgen render; read it at `GET /api/v1/docgen/renders/{render_id}`.
+    pub render_id: Uuid,
+}
+
+/// Exports an account's org chart.
+///
+/// Queues a PDF of the account's people from the built-in "Account org
+/// chart" document template, rendered with what the caller may read, and
+/// answers the render's id.
+#[utoipa::path(
+    post,
+    path = "/api/v1/sales/accounts/{id}/org-chart/export",
+    operation_id = "post_sales_org_chart_export",
+    tag = "sales",
+    params(("id" = Uuid, Path, description = "The account")),
+    request_body = SalesOrgChartExportBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 202, description = "The render is queued", body = SalesOrgChartExport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such account the caller may read, or no org chart template", body = ErrorResponse),
+        (status = 422, description = "A format other than pdf", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn post_sales_org_chart_export(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(account): Path<Uuid>,
+    Json(body): Json<SalesOrgChartExportBody>,
+) -> Result<(axum::http::StatusCode, Json<SalesOrgChartExport>), AppError> {
+    let render_id = chart::export_chart(&state, &ctx, account, &body.format).await?;
+    Ok((
+        axum::http::StatusCode::ACCEPTED,
+        Json(SalesOrgChartExport { render_id }),
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(
         put_sales_contact_manager,
         post_sales_contact_left,
-        get_sales_org_chart
+        get_sales_org_chart,
+        get_sales_committee_map,
+        post_sales_org_chart_export
     ),
     components(schemas(
+        SalesOrgChartExportBody,
+        SalesOrgChartExport,
+        committee::DealMap,
+        committee::DealContact,
+        committee::InfluenceLink,
+        committee::Gap,
+        committee::GapKind,
         movers::SalesContactLeftBody,
         movers::SalesContactLeft,
         chart::OrgChart,
