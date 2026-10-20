@@ -19,6 +19,7 @@
 pub mod google_meet;
 pub mod jitsi;
 pub mod teams;
+pub mod webinar;
 pub mod zoom;
 
 use std::sync::OnceLock;

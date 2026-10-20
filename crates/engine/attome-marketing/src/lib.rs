@@ -39,6 +39,7 @@ pub mod static_list;
 pub mod tracking;
 /// E14-T4: the website tracking script.
 pub mod tracking_script;
+pub mod webinar_sync;
 
 pub use model::MarketingModel;
 

@@ -2677,6 +2677,7 @@ const DEDUP_KEY_INBOUND_MAIL: &str = "inbound-mail";
 const DEDUP_KEY_CASE_SUMMARY: &str = "case-summary";
 /// E16-T1: SMS campaign sending (a registered job type).
 const DEDUP_KEY_SMS_CAMPAIGN: &str = "sms-campaign";
+const DEDUP_KEY_WEBINAR_SYNC: &str = "webinar-sync";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
 /// E7-T6: the live segment tick (a registered job type).
@@ -2750,6 +2751,9 @@ pub const MARKETING_WEB_EVENT_BATCH: attome_jobs::JobType =
 /// scheduled.
 pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::enrol::JOB, 1);
+
+/// E22-T1: webinar registrants pushed and attendance read.
+pub const WEBINAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("webinar_sync", 1);
 
 /// J8-T1: new Google reviews become inbound communications.
 pub const SOCIAL_REVIEWS_SYNC: attome_jobs::JobType =
@@ -2863,6 +2867,26 @@ pub fn register_job_types() {
                 attome_marketing::static_list::run_import(&state, payload.import_id)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WEBINAR_SYNC,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let pushed = attome_marketing::webinar_sync::push_due(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                let read = attome_marketing::webinar_sync::pull_due(&state, chrono::Utc::now())
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if pushed + read > 0 {
+                    tracing::info!(pushed, read, "webinar sync: run complete");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3149,6 +3173,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
         EngineJob::Registered(job) if job.name == SMS_CAMPAIGN.name => DEDUP_KEY_SMS_CAMPAIGN,
+        EngineJob::Registered(job) if job.name == WEBINAR_SYNC.name => DEDUP_KEY_WEBINAR_SYNC,
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
         EngineJob::Registered(job) if job.name == PROFILE_EVENT_RETENTION.name => {
             DEDUP_KEY_PROFILE_EVENT_RETENTION
@@ -3613,6 +3638,19 @@ pub fn spawn_sms_campaign_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SMS_CAMPAIGN, "sms campaign");
+}
+
+/// E22-T1: every fifteen minutes, webinar registrants and attendance.
+pub fn spawn_webinar_sync_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(WEBINAR_SYNC.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "webinar sync: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_WEBINAR_SYNC, "webinar sync");
 }
 
 /// E7-T6: every five seconds, one tick of live segments (one pending at most).
