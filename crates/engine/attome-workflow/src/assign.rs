@@ -283,6 +283,178 @@ pub async fn territory_owner(
     .flatten())
 }
 
+/// M11-T2: one past record to replay, with the owner it was given.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PastAssignment {
+    pub record_id: Uuid,
+    pub record: serde_json::Map<String, Value>,
+    /// The owner the record actually got; `None` when it has none.
+    pub actual_owner: Option<Uuid>,
+}
+
+/// M11-T2: what a strategy needs that the records do not carry.
+#[derive(Debug, Clone, Default)]
+pub struct SimulationInputs {
+    pub candidates: Vec<Uuid>,
+    /// Live records each candidate owned when the replay starts.
+    pub loads: HashMap<Uuid, i64>,
+    pub skills_of: HashMap<Uuid, Vec<(String, f64)>>,
+    pub required_skills: Vec<String>,
+    pub rules: Vec<Value>,
+    /// The territory owner each record resolves to, by record id.
+    pub territory_owners: HashMap<Uuid, Uuid>,
+}
+
+/// M11-T2: how a strategy would have spread the replayed records.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
+pub struct SimulationReport {
+    pub records: usize,
+    /// Records the strategy would give each user.
+    pub simulated: HashMap<Uuid, usize>,
+    /// Records each user actually got.
+    pub actual: HashMap<Uuid, usize>,
+    /// Records the strategy finds nobody for (the fallback queue would take
+    /// them).
+    pub unassigned: usize,
+    /// Records the strategy gives someone other than their actual owner.
+    pub changed: usize,
+    /// The largest count over the smallest among candidates (1.0 is even;
+    /// `None` when a candidate would get nothing).
+    pub spread: Option<f64>,
+}
+
+/// M11-T2: replays `past` (oldest first) with `strategy`, as the assign node
+/// would have run it record by record: round robin moves on after each pick,
+/// least loaded counts each pick as one more record. Pure: the caller loads
+/// the records and the inputs.
+pub fn simulate_assignments(
+    strategy: Strategy,
+    past: &[PastAssignment],
+    inputs: &SimulationInputs,
+) -> SimulationReport {
+    let mut report = SimulationReport {
+        records: past.len(),
+        ..SimulationReport::default()
+    };
+    let mut loads = inputs.loads.clone();
+    let mut last: Option<Uuid> = None;
+    for item in past {
+        if let Some(owner) = item.actual_owner {
+            *report.actual.entry(owner).or_default() += 1;
+        }
+        let pick = match strategy {
+            Strategy::Rule => by_rule(&inputs.rules, &item.record),
+            Strategy::RoundRobin => next_round_robin(&inputs.candidates, last),
+            Strategy::LeastLoaded => least_loaded(&inputs.candidates, &loads),
+            Strategy::Skills => best_skilled(
+                &inputs.candidates,
+                &inputs.skills_of,
+                &inputs.required_skills,
+            ),
+            Strategy::Territory => inputs.territory_owners.get(&item.record_id).copied(),
+        };
+        match pick {
+            Some(user) => {
+                last = Some(user);
+                *loads.entry(user).or_default() += 1;
+                *report.simulated.entry(user).or_default() += 1;
+                if item.actual_owner != Some(user) {
+                    report.changed += 1;
+                }
+            }
+            None => report.unassigned += 1,
+        }
+    }
+    let counts: Vec<usize> = inputs
+        .candidates
+        .iter()
+        .map(|c| report.simulated.get(c).copied().unwrap_or(0))
+        .collect();
+    report.spread = match (counts.iter().max(), counts.iter().min()) {
+        (Some(&max), Some(&min)) if min > 0 => Some(max as f64 / min as f64),
+        _ => None,
+    };
+    report
+}
+
+#[cfg(test)]
+mod assign_simulation {
+    use super::*;
+    use serde_json::json;
+
+    fn u(n: u128) -> Uuid {
+        Uuid::from_u128(n)
+    }
+
+    fn past(owners: &[u128], region: &str) -> Vec<PastAssignment> {
+        owners
+            .iter()
+            .enumerate()
+            .map(|(i, owner)| PastAssignment {
+                record_id: u(100 + i as u128),
+                record: json!({ "region": region })
+                    .as_object()
+                    .cloned()
+                    .unwrap_or_default(),
+                actual_owner: Some(u(*owner)),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn assign_simulation_round_robin_spreads_evenly() {
+        let inputs = SimulationInputs {
+            candidates: vec![u(1), u(2), u(3)],
+            ..SimulationInputs::default()
+        };
+        let report = simulate_assignments(Strategy::RoundRobin, &past(&[1; 6], "east"), &inputs);
+        assert_eq!(report.records, 6);
+        assert_eq!(report.simulated.get(&u(2)), Some(&2));
+        assert_eq!(report.spread, Some(1.0));
+        assert_eq!(report.actual.get(&u(1)), Some(&6));
+        assert_eq!(report.changed, 4, "two of six stay with their owner");
+    }
+
+    #[test]
+    fn assign_simulation_least_loaded_fills_the_emptiest_first() {
+        let inputs = SimulationInputs {
+            candidates: vec![u(1), u(2)],
+            loads: HashMap::from([(u(1), 3)]),
+            ..SimulationInputs::default()
+        };
+        let report = simulate_assignments(Strategy::LeastLoaded, &past(&[1; 5], "east"), &inputs);
+        assert_eq!(
+            report.simulated.get(&u(2)),
+            Some(&4),
+            "3 to catch up, then alternate"
+        );
+        assert_eq!(report.simulated.get(&u(1)), Some(&1));
+        assert_eq!(report.spread, Some(4.0));
+    }
+
+    #[test]
+    fn assign_simulation_counts_records_nobody_takes() {
+        let inputs = SimulationInputs {
+            candidates: vec![u(1)],
+            rules: vec![json!({"field": "region", "equals": "west", "user": u(7).to_string()})],
+            ..SimulationInputs::default()
+        };
+        let report = simulate_assignments(Strategy::Rule, &past(&[1, 1], "east"), &inputs);
+        assert_eq!(report.unassigned, 2);
+        assert_eq!(report.spread, None, "a candidate who gets nothing");
+        let territory = simulate_assignments(
+            Strategy::Territory,
+            &past(&[1, 1], "east"),
+            &SimulationInputs {
+                territory_owners: HashMap::from([(u(100), u(1))]),
+                ..inputs.clone()
+            },
+        );
+        assert_eq!(territory.unassigned, 1);
+        assert_eq!(territory.changed, 0);
+    }
+}
+
 #[cfg(test)]
 mod assign_node {
     use super::*;

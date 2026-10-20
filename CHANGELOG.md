@@ -137,6 +137,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   in minutes and an optional rule condition) moves when the record's date changes and is cancelled
   when the record is deleted, clears the date or leaves the condition. The `attome-workflow/timer-follow`
   change-feed consumer applies it at the start of every timer sweep.
+- Assignment simulation (M11-T2): `attome_workflow::assign::simulate_assignments` replays past records
+  with any assignment strategy and reports how they would have been spread, against who got them.
 - MFA done at the identity provider counts (Q2-T2): an `oidc.providers` entry gains `mfa_acr_values`
   (the `amr` entries or `acr` value that mean MFA, as the provider presets list them) and
   `trust_idp_mfa` (default `true`). When a verified ID token carries one of the values, the session
