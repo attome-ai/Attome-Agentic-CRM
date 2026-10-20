@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d3bdda0e47779d55968666579645612367911a1d5faf0666a4bfe93156aa75d1",
+  "checksum": "sha256:7153538f4eeba895f8f957a9116f9b362a53c2c81529a7fa36284f60404b1f98",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -399,6 +399,9 @@
               "route.classify",
               "sales.battlecard.draft_update",
               "sales.battlecard.get",
+              "sales.call.draft_notes",
+              "sales.call_list.build",
+              "sales.call_list.order",
               "sales.competitors.on_deal",
               "sales.opportunity_line.add",
               "sales.opportunity_line.remove",

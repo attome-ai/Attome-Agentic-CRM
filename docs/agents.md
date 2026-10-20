@@ -92,6 +92,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   open and complaint rates by mailbox provider and send; `deliverability.propose_segment` drafts a
   segment of people engaged recently and not sunset, saving nothing. Neither lifts a suppression or
   changes DNS or the policy.
+- Dialer (sales; nothing dials): `sales.call_list.build` creates a draft call list from a description
+  (and a saved view) for a person to fill and activate; `sales.call_list.order` reorders a list's
+  waiting members by points score or deal risk, saying which data is missing rather than guessing;
+  both are confirmed first. `sales.call.draft_notes` drafts notes for a call attempt from its
+  recording's transcript (summary and next steps, extracted locally) and saves nothing.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
 - Secrets (administrators, reads only): `secrets.list` names every configured secret with the
