@@ -9,6 +9,8 @@ pub mod abm;
 pub mod address_check;
 pub mod attribution;
 pub mod deliverability;
+/// E2-T2: email designs to email-safe HTML and plain text.
+pub mod email_render;
 pub mod events;
 pub mod handoff_sla;
 pub mod loyalty;
