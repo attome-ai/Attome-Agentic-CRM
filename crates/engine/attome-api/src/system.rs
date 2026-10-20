@@ -346,6 +346,9 @@ impl EngineSystem {
             // E10-T1: marketing form submissions (own license check, rate
             // limits and challenge; bypass by path shape).
             .merge(attome_marketing::forms::public_routes())
+            // E14-T4: the website tracking script (own licence and flag
+            // checks; an exact bypass path).
+            .merge(attome_marketing::tracking_script::public_routes())
             // D-486 — M55 moved to `attome-document`. `files::routes()` stays
             // mounted HERE, ungated, because it serves
             // `/api/v1/{entity}/{id}/files/{field}/…` for a `file`-typed

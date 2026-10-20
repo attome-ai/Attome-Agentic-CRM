@@ -132,6 +132,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Website tracking script (E14-T4): `GET /api/v1/track/script.js?site=` serves the script (under 10 KB
+  gzipped, cached a day) for an enabled tracked site when `marketing.tracking` is on. It sends nothing
+  before analytics consent, stays anonymous under Global Privacy Control, uses only first-party
+  cookies (`atm_vid`, `atm_sid`), batches page views (with UTM and click ids) and, when custom events
+  are on, `window.attome.track` events to the deployment, and never fingerprints.
 - Page search settings and structured data (E13-T4): `attome_content::seo` reads and writes a page's
   title, description, canonical, robots flags and Open Graph card at its row version (409 on a stale
   one), fills empty ones from the page (title, first paragraph, base URL plus path), and builds and

@@ -35,6 +35,8 @@ pub mod sms_campaign;
 /// E7-T5: static list members by hand, view, form, flow and import.
 pub mod static_list;
 pub mod tracking;
+/// E14-T4: the website tracking script.
+pub mod tracking_script;
 
 pub use model::MarketingModel;
 
@@ -52,5 +54,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<forms::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dynamic_blocks::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<tracking_script::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

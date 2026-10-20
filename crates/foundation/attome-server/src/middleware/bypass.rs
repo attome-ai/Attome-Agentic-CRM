@@ -1,6 +1,8 @@
 /// Compile-time exact bypass list — paths that skip AuthnLayer and AuthzLayer.
 /// New public endpoints MUST be explicitly added here; never make this runtime config.
 pub const EXACT_BYPASS_PATHS: &[&str] = &[
+    // E14-T4: the website tracking script, loaded by a public web page.
+    "/api/v1/track/script.js",
     // B13-T5: the published brand, for the sign-in page; no user data.
     "/api/v1/branding/public",
     // B13-T4: published logos, favicons and fonts, served inert; no user data.
