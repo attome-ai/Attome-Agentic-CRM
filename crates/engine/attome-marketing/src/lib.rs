@@ -38,5 +38,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <segment_insight::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<events::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<sms_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

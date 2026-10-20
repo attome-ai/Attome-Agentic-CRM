@@ -4,3 +4,5 @@ pub mod effects;
 pub mod provider;
 /// E6-T4: the daily rollup per sending domain, provider and send.
 pub mod rollup;
+/// E6-T11: the deliverability routes.
+pub mod routes;

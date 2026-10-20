@@ -132,6 +132,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Deliverability routes (E6-T11): `GET /api/v1/marketing/deliverability/daily` (paged rollup),
+  `GET /api/v1/marketing/deliverability/sends/{send_id}`, `GET /api/v1/marketing/deliverability/dmarc`
+  and `POST /api/v1/marketing/deliverability/dmarc/upload` (administrators; the report file as the
+  body, 20 MB), and `POST /api/v1/marketing/address-check` (60 a minute per person).
 - Deliverability rollup (E6-T4): the hourly `deliverability_rollup` job recomputes today's and
   yesterday's `marketing_deliverability_daily` (migration 0165) — sent, delivered, bounced, opened,
   clicked and complaints per sending domain, mailbox provider and campaign — from email
