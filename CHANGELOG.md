@@ -133,6 +133,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Timers that follow a date (M10-T2): a timer whose payload carries `follow` (an attribute, an offset
+  in minutes and an optional rule condition) moves when the record's date changes and is cancelled
+  when the record is deleted, clears the date or leaves the condition. The `attome-workflow/timer-follow`
+  change-feed consumer applies it at the start of every timer sweep.
 - MFA done at the identity provider counts (Q2-T2): an `oidc.providers` entry gains `mfa_acr_values`
   (the `amr` entries or `acr` value that mean MFA, as the provider presets list them) and
   `trust_idp_mfa` (default `true`). When a verified ID token carries one of the values, the session

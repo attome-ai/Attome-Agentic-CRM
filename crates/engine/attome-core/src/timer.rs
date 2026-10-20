@@ -211,3 +211,236 @@ pub async fn load(conn: &mut sqlx::PgConnection, id: Uuid) -> Result<Option<Time
     .await
     .map_err(AppError::internal)
 }
+
+// ── Timers that follow a date (M10-T2) ──────────────────────────────────────
+
+/// The payload key of a timer that follows a date attribute of its record.
+pub const FOLLOW_KEY: &str = "follow";
+
+/// M10-T2: a timer due `offset_minutes` after (negative: before) the date in
+/// its record's `attribute`, while the record meets `condition` (rule text,
+/// as a workflow condition node reads it; none means always). Stored in the
+/// timer's payload under [`FOLLOW_KEY`]; a change to the record moves the
+/// timer with the date, and a record that leaves the condition, clears the
+/// date or goes away cancels it.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Follow {
+    pub attribute: String,
+    #[serde(default)]
+    pub offset_minutes: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+}
+
+impl Follow {
+    /// When the timer is due for `record`, or `None` when the record has no
+    /// usable date in the attribute.
+    pub fn due_for(&self, record: &serde_json::Value) -> Option<DateTime<Utc>> {
+        let date = date_value(record.get(&self.attribute)?)?;
+        date.checked_add_signed(chrono::Duration::minutes(self.offset_minutes))
+    }
+}
+
+/// The [`Follow`] a timer's payload carries, if any.
+pub fn follow_of(payload: &serde_json::Value) -> Option<Follow> {
+    serde_json::from_value(payload.get(FOLLOW_KEY)?.clone()).ok()
+}
+
+/// A date attribute's stored value as a time: an RFC 3339 timestamp, or a
+/// `YYYY-MM-DD` date at midnight UTC.
+pub fn date_value(value: &serde_json::Value) -> Option<DateTime<Utc>> {
+    let text = value.as_str()?;
+    if let Ok(at) = DateTime::parse_from_rfc3339(text) {
+        return Some(at.with_timezone(&Utc));
+    }
+    chrono::NaiveDate::parse_from_str(text, "%Y-%m-%d")
+        .ok()?
+        .and_hms_opt(0, 0, 0)
+        .map(|at| at.and_utc())
+}
+
+/// What a change to a followed record does to one of its timers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FollowDecision {
+    /// Still due when it was.
+    Keep,
+    /// The date moved; the timer is now due here.
+    Move(DateTime<Utc>),
+    /// The record went away, cleared the date or left the condition.
+    Cancel,
+}
+
+/// M10-T2: the decision for a pending timer due at `due_at` that follows
+/// `follow`, given the record as it now is (`None`: deleted or deactivated)
+/// and whether it meets the follow's condition.
+pub fn follow_decision(
+    follow: &Follow,
+    record: Option<&serde_json::Value>,
+    condition_holds: bool,
+    due_at: DateTime<Utc>,
+) -> FollowDecision {
+    let Some(record) = record else {
+        return FollowDecision::Cancel;
+    };
+    if !condition_holds {
+        return FollowDecision::Cancel;
+    }
+    match follow.due_for(record) {
+        None => FollowDecision::Cancel,
+        Some(due) if due == due_at => FollowDecision::Keep,
+        Some(due) => FollowDecision::Move(due),
+    }
+}
+
+/// A pending timer that follows a date: its id, when it is due and what it
+/// follows.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FollowingTimer {
+    pub id: Uuid,
+    pub due_at: DateTime<Utc>,
+    pub follow: Follow,
+}
+
+/// M10-T2: a record's pending timers that follow one of its dates.
+pub async fn following_for_target(
+    conn: &mut sqlx::PgConnection,
+    target_entity: &str,
+    target_id: Uuid,
+) -> Result<Vec<FollowingTimer>, AppError> {
+    let rows: Vec<(Uuid, DateTime<Utc>, serde_json::Value)> = sqlx::query_as(
+        "SELECT id, due_at, payload FROM timer \
+         WHERE status = 'pending' AND target_entity = $1 AND target_id = $2 \
+           AND payload ? 'follow' \
+         ORDER BY due_at, id LIMIT $3",
+    )
+    .bind(target_entity)
+    .bind(target_id)
+    .bind(MAX_RECORD_TIMERS)
+    .fetch_all(conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(id, due_at, payload)| {
+            follow_of(&payload).map(|follow| FollowingTimer { id, due_at, follow })
+        })
+        .collect())
+}
+
+/// Applies a [`FollowDecision`] to one pending timer; whether it changed (a
+/// timer fired or cancelled meanwhile is left as it is).
+pub async fn apply_follow(
+    conn: &mut sqlx::PgConnection,
+    id: Uuid,
+    decision: FollowDecision,
+) -> Result<bool, AppError> {
+    let result = match decision {
+        FollowDecision::Keep => return Ok(false),
+        FollowDecision::Move(due_at) => {
+            sqlx::query("UPDATE timer SET due_at = $2 WHERE id = $1 AND status = 'pending'")
+                .bind(id)
+                .bind(due_at)
+                .execute(conn)
+                .await
+        }
+        FollowDecision::Cancel => {
+            sqlx::query(
+                "UPDATE timer SET status = 'cancelled' WHERE id = $1 AND status = 'pending'",
+            )
+            .bind(id)
+            .execute(conn)
+            .await
+        }
+    };
+    Ok(result.map_err(AppError::internal)?.rows_affected() > 0)
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, reason = "test fixtures")]
+
+    use super::*;
+    use serde_json::json;
+
+    fn renewal() -> Follow {
+        Follow {
+            attribute: "renewal_date".into(),
+            offset_minutes: -7 * 24 * 60,
+            condition: Some("status == \"active\"".into()),
+        }
+    }
+
+    fn at(text: &str) -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339(text)
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    #[test]
+    fn timer_follow_date_reads_dates_and_timestamps() {
+        assert_eq!(
+            date_value(&json!("2027-03-15")),
+            Some(at("2027-03-15T00:00:00Z"))
+        );
+        assert_eq!(
+            date_value(&json!("2027-03-15T09:30:00+03:00")),
+            Some(at("2027-03-15T06:30:00Z"))
+        );
+        assert_eq!(date_value(&json!("next week")), None);
+        assert_eq!(date_value(&json!(20270315)), None);
+    }
+
+    #[test]
+    fn timer_follow_date_moves_with_the_date() {
+        let follow = renewal();
+        let record = json!({"renewal_date": "2027-03-15", "status": "active"});
+        let due = at("2027-03-08T00:00:00Z");
+        assert_eq!(follow.due_for(&record), Some(due));
+        assert_eq!(
+            follow_decision(&follow, Some(&record), true, due),
+            FollowDecision::Keep
+        );
+        let moved = json!({"renewal_date": "2027-04-01", "status": "active"});
+        assert_eq!(
+            follow_decision(&follow, Some(&moved), true, due),
+            FollowDecision::Move(at("2027-03-25T00:00:00Z"))
+        );
+    }
+
+    #[test]
+    fn timer_follow_date_disappears_when_the_condition_stops() {
+        let follow = renewal();
+        let due = at("2027-03-08T00:00:00Z");
+        let record = json!({"renewal_date": "2027-03-15", "status": "cancelled"});
+        assert_eq!(
+            follow_decision(&follow, Some(&record), false, due),
+            FollowDecision::Cancel
+        );
+        let cleared = json!({"renewal_date": null, "status": "active"});
+        assert_eq!(
+            follow_decision(&follow, Some(&cleared), true, due),
+            FollowDecision::Cancel
+        );
+        assert_eq!(
+            follow_decision(&follow, None, true, due),
+            FollowDecision::Cancel,
+            "a deleted record takes its timers with it"
+        );
+    }
+
+    #[test]
+    fn timer_follow_date_payload_round_trips() {
+        let payload = json!({ "flow": "renewal", "follow": renewal() });
+        assert_eq!(follow_of(&payload), Some(renewal()));
+        assert_eq!(follow_of(&json!({"rule_id": "x"})), None);
+        let bare = json!({ "follow": {"attribute": "due_on"} });
+        assert_eq!(
+            follow_of(&bare),
+            Some(Follow {
+                attribute: "due_on".into(),
+                offset_minutes: 0,
+                condition: None
+            })
+        );
+    }
+}

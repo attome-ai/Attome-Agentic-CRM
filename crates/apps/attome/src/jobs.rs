@@ -1350,6 +1350,18 @@ async fn dispatch_platform_job(
         }
         // M10-T1: due timers become one job each.
         EngineJob::TimerSweep => {
+            // M10-T2: timers that follow a record's date move or go first,
+            // so a moved timer is not claimed at its old time. Its failure
+            // must not hold back the due timers.
+            match attome_workflow::timer_follow::sweep(&attome_state).await {
+                Ok(run) if run.moved + run.cancelled > 0 => tracing::info!(
+                    moved = run.moved,
+                    cancelled = run.cancelled,
+                    "timers: date-following timers updated"
+                ),
+                Ok(_) => {}
+                Err(e) => tracing::warn!(error = ?e, "timers: the date-following sweep failed"),
+            }
             let mut conn = db.acquire().await?;
             let claimed = attome_core::timer::claim_due(&mut conn, chrono::Utc::now()).await?;
             drop(conn);

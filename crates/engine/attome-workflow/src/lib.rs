@@ -17,6 +17,7 @@ pub mod schedule_trigger;
 pub mod scheduler;
 pub mod simulate;
 pub mod sla_sweep;
+pub mod timer_follow;
 pub mod trigger_index;
 
 pub use engine::WorkflowModel;
