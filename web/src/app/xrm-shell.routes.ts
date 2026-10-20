@@ -738,6 +738,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
           },
           {
+            // E29-T1: the marketing calendar with budget against actual.
+            path: 'marketing/calendar',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/marketing/calendar').then(m => m.MarketingCalendarComponent),
+          },
+          {
             // D11-T3: the forecast grid (rows and amounts as the records allow).
             path: 'sales/forecast',
             canActivate: [authGuard],

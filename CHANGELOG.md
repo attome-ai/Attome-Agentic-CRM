@@ -132,6 +132,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Marketing calendar (E29-T1): `/xrm/marketing/calendar` shows a month of campaign starts and ends and
+  marketing events, and each running campaign's budget against actual (its own budget, finance
+  budget lines naming it in `campaign_code` as planned, and their actuals).
 - Note replies are records (C1-T1): a reply is a `note_reply` on the note's parent record (read only
   by someone who can read that record), with its own files, so replying no longer rewrites the note
   and two people replying at once both land. At boot, replies still held in a note's `replies` JSON
