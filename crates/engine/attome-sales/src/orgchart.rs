@@ -19,6 +19,8 @@
 
 /// D23-T5: the chart of an account or its group.
 pub mod chart;
+/// D23-T7: the buying committee and its coverage gaps.
+pub mod committee;
 /// D23-T8: people who leave.
 pub mod movers;
 

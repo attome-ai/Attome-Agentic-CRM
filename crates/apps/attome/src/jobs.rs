@@ -2687,6 +2687,8 @@ const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 /// E8-T5: the journey entry tick and the date entry (registered job types).
 const DEDUP_KEY_JOURNEY_ENTRY: &str = "marketing-journey-entry";
 const DEDUP_KEY_JOURNEY_DATE_ENTRY: &str = "marketing-journey-date-entry";
+/// D23-T7: deal coverage gaps from the change feed (a registered job type).
+const DEDUP_KEY_DEAL_COVERAGE: &str = "sales-deal-coverage";
 /// E23-T1: profile event retention (a registered job type).
 const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
@@ -2763,6 +2765,11 @@ pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
 /// read from the change feed.
 pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
+
+/// D23-T7: deal coverage gaps recomputed for the deals a change-feed batch
+/// touched.
+pub const SALES_DEAL_COVERAGE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_sales::orgchart::committee::JOB, 1);
 
 /// E8-T5: journey entries from date sources, once a deployment day.
 pub const MARKETING_JOURNEY_DATE_ENTRY: attome_jobs::JobType =
@@ -3015,6 +3022,20 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SALES_DEAL_COVERAGE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SALES) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_sales::orgchart::committee::coverage_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3322,6 +3343,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_REPUTATION_FETCH
         }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
+        EngineJob::Registered(job) if job.name == SALES_DEAL_COVERAGE.name => {
+            DEDUP_KEY_DEAL_COVERAGE
+        }
         EngineJob::Registered(job) if job.name == MARKETING_JOURNEY_ENTRY.name => {
             DEDUP_KEY_JOURNEY_ENTRY
         }
@@ -3845,6 +3869,21 @@ pub fn spawn_segment_live_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SEGMENT_LIVE, "live segments");
+}
+
+/// D23-T7: every ten seconds, one tick of deal coverage (one pending at most).
+pub fn spawn_deal_coverage_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(SALES_DEAL_COVERAGE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_DEAL_COVERAGE,
+            "deal coverage",
+        ),
+        Err(error) => tracing::error!(%error, "deal coverage: not scheduled"),
+    }
 }
 
 /// E8-T5: the journey entry tick (every ten seconds) and the date entry
