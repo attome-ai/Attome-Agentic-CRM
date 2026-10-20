@@ -269,14 +269,16 @@ export class LangService {
    * logged and leaves the layer's keys untranslated until the next mount.
    */
   private mergeEn(layer: LayerCatalog): void {
-    const en = layer.en;
-    if (typeof en !== 'function') {
-      this.transloco.setTranslation(en, 'en', { merge: true });
+    // `Translation` is an index signature, so `typeof` alone does not narrow
+    // the union to the loader; say which one each branch holds.
+    if (typeof layer.en !== 'function') {
+      this.transloco.setTranslation(layer.en as Translation, 'en', { merge: true });
       this.catalogVersion.update(v => v + 1);
       return;
     }
-    void this.track(en().then(
-      catalog => {
+    const load = layer.en as () => Promise<Translation>;
+    void this.track(load().then(
+      (catalog: Translation) => {
         this.transloco.setTranslation(catalog, 'en', { merge: true });
         this.catalogVersion.update(v => v + 1);
       },
