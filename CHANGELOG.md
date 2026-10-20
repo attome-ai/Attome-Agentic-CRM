@@ -132,6 +132,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Deliverability agent tools (E6-T12): `deliverability.explain` and `deliverability.propose_segment`,
+  read-only, marketing module, `marketing_deliverability_policy.read`.
 - Static list operations (E7-T5): `POST /api/v1/marketing/lists/{id}/members` and `/members/remove`
   (at most 1,000 readable people, membership events and audit), `POST /api/v1/marketing/lists/{id}/imports`
   (a CSV document of emails or ids, run by the `marketing_list_import` job with its progress at

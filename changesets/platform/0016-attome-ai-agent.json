@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:e98baddc8bad5926bea1ee75e84b9bb523263a3f264578daa013a9ce45fdff1b",
+  "checksum": "sha256:d3bdda0e47779d55968666579645612367911a1d5faf0666a4bfe93156aa75d1",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -321,6 +321,8 @@
               "code.generate",
               "commission.draft_plan_from_policy",
               "commission.explain_line",
+              "deliverability.explain",
+              "deliverability.propose_segment",
               "document.extract",
               "duplicates.check",
               "duplicates.list",

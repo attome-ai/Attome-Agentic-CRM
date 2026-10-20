@@ -32,6 +32,7 @@ attome-records.workspace      = true
 attome-search.workspace       = true
 attome-sales.workspace        = true
 attome-billing.workspace      = true
+attome-marketing.workspace    = true
 attome-security.workspace     = true
 attome-server.workspace       = true
 attome-types.workspace        = true

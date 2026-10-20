@@ -25,6 +25,8 @@ pub mod business;
 pub mod claim_check;
 pub mod classify;
 pub mod commission;
+/// E6-T12: deliverability explanation and a cleaner segment draft.
+pub mod deliverability;
 pub mod draft_article;
 pub mod draft_email;
 pub mod duplicates;
@@ -107,6 +109,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(billing::descriptors());
     all.extend(billing_payment::descriptors());
     all.extend(billing_subscription::descriptors());
+    all.extend(deliverability::descriptors());
     all.extend(sales_team::descriptors());
     all.extend(scan::descriptors());
     all
@@ -164,6 +167,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(billing::executors());
     all.extend(billing_payment::executors());
     all.extend(billing_subscription::executors());
+    all.extend(deliverability::executors());
     all.extend(sales_team::executors());
     all.extend(scan::executors());
     all

@@ -87,6 +87,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   dates), `billing.amendment.draft` (what an amendment would do, with its proration) and
   `billing.renewal.draft` (the next term's dates and lines). The drafts change nothing: amending,
   cancelling, renewing and changing a price stay with people.
+- Deliverability (reads only, marketing): `deliverability.explain` compares a date range of the daily
+  deliverability rollup with the range before it and lists the biggest changes in delivery, bounce,
+  open and complaint rates by mailbox provider and send; `deliverability.propose_segment` drafts a
+  segment of people engaged recently and not sunset, saving nothing. Neither lifts a suppression or
+  changes DNS or the policy.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
 - Secrets (administrators, reads only): `secrets.list` names every configured secret with the

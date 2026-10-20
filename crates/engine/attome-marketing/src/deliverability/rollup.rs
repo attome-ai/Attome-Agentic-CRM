@@ -166,6 +166,49 @@ pub async fn rollup_day(db: &DbPool, day: NaiveDate) -> Result<usize, AppError> 
     Ok(folded.len())
 }
 
+/// The rollup's totals per mailbox provider and send for `domain` (every
+/// sending domain when `None`) over the days `[from, to]`.
+pub async fn totals(
+    db: &DbPool,
+    domain: Option<&str>,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<(String, String, RollupCounts)>, AppError> {
+    let rows: Vec<(String, String, i64, i64, i64, i64, i64, i64)> = sqlx::query_as(
+        "SELECT mailbox_provider, send_ref, SUM(sent)::bigint, SUM(delivered)::bigint, \
+                SUM(bounced)::bigint, SUM(opened)::bigint, SUM(clicked)::bigint, \
+                SUM(complaints)::bigint \
+           FROM marketing_deliverability_daily \
+          WHERE day >= $1 AND day <= $2 AND ($3::text IS NULL OR sending_domain = lower($3)) \
+          GROUP BY mailbox_provider, send_ref ORDER BY mailbox_provider, send_ref",
+    )
+    .bind(from)
+    .bind(to)
+    .bind(domain)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(provider, send, sent, delivered, bounced, opened, clicked, complaints)| {
+                (
+                    provider,
+                    send,
+                    RollupCounts {
+                        sent,
+                        delivered,
+                        bounced,
+                        opened,
+                        clicked,
+                        complaints,
+                    },
+                )
+            },
+        )
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

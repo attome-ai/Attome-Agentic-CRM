@@ -429,6 +429,7 @@ dependencies = [
  "attome-field",
  "attome-inference",
  "attome-jobs",
+ "attome-marketing",
  "attome-metadata",
  "attome-model",
  "attome-modules",
