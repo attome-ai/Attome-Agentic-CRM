@@ -75,7 +75,7 @@ const RECORDED: &[(&str, &[&str])] = &[
     ("POST /api/v1/admin/entities", &["create_entity"]),
     (
         "PATCH /api/v1/admin/entities/{entity_id}",
-        &["update_entity"],
+        &["update_entity", "set_entity_master_data"],
     ),
     (
         "DELETE /api/v1/admin/entities/{entity_id}",

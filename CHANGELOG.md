@@ -143,6 +143,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Master-data settings on entities (L1-T1): `PATCH /api/v1/admin/entities/{id}` takes
+  `master_data: {is_master, hub_style}` (hub style `registry`, `consolidation` or `coexistence`) and
+  `GET` returns it. A master entity needs a data domain (422 naming `is_master`). The settings are
+  stored on `entity_info` (migration 0180) and travel in changesets as the new
+  `set_entity_master_data` operation.
 - Settings from the command line and for agents (U10-T2): `attome settings list|get <key>|set <key>
   <json> --url <server>` reads and changes settings with the administrator API key in `ATTOME_API_KEY`;
   the agent tools `settings.list` and `settings.set` do the same for administrators, a change waiting

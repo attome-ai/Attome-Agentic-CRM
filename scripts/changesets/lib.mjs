@@ -160,6 +160,7 @@ export const OPS = {
   retire_entity: op(C, ['entity']),
   reactivate_entity: op(E, ['entity']),
   set_entity_domain: op(E, ['entity'], ['domain']),
+  set_entity_master_data: op(E, ['entity'], ['is_master']),
   // fields (AttributeDef)
   add_field: op(E, ['entity', 'field'], ['definition']),
   update_field: op(E, ['entity', 'field'], ['definition']),
@@ -245,6 +246,7 @@ export const OPS = {
 // Ops a customer changeset may never carry (rulings 0.4/0.5: no structure).
 export const CUSTOMER_FORBIDDEN = new Set([
   'create_entity', 'update_entity', 'retire_entity', 'reactivate_entity', 'set_entity_domain',
+  'set_entity_master_data',
   'add_field', 'retire_field', 'reactivate_field', 'upsert_relationship', 'retire_relationship',
   'ensure_privilege', 'rename_field', 'change_field_type', 'data_step', 'delete_field',
 ]);

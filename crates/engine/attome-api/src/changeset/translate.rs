@@ -249,6 +249,11 @@ pub(crate) async fn translate(
             };
             Some(json!({ "domain": domain }))
         }
+        // L1-T1: the entity's master-data settings as they now are.
+        Op::SetEntityMasterData => Some(json!({
+            "is_master": c.get("is_master").cloned().unwrap_or(Value::Bool(false)),
+            "hub_style": c.get("hub_style").cloned().unwrap_or(Value::Null),
+        })),
         Op::AddField | Op::UpdateField => {
             let mut extra = Vec::new();
             if c.get("lookup_entity").is_none()

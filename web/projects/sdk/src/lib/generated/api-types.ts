@@ -24815,6 +24815,8 @@ export interface components {
             is_append_only: boolean;
             is_reference_data: boolean;
             logicalname: string;
+            /** @description L1-T1: whether the entity is master data, and its hub style. */
+            master_data: components["schemas"]["MasterData"];
             name: string;
             /** @description Solution 7 (D-785): the layer that owns this entity. */
             owner_layer: string;
@@ -27511,6 +27513,12 @@ export interface components {
             lead_ref?: string | null;
             /** @description `form`, `portal`, `import` or `staff` (default). */
             source?: string | null;
+        };
+        /** @description An entity's master-data settings (`entity_info.is_master`, `hub_style`). */
+        MasterData: {
+            /** @description `registry`, `consolidation` or `coexistence`; `null` when unset. */
+            hub_style?: string | null;
+            is_master: boolean;
         };
         /** @description One field of a match rule (`match_rule.fields`). */
         MatchField: {
@@ -41239,6 +41247,7 @@ export interface components {
              */
             is_reference_data?: boolean | null;
             logicalname?: string | null;
+            master_data?: null | components["schemas"]["MasterData"];
             name?: string | null;
             primary_name_attribute?: string | null;
         };

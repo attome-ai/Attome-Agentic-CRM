@@ -115103,6 +115103,7 @@
           "owner_layer",
           "is_reference_data",
           "business_key_index_state",
+          "master_data",
           "attributes"
         ],
         "properties": {
@@ -115154,6 +115155,10 @@
           },
           "logicalname": {
             "type": "string"
+          },
+          "master_data": {
+            "$ref": "#/components/schemas/MasterData",
+            "description": "L1-T1: whether the entity is master data, and its hub style."
           },
           "name": {
             "type": "string"
@@ -121581,6 +121586,25 @@
               "null"
             ],
             "description": "`form`, `portal`, `import` or `staff` (default)."
+          }
+        }
+      },
+      "MasterData": {
+        "type": "object",
+        "description": "An entity's master-data settings (`entity_info.is_master`, `hub_style`).",
+        "required": [
+          "is_master"
+        ],
+        "properties": {
+          "hub_style": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`registry`, `consolidation` or `coexistence`; `null` when unset."
+          },
+          "is_master": {
+            "type": "boolean"
           }
         }
       },
@@ -157267,6 +157291,17 @@
               "null"
             ]
           },
+          "master_data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MasterData",
+                "description": "L1-T1: the entity's master-data settings, written as one\n`set_entity_master_data` changeset operation. `is_master: true`\nneeds the entity to be in a data domain (422 naming `is_master`).\nAbsent leaves them unchanged."
+              }
+            ]
+          },
           "name": {
             "type": [
               "string",
@@ -159939,6 +159974,7 @@
     }
   ],
   "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -159990,6 +160026,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

@@ -869,6 +869,7 @@ impl Ctx<'_> {
                 with_lock_retry!(provision::reactivate_entity(db, op.t("entity")).await)?
             }
             Op::SetEntityDomain => self.set_entity_domain(op).await?,
+            Op::SetEntityMasterData => self.set_entity_master_data(op).await?,
             Op::AddField | Op::UpdateField => {
                 let attr: AttributeDef = op.definition().map_err(def_err)?;
                 self.apply_attribute(op.t("entity"), &attr).await?
@@ -1174,6 +1175,40 @@ impl Ctx<'_> {
                     other.as_str()
                 )));
             }
+        })
+    }
+
+    /// L1-T1: an entity's master-data settings, through the same function
+    /// the entity PATCH uses.
+    async fn set_entity_master_data(&mut self, op: &DocOp) -> Result<ReconcileOutcome, AppError> {
+        let entity = op.t("entity").to_owned();
+        let recording = Recording::Applying {
+            layer: self.layer(),
+        };
+        let actor = self.actor.unwrap_or(Uuid::nil());
+        let settings = attome_compliance::governance_admin::MasterData {
+            is_master: op.arg("is_master").and_then(Value::as_bool).unwrap_or(false),
+            hub_style: op
+                .arg("hub_style")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+        };
+        let event = attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            actor,
+            "entity_info",
+            None,
+        )
+        .named("changeset.apply.set_entity_master_data");
+        let changed = attome_compliance::governance_admin::set_entity_master_data(
+            self.state, &recording, &entity, &settings, event,
+        )
+        .await?;
+        Ok(if changed {
+            ReconcileOutcome::Updated
+        } else {
+            ReconcileOutcome::Unchanged
         })
     }
 

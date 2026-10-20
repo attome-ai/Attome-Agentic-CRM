@@ -194,6 +194,7 @@ pub fn required_args(op: Op) -> &'static [&'static str] {
         | Op::UpsertFieldProfile
         | Op::UpsertDataDomain => &["definition"],
         Op::SetEntityDomain => &["domain"],
+        Op::SetEntityMasterData => &["is_master"],
         Op::SetLabel => &["display_name"],
         Op::SetWorkflowDraft => &["graph"],
         Op::GrantRolePrivilege => &["depth"],
@@ -515,6 +516,7 @@ fn customer_forbidden(op: Op) -> bool {
             | Op::RetireEntity
             | Op::ReactivateEntity
             | Op::SetEntityDomain
+            | Op::SetEntityMasterData
             | Op::AddField
             | Op::RetireField
             | Op::ReactivateField
@@ -1433,7 +1435,8 @@ async fn row_layer(conn: &mut PgConnection, op: &DocOp) -> Result<Option<String>
         | Op::CreateEntity
         | Op::RetireEntity
         | Op::ReactivateEntity
-        | Op::SetEntityDomain => (
+        | Op::SetEntityDomain
+        | Op::SetEntityMasterData => (
             one(
                 "SELECT owner_layer FROM entity_info WHERE logicalname = $1 \
                  ORDER BY (is_active IS NULL OR is_active = true) DESC LIMIT 1",
@@ -1802,6 +1805,7 @@ pub async fn plan(
                         Op::ReactivateEntity
                             | Op::ReactivateField
                             | Op::SetEntityDomain
+                            | Op::SetEntityMasterData
                             | Op::SetLabel
                     )
                 {

@@ -688,6 +688,107 @@ async fn write_entity_domains(
     Ok(())
 }
 
+// ── set_entity_master_data (roadmap L1-T1) ─────────────────────────────
+
+/// The master-data hub styles (L1).
+pub const HUB_STYLES: [&str; 3] = ["registry", "consolidation", "coexistence"];
+
+/// An entity's master-data settings (`entity_info.is_master`, `hub_style`).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
+pub struct MasterData {
+    pub is_master: bool,
+    /// `registry`, `consolidation` or `coexistence`; `null` when unset.
+    pub hub_style: Option<String>,
+}
+
+#[derive(sqlx::FromRow)]
+struct EntityMasterRow {
+    id: Uuid,
+    domain_ref: Option<Uuid>,
+    owner_layer: String,
+    is_master: bool,
+    hub_style: Option<String>,
+}
+
+/// Sets `entity_logicalname`'s master-data settings — the
+/// `set_entity_master_data` operation's one implementation, shared by the
+/// entity PATCH and the changeset applier. Like the domain write: the
+/// metadata-write lock, the owner check (409 `layer_mismatch`), the UPDATE,
+/// a change-log row (other nodes' registries catch up), the security event
+/// and one recorded operation. A master entity needs a data domain (422
+/// naming `is_master`), and `hub_style` is one of [`HUB_STYLES`]. Returns
+/// whether anything changed; nothing changed records nothing.
+pub async fn set_entity_master_data(
+    state: &EngineState,
+    recording: &Recording,
+    entity_logicalname: &str,
+    settings: &MasterData,
+    event: SecurityEvent,
+) -> Result<bool, AppError> {
+    if let Some(style) = settings.hub_style.as_deref()
+        && !HUB_STYLES.contains(&style)
+    {
+        return Err(AppError::Validation(
+            "hub_style must be registry, consolidation or coexistence".into(),
+        ));
+    }
+    let db = &state.base.db_migrator;
+    recording.preflight(db).await?;
+    let mut tx = attome_db::tx::begin(db).await?;
+    attome_core::acquire_metadata_write_lock(&mut tx).await?;
+    let row: Option<EntityMasterRow> = sqlx::query_as(
+        "SELECT id, domain_ref, owner_layer, is_master, hub_style FROM entity_info           WHERE logicalname = $1 AND (is_active IS NULL OR is_active = true)           FOR UPDATE",
+    )
+    .bind(entity_logicalname)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let row = row.ok_or(AppError::NotFound)?;
+    if settings.is_master && row.domain_ref.is_none() {
+        return Err(AppError::Validation(
+            "is_master: a master entity needs a data domain; assign the entity to one first".into(),
+        ));
+    }
+    if row.is_master == settings.is_master && row.hub_style == settings.hub_style {
+        attome_db::tx::commit(tx).await?;
+        return Ok(false);
+    }
+    recording.check_owner(parse_layer(&row.owner_layer)?)?;
+    sqlx::query("UPDATE entity_info SET is_master = $2, hub_style = $3 WHERE id = $1")
+        .bind(row.id)
+        .bind(settings.is_master)
+        .bind(&settings.hub_style)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    attome_core::append_change_log(
+        &mut tx,
+        row.id,
+        entity_logicalname,
+        attome_core::ChangeKind::Upsert,
+    )
+    .await?;
+    write_security_event(&mut tx, &attome_audit::audit_service(state), event).await?;
+    if matches!(recording, Recording::Request(_)) {
+        let snapshot = entity_snapshot(&mut tx, ObjectKind::Entity, row.id).await?;
+        recording
+            .record(
+                &mut tx,
+                RecordedOp {
+                    op: Op::SetEntityMasterData,
+                    object_kind: "entity",
+                    object_ref: Some(row.id),
+                    target: entity_target(entity_logicalname),
+                    snapshot,
+                    changed: vec!["is_master", "hub_style"],
+                },
+            )
+            .await?;
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(true)
+}
+
 // ── Accountability report (M15 plan §3/§4) ──────────────────────────────
 
 #[derive(Serialize, Default, ToSchema)]

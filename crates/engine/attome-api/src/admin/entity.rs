@@ -121,6 +121,8 @@ pub struct EntityDetail {
     /// `none` (no key), `missing`, `building`, `invalid` (a failed build;
     /// the next sync rebuilds it) or `valid`.
     business_key_index_state: String,
+    /// L1-T1: whether the entity is master data, and its hub style.
+    master_data: attome_compliance::governance_admin::MasterData,
     attributes: Vec<AttributeMeta>,
 }
 
@@ -158,6 +160,11 @@ pub(super) struct UpdateEntityBody {
     /// generic writes to it are recorded as `upsert_record` when a changeset
     /// is in play. Absent leaves it unchanged.
     is_reference_data: Option<bool>,
+    /// L1-T1: the entity's master-data settings, written as one
+    /// `set_entity_master_data` changeset operation. `is_master: true`
+    /// needs the entity to be in a data domain (422 naming `is_master`).
+    /// Absent leaves them unchanged.
+    master_data: Option<attome_compliance::governance_admin::MasterData>,
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -464,6 +471,12 @@ pub(super) async fn get_entity(
         is_reference_data,
     ) = row.ok_or(AppError::NotFound)?;
     let logicalname = logicalname.unwrap_or_default();
+    let (is_master, hub_style): (bool, Option<String>) =
+        sqlx::query_as("SELECT is_master, hub_style FROM entity_info WHERE id = $1")
+            .bind(entity_id)
+            .fetch_one(&state.base.db_migrator)
+            .await
+            .map_err(AppError::internal)?;
     let attributes = fetch_attributes(&state.base.db_migrator, entity_id).await?;
     let (business_key_index, index_state) = provision::business_key_index_status(
         &state.base.db_migrator,
@@ -485,6 +498,10 @@ pub(super) async fn get_entity(
         is_reference_data,
         business_key_index,
         business_key_index_state: index_state.as_str().to_owned(),
+        master_data: attome_compliance::governance_admin::MasterData {
+            is_master,
+            hub_style,
+        },
         attributes,
     }))
 }
@@ -648,6 +665,28 @@ pub(super) async fn update_entity(
         ));
     }
 
+    // L1-T1: the master-data settings are their own recorded operation.
+    let master_changed = match &body.master_data {
+        Some(settings) => {
+            attome_compliance::governance_admin::set_entity_master_data(
+                &state,
+                &recording,
+                &old_logical,
+                settings,
+                attome_audit::security::SecurityEvent::new(
+                    attome_audit::security::MandatoryCategory::Configuration,
+                    AuditOperation::Update,
+                    ctx.user_id,
+                    "entity_info",
+                    Some(entity_id),
+                )
+                .named("entity.master_data_set"),
+            )
+            .await?
+        }
+        None => false,
+    };
+
     let (user_ctx, org_ref) =
         attome_records::entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
@@ -681,6 +720,13 @@ pub(super) async fn update_entity(
             "category",
             cur_category.clone(),
             new_category.clone(),
+        ));
+    }
+    if master_changed && let Some(settings) = &body.master_data {
+        changed_fields.push(simple_field_change(
+            "is_master",
+            None,
+            Some(settings.is_master.to_string()),
         ));
     }
     if let Some(declared) = &key_declaration {

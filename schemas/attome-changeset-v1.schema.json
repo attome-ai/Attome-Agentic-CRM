@@ -157,6 +157,7 @@
             "retire_entity",
             "reactivate_entity",
             "set_entity_domain",
+            "set_entity_master_data",
             "add_field",
             "update_field",
             "retire_field",
@@ -248,6 +249,9 @@
         },
         {
           "$ref": "#/$defs/op_set_entity_domain"
+        },
+        {
+          "$ref": "#/$defs/op_set_entity_master_data"
         },
         {
           "$ref": "#/$defs/op_add_field"
@@ -563,6 +567,38 @@
           "type": "object",
           "required": [
             "domain"
+          ]
+        }
+      },
+      "required": [
+        "args"
+      ]
+    },
+    "op_set_entity_master_data": {
+      "description": "set_entity_master_data (stage 1)",
+      "properties": {
+        "op": {
+          "const": "set_entity_master_data"
+        },
+        "phase": {
+          "const": "expand"
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "entity"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "entity": {
+              "$ref": "#/$defs/logicalName"
+            }
+          }
+        },
+        "args": {
+          "type": "object",
+          "required": [
+            "is_master"
           ]
         }
       },

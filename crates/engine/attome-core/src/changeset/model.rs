@@ -131,6 +131,7 @@ op_catalogue! {
     RetireEntity => "retire_entity", Contract, 1, ["entity"];
     ReactivateEntity => "reactivate_entity", Expand, 1, ["entity"];
     SetEntityDomain => "set_entity_domain", Expand, 1, ["entity"];
+    SetEntityMasterData => "set_entity_master_data", Expand, 1, ["entity"];
     AddField => "add_field", Expand, 1, ["entity", "field"];
     UpdateField => "update_field", Expand, 1, ["entity", "field"];
     RetireField => "retire_field", Contract, 1, ["entity", "field"];
@@ -282,8 +283,8 @@ mod tests {
             ours, names,
             "Op::ALL must equal the schema's op enum, in order"
         );
-        assert_eq!(Op::ALL.len(), 64);
-        assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 1).count(), 57);
+        assert_eq!(Op::ALL.len(), 65);
+        assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 1).count(), 58);
         assert_eq!(Op::ALL.iter().filter(|op| op.stage() == 2).count(), 7);
 
         for op in Op::ALL {

@@ -136,6 +136,17 @@ fn sentence(op_name: &str, target: &Map<String, Value>, args: &Map<String, Value
         Op::UpdateEntity => format!("Update the table {}{}.", e(), c.changed()),
         Op::RetireEntity => format!("Retire the table {} (hidden, data kept).", e()),
         Op::ReactivateEntity => format!("Bring back the retired table {}.", e()),
+        Op::SetEntityMasterData => {
+            if truthy(c.a("is_master")) {
+                format!(
+                    "Make the table {} master data ({}).",
+                    e(),
+                    c.a("hub_style").and_then(Value::as_str).unwrap_or("no hub style")
+                )
+            } else {
+                format!("The table {} is no longer master data.", e())
+            }
+        }
         Op::SetEntityDomain => {
             if truthy(c.a("domain")) {
                 format!(
