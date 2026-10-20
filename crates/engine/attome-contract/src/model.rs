@@ -42,5 +42,9 @@ impl EngineModel for ContractModel {
                 "/api/v1/contract/contracts/{id}/draft",
                 post(crate::draft::post_draft),
             )
+            .route(
+                "/api/v1/contract/contracts/{id}/compare",
+                post(crate::compare::post_compare),
+            )
     }
 }

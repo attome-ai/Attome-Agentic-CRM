@@ -6,6 +6,7 @@
 //! it. Gated on the `contract` module.
 
 pub mod amendment;
+pub mod compare;
 pub mod counterparty;
 pub mod dates;
 pub mod draft;
@@ -24,5 +25,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 40;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <counterparty::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<draft::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<compare::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

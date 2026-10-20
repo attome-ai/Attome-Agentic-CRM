@@ -347,6 +347,89 @@ fn literal_string(content: &[u8], mut i: usize) -> (String, usize) {
     (text, i)
 }
 
+/// W1-T7: the text of a stored file: what the upload scan already extracted
+/// into `document_text`, else the file read and extracted now, its format
+/// from the key's extension (`.docx`, `.pdf`, `.txt`, or `.html`/`.htm`
+/// with the tags dropped). `None` when the file is missing, too large or
+/// holds no readable text. Reads no permission: the caller has checked that
+/// the record naming the file is readable.
+pub async fn stored_file_text(
+    state: &EngineState,
+    file_key: &str,
+) -> Result<Option<String>, AppError> {
+    let stored: Option<String> =
+        sqlx::query_scalar("SELECT content_text FROM document_text WHERE file_key = $1")
+            .bind(file_key)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if stored.is_some() {
+        return Ok(stored);
+    }
+    let lower = file_key.to_ascii_lowercase();
+    let html = lower.ends_with(".html") || lower.ends_with(".htm");
+    let format = if html {
+        Some(TextFormat::Plain)
+    } else {
+        format_of("", &lower)
+    };
+    let Some(format) = format else {
+        return Ok(None);
+    };
+    let path = ObjectPath::parse(file_key)
+        .map_err(|e| AppError::internal(format!("invalid stored file key: {e}")))?;
+    let object = match state.base.storage.store().get(&path).await {
+        Ok(object) => object,
+        Err(object_store::Error::NotFound { .. }) => return Ok(None),
+        Err(e) => return Err(AppError::internal(e)),
+    };
+    if object.meta.size > MAX_FILE_BYTES {
+        return Ok(None);
+    }
+    let bytes = object.bytes().await.map_err(AppError::internal)?;
+    tokio::task::spawn_blocking(move || {
+        let text = extract(format, &bytes)?;
+        Some(if html { strip_tags(&text) } else { text })
+    })
+    .await
+    .map_err(AppError::internal)
+}
+
+/// HTML with its tags dropped and the common entities read; a block tag
+/// (paragraph, heading, list item, row, line break, division) ends a line.
+/// Pure.
+pub fn strip_tags(html: &str) -> String {
+    const BLOCKS: &[&str] = &[
+        "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr", "section",
+    ];
+    let mut out = String::with_capacity(html.len());
+    let mut tag: Option<String> = None;
+    for c in html.chars() {
+        match (&mut tag, c) {
+            (None, '<') => tag = Some(String::new()),
+            (Some(name), '>') => {
+                let lower = name.trim_start_matches('/').to_ascii_lowercase();
+                let word = lower
+                    .split(|c: char| c.is_whitespace() || c == '/')
+                    .next()
+                    .unwrap_or_default();
+                out.push(if BLOCKS.contains(&word) { '\n' } else { ' ' });
+                tag = None;
+            }
+            (Some(name), c) => name.push(c),
+            (None, c) => out.push(c),
+        }
+    }
+    let out = out
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'");
+    tidy(&out)
+}
+
 /// Worker for `EngineJob::DocumentTextExtract`: extracts a clean upload's
 /// text into `document_text` and re-announces the documents that name it.
 /// Idempotent; a file with no readable text, or too large, is skipped.

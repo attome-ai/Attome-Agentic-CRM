@@ -2766,6 +2766,11 @@ pub const MARKETING_JOURNEY_ENROL: attome_jobs::JobType =
 pub const MARKETING_JOURNEY_ENTRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::entry::TICK_JOB, 1);
 
+/// W1-T7: one contract comparison, computed as its requester (payload
+/// `attome_contract::compare::CompareJob`). Only enqueued.
+pub const CONTRACT_COMPARE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_contract::compare::JOB, 1);
+
 /// D23-T10: one account's org chart drafts, written as the requester
 /// (payload `attome_sales::orgchart::drafts::DraftJob`). Only enqueued.
 pub const SALES_ORGCHART_DRAFT: attome_jobs::JobType =
@@ -3027,6 +3032,27 @@ pub fn register_job_types() {
                     dropped_invalid = counts.dropped_invalid,
                     "web event batch written"
                 );
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CONTRACT_COMPARE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_CONTRACT) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_contract::compare::CompareJob = job.payload()?;
+                let ctx = state
+                    .base
+                    .security
+                    .resolve_strict(payload.user_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                attome_contract::compare::run_compare(&state, &ctx, payload.comparison_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
