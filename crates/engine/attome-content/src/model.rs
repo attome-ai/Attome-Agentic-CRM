@@ -100,6 +100,16 @@ pub struct ContentSpace {
     pub require_approval: bool,
     /// E11-T1: `standard` or `marketing` (landing pages), set at create.
     pub kind: String,
+    /// E12-T2: the domain this space is served on.
+    pub domain: Option<String>,
+    pub site_title: Option<String>,
+    /// CSS custom property to value (`--ac-bg`: `#fff`).
+    #[schema(value_type = Object)]
+    pub theme: serde_json::Value,
+    #[schema(value_type = Vec<crate::sites::MenuItem>)]
+    pub menu: serde_json::Value,
+    /// Pages under this path are the site's blog posts.
+    pub blog_path: Option<String>,
     pub row_version: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -128,6 +138,20 @@ pub struct UpdateSpaceBody {
     /// K5-T1: `None` leaves it unchanged.
     #[serde(default)]
     pub require_approval: Option<bool>,
+    /// E12-T2: `None` leaves it, `""` clears it.
+    #[serde(default)]
+    pub domain: Option<String>,
+    #[serde(default)]
+    pub site_title: Option<String>,
+    /// Replaces the theme when present.
+    #[serde(default)]
+    pub theme: Option<std::collections::BTreeMap<String, String>>,
+    /// Replaces the menu when present.
+    #[serde(default)]
+    pub menu: Option<Vec<crate::sites::MenuItem>>,
+    /// `None` leaves it, `""` clears it.
+    #[serde(default)]
+    pub blog_path: Option<String>,
 }
 
 /// A reusable block-content starting point for new pages — selecting one at

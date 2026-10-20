@@ -59,6 +59,8 @@ pub struct HeadInput {
     pub x_default: Option<String>,
     /// Structured data documents that passed validation.
     pub json_ld: Vec<Value>,
+    /// E12-T2: the site's theme stylesheet.
+    pub theme_href: Option<String>,
 }
 
 /// Where the site is served, for absolute URLs.
@@ -198,7 +200,15 @@ pub fn render_head(head: &HeadInput) -> String {
     }
     out.push_str("<style>");
     out.push_str(BASE_STYLE);
-    out.push_str("</style></head>");
+    out.push_str("</style>");
+    // After the base style, so the site's theme overrides it.
+    if let Some(href) = head.theme_href.as_deref().filter(|h| safe_url(h)) {
+        out.push_str(&format!(
+            "<link rel=\"stylesheet\" href=\"{}\">",
+            escape_html(href)
+        ));
+    }
+    out.push_str("</head>");
     out
 }
 
@@ -323,7 +333,9 @@ pub fn render_page(page: &PageInput) -> String {
         escape_html(language)
     );
     out.push_str(&render_head(&page.head));
-    out.push_str("<body><main>");
+    out.push_str("<body>");
+    out.push_str(crate::sites::NAV_PLACEHOLDER);
+    out.push_str("<main>");
     for block in &page.blocks {
         render_block(block, 0, &mut out);
     }
@@ -383,6 +395,12 @@ pub async fn render_version_in_tx(
     else {
         return Ok(());
     };
+    let space: Option<uuid::Uuid> =
+        sqlx::query_scalar("SELECT content_space_id FROM content_page WHERE id = $1")
+            .bind(page_id)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
     let detail: Option<crate::model::PageDetail> = sqlx::query_as(&format!(
         "SELECT {} FROM content_page WHERE id = $1 AND is_deleted = FALSE",
         crate::admin::PAGE_COLUMNS
@@ -473,6 +491,7 @@ pub async fn render_version_in_tx(
             alternates,
             x_default,
             json_ld,
+            theme_href: space.map(|s| format!("/api/v1/content/theme.css?space={s}")),
         },
         blocks,
     });

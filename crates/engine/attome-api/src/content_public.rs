@@ -453,8 +453,74 @@ async fn page_html(
     if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
-    let row: Option<(Uuid, i32, Option<String>)> = sqlx::query_as(
-        "SELECT p.id, v.version_number, v.html \
+    let site = attome_content::sites::site_for_space(&state.base.db, q.space)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let route = format!("/api/v1/content/html?space={}&path=", q.space);
+    served_html(&state, &site, &q.path, &headers, &route).await
+}
+
+#[derive(Deserialize, IntoParams)]
+struct SiteQuery {
+    /// The page's URL path on the site, e.g. `/pricing`.
+    path: String,
+}
+
+/// A page of the site served on this host (E12-T2).
+///
+/// The space whose domain is the request's host serves the published page
+/// at `path`, as `/api/v1/content/html` does, with the site's menu. No
+/// sign-in; the same 404 for an unknown host, a missing or unpublished
+/// page, or an unlicensed deployment.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/site",
+    tag = "content",
+    params(SiteQuery),
+    responses(
+        (status = 200, description = "The page as HTML", content_type = "text/html"),
+        (status = 301, description = "The page moved; `Location` names its current path"),
+        (status = 304, description = "The client already holds this version"),
+        (status = 404, description = "No site on this host, or no published page at this path", body = ErrorResponse),
+    ),
+)]
+async fn site_page(
+    State(state): State<EngineState>,
+    Query(q): Query<SiteQuery>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    let site = attome_content::sites::site_for_host(&state.base.db, host)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    served_html(
+        &state,
+        &site,
+        &q.path,
+        &headers,
+        "/api/v1/content/site?path=",
+    )
+    .await
+}
+
+/// The stored HTML of the newest version of the page at `path` in `site`,
+/// with the site's menu written in; `route` (ending in `path=`) names the
+/// redirect target for a moved page.
+async fn served_html(
+    state: &EngineState,
+    site: &attome_content::sites::SiteConfig,
+    path: &str,
+    headers: &HeaderMap,
+    route: &str,
+) -> Result<Response, AppError> {
+    let row: Option<(Uuid, i32, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT p.id, v.version_number, v.html, p.language \
            FROM content_page p \
            JOIN LATERAL ( \
                SELECT version_number, html FROM content_page_version WHERE page_id = p.id \
@@ -463,22 +529,91 @@ async fn page_html(
           WHERE p.content_space_id = $1 AND p.url_path = $2 \
             AND p.status = 'published' AND p.is_deleted = FALSE AND p.audience = 'public'",
     )
-    .bind(q.space)
-    .bind(&q.path)
+    .bind(site.space_id)
+    .bind(path)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let Some((page_id, version, html)) = row else {
-        return moved(&state, &q.path, &["public"], |space, path| {
-            format!("/api/v1/content/html?space={space}&path={path}")
+    let Some((page_id, version, html, language)) = row else {
+        let route = route.to_owned();
+        return moved(state, path, &["public"], move |_, path| {
+            format!("{route}{path}")
         })
         .await;
     };
     // A version published before E12 has no stored HTML: not served here.
     let html = html.ok_or(AppError::NotFound)?;
-    let etag = delivery_etag(page_id, version);
+    // The page's version and the site's (its menu) both change the document.
+    let etag = format!("\"{page_id}.{version}.s{}\"", site.row_version);
     let etag_value = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
     let cache = HeaderValue::from_static("public, max-age=60, must-revalidate");
+    if etag_held(
+        headers
+            .get(axum::http::header::IF_NONE_MATCH)
+            .and_then(|v| v.to_str().ok()),
+        &etag,
+    ) {
+        return Ok((
+            StatusCode::NOT_MODIFIED,
+            [
+                (axum::http::header::ETAG, etag_value),
+                (axum::http::header::CACHE_CONTROL, cache),
+            ],
+        )
+            .into_response());
+    }
+    let arabic = attome_content::render_html::is_rtl(language.as_deref());
+    let nav = attome_content::sites::menu_html(&site.menu, arabic, path);
+    let html = html.replacen(attome_content::sites::NAV_PLACEHOLDER, &nav, 1);
+    Ok((
+        [
+            (axum::http::header::ETAG, etag_value),
+            (axum::http::header::CACHE_CONTROL, cache),
+            (
+                axum::http::header::CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            ),
+        ],
+        html,
+    )
+        .into_response())
+}
+
+#[derive(Deserialize, IntoParams)]
+struct SpaceQuery {
+    /// The content space (site).
+    space: Uuid,
+}
+
+/// A site's theme stylesheet (E12-T2).
+///
+/// The site's theme as CSS custom properties, linked from every rendered
+/// page of the space, so a theme change shows without republishing.
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/theme.css",
+    tag = "content",
+    params(SpaceQuery),
+    responses(
+        (status = 200, description = "The stylesheet", content_type = "text/css"),
+        (status = 304, description = "The client already holds this version"),
+        (status = 404, description = "No such space, or Content Management isn't licensed", body = ErrorResponse),
+    ),
+)]
+async fn site_theme(
+    State(state): State<EngineState>,
+    Query(q): Query<SpaceQuery>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let site = attome_content::sites::site_for_space(&state.base.db, q.space)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let etag = format!("\"theme.{}.{}\"", site.space_id, site.row_version);
+    let etag_value = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
+    let cache = HeaderValue::from_static("public, max-age=300, must-revalidate");
     if etag_held(
         headers
             .get(axum::http::header::IF_NONE_MATCH)
@@ -500,10 +635,57 @@ async fn page_html(
             (axum::http::header::CACHE_CONTROL, cache),
             (
                 axum::http::header::CONTENT_TYPE,
-                HeaderValue::from_static("text/html; charset=utf-8"),
+                HeaderValue::from_static("text/css; charset=utf-8"),
             ),
         ],
-        html,
+        attome_content::sites::theme_css(&site.theme),
+    )
+        .into_response())
+}
+
+/// A site's blog as RSS (E12-T2).
+///
+/// The newest published public pages under the site's blog path, newest
+/// first, as an RSS 2.0 feed with links on the site's domain (else the
+/// deployment's public URL).
+#[utoipa::path(
+    get,
+    path = "/api/v1/content/rss",
+    tag = "content",
+    params(SpaceQuery),
+    responses(
+        (status = 200, description = "The feed", content_type = "application/rss+xml"),
+        (status = 404, description = "No such space, or Content Management isn't licensed", body = ErrorResponse),
+    ),
+)]
+async fn site_rss(
+    State(state): State<EngineState>,
+    Query(q): Query<SpaceQuery>,
+) -> Result<Response, AppError> {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
+        return Err(AppError::NotFound);
+    }
+    let site = attome_content::sites::site_for_space(&state.base.db, q.space)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let posts = attome_content::sites::recent_posts(&state.base.db, &site).await?;
+    let base = match site.domain.as_deref() {
+        Some(domain) => format!("https://{domain}"),
+        None => state.base.config.frontend_url(),
+    };
+    let title = site.title.clone().unwrap_or_default();
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                HeaderValue::from_static("application/rss+xml; charset=utf-8"),
+            ),
+            (
+                axum::http::header::CACHE_CONTROL,
+                HeaderValue::from_static("public, max-age=300"),
+            ),
+        ],
+        attome_content::sites::rss(&title, &base, &posts),
     )
         .into_response())
 }
@@ -621,6 +803,9 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/content/delivery", get(deliver_page))
         .route("/api/v1/content/html", get(page_html))
+        .route("/api/v1/content/site", get(site_page))
+        .route("/api/v1/content/theme.css", get(site_theme))
+        .route("/api/v1/content/rss", get(site_rss))
         .route("/api/v1/content/internal", get(deliver_internal_page))
         .route("/api/v1/content/preview", get(preview_page))
 }
@@ -632,6 +817,9 @@ pub fn routes() -> Router<EngineState> {
     knowledge_feedback,
     deliver_page,
     page_html,
+    site_page,
+    site_theme,
+    site_rss,
     deliver_internal_page,
     preview_page
 ))]

@@ -23,8 +23,8 @@ use axum::{
 use serde_json::Value;
 use uuid::Uuid;
 
-const SPACE_COLUMNS: &str =
-    "id, name, description, require_approval, kind, row_version, created_at, updated_at";
+const SPACE_COLUMNS: &str = "id, name, description, require_approval, kind, domain, site_title, \
+     theme, menu, blog_path, row_version, created_at, updated_at";
 
 /// Same `If-Match: "<row_version>"` contract as `content_admin::
 /// expected_row_version` — reimplemented here rather than shared across the
@@ -212,6 +212,40 @@ async fn update_space(
         return Err(AppError::Validation("name must not be empty".into()));
     }
     let description = body.description.as_deref().map(str::trim);
+    // E12-T2: the site settings, checked before anything is written.
+    let domain = match body.domain.as_deref().map(str::trim) {
+        Some("") => Some(String::new()),
+        Some(d) => Some(crate::sites::normalise_domain(d).ok_or_else(|| {
+            AppError::Validation("domain: a host name such as www.example.com".into())
+        })?),
+        None => None,
+    };
+    if let Some(theme) = &body.theme {
+        crate::sites::validate_theme(theme)?;
+    }
+    if let Some(menu) = &body.menu {
+        crate::sites::validate_menu(menu)?;
+    }
+    let blog_path = match body.blog_path.as_deref().map(str::trim) {
+        Some(p) if !p.is_empty() && !(p.starts_with('/') && !p.starts_with("//")) => {
+            return Err(AppError::Validation(
+                "blog_path: a site path such as /blog".into(),
+            ));
+        }
+        other => other.map(str::to_owned),
+    };
+    let theme = body
+        .theme
+        .as_ref()
+        .map(serde_json::to_value)
+        .transpose()
+        .map_err(AppError::internal)?;
+    let menu = body
+        .menu
+        .as_ref()
+        .map(serde_json::to_value)
+        .transpose()
+        .map_err(AppError::internal)?;
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 
@@ -223,6 +257,11 @@ async fn update_space(
             SET name = COALESCE($2, name), \
                 description = CASE WHEN $3 = '' THEN NULL WHEN $3 IS NULL THEN description ELSE $3 END, \
                 require_approval = COALESCE($6, require_approval), \
+                domain = CASE WHEN $7 = '' THEN NULL WHEN $7 IS NULL THEN domain ELSE $7 END, \
+                site_title = CASE WHEN $8 = '' THEN NULL WHEN $8 IS NULL THEN site_title ELSE $8 END, \
+                theme = COALESCE($9, theme), \
+                menu = COALESCE($10, menu), \
+                blog_path = CASE WHEN $11 = '' THEN NULL WHEN $11 IS NULL THEN blog_path ELSE $11 END, \
                 row_version = row_version + 1, \
                 updated_at = NOW(), \
                 updated_by = $4 \
@@ -239,10 +278,21 @@ async fn update_space(
         .bind(ctx.user_id)
         .bind(row_version)
         .bind(body.require_approval)
+        .bind(&domain)
+        .bind(body.site_title.as_deref().map(str::trim))
+        .bind(&theme)
+        .bind(&menu)
+        .bind(&blog_path)
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
-            if is_unique_violation(&e) {
+            let on_domain = e
+                .as_database_error()
+                .and_then(|d| d.constraint())
+                .is_some_and(|c| c == "content_space_domain_uq");
+            if on_domain {
+                AppError::Conflict("another space is served on this domain")
+            } else if is_unique_violation(&e) {
                 AppError::Conflict("a space with this name already exists")
             } else {
                 AppError::internal(e)

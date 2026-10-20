@@ -72,6 +72,11 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // E12-T1: the same published page as server-rendered HTML, with the
     // same checks and the same identical 404 as `/content/delivery`.
     "/api/v1/content/html",
+    // E12-T2: a site's page by host, its theme stylesheet and its blog's
+    // RSS feed: published public content only, the same identical 404.
+    "/api/v1/content/site",
+    "/api/v1/content/theme.css",
+    "/api/v1/content/rss",
     // K5-T2: a signed preview link opens one page's draft for anyone who
     // holds it; the handler checks the signature and expiry and answers the
     // same 404 for every miss.
