@@ -1225,6 +1225,14 @@
             "null"
           ]
         },
+        "outbound_proxy": {
+          "description": "Q21-T1: an HTTP(S) proxy for calls to public addresses (vendor APIs,\nwebhooks), for a network that reaches the internet only through one,\nsuch as `http://proxy.corp:3128` (credentials may be in the URL).\nHosts the operator lists as private for a call (a model server, an\nidentity provider) are reached directly. `HTTP_PROXY` and the other\nenvironment variables are never used. Absent means no proxy.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "writeOnly": true
+        },
         "portal_hosts": {
           "default": [],
           "description": "D-585: the hosts web portals (`/{keyword}/...`) answer on, disjoint\nfrom `staff_hosts`. Empty means portals answer on any host outside\nthe production profile, and on **no** host in it.",
