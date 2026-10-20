@@ -90,6 +90,7 @@ pub async fn publish(
         .map(|r| r.target)
         .filter(|target| !missing.contains(target))
         .collect();
+    let attribute_types = crate::validate::attribute_types(tx, registry, &external).await?;
     let set = VersionSet {
         objects: vec![VersionObject {
             kind: kind.name(),
@@ -99,6 +100,7 @@ pub async fn publish(
             schema_version: u32::try_from(schema_version).unwrap_or(0),
         }],
         external,
+        attribute_types,
     };
     validate_publish(&set, registry, cross).map_err(|issues| publish_error(&issues))?;
 
@@ -166,7 +168,7 @@ pub async fn published_set(pool: &DbPool, registry: &KindRegistry) -> Result<Ver
         .collect();
     Ok(VersionSet {
         objects,
-        external: BTreeSet::new(),
+        ..VersionSet::default()
     })
 }
 

@@ -31,6 +31,7 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::RecordTypeKind),
         Arc::new(attome_model::kinds::FlowTemplateKind),
         Arc::new(attome_model::kinds::ComponentKind),
+        Arc::new(attome_model::kinds::RecordTemplateKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));
@@ -43,6 +44,12 @@ pub fn registry() -> &'static KindRegistry {
     static KINDS: OnceLock<KindRegistry> = OnceLock::new();
     KINDS.get_or_init(|| {
         let mut registry = KindRegistry::default();
+        // B8-T1: kinds check values against their attributes' field types.
+        registry.set_attribute_type_name(|code| {
+            attome_core::FieldType::from_int(code)
+                .unwrap_or(attome_core::FieldType::Text)
+                .as_str()
+        });
         for kind in registered_kinds() {
             if let Err(error) = registry.register(kind) {
                 tracing::error!(%error, "metadata kind registered twice; the second is ignored");

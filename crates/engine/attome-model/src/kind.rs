@@ -50,6 +50,12 @@ pub struct Reference {
 pub trait ValidationCtx {
     /// Whether `target` exists (in the version being checked).
     fn exists(&self, target: &ObjectRef) -> bool;
+
+    /// B8-T1: an attribute's field type (`text`, `number`, `lookup`, ...),
+    /// when the context knows it; `None` skips type checks.
+    fn attribute_type(&self, _attribute: &ObjectRef) -> Option<String> {
+        None
+    }
 }
 
 /// One object handed to the cooker.

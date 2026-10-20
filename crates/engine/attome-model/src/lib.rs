@@ -46,6 +46,11 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 30;
 #[derive(Default, Clone)]
 pub struct KindRegistry {
     kinds: BTreeMap<&'static str, Arc<dyn Kind>>,
+    /// B8-T1: names an `attribute_info."type"` code (`text`, `lookup`, ...).
+    /// Set by the crate that owns the field types (attome-core sits above
+    /// this one); without it, attribute types are unknown and type checks
+    /// are skipped.
+    attribute_type_name: Option<fn(i32) -> &'static str>,
 }
 
 impl std::fmt::Debug for KindRegistry {
@@ -83,5 +88,15 @@ impl KindRegistry {
     /// Whether no kind is registered.
     pub fn is_empty(&self) -> bool {
         self.kinds.is_empty()
+    }
+
+    /// B8-T1: how an `attribute_info."type"` code is named.
+    pub fn set_attribute_type_name(&mut self, name: fn(i32) -> &'static str) {
+        self.attribute_type_name = Some(name);
+    }
+
+    /// The field type name of an `attribute_info."type"` code, when known.
+    pub fn attribute_type_name(&self, code: i32) -> Option<&'static str> {
+        self.attribute_type_name.map(|name| name(code))
     }
 }

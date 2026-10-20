@@ -141,6 +141,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   with any assignment strategy and reports how they would have been spread, against who got them.
 - Component manifests (T3-T3): a `component` metadata kind holds a custom element's tag, its module
   inside a published package, typed properties set by the builder or bound by the host, and its events.
+- Record templates (B8-T1): a `record_template` kind holds fixed, expression or prompted values, child
+  templates and a condition. Saving and publishing now check a value against its attribute's field type.
 - MFA done at the identity provider counts (Q2-T2): an `oidc.providers` entry gains `mfa_acr_values`
   (the `amr` entries or `acr` value that mean MFA, as the provider presets list them) and
   `trust_idp_mfa` (default `true`). When a verified ID token carries one of the values, the session

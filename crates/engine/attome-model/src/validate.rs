@@ -52,7 +52,60 @@ pub fn validate_save_with(kind: &dyn Kind, doc: &Value, ctx: &dyn ValidationCtx)
     issues
 }
 
-/// Step two: as [`validate_save_with`], looking the references up in `tx`.
+/// B8-T1: [`KnownObjects`] plus the field types of the attributes among
+/// them, so a kind can check a value against its attribute.
+#[derive(Debug, Default, Clone)]
+pub struct TypedObjects {
+    pub known: KnownObjects,
+    pub attribute_types: std::collections::BTreeMap<ObjectRef, String>,
+}
+
+impl ValidationCtx for TypedObjects {
+    fn exists(&self, target: &ObjectRef) -> bool {
+        self.known.exists(target)
+    }
+
+    fn attribute_type(&self, attribute: &ObjectRef) -> Option<String> {
+        self.attribute_types.get(attribute).cloned()
+    }
+}
+
+/// The field types of the attribute targets in `targets`.
+pub(crate) async fn attribute_types(
+    tx: &mut Tx<'_>,
+    registry: &KindRegistry,
+    targets: &BTreeSet<ObjectRef>,
+) -> Result<std::collections::BTreeMap<ObjectRef, String>, AppError> {
+    let ids: Vec<uuid::Uuid> = targets
+        .iter()
+        .filter(|t| t.kind == crate::kinds::ATTRIBUTE)
+        .map(|t| t.id.0)
+        .collect();
+    if ids.is_empty() || registry.attribute_type_name(0).is_none() {
+        return Ok(Default::default());
+    }
+    let rows: Vec<(uuid::Uuid, Option<i32>)> =
+        sqlx::query_as("SELECT id, \"type\" FROM attribute_info WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(id, code)| {
+            Some((
+                ObjectRef {
+                    kind: crate::kinds::ATTRIBUTE,
+                    id: ObjectId(id),
+                },
+                registry.attribute_type_name(code?)?.to_owned(),
+            ))
+        })
+        .collect())
+}
+
+/// Step two: as [`validate_save_with`], looking the references (and the
+/// field types of referenced attributes) up in `tx`.
 pub async fn validate_save(
     tx: &mut Tx<'_>,
     registry: &KindRegistry,
@@ -61,13 +114,17 @@ pub async fn validate_save(
 ) -> Result<Vec<Issue>, AppError> {
     let refs = kind.references(doc);
     let missing = crate::references::missing_targets(tx, registry, &refs).await?;
-    let known = KnownObjects(
-        refs.iter()
-            .map(|r| r.target)
-            .filter(|target| !missing.contains(target))
-            .collect(),
-    );
-    Ok(validate_save_with(kind, doc, &known))
+    let known: BTreeSet<ObjectRef> = refs
+        .iter()
+        .map(|r| r.target)
+        .filter(|target| !missing.contains(target))
+        .collect();
+    let attribute_types = attribute_types(tx, registry, &known).await?;
+    let ctx = TypedObjects {
+        known: KnownObjects(known),
+        attribute_types,
+    };
+    Ok(validate_save_with(kind, doc, &ctx))
 }
 
 /// One object of a version being published.
@@ -87,16 +144,21 @@ pub struct VersionObject {
 pub struct VersionSet {
     pub objects: Vec<VersionObject>,
     pub external: BTreeSet<ObjectRef>,
+    /// B8-T1: the field types of the external attributes, when known.
+    pub attribute_types: std::collections::BTreeMap<ObjectRef, String>,
 }
 
 impl VersionSet {
-    fn known(&self) -> KnownObjects {
+    fn known(&self) -> TypedObjects {
         let mut known = self.external.clone();
         known.extend(self.objects.iter().map(|o| ObjectRef {
             kind: o.kind,
             id: o.id,
         }));
-        KnownObjects(known)
+        TypedObjects {
+            known: KnownObjects(known),
+            attribute_types: self.attribute_types.clone(),
+        }
     }
 }
 
@@ -286,7 +348,7 @@ mod tests {
         second.doc["uses"] = json!([first.id.to_string()]);
         let set = VersionSet {
             objects: vec![first, second],
-            external: BTreeSet::new(),
+            ..VersionSet::default()
         };
         let cross = CrossChecks(vec![Arc::new(NoDuplicateTitles)]);
         let issues = validate_publish(&set, &registry(), &cross).unwrap_err();
