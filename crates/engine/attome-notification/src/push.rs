@@ -299,6 +299,33 @@ struct Address {
     auth: Option<String>,
 }
 
+/// B19-T2: a Web Push message in the shape the Angular service worker shows:
+/// a `notification` with the title, body and app icon, which opens `route` in
+/// the app (or focuses it) when tapped, and carries `route` for the app itself
+/// when it is open. A route that is not an app path opens the app's start.
+/// Pure.
+pub fn web_payload(msg: &PushMessage) -> Value {
+    let route = msg
+        .route
+        .as_deref()
+        .filter(|r| r.starts_with('/') && !r.starts_with("//"))
+        .unwrap_or("/");
+    json!({
+        "notification": {
+            "title": msg.title,
+            "body": msg.body,
+            "icon": "/icons/icon-192.png",
+            "badge": "/icons/icon-192.png",
+            "data": {
+                "route": route,
+                "onActionClick": {
+                    "default": { "operation": "navigateLastFocusedOrOpen", "url": route }
+                }
+            }
+        }
+    })
+}
+
 async fn send_web(p: &Provider, a: &Address, msg: &PushMessage) -> Result<(u16, String), AppError> {
     let ua_public = URL_SAFE_NO_PAD
         .decode(
@@ -311,14 +338,14 @@ async fn send_web(p: &Provider, a: &Address, msg: &PushMessage) -> Result<(u16, 
     let auth = URL_SAFE_NO_PAD
         .decode(a.auth.as_deref().unwrap_or_default().trim_end_matches('='))
         .map_err(|_| AppError::Validation("push: bad subscription secret".into()))?;
-    let mut payload = serde_json::to_vec(msg).map_err(AppError::internal)?;
+    let mut payload = serde_json::to_vec(&web_payload(msg)).map_err(AppError::internal)?;
     if payload.len() > MAX_WEB_PAYLOAD {
-        payload = serde_json::to_vec(&PushMessage {
+        let short = PushMessage {
             title: msg.title.chars().take(200).collect(),
             body: msg.body.chars().take(1000).collect(),
             route: msg.route.clone(),
-        })
-        .map_err(AppError::internal)?;
+        };
+        payload = serde_json::to_vec(&web_payload(&short)).map_err(AppError::internal)?;
     }
     let body = encrypt_web_push(&payload, &ua_public, &auth)?;
     let key = es256_key(&p.secret)?;
@@ -789,6 +816,29 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_web_push_opens_its_route_in_the_app() {
+        let msg = PushMessage {
+            title: "Ticket 42".into(),
+            body: "updated".into(),
+            route: Some("/xrm/entity/ticket/form/42".into()),
+        };
+        let payload = web_payload(&msg);
+        assert_eq!(payload["notification"]["title"], "Ticket 42");
+        assert_eq!(
+            payload["notification"]["data"]["onActionClick"]["default"]["url"],
+            "/xrm/entity/ticket/form/42"
+        );
+        let elsewhere = PushMessage {
+            route: Some("//evil.example".into()),
+            ..msg
+        };
+        assert_eq!(
+            web_payload(&elsewhere)["notification"]["data"]["route"],
+            "/"
+        );
+    }
 
     /// The browser's side of RFC 8291: decrypts what [`encrypt_web_push`]
     /// produced, with the browser's private key.

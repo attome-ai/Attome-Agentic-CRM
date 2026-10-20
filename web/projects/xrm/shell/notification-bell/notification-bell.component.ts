@@ -1,10 +1,11 @@
 import { DOCUMENT } from '@angular/common';
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, OnInit, signal,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, OnInit, signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { ApiService, TranslatePipe, LiveChannel } from '@attome/base';
+import { WebPushService } from '../services/web-push.service';
 import {
   EMPTY, Observable, catchError, distinctUntilChanged, fromEvent, map, of, repeat, startWith, switchMap, tap, timer,
 } from 'rxjs';
@@ -121,12 +122,35 @@ export class NotificationBellComponent implements OnInit {
   private readonly document   = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly live       = inject(LiveChannel);
+  /** B19-T2: browser push and the installed app's badge. */
+  readonly push               = inject(WebPushService);
+  readonly pushMessage        = signal<string | null>(null);
 
   readonly notifications = signal<XrmNotif[]>([]);
   readonly unreadCount   = signal(0);
   readonly isOpen        = signal(false);
   /** J11-T2: the notifications by kind and record. */
   readonly groups        = computed(() => groupNotifications(this.notifications()));
+
+  constructor() {
+    // B19-T2: the installed app's icon shows the unread count.
+    effect(() => this.push.setBadge(this.unreadCount()));
+    this.push.watchClicks();
+  }
+
+  /** B19-T2: turns browser notifications on or off for this browser. */
+  async togglePush(): Promise<void> {
+    this.pushMessage.set(null);
+    try {
+      if (this.push.enabled()) {
+        await this.push.disable();
+      } else {
+        this.pushMessage.set(await this.push.enable() ? 'webPush.on' : 'webPush.refused');
+      }
+    } catch {
+      this.pushMessage.set('webPush.refused');
+    }
+  }
 
   /** Polls that failed since the last success; drives `notificationPollDelay`. */
   private consecutiveFailures = 0;

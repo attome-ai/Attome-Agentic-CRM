@@ -35,7 +35,8 @@ export const appConfig: ApplicationConfig = {
     // B19-T1: the installable app. The service worker caches the shell and
     // hash-named render plans, fetches a new version in the background and
     // applies it on the next open (or a reload from the update notice).
-    provideServiceWorker('ngsw-worker.js', {
+    // B19-T2: sw.js adds the share target to Angular's worker (ngsw-worker.js).
+    provideServiceWorker('sw.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),

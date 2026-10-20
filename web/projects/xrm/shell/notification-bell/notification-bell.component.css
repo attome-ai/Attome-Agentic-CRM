@@ -109,3 +109,13 @@
   font-size: 11px;
   color: var(--color-text-secondary);
 }
+
+/* B19-T2: the browser notifications toggle under the list. */
+.panel-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-block: 8px;
+  padding-inline: 12px;
+  border-block-start: 1px solid var(--color-border, #334155);
+}

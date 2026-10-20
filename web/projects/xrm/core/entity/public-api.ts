@@ -26,6 +26,7 @@ export type {
 // dedicated-join-table subgrid need two different mechanisms.
 export { RelationshipGridComponent }  from './relationship-grid/relationship-grid.component';
 export { DocumentFolderBrowserComponent } from './document-folder/document-folder-browser.component';
+export { ShareTargetComponent } from './share-target/share-target.component';
 export { CommunicationsPanelComponent } from './communications/communications-panel.component';
 export { NotesPanelComponent }          from './notes/notes-panel.component';
 // U4 (D-602) — "Remind me" on the record form header.

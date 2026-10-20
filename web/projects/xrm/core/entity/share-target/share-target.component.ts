@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService, TranslatePipe } from '@attome/base';
-import { EntityService, FileUploadService, UploadPipeline } from '@attome/xrm/core/entity';
+import { FileUploadService } from '../field/file-upload.service';
+import { UploadPipeline } from '../field/upload-pipeline';
+import { EntityService } from '../services/entity.service';
 import { firstValueFrom } from 'rxjs';
 
 /** What the service worker (`src/sw.js`) kept from a share. */

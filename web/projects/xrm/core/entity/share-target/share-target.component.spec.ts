@@ -2,7 +2,9 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService, LangService } from '@attome/base';
-import { EntityService, FileUploadService, UploadPipeline } from '@attome/xrm/core/entity';
+import { FileUploadService } from '../field/file-upload.service';
+import { UploadPipeline } from '../field/upload-pipeline';
+import { EntityService } from '../services/entity.service';
 import { of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

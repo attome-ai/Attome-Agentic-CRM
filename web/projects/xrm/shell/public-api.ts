@@ -2,6 +2,7 @@ export { ShellComponent }             from './shell/shell.component';
 export { DashboardComponent }         from './dashboard/dashboard.component';
 export { MyJobsComponent }            from './my-jobs/my-jobs.component';
 export type { MyJob }                 from './my-jobs/my-jobs.component';
+export { WebPushService }             from './services/web-push.service';
 export { ModuleComingSoonComponent }  from './module-coming-soon/module-coming-soon.component';
 // B11-T2 — the signed-in person's own settings, applied live.
 export { PersonalSettingsPageComponent } from './settings/personal-settings-page.component';

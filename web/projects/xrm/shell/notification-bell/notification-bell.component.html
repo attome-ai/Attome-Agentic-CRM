@@ -50,4 +50,14 @@
       }
     }
   </div>
+  @if (push.supported) {
+    <div class="panel-footer">
+      <button class="panel-action" type="button" (click)="togglePush()" data-push-toggle>
+        {{ (push.enabled() ? 'webPush.disable' : 'webPush.enable') | translate }}
+      </button>
+      @if (pushMessage(); as m) {
+        <small role="status">{{ m | translate }}</small>
+      }
+    </div>
+  }
 </div>
