@@ -47,7 +47,7 @@ connector's own settings, and never from a request. There is no global allow-lis
 | Document rendering | the render sidecar | `docgen.render_service_url`'s host |
 | Asterisk calls and recordings | the customer's PBX | that connector's `base_url` host |
 | Fleet console (development builds) | customer servers | loopback only |
-| `attome status`, `attome secrets`, `attome model` | the operator's own server | the server named on the command line |
+| `attome status`, `attome status-page`, `attome secrets`, `attome model` | the operator's own server | the server named on the command line |
 | Twilio, SMS, push, video meetings, mailbox sync, Gmail, Microsoft Graph, Meta, Google reviews, ZATCA | the vendor's API | none |
 | Webhooks, workflow webhook steps, REST connectors, the web crawler, payment gateways | an address an administrator or user supplied | none |
 

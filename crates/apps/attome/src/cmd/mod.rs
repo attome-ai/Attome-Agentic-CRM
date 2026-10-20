@@ -15,5 +15,6 @@ pub mod service;
 pub mod sizing;
 pub mod sovereignty;
 pub mod status;
+pub mod status_page;
 pub mod verify_audit_chain;
 pub mod worker;

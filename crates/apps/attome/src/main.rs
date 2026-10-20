@@ -49,6 +49,9 @@ Usage:
   attome status [--url <url>]...
                                 Each node's version, schema, and whether it has
                                 started and is ready
+  attome status-page --url <server> --out <dir>
+                                Write a server's public status page as static
+                                HTML and JSON into a directory
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
@@ -148,6 +151,10 @@ fn main() -> ExitCode {
         ["runbook", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::runbook::run(&rest)
+        }
+        ["status-page", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::status_page::run(&rest)
         }
         ["status", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

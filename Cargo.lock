@@ -2042,6 +2042,7 @@ dependencies = [
  "axum",
  "chrono",
  "chrono-tz",
+ "object_store",
  "serde",
  "serde_json",
  "sqlx",

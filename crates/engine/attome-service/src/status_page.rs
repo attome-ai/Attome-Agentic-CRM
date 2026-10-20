@@ -23,7 +23,8 @@
 //!   with `notify_subscribers` set and not yet sent, emails every confirmed
 //!   subscriber in their language and stamps `notified_at`, so an update is
 //!   sent once. Notices go by email directly: the routed notify API (M15)
-//!   is not built.
+//!   is not built. The same job writes the static copy of the page
+//!   (H8-T2, [`crate::status_static`]) when any status record changed.
 
 use std::sync::Mutex;
 use std::time::Instant;
@@ -82,7 +83,7 @@ pub fn overall<'a>(statuses: impl IntoIterator<Item = &'a str>) -> &'static str 
 }
 
 /// One component.
-#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StatusComponent {
     pub id: Uuid,
     pub name: String,
@@ -91,14 +92,14 @@ pub struct StatusComponent {
 }
 
 /// A group of components.
-#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StatusGroup {
     pub name: Option<String>,
     pub components: Vec<StatusComponent>,
 }
 
 /// One update.
-#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StatusUpdate {
     pub status: Option<String>,
     pub body: String,
@@ -107,7 +108,7 @@ pub struct StatusUpdate {
 }
 
 /// An incident or maintenance.
-#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StatusEvent {
     pub id: Uuid,
     pub title: String,
@@ -121,7 +122,7 @@ pub struct StatusEvent {
 }
 
 /// The public page.
-#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StatusPage {
     pub overall: String,
     pub groups: Vec<StatusGroup>,
@@ -772,6 +773,13 @@ pub async fn notify_tick(state: &EngineState) -> Result<usize, AppError> {
         return Ok(0);
     };
     let mut sent = 0;
+    // H8-T2: any status record changed, so the static page is out of date.
+    if events.iter().any(|e| {
+        e.entity_logicalname.starts_with("status_") && e.entity_logicalname != "status_subscriber"
+    }) && let Err(error) = crate::status_static::publish(state).await
+    {
+        tracing::warn!(%error, "status page: the static copy was not written");
+    }
     for event in events
         .iter()
         .filter(|e| e.entity_logicalname == "status_update" && e.operation == "create")

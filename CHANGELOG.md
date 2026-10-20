@@ -1150,6 +1150,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   transaction, store each line total and the deal's one-time, recurring and contract totals and amount,
   and recalculate the stored split amounts. A product must be on the deal's price list in its currency
   (`product_not_on_price_list`). `opportunity_line` and the deal totals are now engine-managed.
+- Static status page (H8-T2): when a status record changes, the status notice job writes the public
+  status page as one static bilingual `status-page/index.html` (and `status-page/status.json`) to the
+  object store, for a bucket or static host. `attome status-page --url <server> --out <dir>` writes the
+  same files from a server's public `GET /api/v1/status` into a directory on another host.
 - Work order invoicing (I1-T2, field-service pack `0004`): when a work order is completed, each line is
   split into what its entitlement covers and what is billable (a warranty by its term's parts and labour
   percent, an hours entitlement from the hours left, a cases entitlement with one case; contracts never
