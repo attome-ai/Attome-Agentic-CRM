@@ -102,10 +102,18 @@ pub enum NodeType {
     /// `territory`), falling back to a queue when nobody fits; see
     /// `crate::assign` and `scheduler::execute_assign`.
     Assign,
+    /// E8-T1/E8-T2: a step another engine contributes through
+    /// `attome_core::workflow_step` (a journey's send email, wait for a
+    /// reply, update a list). `config.handler` names the registered handler
+    /// and `config.config` is its own configuration, checked by the handler
+    /// at publish. Its effect is the handler's, unknown here, so it is
+    /// classified as the most conservative step: an external effect behind
+    /// the fired-marker mechanism.
+    ModuleStep,
 }
 
 impl NodeType {
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -123,6 +131,7 @@ impl NodeType {
         Self::RestoreRecord,
         Self::DuplicateCheck,
         Self::Assign,
+        Self::ModuleStep,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -144,6 +153,7 @@ impl NodeType {
             Self::RestoreRecord => "restore_record",
             Self::DuplicateCheck => "duplicate_check",
             Self::Assign => "assign",
+            Self::ModuleStep => "module_step",
         }
     }
 
@@ -185,7 +195,7 @@ impl NodeType {
             // same shape as a notification or a webhook call, and checked
             // against `fired_side_effects` before firing for the same
             // reason: a crash-replay must not open a second session.
-            Self::SendNotification | Self::Webhook | Self::AgentStep => {
+            Self::SendNotification | Self::Webhook | Self::AgentStep | Self::ModuleStep => {
                 SideEffect::FiredSideEffectsMarker
             }
             // `Route` reads and classifies only — `route.classify` is
@@ -264,6 +274,7 @@ impl NodeType {
             Self::RestoreRecord => &[("record_id", PortType::RecordId, true)],
             Self::DuplicateCheck => &[("record_id", PortType::RecordId, true)],
             Self::Assign => &[("record_id", PortType::RecordId, true)],
+            Self::ModuleStep => &[("input", PortType::Json, false)],
         }
     }
 
@@ -315,6 +326,7 @@ impl NodeType {
             Self::RestoreRecord => &[("record", PortType::RecordId)],
             Self::DuplicateCheck => &[("found", PortType::Json), ("none", PortType::Json)],
             Self::Assign => &[("record", PortType::RecordId)],
+            Self::ModuleStep => &[("output", PortType::Json)],
         }
     }
 
@@ -399,7 +411,7 @@ impl NodeType {
             // deterministically does — the same reasoning I-7's air-gap gate
             // uses for anything that leaves a bounded, reviewable path.
             // `RequiresKey`: never blindly replay starting a session.
-            Self::AgentStep => NodeCapability {
+            Self::AgentStep | Self::ModuleStep => NodeCapability {
                 risk: RiskTier::Consequential,
                 effect: Effect::External,
                 retry: RetryClass::RequiresKey,
@@ -735,6 +747,7 @@ mod tests {
             NodeType::SendNotification,
             NodeType::Webhook,
             NodeType::AgentStep,
+            NodeType::ModuleStep,
         ] {
             assert_ne!(t.side_effect(), SideEffect::None, "{t}");
         }
@@ -849,7 +862,7 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 17, "the node set is closed (I-5)");
+        assert_eq!(NodeType::ALL.len(), 18, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type

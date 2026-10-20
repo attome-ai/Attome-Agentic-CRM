@@ -414,6 +414,18 @@ fn simulate_node(
         NodeType::SubWorkflow => simulate_sub_workflow(node),
         NodeType::AgentStep => simulate_agent_step(node, input),
         NodeType::Route => Ok(simulate_route(node, approval_decisions)),
+        // E8-T2: a dry run checks the step's handler and configuration and
+        // runs nothing (this pass is synchronous; the handler is not).
+        NodeType::ModuleStep => {
+            let handler = scheduler::module_step_handler(state, node)?;
+            handler
+                .validate_config(node.config.get("config").unwrap_or(&Value::Null))
+                .map_err(AppError::Validation)?;
+            Ok(SimOutcome::Succeeded {
+                output: Value::Null,
+                would_have: Some(format!("would run module step {}", handler.key())),
+            })
+        }
     }
 }
 

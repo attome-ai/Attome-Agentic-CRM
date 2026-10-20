@@ -190,6 +190,10 @@ enum NodeOutcome {
         /// a resume path (sla_sweep, signal) only has to flip status.
         eventual_output: Value,
     },
+    /// E8-T2: a module step ended the instance (`StepOutcome::Exit`).
+    Exit {
+        reason: String,
+    },
 }
 
 /// Drives `instance_id` in-memory until a checkpoint, then persists it in
@@ -324,6 +328,14 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
 
     let mut pending_waits: Vec<PendingWait> = Vec::new();
     let mut instance_failed = false;
+    // E8-T2: a module step's exit or the kind guard ends the instance.
+    let mut instance_cancelled = false;
+    let guard = kind_guard(state, instance.definition_version_id).await?;
+    let correlation = if guard.is_some() {
+        correlation_of(state, instance_id).await?
+    } else {
+        None
+    };
     let mut iterations = 0usize;
 
     'pass: loop {
@@ -354,6 +366,16 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
             // never a panic that takes the apalis worker task with it.
             let node_type = NodeType::parse(&node.node_type);
             let cacheable = node_type.is_some_and(NodeType::is_cacheable);
+
+            if let Some(guard) = &guard
+                && let Some(reason) = guard
+                    .before_node(state, instance_id, correlation, &node_id)
+                    .await?
+            {
+                node_data.insert("exit_reason".into(), Value::String(reason));
+                instance_cancelled = true;
+                break 'pass;
+            }
 
             let input = resolve_input(&graph, node, &node_data);
             let entry = node_runs
@@ -433,6 +455,15 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
                         resume_at,
                     });
                 }
+                Ok(NodeOutcome::Exit { reason }) => {
+                    let entry = node_runs.get_mut(&node_id).expect(NODE_RUN_ENTRY_INVARIANT);
+                    entry.status = "succeeded".into();
+                    entry.completed_at = Some(Utc::now());
+                    entry.output = Some(serde_json::json!({ "exit": reason }));
+                    node_data.insert("exit_reason".into(), Value::String(reason));
+                    instance_cancelled = true;
+                    break 'pass;
+                }
                 Err(e) => {
                     let max_attempts = node
                         .config
@@ -499,7 +530,9 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
     // redelivery this function's own doc comment promises to tolerate.
     let waiting_on_an_earlier_pass = node_runs.values().any(|nr| nr.status == "waiting");
 
-    let new_status = if instance_failed {
+    let new_status = if instance_cancelled {
+        "cancelled"
+    } else if instance_failed {
         "failed"
     } else if !pending_waits.is_empty() || waiting_on_an_earlier_pass {
         "waiting"
@@ -1370,7 +1403,155 @@ async fn execute_node(
         }),
         NodeType::AgentStep => execute_agent_step(state, ctx, node, input, fired, round).await,
         NodeType::Route => execute_route(state, ctx, node, input).await,
+        NodeType::ModuleStep => {
+            execute_module_step(state, instance, node, input, fired, round).await
+        }
     }
+}
+
+/// The instance's correlated record, for module steps and kind guards.
+async fn correlation_of(state: &EngineState, instance_id: Uuid) -> Result<Option<Uuid>, AppError> {
+    Ok(sqlx::query_scalar::<_, Option<Uuid>>(
+        "SELECT correlation_entity_id FROM workflow_instance WHERE id = $1",
+    )
+    .bind(instance_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .flatten())
+}
+
+/// E8-T2: the registered handler for a module step, when its module is
+/// licensed.
+pub(crate) fn module_step_handler<'a>(
+    state: &'a EngineState,
+    node: &GraphNode,
+) -> Result<&'a std::sync::Arc<dyn attome_core::workflow_step::WorkflowStepHandler>, AppError> {
+    let key = node
+        .config
+        .get("handler")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            AppError::Validation(format!("module step {:?} names no handler", node.id))
+        })?;
+    let handler = state.workflow_step_handlers.get(key).ok_or_else(|| {
+        AppError::Validation(format!(
+            "module step {:?} names handler {key:?}, which no engine registered",
+            node.id
+        ))
+    })?;
+    if !state.modules.load().has(handler.module_id()) {
+        return Err(AppError::Validation(format!(
+            "module step {:?}: handler {key:?} needs a module this deployment is not licensed for",
+            node.id
+        )));
+    }
+    Ok(handler)
+}
+
+/// E8-T2: runs a module step through its registered handler and maps its
+/// outcome. A finished step is fired-marked, so a crash replay does not run
+/// it twice; a timed wait runs the handler again when due, and an event
+/// wait completes the node when the event arrives (as `WaitForEvent` does); a block either passes on (`continue_after`) or waits
+/// `config.retry_after_seconds` (an hour by default); an exit ends the
+/// instance.
+async fn execute_module_step(
+    state: &EngineState,
+    instance: &InstanceRow,
+    node: &GraphNode,
+    input: &Value,
+    fired: &mut HashSet<String>,
+    round: i32,
+) -> Result<NodeOutcome, AppError> {
+    if fired.contains(&fired_key(&node.id, round)) {
+        return Ok(NodeOutcome::Succeeded {
+            output: serde_json::json!({ "skipped_replay": true }),
+        });
+    }
+    let handler = module_step_handler(state, node)?;
+    let invocation = attome_core::workflow_step::StepInvocation {
+        instance_id: instance.id,
+        node_id: node.id.clone(),
+        correlation_entity_id: correlation_of(state, instance.id).await?,
+        config: node.config.get("config").cloned().unwrap_or(Value::Null),
+        input: input.get("input").cloned().unwrap_or(Value::Null),
+        simulate: false,
+    };
+    use attome_core::workflow_step::StepOutcome;
+    Ok(match handler.run(state, invocation).await? {
+        StepOutcome::Done(output) => {
+            fired.insert(fired_key(&node.id, round));
+            NodeOutcome::Succeeded { output }
+        }
+        StepOutcome::Waiting {
+            resume_at,
+            wait_event,
+        } => match wait_event {
+            Some(event) => NodeOutcome::Waiting {
+                match_type: "entity_event",
+                entity_logicalname: None,
+                condition: Some(serde_json::json!({ "event": event })),
+                resume_at,
+                eventual_output: serde_json::json!({ "waited_for": event }),
+            },
+            // A timed wait runs the handler again when it is due (the
+            // retry wait re-executes the node rather than replaying it).
+            None => NodeOutcome::Waiting {
+                match_type: "schedule",
+                entity_logicalname: None,
+                condition: Some(serde_json::json!({ "kind": "retry" })),
+                resume_at: resume_at.or_else(|| Some(Utc::now())),
+                eventual_output: serde_json::json!({ "waited": true }),
+            },
+        },
+        StepOutcome::Blocked {
+            reason,
+            continue_after: true,
+        } => {
+            fired.insert(fired_key(&node.id, round));
+            NodeOutcome::Succeeded {
+                output: serde_json::json!({ "blocked": reason }),
+            }
+        }
+        StepOutcome::Blocked {
+            reason,
+            continue_after: false,
+        } => {
+            let seconds = node
+                .config
+                .get("retry_after_seconds")
+                .and_then(Value::as_i64)
+                .unwrap_or(3600)
+                .clamp(60, 30 * 86_400);
+            NodeOutcome::Waiting {
+                match_type: "schedule",
+                entity_logicalname: None,
+                condition: Some(serde_json::json!({ "kind": "retry" })),
+                resume_at: Some(Utc::now() + chrono::Duration::seconds(seconds)),
+                eventual_output: serde_json::json!({ "blocked": reason }),
+            }
+        }
+        StepOutcome::Exit { reason } => NodeOutcome::Exit { reason },
+    })
+}
+
+/// E8-T2: the guard of the instance's definition kind, if one is registered.
+async fn kind_guard(
+    state: &EngineState,
+    definition_version_id: Uuid,
+) -> Result<Option<std::sync::Arc<dyn attome_core::workflow_step::WorkflowKindGuard>>, AppError> {
+    if state.workflow_kind_guards.is_empty() {
+        return Ok(None);
+    }
+    let kind: Option<String> = sqlx::query_scalar(
+        "SELECT d.kind FROM workflow_definition d \
+           JOIN workflow_definition_version v ON v.definition_id = d.id WHERE v.id = $1",
+    )
+    .bind(definition_version_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(kind.and_then(|k| state.workflow_kind_guards.get(k.as_str()).cloned()))
 }
 
 pub(crate) fn eval_condition(config: &Value, value: &Value) -> bool {

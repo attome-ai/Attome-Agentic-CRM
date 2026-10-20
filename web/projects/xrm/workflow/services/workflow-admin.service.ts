@@ -141,6 +141,9 @@ export const NODE_TYPES: NodeTypeSpec[] = [
   { type: 'assign', label: 'Assign Owner',
     inputs: [{ name: 'record_id', portType: 'record_id', required: true }],
     outputs: [{ name: 'record', portType: 'record_id' }] },
+  // E8-T2: a step another module contributes (a journey's send email).
+  { type: 'module_step', label: 'Module Step', inputs: [{ name: 'input', portType: 'json' }],
+    outputs: [{ name: 'output', portType: 'json' }] },
 ];
 
 export function nodeTypeSpec(type: string): NodeTypeSpec | undefined {
@@ -330,6 +333,13 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
     { key: 'url', label: 'URL', kind: 'text', required: true },
     { key: 'method', label: 'Method', kind: 'select', default: 'POST',
       options: ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'].map(m => ({ value: m, label: m })) },
+  ],
+  // scheduler::execute_module_step (E8-T2)
+  module_step: [
+    { key: 'handler', label: 'Step', kind: 'text', required: true,
+      hint: 'The registered step key, such as marketing.send_email.' },
+    { key: 'config', label: 'Step settings', kind: 'json' },
+    { key: 'retry_after_seconds', label: 'Retry a blocked step after (seconds)', kind: 'number', default: 3600 },
   ],
   // scheduler::join_mode_and_threshold
   join: [

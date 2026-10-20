@@ -948,6 +948,28 @@ async fn publish_version(
         .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
     let schema_hash = crate::graph::validate(&graph)
         .map_err(|e| AppError::Validation(format!("graph validation failed: {e}")))?;
+    // E8-T2: every module step names a registered, licensed handler that
+    // accepts its configuration.
+    for node in &graph.nodes {
+        if crate::node_types::NodeType::parse(&node.node_type)
+            != Some(crate::node_types::NodeType::ModuleStep)
+        {
+            continue;
+        }
+        let handler = crate::scheduler::module_step_handler(&state, node)?;
+        handler
+            .validate_config(
+                node.config
+                    .get("config")
+                    .unwrap_or(&serde_json::Value::Null),
+            )
+            .map_err(|reason| {
+                AppError::Validation(format!(
+                    "graph validation failed: module step {:?}: {reason}",
+                    node.id
+                ))
+            })?;
+    }
 
     // TODO-047 / M32 Phase 1 (D-450): publish-time escalation validation.
     // `escalation::validate` existed as a pure, fully-tested module before

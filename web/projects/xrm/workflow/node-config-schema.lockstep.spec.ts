@@ -28,6 +28,8 @@ const EXECUTOR_TO_NODE_TYPE: Record<string, string[]> = {
   execute_wait_for_event:    ['wait_for_event'],
   execute_sub_workflow:      ['sub_workflow'],
   execute_webhook:           ['webhook'],
+  execute_module_step:       ['module_step'],
+  module_step_handler:       ['module_step'],
   join_mode_and_threshold:   ['join'],
   rebuild_entry_rows:        ['trigger'],
   entry_condition:           ['trigger'],
