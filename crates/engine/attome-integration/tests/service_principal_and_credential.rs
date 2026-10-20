@@ -130,8 +130,13 @@ async fn a_stored_credential_decrypts_correctly_and_is_never_exposed_by_meta() {
         .expect("resolve")
         .expect("credential must resolve");
     assert_eq!(
-        resolved, plaintext,
+        resolved.with_value(str::to_owned),
+        plaintext,
         "decrypted value must round-trip exactly"
+    );
+    assert!(
+        !format!("{resolved:?}").contains(plaintext),
+        "Z1-T10: a sealed credential never prints its value"
     );
 
     let meta = credential::meta(&db, &credential_id.to_string())
@@ -230,7 +235,8 @@ async fn rotate_supersedes_the_previous_credential_rather_than_leaving_two_activ
         credential::resolve(&db, &ring, Some(&second_id.to_string()))
             .await
             .expect("resolve")
-            .expect("must resolve"),
+            .expect("must resolve")
+            .with_value(str::to_owned),
         "second-secret-value"
     );
 }

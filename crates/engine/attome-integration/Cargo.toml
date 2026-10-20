@@ -46,6 +46,7 @@ utoipa.workspace          = true
 url.workspace             = true
 uuid.workspace            = true
 webpki-roots.workspace    = true
+zeroize.workspace         = true
 
 [dev-dependencies]
 attome-testkit.workspace = true

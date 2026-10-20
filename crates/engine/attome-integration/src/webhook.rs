@@ -167,7 +167,7 @@ fn parse_timestamp(raw: &str) -> Option<i64> {
 pub async fn admit(
     redis: &Store,
     system_id: Uuid,
-    credential: &str,
+    credential: &credential::Credential,
     headers: &HeaderMap,
     body: &[u8],
     now_unix: i64,
@@ -192,7 +192,7 @@ pub async fn admit(
     if (now_unix - ts).abs() > TIMESTAMP_WINDOW_SECS {
         return Err(reject(system_id, "stale_timestamp", AppError::Unauthorized));
     }
-    if !verify_hmac(credential, &[raw_ts.as_bytes(), b".", body], &sig) {
+    if !credential.with_value(|c| verify_hmac(c, &[raw_ts.as_bytes(), b".", body], &sig)) {
         return Err(reject(system_id, "bad_signature", AppError::Unauthorized));
     }
 
@@ -346,7 +346,7 @@ async fn handle_webhook(
 async fn land_events(
     state: &EngineState,
     row: &system::IntegrationSystem,
-    credential: &str,
+    credential: &credential::Credential,
     body: &[u8],
     accepted: &mut usize,
 ) -> Result<(), AppError> {
@@ -461,7 +461,15 @@ mod tests {
     }
 
     async fn run(h: &HeaderMap, body: &[u8]) -> Result<Admission, AppError> {
-        admit(&dead_redis(), Uuid::nil(), CRED, h, body, NOW).await
+        admit(
+            &dead_redis(),
+            Uuid::nil(),
+            &credential::Credential::new(CRED.into()),
+            h,
+            body,
+            NOW,
+        )
+        .await
     }
 
     #[test]

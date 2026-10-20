@@ -82,7 +82,7 @@ async fn run_system(
             .await
             .map_err(AppError::internal)?
             .flatten();
-    let (messages, next) = mail::read(&system, credential.as_deref(), cursor.as_deref()).await?;
+    let (messages, next) = mail::read(&system, credential.as_ref(), cursor.as_deref()).await?;
 
     let routing = MailboxRouting::from_config(&mail::config(&system));
     let principal: Uuid = system

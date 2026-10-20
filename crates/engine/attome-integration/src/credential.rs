@@ -81,6 +81,78 @@ pub async fn rotate(
     store(tx, ring, system_id, plaintext).await
 }
 
+/// Z1-T10: a decrypted credential, sealed. No public function returns its
+/// value: it goes into a request ([`Credential::header`],
+/// [`Credential::bearer`], [`Credential::basic`], [`Credential::hmac_sha256_hex`])
+/// or is lent to a closure for the call that needs it (an IMAP login, a
+/// provider's JSON of keys) with [`Credential::with_value`]. The value is
+/// zeroed on drop, and `Debug` never prints it.
+#[derive(Clone)]
+pub struct Credential(zeroize::Zeroizing<String>);
+
+impl std::fmt::Debug for Credential {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Credential([REDACTED])")
+    }
+}
+
+impl Credential {
+    /// Seals a value just decrypted (or, in a test, made up).
+    pub(crate) fn new(value: String) -> Self {
+        Self(zeroize::Zeroizing::new(value))
+    }
+
+    /// A credential from a known value, for tests in other crates.
+    #[doc(hidden)]
+    pub fn for_test(value: &str) -> Self {
+        Self::new(value.to_owned())
+    }
+
+    /// Lends the value to `use_it` for one call; whatever `use_it` returns
+    /// is the caller's. Keep the value inside the closure.
+    pub fn with_value<R>(&self, use_it: impl FnOnce(&str) -> R) -> R {
+        use_it(&self.0)
+    }
+
+    /// The value as the named request header.
+    pub fn header(&self, builder: reqwest::RequestBuilder, name: &str) -> reqwest::RequestBuilder {
+        let mut value = reqwest::header::HeaderValue::from_str(&self.0)
+            .unwrap_or_else(|_| reqwest::header::HeaderValue::from_static(""));
+        value.set_sensitive(true);
+        builder.header(name, value)
+    }
+
+    /// `Authorization: Bearer <value>`.
+    pub fn bearer(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        builder.bearer_auth(&*self.0)
+    }
+
+    /// `Authorization: Basic`, the value being `user:password`.
+    pub fn basic(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match self.0.split_once(':') {
+            Some((user, password)) => builder.basic_auth(user, Some(password)),
+            None => builder.basic_auth(&*self.0, None::<&str>),
+        }
+    }
+
+    /// The HMAC-SHA256 of `message` keyed by the value, as hex.
+    pub fn hmac_sha256_hex(&self, message: &[u8]) -> String {
+        use hmac::{Hmac, Mac};
+        // HMAC takes a key of any length, so this never fails.
+        let Ok(mut mac) = <Hmac<sha2::Sha256> as Mac>::new_from_slice(self.0.as_bytes()) else {
+            return String::new();
+        };
+        mac.update(message);
+        hex::encode(mac.finalize().into_bytes())
+    }
+}
+
+/// The live key ring credentials are sealed under (rotated without a
+/// restart through the secrets reload).
+pub fn ring(state: &attome_core::EngineState) -> KeyRing {
+    state.base.secrets.load().integration_credential_key.clone()
+}
+
 /// Decrypts the current credential for a system, given its
 /// `credential_ref` (the `integration_credential.id` string stored on
 /// the `integration_system` row). `Ok(None)` when the ref is absent or
@@ -90,7 +162,7 @@ pub async fn resolve(
     db: &DbPool,
     ring: &KeyRing,
     credential_ref: Option<&str>,
-) -> Result<Option<String>, AppError> {
+) -> Result<Option<Credential>, AppError> {
     let Some(credential_ref) = credential_ref else {
         return Ok(None);
     };
@@ -106,7 +178,9 @@ pub async fn resolve(
     .await
     .map_err(AppError::internal)?;
     match encrypted {
-        Some(encrypted) => Ok(Some(crypto::decrypt_credential(ring, id, &encrypted)?)),
+        Some(encrypted) => Ok(Some(Credential::new(crypto::decrypt_credential(
+            ring, id, &encrypted,
+        )?))),
         None => Ok(None),
     }
 }
@@ -123,4 +197,16 @@ pub async fn meta(db: &DbPool, credential_ref: &str) -> Result<Option<Credential
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)
+}
+
+/// [`resolve`] for an adapter inside this crate that needs the value itself
+/// (an IMAP login, a provider's JSON of keys, a signing key). Never public.
+pub(crate) async fn resolve_value(
+    db: &DbPool,
+    ring: &KeyRing,
+    credential_ref: Option<&str>,
+) -> Result<Option<String>, AppError> {
+    Ok(resolve(db, ring, credential_ref)
+        .await?
+        .map(|credential| credential.with_value(str::to_owned)))
 }

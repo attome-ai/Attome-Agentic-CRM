@@ -43,10 +43,7 @@ fn valid_kind(s: &str) -> bool {
 }
 
 fn valid_auth_type(s: &str) -> bool {
-    matches!(
-        s,
-        "api_key" | "oauth2_client_credentials" | "basic" | "hmac"
-    )
+    crate::connection::AUTH_TYPES.contains(&s)
 }
 
 // ── Request/response types ──────────────────────────────────────────────────
@@ -144,10 +141,10 @@ async fn create_system(
         )));
     }
     if !valid_auth_type(&body.auth_type) {
-        return Err(AppError::Validation(
-            "auth_type must be one of [\"api_key\", \"oauth2_client_credentials\", \"basic\", \"hmac\"]"
-                .into(),
-        ));
+        return Err(AppError::Validation(format!(
+            "auth_type must be one of {:?}",
+            crate::connection::AUTH_TYPES
+        )));
     }
     if !state.base.config.integration.enabled {
         return Err(AppError::Validation(
@@ -359,7 +356,7 @@ async fn test_connection(
     // over quota gets 429 before any socket is opened.
     let result = guard::outbound(&state.base.redis_coordination, &row, kind)
         .await?
-        .health(&row, credential.as_deref())
+        .health(&row, credential.as_ref())
         .await?;
 
     // Best-effort health status write-back through the generic engine

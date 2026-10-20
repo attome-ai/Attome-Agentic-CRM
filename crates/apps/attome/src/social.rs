@@ -151,11 +151,11 @@ async fn meta_events(
     let system = social::system_by_key(&state, "meta", &key)
         .await?
         .ok_or(AppError::NotFound)?;
-    let secrets = social::secrets(&state, &system).await?;
+    let app_secret = social::sealed_secret(&state, &system, "app_secret").await?;
     let signature = headers
         .get("x-hub-signature-256")
         .and_then(|v| v.to_str().ok());
-    if !meta::signature_ok(social::secret(&secrets, "app_secret")?, &body, signature) {
+    if !app_secret.with_value(|secret| meta::signature_ok(secret, &body, signature)) {
         return Err(AppError::NotFound);
     }
     for message in meta::parse_webhook(&body) {

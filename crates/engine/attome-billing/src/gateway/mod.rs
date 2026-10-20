@@ -430,7 +430,9 @@ pub async fn credential(
     .ok_or_else(|| {
         AppError::Validation(format!("the gateway {} has no credential", system.name))
     })?;
-    Ok(zeroize::Zeroizing::new(secret))
+    // Z1-T10: the gateway adapters sign and authenticate with the value
+    // itself, so it is taken out of the seal here, zeroed on drop.
+    Ok(zeroize::Zeroizing::new(secret.with_value(str::to_owned)))
 }
 
 /// The webhook secret in a gateway credential (its JSON `webhook_secret`).

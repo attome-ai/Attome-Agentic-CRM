@@ -488,8 +488,8 @@ dependencies = [
  "attome-grc",
  "attome-hr",
  "attome-integration",
- "attome-marketing",
  "attome-jobs",
+ "attome-marketing",
  "attome-metadata",
  "attome-metric",
  "attome-model",
@@ -1339,6 +1339,7 @@ dependencies = [
  "utoipa",
  "uuid",
  "webpki-roots 0.26.11",
+ "zeroize",
 ]
 
 [[package]]

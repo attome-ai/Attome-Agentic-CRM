@@ -97,9 +97,10 @@ type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, AppError>> + Send 
 /// Object-safe (boxed-future methods, same shape as `attome_ai::Action`) so
 /// [`connector_for`] can return `&'static dyn Connector`.
 ///
-/// Every method takes `credential` explicitly (the plaintext, already
-/// decrypted by the caller via `crate::credential::resolve` — an adapter
-/// never touches `KeyRing`/DB itself) rather than bundling it onto
+/// Every method takes `credential` explicitly (already decrypted by the
+/// caller via `crate::credential::resolve`, and sealed: Z1-T10's
+/// [`crate::credential::Credential`] goes into a request without its value
+/// being handed out — an adapter never touches `KeyRing`/DB itself) rather than bundling it onto
 /// [`IntegrationSystem`], so the row type stays a plain, freely-loggable
 /// `sqlx::FromRow` shape and the one place a secret can leak is this
 /// parameter list, not a struct field some other code path might `{:?}`.
@@ -111,7 +112,7 @@ pub trait Connector: Send + Sync {
     fn pull<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a crate::credential::Credential>,
         cursor: Option<&'a str>,
     ) -> BoxFuture<'a, PullResult>;
 
@@ -119,7 +120,7 @@ pub trait Connector: Send + Sync {
     fn push<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a crate::credential::Credential>,
         event: &'a Value,
     ) -> BoxFuture<'a, PushResult>;
 
@@ -133,7 +134,7 @@ pub trait Connector: Send + Sync {
     fn webhook<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a crate::credential::Credential>,
         body: &'a [u8],
     ) -> BoxFuture<'a, Vec<WebhookEvent>>;
 
@@ -141,7 +142,7 @@ pub trait Connector: Send + Sync {
     fn health<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a crate::credential::Credential>,
     ) -> BoxFuture<'a, HealthResult>;
 }
 

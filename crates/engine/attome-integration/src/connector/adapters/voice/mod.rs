@@ -132,17 +132,51 @@ pub async fn system_by_key(
 }
 
 /// The system's secret.
-pub async fn credential(
+pub(crate) async fn credential(
     state: &EngineState,
     system: &IntegrationSystem,
 ) -> Result<String, AppError> {
-    crate::credential::resolve(
+    crate::credential::resolve_value(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &crate::credential::ring(state),
         system.credential_ref.as_deref(),
     )
     .await?
     .ok_or_else(|| AppError::Validation(format!("{}: no credential set", system.name)))
+}
+
+/// Z1-T10: the Twilio softphone access token for `identity`, signed with
+/// the voice system's API key secret, so the secret never leaves this
+/// crate. `None` when the credential holds no API key secret.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the token's claims, each one named"
+)]
+pub async fn softphone_token(
+    state: &EngineState,
+    system: &IntegrationSystem,
+    account_sid: &str,
+    api_key_sid: &str,
+    twiml_app_sid: &str,
+    identity: &str,
+    now: i64,
+    ttl_secs: i64,
+) -> Result<Option<String>, AppError> {
+    let secrets = twilio::Secrets::parse(&credential(state, system).await?);
+    let Some(key_secret) = secrets.api_key_secret else {
+        return Ok(None);
+    };
+    twilio::access_token(
+        account_sid,
+        api_key_sid,
+        &key_secret,
+        twiml_app_sid,
+        identity,
+        now,
+        ttl_secs,
+    )
+    .map(Some)
+    .ok_or_else(|| AppError::internal("softphone token could not be signed"))
 }
 
 /// A number as E.164 (`+` and 8 to 15 digits), or none. Pure.

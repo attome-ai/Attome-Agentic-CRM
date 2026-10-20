@@ -13,6 +13,7 @@
 //! 2's sync engine will read from.
 
 pub mod admin;
+pub mod connection;
 pub mod connector;
 pub mod credential;
 mod crypto;

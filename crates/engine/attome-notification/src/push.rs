@@ -248,7 +248,7 @@ async fn provider(state: &EngineState, push: &str) -> Result<Option<Provider>, A
     };
     let secret = attome_integration::credential::resolve(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &attome_integration::credential::ring(state),
         credential_ref.as_deref(),
     )
     .await?;
@@ -256,6 +256,9 @@ async fn provider(state: &EngineState, push: &str) -> Result<Option<Provider>, A
         tracing::warn!(push, "push: provider configured without a credential");
         return Ok(None);
     };
+    // Z1-T10: the push providers sign with the key itself (VAPID, APNs,
+    // FCM's service account), inside this module only.
+    let secret = secret.with_value(str::to_owned);
     let config = config
         .and_then(|c| serde_json::from_str(&c).ok())
         .unwrap_or(Value::Null);

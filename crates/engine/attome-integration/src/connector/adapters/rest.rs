@@ -27,7 +27,9 @@ use std::time::Duration;
 use attome_types::AppError;
 use serde_json::Value;
 
+use crate::connection::Connection;
 use crate::connector::{Connector, HealthResult, PullResult, PushResult, WebhookEvent};
+use crate::credential::Credential;
 use crate::system::IntegrationSystem;
 
 type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, AppError>> + Send + 'a>>;
@@ -40,70 +42,16 @@ const REQUEST_TIMEOUT_SECS: u64 = 15;
 #[derive(Debug)]
 pub struct RestAdapter;
 
-/// Adds the credential to a request per `system.auth_type`. `Err` for
-/// `oauth2_client_credentials` — a real OAuth2 token-exchange flow (fetch,
-/// cache, refresh) is Phase 2/3 scope (M59 plan §4's "Connector templates"
-/// row); Phase 1 supports the three credential shapes that need no token
-/// lifecycle of their own.
+/// Adds the credential to a request per `system.auth_type`, through the
+/// system's [`Connection`] (Z1-T10), which sets it without handing the
+/// value out.
 fn apply_auth(
     builder: reqwest::RequestBuilder,
     system: &IntegrationSystem,
-    credential: Option<&str>,
+    credential: Option<&Credential>,
     body_for_hmac: &[u8],
 ) -> Result<reqwest::RequestBuilder, AppError> {
-    match system.auth_type.as_str() {
-        "api_key" => {
-            let cred = credential.ok_or_else(|| {
-                AppError::Validation(
-                    "system has no credential configured for auth_type = api_key".into(),
-                )
-            })?;
-            Ok(builder.header("X-Api-Key", cred))
-        }
-        "basic" => {
-            let cred = credential.ok_or_else(|| {
-                AppError::Validation(
-                    "system has no credential configured for auth_type = basic".into(),
-                )
-            })?;
-            // `credential` is stored/entered as "user:password" — see
-            // `admin.rs`'s credential endpoint doc.
-            let encoded = base64_encode(cred.as_bytes());
-            Ok(builder.header("Authorization", format!("Basic {encoded}")))
-        }
-        "hmac" => {
-            let cred = credential.ok_or_else(|| {
-                AppError::Validation(
-                    "system has no credential configured for auth_type = hmac".into(),
-                )
-            })?;
-            let sig = hmac_sha256_hex(cred.as_bytes(), body_for_hmac);
-            Ok(builder.header("X-Signature", sig))
-        }
-        "oauth2_client_credentials" => Err(AppError::Validation(
-            "auth_type = oauth2_client_credentials is not implemented in M59 Phase 1".into(),
-        )),
-        other => Err(AppError::internal(format!(
-            "unknown auth_type {other:?} reached the REST adapter — admin.rs should have rejected it"
-        ))),
-    }
-}
-
-fn base64_encode(bytes: &[u8]) -> String {
-    use base64::Engine;
-    base64::engine::general_purpose::STANDARD.encode(bytes)
-}
-
-#[expect(
-    clippy::expect_used,
-    reason = "each expect() here guards an invariant its message states"
-)]
-fn hmac_sha256_hex(key: &[u8], message: &[u8]) -> String {
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("HMAC accepts any key length");
-    mac.update(message);
-    hex::encode(mac.finalize().into_bytes())
+    Connection::of(system).authorize(builder, credential, body_for_hmac)
 }
 
 /// Parses a pull response body into records + an optional cursor. Accepts
@@ -142,18 +90,39 @@ fn parse_pull_response(body: &[u8]) -> Result<PullResult, AppError> {
     }
 }
 
-async fn guarded_client() -> Result<attome_server::ssrf_guard::GuardedClient, AppError> {
-    attome_server::ssrf_guard::GuardedClient::new(REQUEST_TIMEOUT_SECS).map_err(AppError::internal)
+/// The client a call goes through: the shared guarded client, or, for a
+/// `client_certificate` connection, one presenting its TLS identity behind
+/// the same address guard.
+enum Client {
+    Guarded(attome_server::ssrf_guard::GuardedClient),
+    Identity(attome_outbound::http::Outbound),
+}
+
+async fn guarded_client(
+    system: &IntegrationSystem,
+    credential: Option<&Credential>,
+) -> Result<Client, AppError> {
+    if let Some(identity) =
+        Connection::of(system).client(credential, Duration::from_secs(REQUEST_TIMEOUT_SECS))?
+    {
+        return Ok(Client::Identity(identity));
+    }
+    attome_server::ssrf_guard::GuardedClient::new(REQUEST_TIMEOUT_SECS)
+        .map(Client::Guarded)
+        .map_err(AppError::internal)
 }
 
 fn guarded_request(
-    client: &attome_server::ssrf_guard::GuardedClient,
+    client: &Client,
     method: reqwest::Method,
     url: reqwest::Url,
 ) -> Result<reqwest::RequestBuilder, AppError> {
-    client
-        .request(method, url)
-        .map_err(|e| AppError::Validation(format!("base_url rejected: {e}")))
+    match client {
+        Client::Guarded(client) => client
+            .request(method, url)
+            .map_err(|e| AppError::Validation(format!("base_url rejected: {e}"))),
+        Client::Identity(client) => Ok(client.request(method, url)),
+    }
 }
 
 async fn validate_target(url: &str) -> Result<reqwest::Url, AppError> {
@@ -169,7 +138,7 @@ impl Connector for RestAdapter {
     fn pull<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a Credential>,
         cursor: Option<&'a str>,
     ) -> BoxFuture<'a, PullResult> {
         Box::pin(async move {
@@ -177,7 +146,7 @@ impl Connector for RestAdapter {
             if let Some(cursor) = cursor {
                 url.query_pairs_mut().append_pair("cursor", cursor);
             }
-            let client = guarded_client().await?;
+            let client = guarded_client(system, credential).await?;
             let request = apply_auth(
                 guarded_request(&client, reqwest::Method::GET, url)?,
                 system,
@@ -202,12 +171,12 @@ impl Connector for RestAdapter {
     fn push<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a Credential>,
         event: &'a Value,
     ) -> BoxFuture<'a, PushResult> {
         Box::pin(async move {
             let url = validate_target(&system.base_url).await?;
-            let client = guarded_client().await?;
+            let client = guarded_client(system, credential).await?;
             let body = serde_json::to_vec(event).map_err(AppError::internal)?;
             let request = apply_auth(
                 guarded_request(&client, reqwest::Method::POST, url)?,
@@ -236,7 +205,7 @@ impl Connector for RestAdapter {
     fn webhook<'a>(
         &'a self,
         _system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a Credential>,
         body: &'a [u8],
     ) -> BoxFuture<'a, Vec<WebhookEvent>> {
         Box::pin(async move {
@@ -258,7 +227,7 @@ impl Connector for RestAdapter {
     fn health<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a Credential>,
     ) -> BoxFuture<'a, HealthResult> {
         Box::pin(async move {
             let url = match validate_target(&system.base_url).await {
@@ -270,7 +239,7 @@ impl Connector for RestAdapter {
                     });
                 }
             };
-            let client = guarded_client().await?;
+            let client = guarded_client(system, credential).await?;
             let request = match guarded_request(&client, reqwest::Method::GET, url)
                 .and_then(|builder| apply_auth(builder, system, credential, b""))
             {
@@ -364,16 +333,21 @@ mod tests {
     fn apply_auth_rejects_oauth2_client_credentials_in_phase_1() {
         let system = stub_system("https://example.com".into(), "oauth2_client_credentials");
         let client = reqwest::Client::new();
-        let err =
-            apply_auth(client.get("https://example.com"), &system, Some("x"), b"").unwrap_err();
+        let err = apply_auth(
+            client.get("https://example.com"),
+            &system,
+            Some(&Credential::new("x".into())),
+            b"",
+        )
+        .unwrap_err();
         assert!(err.to_string().contains("not implemented"));
     }
 
     #[test]
     fn hmac_sha256_hex_is_deterministic_and_key_sensitive() {
-        let a = hmac_sha256_hex(b"key-a", b"body");
-        let b = hmac_sha256_hex(b"key-a", b"body");
-        let c = hmac_sha256_hex(b"key-b", b"body");
+        let a = Credential::new("key-a".into()).hmac_sha256_hex(b"body");
+        let b = Credential::new("key-a".into()).hmac_sha256_hex(b"body");
+        let c = Credential::new("key-b".into()).hmac_sha256_hex(b"body");
         assert_eq!(a, b);
         assert_ne!(a, c);
         assert_eq!(a.len(), 64, "must be 32 bytes hex-encoded");
@@ -448,7 +422,8 @@ mod tests {
     /// even when `validate_target` was skipped.
     #[tokio::test]
     async fn the_adapter_client_refuses_a_loopback_literal_without_validate_target() {
-        let client = guarded_client().await.expect("client builds");
+        let system = stub_system("https://example.com".into(), "api_key");
+        let client = guarded_client(&system, None).await.expect("client builds");
         let url = reqwest::Url::parse("http://127.0.0.1:9/").expect("url parses");
         let err = guarded_request(&client, reqwest::Method::GET, url).unwrap_err();
         assert!(matches!(err, AppError::Validation(_)), "{err:?}");

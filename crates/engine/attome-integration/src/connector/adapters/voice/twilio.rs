@@ -26,7 +26,7 @@ const API: &str = "https://api.twilio.com/2010-04-01";
 
 /// The Twilio secrets in a system's credential.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Secrets {
+pub(crate) struct Secrets {
     pub auth_token: String,
     pub api_key_secret: Option<String>,
 }

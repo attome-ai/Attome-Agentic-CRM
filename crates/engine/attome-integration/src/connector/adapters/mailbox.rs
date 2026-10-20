@@ -32,7 +32,7 @@ impl Connector for MailboxAdapter {
     fn pull<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        credential: Option<&'a str>,
+        credential: Option<&'a crate::credential::Credential>,
         cursor: Option<&'a str>,
     ) -> BoxFuture<'a, PullResult> {
         Box::pin(async move {
@@ -47,7 +47,7 @@ impl Connector for MailboxAdapter {
     fn push<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
         _event: &'a Value,
     ) -> BoxFuture<'a, PushResult> {
         Box::pin(async move { Err(not_implemented(system)) })
@@ -56,7 +56,7 @@ impl Connector for MailboxAdapter {
     fn webhook<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
         _body: &'a [u8],
     ) -> BoxFuture<'a, Vec<WebhookEvent>> {
         Box::pin(async move { Err(not_implemented(system)) })
@@ -65,7 +65,7 @@ impl Connector for MailboxAdapter {
     fn health<'a>(
         &'a self,
         system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
     ) -> BoxFuture<'a, HealthResult> {
         Box::pin(async move { Err(not_implemented(system)) })
     }
@@ -123,7 +123,11 @@ mod tests {
         assert!(err.to_string().contains("credential"), "{err}");
         system.config = Some(r#"{"mail":"pop3"}"#.into());
         let err = adapter
-            .pull(&system, Some("secret"), None)
+            .pull(
+                &system,
+                Some(&crate::credential::Credential::new("secret".into())),
+                None,
+            )
             .await
             .unwrap_err();
         assert!(err.to_string().contains("imap, graph or gmail"), "{err}");

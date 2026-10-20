@@ -103,10 +103,13 @@ pub fn config(system: &IntegrationSystem) -> Value {
 }
 
 /// The system's credential as a JSON object of secrets.
-pub async fn secrets(state: &EngineState, system: &IntegrationSystem) -> Result<Value, AppError> {
-    let raw = crate::credential::resolve(
+pub(crate) async fn secrets(
+    state: &EngineState,
+    system: &IntegrationSystem,
+) -> Result<Value, AppError> {
+    let raw = crate::credential::resolve_value(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &crate::credential::ring(state),
         system.credential_ref.as_deref(),
     )
     .await?
@@ -122,8 +125,20 @@ pub async fn secrets(state: &EngineState, system: &IntegrationSystem) -> Result<
         })
 }
 
+/// Z1-T10: one named secret of a social system's credential, sealed.
+pub async fn sealed_secret(
+    state: &EngineState,
+    system: &IntegrationSystem,
+    name: &str,
+) -> Result<crate::credential::Credential, AppError> {
+    let secrets = secrets(state, system).await?;
+    Ok(crate::credential::Credential::new(
+        secret(&secrets, name)?.to_owned(),
+    ))
+}
+
 /// One secret by name.
-pub fn secret<'a>(secrets: &'a Value, name: &str) -> Result<&'a str, AppError> {
+pub(crate) fn secret<'a>(secrets: &'a Value, name: &str) -> Result<&'a str, AppError> {
     secrets
         .get(name)
         .and_then(Value::as_str)

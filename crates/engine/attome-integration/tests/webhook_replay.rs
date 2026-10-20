@@ -29,6 +29,10 @@ use uuid::Uuid;
 
 const CRED: &str = "replay-test-credential";
 
+fn cred() -> attome_integration::credential::Credential {
+    attome_integration::credential::Credential::for_test(CRED)
+}
+
 async fn test_pool() -> Option<RedisPool> {
     let (host, port) = attome_testkit::test_redis()?;
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
@@ -74,7 +78,7 @@ async fn a_replayed_signed_request_is_refused_with_409() {
     let first = webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h,
         body,
         now(),
@@ -86,7 +90,7 @@ async fn a_replayed_signed_request_is_refused_with_409() {
     let replay = webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h,
         body,
         now(),
@@ -107,7 +111,7 @@ async fn a_replay_with_a_recased_signature_is_still_refused() {
     webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h,
         body,
         now(),
@@ -123,7 +127,7 @@ async fn a_replay_with_a_recased_signature_is_still_refused() {
     let replay = webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &recased,
         body,
         now(),
@@ -147,7 +151,7 @@ async fn distinct_deliveries_and_distinct_systems_are_each_admitted() {
     webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h1,
         body,
         t,
@@ -157,7 +161,7 @@ async fn distinct_deliveries_and_distinct_systems_are_each_admitted() {
     webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h2,
         body,
         t,
@@ -167,7 +171,7 @@ async fn distinct_deliveries_and_distinct_systems_are_each_admitted() {
     webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         Uuid::now_v7(),
-        CRED,
+        &cred(),
         &h1,
         body,
         t,
@@ -187,7 +191,7 @@ async fn a_released_nonce_admits_the_retry() {
     let admission = webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h,
         body,
         now(),
@@ -198,7 +202,7 @@ async fn a_released_nonce_admits_the_retry() {
     webhook::admit(
         &attome_cache::Store::Redis(pool.clone()),
         system,
-        CRED,
+        &cred(),
         &h,
         body,
         now(),

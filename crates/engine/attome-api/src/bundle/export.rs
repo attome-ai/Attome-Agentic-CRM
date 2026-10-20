@@ -1026,3 +1026,37 @@ async fn export_rules(db: &DbPool, bundle: &mut Bundle) -> Result<(), AppError> 
     bundle.rules = crate::rule_admin::export_defs(db).await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod export_secrets {
+    /// Z1-T10: a bundle or changeset never carries an integration credential.
+    /// Credentials are not metadata: they live in `integration_credential`,
+    /// sealed under the deployment's own key, and no exporter reads that
+    /// table, so promotion cannot copy one between deployments.
+    #[test]
+    fn exporters_never_read_the_credential_table() {
+        for (name, source) in [
+            ("bundle/export.rs", include_str!("export.rs")),
+            ("bundle/record_sets.rs", include_str!("record_sets.rs")),
+            (
+                "changeset/routes.rs",
+                include_str!("../changeset/routes.rs"),
+            ),
+            (
+                "changeset/translate.rs",
+                include_str!("../changeset/translate.rs"),
+            ),
+        ] {
+            let code: String = source
+                .lines()
+                .filter(|line| !line.trim_start().starts_with("//"))
+                .filter(|line| !line.contains("export_secrets") && !line.contains("\"bundle/"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert!(
+                !code.contains(concat!("integration", "_credential")),
+                "{name} reads the credential table"
+            );
+        }
+    }
+}

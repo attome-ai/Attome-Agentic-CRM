@@ -698,21 +698,21 @@ async fn get_softphone(
         ) else {
             continue;
         };
-        let secrets = twilio::Secrets::parse(&voice::credential(&state, &system).await?);
-        let Some(key_secret) = secrets.api_key_secret else {
-            continue;
-        };
         let identity = twilio::client_identity(ctx.user_id);
-        let token = twilio::access_token(
+        let Some(token) = voice::softphone_token(
+            &state,
+            &system,
             account,
             key,
-            &key_secret,
             app,
             &identity,
             Utc::now().timestamp(),
             SOFTPHONE_TTL_SECS,
         )
-        .ok_or_else(|| AppError::internal("softphone token could not be signed"))?;
+        .await?
+        else {
+            continue;
+        };
         return Ok(Json(SoftphoneConfig {
             available: true,
             identity: Some(identity),

@@ -67,7 +67,7 @@ impl Connector for WebChatAdapter {
     fn pull<'a>(
         &'a self,
         _system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
         _cursor: Option<&'a str>,
     ) -> BoxFuture<'a, PullResult> {
         // A web-chat message always arrives through `webhook()` below (the
@@ -86,7 +86,7 @@ impl Connector for WebChatAdapter {
     fn push<'a>(
         &'a self,
         _system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
         _event: &'a Value,
     ) -> BoxFuture<'a, PushResult> {
         // Web chat has no outbound transport of its own: an outbound reply
@@ -109,7 +109,7 @@ impl Connector for WebChatAdapter {
     fn webhook<'a>(
         &'a self,
         _system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
         body: &'a [u8],
     ) -> BoxFuture<'a, Vec<WebhookEvent>> {
         Box::pin(async move {
@@ -141,7 +141,7 @@ impl Connector for WebChatAdapter {
     fn health<'a>(
         &'a self,
         _system: &'a IntegrationSystem,
-        _credential: Option<&'a str>,
+        _credential: Option<&'a crate::credential::Credential>,
     ) -> BoxFuture<'a, HealthResult> {
         // No external dependency to probe — the widget's own reachability is
         // this deployment's own `/health` route, not a connector concern.

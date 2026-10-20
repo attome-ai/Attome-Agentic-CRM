@@ -58,7 +58,10 @@ fn approval_required(state: &EngineState) -> bool {
 }
 
 /// A channel's page id and token.
-async fn page(state: &EngineState, system: Uuid) -> Result<(String, String), AppError> {
+async fn page(
+    state: &EngineState,
+    system: Uuid,
+) -> Result<(String, attome_integration::credential::Credential), AppError> {
     let system = attome_integration::system::load(&state.base.db, system)
         .await?
         .ok_or_else(|| AppError::Validation("the post's channel is gone".into()))?;
@@ -73,8 +76,8 @@ async fn page(state: &EngineState, system: Uuid) -> Result<(String, String), App
         .map(|v| v.to_string().trim_matches('"').to_owned())
         .filter(|p| !p.is_empty())
         .ok_or_else(|| AppError::Validation(format!("{}: config has no page_id", system.name)))?;
-    let secrets = social::secrets(state, &system).await?;
-    Ok((page_id, social::secret(&secrets, "page_token")?.to_owned()))
+    let token = social::sealed_secret(state, &system, "page_token").await?;
+    Ok((page_id, token))
 }
 
 type DueRow = (Uuid, Uuid, String, Option<String>);
@@ -110,6 +113,7 @@ pub async fn publish_due(state: &EngineState, now: DateTime<Utc>) -> Result<u32,
         }
         let result = match page(state, system).await {
             Ok((page_id, token)) => {
+                let token = token.with_value(str::to_owned);
                 meta::publish_page_post(&token, &page_id, &message, link.as_deref()).await
             }
             Err(e) => Err(e),
@@ -162,7 +166,7 @@ pub async fn read_metrics(state: &EngineState, now: DateTime<Utc>) -> Result<u32
     let mut read = 0;
     for (id, system, post_id) in posts {
         let metrics = match page(state, system).await {
-            Ok((_, token)) => meta::fetch_metrics(&token, &post_id).await,
+            Ok((_, token)) => meta::fetch_metrics(&token.with_value(str::to_owned), &post_id).await,
             Err(e) => Err(e),
         };
         match metrics {

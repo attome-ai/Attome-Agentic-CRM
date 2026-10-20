@@ -127,12 +127,17 @@ pub fn required<'a>(
 /// cursor to continue from (J2-T2's router reads them typed).
 pub async fn read(
     system: &IntegrationSystem,
-    credential: Option<&str>,
+    credential: Option<&crate::credential::Credential>,
     cursor: Option<&str>,
 ) -> Result<(Vec<MailMessage>, Option<String>), AppError> {
     let cfg = config(system);
-    let credential = credential
-        .ok_or_else(|| AppError::Validation(format!("{}: no credential set", system.name)))?;
+    // The readers log in with the value itself; it stays inside this crate.
+    let credential = zeroize::Zeroizing::new(
+        credential
+            .ok_or_else(|| AppError::Validation(format!("{}: no credential set", system.name)))?
+            .with_value(str::to_owned),
+    );
+    let credential = credential.as_str();
     match cfg.get("mail").and_then(Value::as_str) {
         Some("imap") => imap::pull(system, &cfg, credential, cursor).await,
         Some("graph") => graph::pull(system, &cfg, credential, cursor).await,
@@ -147,7 +152,7 @@ pub async fn read(
 /// Reads the messages after `cursor` with the system's reader.
 pub async fn pull(
     system: &IntegrationSystem,
-    credential: Option<&str>,
+    credential: Option<&crate::credential::Credential>,
     cursor: Option<&str>,
 ) -> Result<PullResult, AppError> {
     let (messages, next) = read(system, credential, cursor).await?;

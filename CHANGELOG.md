@@ -8,6 +8,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Integration secrets stay sealed (Z1-T10): a decrypted credential is now an
+  `attome_integration::credential::Credential` that only sets itself on a request (header, bearer,
+  basic, HMAC signature) or is lent to one closure; it never prints and is zeroed on drop. The
+  `Connector` trait, the webhook check, mail, SMS, voice, social, video, reputation, billing gateways,
+  push and marketing posting take it sealed, and the helpers that returned a plaintext secret are
+  private to the integration crate. Callers name a connection (`connection::Connection::resolve`)
+  and authenticate through `apply_auth` without seeing the secret. New REST auth types:
+  `api_key_header` (header named by `config.auth_header`), `bearer` and `client_certificate` (a PEM
+  certificate and key as the TLS client identity). Push and the adapters now read the live key ring,
+  so a rotated `integration.credential_encryption_key` applies without a restart.
 - Every outbound HTTP call goes through one guarded client (Q21-T1, `attome_outbound::http`): private
   addresses are refused unless the call's purpose lists the host from configuration (a model server,
   an identity provider, the render sidecar, an Asterisk PBX, an SES endpoint, alert webhooks), cloud

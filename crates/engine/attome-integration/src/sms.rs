@@ -76,9 +76,9 @@ async fn provider(state: &EngineState) -> Result<Option<Provider>, AppError> {
     let config: Value = config
         .and_then(|c| serde_json::from_str(&c).ok())
         .unwrap_or(Value::Null);
-    let Some(secret) = crate::credential::resolve(
+    let Some(secret) = crate::credential::resolve_value(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &crate::credential::ring(state),
         credential_ref.as_deref(),
     )
     .await?

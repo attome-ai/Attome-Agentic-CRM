@@ -163,7 +163,7 @@ pub fn admin_consent_url(tenant: &str, client_id: &str, redirect_uri: &str) -> S
 
 /// A token answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Tokens {
+pub(crate) struct Tokens {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_in: i64,
@@ -173,7 +173,7 @@ pub struct Tokens {
 }
 
 /// Reads a token endpoint's answer; the provider's error code otherwise.
-pub fn parse_tokens(status: u16, body: &str) -> Result<Tokens, String> {
+pub(crate) fn parse_tokens(status: u16, body: &str) -> Result<Tokens, String> {
     let json: Value = serde_json::from_str(body).unwrap_or(Value::Null);
     if !(200..300).contains(&status) {
         return Err(json
@@ -267,9 +267,9 @@ async fn app(state: &EngineState, provider: Provider) -> Result<App, AppError> {
         .filter(|s| !s.is_empty())
         .unwrap_or("common")
         .to_owned();
-    let secret = crate::credential::resolve(
+    let secret = crate::credential::resolve_value(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &crate::credential::ring(state),
         credential_ref.as_deref(),
     )
     .await?

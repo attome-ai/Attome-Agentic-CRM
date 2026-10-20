@@ -125,9 +125,9 @@ pub(crate) async fn video_app(
     let Some((config, credential_ref)) = row else {
         return Ok(None);
     };
-    let secret = crate::credential::resolve(
+    let secret = crate::credential::resolve_value(
         &state.base.db,
-        &state.base.config.integration.credential_encryption_key,
+        &crate::credential::ring(state),
         credential_ref.as_deref(),
     )
     .await?;
