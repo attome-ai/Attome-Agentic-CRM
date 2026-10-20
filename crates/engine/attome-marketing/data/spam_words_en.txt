@@ -1,0 +1,29 @@
+# Phrases that often mark a marketing email as spam (E6-T10), one per line,
+# lower case. Lines starting with # are ignored. A match is a finding to
+# review, not a block: E3 decides on the score.
+100% free
+act now
+apply now
+as seen on
+buy now
+cash bonus
+click here
+congratulations you
+earn extra cash
+exclusive deal
+free gift
+free money
+guaranteed
+increase your income
+limited time offer
+lowest price
+make money fast
+no credit check
+no obligation
+once in a lifetime
+risk free
+special promotion
+this is not spam
+urgent response
+winner
+you have been selected

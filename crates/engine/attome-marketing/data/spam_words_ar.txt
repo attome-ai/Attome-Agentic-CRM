@@ -1,0 +1,5 @@
+# Arabic spam phrases (E6-T10), one per line. Empty until the owner supplies
+# or approves the list (the task's own condition); matching normalises alef
+# forms, ta marbuta, alef maqsura, diacritics and tatweel first, so the
+# phrases may be written in any of those forms. Lines starting with # are
+# ignored.

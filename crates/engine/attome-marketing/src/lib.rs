@@ -7,6 +7,7 @@
 pub mod ab_test;
 pub mod abm;
 pub mod address_check;
+pub mod alerts;
 pub mod attribution;
 pub mod blocklist;
 pub mod deliverability;
@@ -25,6 +26,7 @@ pub mod landing;
 pub mod loyalty;
 pub mod model;
 pub mod nurture_tracks;
+pub mod precheck;
 /// E23-T1: profile events and their retention.
 pub mod profile_events;
 pub mod referral;

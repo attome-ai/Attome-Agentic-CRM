@@ -9,11 +9,12 @@
 //!   administrators only; the upload is the report file as the body (XML,
 //!   gzip or ZIP), at most 20 MB;
 //! - `POST /api/v1/marketing/address-check` — the address checks (E6-T6),
-//!   limited to 60 a minute per person.
+//!   limited to 60 a minute per person;
+//! - `POST /api/v1/marketing/precheck` — the pre-send check (E6-T10): a
+//!   score and findings, nothing sent or stored.
 //!
 //! The policy itself changes through the generic entity API on
-//! `marketing_deliverability_policy` (an audited entity). Blocklist status
-//! and the pre-send check join when their engines (E6-T8, E6-T9) exist.
+//! `marketing_deliverability_policy` (an audited entity).
 
 use attome_audit::security::{ExemptReason, x_audit_exempt};
 use attome_core::EngineState;
@@ -408,8 +409,85 @@ fn address_cache() -> Option<&'static crate::address_check::MxCache> {
         .as_ref()
 }
 
+/// A message to check before sending.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct PrecheckBody {
+    /// The rendered HTML body.
+    pub html: String,
+    /// The plain-text part, if the message has one.
+    #[serde(default)]
+    pub text: Option<String>,
+    /// The audience: how many, how many never mailed before, how many with
+    /// an invalid address.
+    #[serde(default)]
+    pub recipients: i64,
+    #[serde(default)]
+    pub never_mailed: i64,
+    #[serde(default)]
+    pub invalid: i64,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/marketing/precheck",
+    operation_id = "post_marketing_precheck",
+    tag = "marketing",
+    request_body = PrecheckBody,
+    extensions(("x-audit-exempt" = json!(x_audit_exempt(
+        ExemptReason::ReadOnly,
+        None,
+        "scores a message; sends and writes nothing",
+    )))),
+    responses(
+        (status = 200, description = "The score and findings", body = crate::precheck::PrecheckReport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks marketing_deliverability_policy.read", body = ErrorResponse),
+        (status = 422, description = "The message is empty", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Check a message before sending.
+///
+/// A score from 0 to 100 (70 passes) and the findings behind it: spam
+/// wording, image-heavy content, links to domains on a blocklist this
+/// deployment checked in the last week, a missing unsubscribe link or text
+/// part, size, and the audience's never-mailed and invalid shares. Each
+/// finding names a guidance key; nothing is sent or stored.
+async fn post_precheck(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<DeliverabilityRead>>,
+    Json(body): Json<PrecheckBody>,
+) -> Result<Json<crate::precheck::PrecheckReport>, AppError> {
+    if body.html.trim().is_empty() {
+        return Err(AppError::Validation("html is required".into()));
+    }
+    let blocked: std::collections::HashSet<String> = sqlx::query_scalar::<_, String>(
+        "SELECT DISTINCT lower(target) FROM marketing_blocklist_check \
+          WHERE target_kind = 'domain' AND listed AND checked_at >= now() - interval '7 days'",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+    Ok(Json(crate::precheck::precheck(
+        crate::precheck::PrecheckEmail {
+            html: &body.html,
+            text: body.text.as_deref(),
+            size_bytes: body.html.len() + body.text.as_deref().map_or(0, str::len),
+        },
+        crate::precheck::AudienceStats {
+            recipients: body.recipients.max(0),
+            never_mailed: body.never_mailed.max(0),
+            invalid: body.invalid.max(0),
+        },
+        &blocked,
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route("/api/v1/marketing/precheck", post(post_precheck))
         .route("/api/v1/marketing/deliverability/daily", get(get_daily))
         .route(
             "/api/v1/marketing/deliverability/sends/{send_id}",
@@ -425,8 +503,19 @@ pub fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(get_daily, get_send, get_dmarc, post_dmarc_upload, post_address_check),
+    paths(
+        get_daily,
+        get_send,
+        get_dmarc,
+        post_dmarc_upload,
+        post_address_check,
+        post_precheck
+    ),
     components(schemas(
+        PrecheckBody,
+        crate::precheck::PrecheckReport,
+        crate::precheck::Finding,
+        crate::precheck::Severity,
         DeliverabilityDay,
         SendProvider,
         SendDeliverability,

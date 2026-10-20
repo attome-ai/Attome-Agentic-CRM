@@ -3049,6 +3049,16 @@ pub fn register_job_types() {
                         .await
                         .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 }
+                // E6-T10: yesterday's alerts, each raised and notified once.
+                let raised = attome_marketing::alerts::evaluate(
+                    &state,
+                    attome_marketing::alerts::evaluation_day(today),
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if !raised.is_empty() {
+                    tracing::warn!(alerts = raised.len(), "deliverability alerts raised");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

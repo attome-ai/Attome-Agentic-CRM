@@ -1759,6 +1759,16 @@ export const xrmEn = {
     separator: ', ',
     saveFailed: 'Your presence could not be saved.',
   },
+  deliverabilityGuidance: {
+    spam_wording: 'A phrase often used in spam: reword it.',
+    image_heavy: 'Mostly images: add more text, and alt text to each image.',
+    blocklisted_link: 'A link points to a domain on a blocklist: remove it or use another domain.',
+    missing_unsubscribe: 'No unsubscribe link: add one; mailbox providers require it for bulk mail.',
+    missing_text_part: 'No plain-text version: add one so every mail program can show the message.',
+    too_large: 'Over 100 KB: compress images and trim the HTML; large messages are clipped.',
+    never_mailed_audience: 'Most of this audience was never mailed: warm up with a smaller, engaged group first.',
+    invalid_share: 'More than 5% of addresses are invalid: clean the list before sending.',
+  },
   salesDialer: {
     title: 'Dialer',
     start: 'Start dialer',
