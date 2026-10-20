@@ -8,6 +8,7 @@
 pub mod amendment;
 pub mod counterparty;
 pub mod dates;
+pub mod draft;
 pub mod links;
 pub mod model;
 pub mod retention;
@@ -21,5 +22,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 40;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    <counterparty::ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <counterparty::ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(<draft::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc
 }

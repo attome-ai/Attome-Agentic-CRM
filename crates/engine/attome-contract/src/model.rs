@@ -38,5 +38,9 @@ impl EngineModel for ContractModel {
                 "/api/v1/contract/counterparty-match/run",
                 post(crate::counterparty::post_run),
             )
+            .route(
+                "/api/v1/contract/contracts/{id}/draft",
+                post(crate::draft::post_draft),
+            )
     }
 }

@@ -132,6 +132,17 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Contract drafting (W1-T6): `POST /api/v1/contract/contracts/{id}/draft` adds the contract's next
+  version and queues a render of its type's draft template (`contract_type.draft_template_ref`, a
+  document template) as the caller, in the contract's `language`, with the clauses chosen for it
+  (`contract_clause`); the document is attached to the new version. A document render may now name
+  the record its document is attached to (migration 0160).
+- Contracts from the business (W1-T13): an accepted quote or a confirmed order drafts one sales
+  contract, and each contract type gets an intake offering whose requests draft a contract of that
+  type (`ContractLinkSweep`, every quarter hour; `contract.source_kind` and `source_id`).
+- Contract security (W1-T14): Contract Manager, Legal, Contract Requester and Contract Viewer roles;
+  confidential contracts are read by Legal only; contract value, terms and clause text sit behind
+  the Contract terms field profile; a review retention rule starts at each contract's end date.
 - Browser push and sharing into Attome (B19-T2): a person turns on browser notifications from the
   notification panel; a push opens its record when tapped, and the installed app's icon shows the
   unread count. Files shared from another app on the device land on `/xrm/share` and are saved as

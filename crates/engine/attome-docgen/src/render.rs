@@ -96,6 +96,9 @@ pub(crate) struct RenderRow {
     attach_error: Option<String>,
     pub(crate) requested_by: Uuid,
     requested_at: DateTime<Utc>,
+    attach_entity: Option<String>,
+    attach_record_id: Option<Uuid>,
+    attach_field: Option<String>,
 }
 
 /// Creates a `pending` `docgen_render` row and enqueues its
@@ -113,12 +116,74 @@ pub(crate) async fn create_render(
     record_id: Uuid,
     requested_by: Uuid,
 ) -> Result<Uuid, AppError> {
-    let render_id = Uuid::now_v7();
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let render_id = insert_render(
+        &mut tx,
+        template_id,
+        entity,
+        format,
+        record_id,
+        requested_by,
+        None,
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(render_id)
+}
+
+/// W1-T6: where a render's document goes when not to the rendered record's
+/// own `attach_to_field`: `field` (a file field) of `entity`'s `record_id`.
+/// The worker attaches it as the requester, so the requester needs update
+/// rights on that record.
+#[derive(Debug, Clone, Copy)]
+pub struct AttachTarget<'a> {
+    pub entity: &'a str,
+    pub record_id: Uuid,
+    pub field: &'a str,
+}
+
+/// W1-T6: enqueues a render of `template_id` for `record_id` inside the
+/// caller's transaction, so the render and the caller's own rows commit or
+/// roll back together. The caller must be able to read the template, as on
+/// `POST /api/v1/docgen/templates/{id}/render`; the worker re-derives what
+/// `ctx`'s user may see at render time. Answers the render's id.
+pub async fn enqueue_in_tx(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    template_id: Uuid,
+    record_id: Uuid,
+    attach: Option<AttachTarget<'_>>,
+) -> Result<Uuid, AppError> {
+    let (entity, format) = render_target(state, ctx, template_id).await?;
+    insert_render(
+        tx,
+        template_id,
+        &entity,
+        &format,
+        record_id,
+        ctx.user_id,
+        attach,
+    )
+    .await
+}
+
+/// The `pending` row and its job, in `tx`.
+async fn insert_render(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    template_id: Uuid,
+    entity: &str,
+    format: &str,
+    record_id: Uuid,
+    requested_by: Uuid,
+    attach: Option<AttachTarget<'_>>,
+) -> Result<Uuid, AppError> {
+    let render_id = Uuid::now_v7();
     sqlx::query(
         "INSERT INTO docgen_render \
-            (id, template_ref, entity_logicalname, record_id, status, format, requested_by, requested_at) \
-         VALUES ($1, $2, $3, $4, 'pending', $5, $6, NOW())",
+            (id, template_ref, entity_logicalname, record_id, status, format, requested_by, \
+             requested_at, attach_entity, attach_record_id, attach_field) \
+         VALUES ($1, $2, $3, $4, 'pending', $5, $6, NOW(), $7, $8, $9)",
     )
     .bind(render_id)
     .bind(template_id)
@@ -126,17 +191,16 @@ pub(crate) async fn create_render(
     .bind(record_id)
     .bind(format)
     .bind(requested_by)
-    .execute(&mut *tx)
+    .bind(attach.map(|a| a.entity))
+    .bind(attach.map(|a| a.record_id))
+    .bind(attach.map(|a| a.field))
+    .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
 
-    attome_jobs::enqueue_in_tx(
-        &mut tx,
-        attome_core::jobs::EngineJob::DocgenRender { render_id },
-    )
-    .await
-    .map_err(AppError::internal)?;
-    attome_db::tx::commit(tx).await?;
+    attome_jobs::enqueue_in_tx(tx, attome_core::jobs::EngineJob::DocgenRender { render_id })
+        .await
+        .map_err(AppError::internal)?;
     Ok(render_id)
 }
 
@@ -505,7 +569,7 @@ pub(crate) async fn load_render(
     sqlx::query_as(
         "SELECT id, template_ref, entity_logicalname, record_id, status, format, \
                 object_key, error, attached, attach_error, \
-                requested_by, requested_at \
+                requested_by, requested_at, attach_entity, attach_record_id, attach_field \
          FROM docgen_render WHERE id = $1 AND is_deleted = false",
     )
     .bind(render_id)
@@ -781,13 +845,25 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
     // Runs only after the completion + audit commit, so a record never gets
     // a generated document attached for a render that has no audit evidence.
     // It has its own transaction and its own audit trail (update_record_for).
-    if let Some(field) = attach_to_field {
+    // W1-T6: a render that names its own target attaches there instead.
+    let target = match (
+        render.attach_entity.as_deref(),
+        render.attach_record_id,
+        render.attach_field.as_deref(),
+    ) {
+        (Some(entity), Some(record), Some(field)) => {
+            Some((entity.to_owned(), record, field.to_owned()))
+        }
+        _ => attach_to_field
+            .map(|field| (render.entity_logicalname.clone(), render.record_id, field)),
+    };
+    if let Some((attach_entity, attach_record, field)) = target {
         attach_generated_file(
             state,
             &security,
             render_id,
-            &render.entity_logicalname,
-            render.record_id,
+            &attach_entity,
+            attach_record,
             &field,
             &object_key,
             &checksum,
