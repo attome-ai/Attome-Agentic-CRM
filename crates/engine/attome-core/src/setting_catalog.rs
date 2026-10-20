@@ -71,6 +71,15 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             || json!(""),
         ),
         SettingDescriptor::new(
+            "marketing.profile_event_retention_months",
+            "Months profile events are kept (E23-T1); older months are dropped \
+             whole, nightly.",
+            || json!({"type": "integer", "minimum": 1, "maximum": 120}),
+            DEPLOYMENT,
+            false,
+            || json!(13),
+        ),
+        SettingDescriptor::new(
             "marketing.sms_quiet_hours",
             "Hours (HH:MM, recipient's local time) when campaign SMS are held, \
              by country code with \"*\" for every other country, e.g. \

@@ -132,6 +132,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Profile events (E23-T1): `profile_event` (migration 0167), monthly partitions kept ahead by the
+  partition job, indexed by contact and by anonymous id; the daily `profile_event_retention` job drops
+  months older than `marketing.profile_event_retention_months` (default 13).
 - Marketing forms (E10-T1): the marketing pack's `marketing_form` (target lead or contact, field map,
   consent purposes, UTM capture, publishing) and `marketing_form_submission` (pack changeset 0006);
   the public `POST /api/v1/marketing/forms/{id}/submit` maps the fields, finds the person by email or

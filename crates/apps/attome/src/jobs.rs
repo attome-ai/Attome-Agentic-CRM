@@ -2557,6 +2557,8 @@ const MARKETING_PARTITIONED_TABLES: &[(&str, &str)] = &[
     ("marketing_web_event", "occurred_at"),
     // F3-T7 — `billing_usage_record` (migrations/0088_billing_usage.sql).
     ("billing_usage_record", "occurred_at"),
+    // E23-T1 — `profile_event` (migrations/0167_profile_event.sql).
+    ("profile_event", "at"),
 ];
 
 /// Detached `tokio::spawn` loop, same shape as
@@ -2677,6 +2679,8 @@ const DEDUP_KEY_CASE_SUMMARY: &str = "case-summary";
 const DEDUP_KEY_SMS_CAMPAIGN: &str = "sms-campaign";
 /// E6-T4: the daily deliverability rollup (a registered job type).
 const DEDUP_KEY_DELIVERABILITY_ROLLUP: &str = "deliverability-rollup";
+/// E23-T1: profile event retention (a registered job type).
+const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
 const DEDUP_KEY_SOCIAL_REVIEWS_SYNC: &str = "social-reviews-sync";
 
@@ -2720,6 +2724,10 @@ pub const SMS_CAMPAIGN: attome_jobs::JobType = attome_jobs::JobType::new("sms_ca
 /// E6-T4: today's and yesterday's deliverability rollup, recomputed.
 pub const DELIVERABILITY_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new("deliverability_rollup", 1);
+
+/// E23-T1: drops profile event months past retention.
+pub const PROFILE_EVENT_RETENTION: attome_jobs::JobType =
+    attome_jobs::JobType::new("profile_event_retention", 1);
 
 /// E7-T5: one static list import (payload `{"import_id"}`).
 pub const MARKETING_LIST_IMPORT: attome_jobs::JobType =
@@ -2837,6 +2845,20 @@ pub fn register_job_types() {
                 attome_marketing::static_list::run_import(&state, payload.import_id)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PROFILE_EVENT_RETENTION,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let dropped = attome_marketing::profile_events::apply_retention(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if dropped > 0 {
+                    tracing::info!(dropped, "profile event retention: run complete");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3040,6 +3062,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
         EngineJob::Registered(job) if job.name == SMS_CAMPAIGN.name => DEDUP_KEY_SMS_CAMPAIGN,
+        EngineJob::Registered(job) if job.name == PROFILE_EVENT_RETENTION.name => {
+            DEDUP_KEY_PROFILE_EVENT_RETENTION
+        }
         EngineJob::Registered(job) if job.name == DELIVERABILITY_ROLLUP.name => {
             DEDUP_KEY_DELIVERABILITY_ROLLUP
         }
@@ -3500,6 +3525,25 @@ pub fn spawn_sms_campaign_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SMS_CAMPAIGN, "sms campaign");
+}
+
+/// E23-T1: daily, profile event months past retention.
+pub fn spawn_profile_event_retention_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(PROFILE_EVENT_RETENTION.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "profile event retention: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_PROFILE_EVENT_RETENTION,
+        "profile event retention",
+    );
 }
 
 /// E6-T4: hourly, today's and yesterday's deliverability rollup.

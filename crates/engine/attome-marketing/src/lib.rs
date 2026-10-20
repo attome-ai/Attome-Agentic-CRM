@@ -20,6 +20,8 @@ pub mod handoff_sla;
 pub mod loyalty;
 pub mod model;
 pub mod nurture_tracks;
+/// E23-T1: profile events and their retention.
+pub mod profile_events;
 pub mod referral;
 pub mod segment;
 pub mod segment_insight;
