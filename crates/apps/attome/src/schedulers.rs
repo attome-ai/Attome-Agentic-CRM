@@ -116,6 +116,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_case_summary_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // E16-T1: SMS campaigns, a batch every five minutes.
     crate::jobs::spawn_sms_campaign_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // E6-T4: the deliverability rollup for today and yesterday, hourly.
+    crate::jobs::spawn_deliverability_rollup_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(3600),
+    );
     // J8-T1: new Google reviews, every 15 minutes.
     crate::jobs::spawn_social_reviews_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // D15-T3: meetings and people's own calendars, every five minutes.
