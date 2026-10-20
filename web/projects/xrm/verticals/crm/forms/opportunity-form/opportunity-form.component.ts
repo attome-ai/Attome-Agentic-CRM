@@ -1,5 +1,5 @@
 import { NgComponentOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { LangService, TranslatePipe } from '@attome/base';
 import {
@@ -9,6 +9,7 @@ import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { FieldSchema } from '@attome/xrm';
 
 type CompetitorsModule = typeof import('@attome/xrm/verticals/sales/competitors');
+type PlaybooksModule = typeof import('@attome/xrm/verticals/sales/playbooks');
 
 /**
  * Hand-coded form for `opportunity`, scaffolded from verticals/crm/bundle.json's
@@ -37,6 +38,12 @@ export class OpportunityFormComponent extends EngineFormBase {
    *  deployment without sales never fetches it; it hides itself when the deal
    *  has no competitor. */
   protected readonly competitorsPanel = signal<CompetitorsModule | null>(null);
+  /** The sales pack's plays panel (D26-T2), loaded the same way; it hides
+   *  itself when no play applies to the deal. */
+  protected readonly playsPanel = signal<PlaybooksModule | null>(null);
+  /** The deal's stage as last saved: the plays follow the saved deal, so an
+   *  unsaved stage change does not reload them. */
+  protected readonly savedStage = signal<string | null>(null);
 
   constructor() {
     super();
@@ -44,6 +51,15 @@ export class OpportunityFormComponent extends EngineFormBase {
       m => this.competitorsPanel.set(m),
       () => this.competitorsPanel.set(null),
     );
+    import('@attome/xrm/verticals/sales/playbooks').then(
+      m => this.playsPanel.set(m),
+      () => this.playsPanel.set(null),
+    );
+    effect(() => {
+      if (this.dirty()) return;
+      const stage = this.recordValue()['stage'];
+      untracked(() => this.savedStage.set(typeof stage === 'string' ? stage : null));
+    });
   }
 
   protected override defineTabs(): XrmFormTabDef[] {

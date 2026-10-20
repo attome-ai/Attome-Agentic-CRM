@@ -27,6 +27,8 @@ pub mod model;
 pub mod opportunity_lines;
 pub mod orgchart;
 pub mod owner_change;
+/// D26-T2: the plays that apply to a deal.
+pub mod plays;
 pub mod price_resolution;
 pub mod pricing;
 /// D9-T3: quote acceptance by guest link.
@@ -69,5 +71,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<dialer::telephony::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<territory::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<competitor_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<plays::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

@@ -237,6 +237,14 @@ export const xrmAr = {
     bucket: { current: 'لم يستحق بعد', days_1_30: '١–٣٠ يومًا', days_31_60: '٣١–٦٠ يومًا', days_61_90: '٦١–٩٠ يومًا', over_90: 'أكثر من ٩٠ يومًا' },
     empty: 'لا مبالغ مستحقة.', pages: 'الصفحات', previous: 'السابق', next: 'التالي',
   },
+  // D26-T2: the plays panel on a deal.
+  plays: {
+    title: 'الخطط المناسبة لهذه الصفقة',
+    steps: 'الخطوات',
+    dueAfter: 'خلال {days} يوم',
+    noSteps: 'لا توجد خطوات لهذه الخطة بعد.',
+    activity: { call: 'مكالمة', email: 'بريد إلكتروني', meeting: 'اجتماع', task: 'مهمة' },
+  },
   battlecards: {
     title: 'المنافسون وبطاقات المنافسة',
     proposed: 'منافسون ذُكروا في الرسائل والملاحظات',

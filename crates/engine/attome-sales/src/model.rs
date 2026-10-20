@@ -144,6 +144,10 @@ impl EngineModel for SalesModel {
                 get(crate::competitor_routes::get_sales_battlecards),
             )
             .route(
+                "/api/v1/sales/opportunities/{id}/plays",
+                get(crate::plays::get_sales_plays),
+            )
+            .route(
                 "/api/v1/sales/competitors/{id}/head-to-head",
                 get(crate::competitor_routes::get_sales_head_to_head),
             )

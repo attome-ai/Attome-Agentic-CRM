@@ -257,6 +257,14 @@ export const xrmEn = {
     bucket: { current: 'Not yet due', days_1_30: '1–30 days', days_31_60: '31–60 days', days_61_90: '61–90 days', over_90: 'Over 90 days' },
     empty: 'Nothing is owed.', pages: 'Pages', previous: 'Previous', next: 'Next',
   },
+  // D26-T2: the plays panel on a deal.
+  plays: {
+    title: 'Plays for this deal',
+    steps: 'Steps',
+    dueAfter: 'within {days} days',
+    noSteps: 'This play has no steps yet.',
+    activity: { call: 'Call', email: 'Email', meeting: 'Meeting', task: 'Task' },
+  },
   battlecards: {
     title: 'Competitors and battle cards',
     proposed: 'Competitors named in emails and notes',

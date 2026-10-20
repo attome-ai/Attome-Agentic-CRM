@@ -13,6 +13,9 @@
         </div>
       </div>
     </section>
+    @if (playsPanel(); as m) {
+      <ng-container *ngComponentOutlet="m.PlaysPanelComponent; inputs: { opportunityId: id(), stage: savedStage() }" />
+    }
     @if (competitorsPanel(); as m) {
       <ng-container *ngComponentOutlet="m.BattlecardPanelComponent; inputs: { opportunityId: id() }" />
     }
