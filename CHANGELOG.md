@@ -133,6 +133,22 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Server-rendered pages and sites (E12-T1, E12-T2, E13-T6): publishing a page renders its HTML
+  once (Open Graph and X cards, hreflang for its translations, JSON-LD for articles), served by
+  `GET /api/v1/content/html` (ETag, 304) and, by host, `GET /api/v1/content/site`; a content space
+  can be a site with a domain, theme (`GET /api/v1/content/theme.css`), menu and blog
+  (`GET /api/v1/content/rss`), set through `PATCH /api/v1/admin/content/spaces/{id}`.
+- Contract comparison (W1-T7): `POST /api/v1/contract/contracts/{id}/compare` queues a word-level,
+  section-by-section diff of two versions and flags clauses unlike the library's standard and
+  fallbacks; the result is stored on the `contract_comparison` record.
+- Org chart drafts (D23-T10): `POST /api/v1/sales/accounts/{id}/org-chart/propose` and
+  `POST /api/v1/sales/orgchart-drafts/{id}/decide`, and the agent tools `sales.orgchart.read`,
+  `sales.committee.read`, `sales.coverage.gaps`, `sales.orgchart.propose`.
+- Journeys (E8-T5, E8-T8): entry sources (list joins, events, dates including Hijri, list at a
+  time) start live journeys; publishing a journey version can move waiting people to it.
+- Metric members (P9-T5): a query metric with dimensions stores a snapshot per member beside the
+  total; `GET /api/v1/metrics/{id}/snapshots?dimension_attribute=` lists them.
+
 - Power dialer documented (D21-T14, `docs/dialer.md`): the call list routes
   `POST /api/v1/sales/call-lists/{id}/build`, `/claim`, `/dial` and `/voicemail`, and
   `POST /api/v1/sales/call-list-members/{id}/outcome` and `/skip`; what is off until set up, and that
@@ -1770,6 +1786,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- A deal's amount is locked while it has lines (D6-T4): a staff write of `opportunity.amount`
+  answers `field_locked`; the lines set it.
 - Lists and entity schemas revalidate (AA7-T11): the web app remembers the last answer to each
   `query/execute` and `/schema` request with its ETag (in memory, 200 at most, forgotten on sign-out
   and on a language change) and sends `If-None-Match`, so returning to an unchanged list costs one
