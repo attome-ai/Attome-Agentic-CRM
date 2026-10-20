@@ -142325,6 +142325,14 @@
             ],
             "description": "U10-T1: the description in Arabic."
           },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "U10-T3: the stored row this value comes from (its audit trail is\n`entity_name = \"setting\"`, `record_id = id`); `null` while the code\ndefault applies, or in a user's own view."
+          },
           "key": {
             "type": "string"
           },

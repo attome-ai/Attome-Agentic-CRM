@@ -113,6 +113,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.SystemSettingsComponent),
           },
           {
+            // U10-T3: the admin console, areas, search and setting history.
+            path: 'console',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.AdminConsoleComponent),
+          },
+          {
             // Z3-T10: per-cache numbers and purge.
             path: 'caches',
             canActivate: [authGuard],
@@ -376,6 +382,13 @@ export const xrmShellRoutes: Routes = [
             path: 'resources/capacity',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/project').then(m => m.ResourceCapacityPageComponent),
+          },
+          {
+            // V3-T1: my week's timesheet as a grid. A literal path, ahead of
+            // the '**' wildcard like the list below.
+            path: 'project/timesheet/week',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/project').then(m => m.TimesheetGridComponent),
           },
           {
             // Timesheets (M69 §4) — a bespoke list with Submit/Approve/Reject
@@ -858,6 +871,12 @@ export const xrmShellRoutes: Routes = [
             path: 'metric/scorecard',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/report').then(m => m.MetricListComponent),
+          },
+          {
+            // B19-T2: where the service worker sends files another app shared.
+            path: 'share',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity').then(m => m.ShareTargetComponent),
           },
           {
             // The system-wide Documents page (D-36x) — a hand-built

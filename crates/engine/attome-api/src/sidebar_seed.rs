@@ -420,7 +420,9 @@ async fn ensure_sidebar_privilege(
 // Bumped 17 -> 18: admin-only "Secrets" and "Configuration History" (Z1-T14),
 // "Pending Timers" (M10-T4) and "Caches" (Z3-T10) under Management, each
 // linked to `system.admin` like its route. Icons are in the subset.
-const SEED_VERSION: &str = "18";
+// Bumped 18 -> 19: the admin-only "Administration" console (U10-T3) under
+// Management and "My Timesheet" (V3-T1) under Projects.
+const SEED_VERSION: &str = "19";
 
 pub async fn seed(db: &DbPool) -> Result<(), AppError> {
     attome_core::seed_gate::run_if_stale(db, "sidebar", SEED_VERSION, || seed_body(db)).await
@@ -1079,6 +1081,19 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
     ensure_sidebar_privilege(db, caches, ADMIN_PRIVILEGE_KEY).await?;
+    // U10-T3: the admin console, admin-only like its route.
+    let console = upsert_sidebar(
+        db,
+        "Administration",
+        Some("/xrm/admin/console"),
+        "las la-sliders-h",
+        "#334155",
+        Some(management_group),
+        44,
+        Some("core"),
+    )
+    .await?;
+    ensure_sidebar_privilege(db, console, ADMIN_PRIVILEGE_KEY).await?;
 
     // Basic Units U8 — the state-model editor. Its routes are
     // `Authorized<Admin>`, so the row is linked to `system.admin`
@@ -1831,6 +1846,18 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
         "#8b5cf6",
         Some(project_group),
         80,
+        Some("project"),
+    )
+    .await?;
+    // V3-T1: the person's own week as a grid.
+    upsert_sidebar(
+        db,
+        "My Timesheet",
+        Some("/xrm/project/timesheet/week"),
+        "las la-calendar-alt",
+        "#8b5cf6",
+        Some(project_group),
+        79,
         Some("project"),
     )
     .await?;

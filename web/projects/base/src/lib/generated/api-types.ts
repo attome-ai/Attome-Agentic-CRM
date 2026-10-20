@@ -36456,6 +36456,13 @@ export interface components {
             description: string;
             /** @description U10-T1: the description in Arabic. */
             description_ar?: string | null;
+            /**
+             * Format: uuid
+             * @description U10-T3: the stored row this value comes from (its audit trail is
+             *     `entity_name = "setting"`, `record_id = id`); `null` while the code
+             *     default applies, or in a user's own view.
+             */
+            id?: string | null;
             key: string;
             schema: unknown;
             source: string;

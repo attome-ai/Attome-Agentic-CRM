@@ -8,6 +8,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Every outbound HTTP call goes through one guarded client (Q21-T1, `attome_outbound::http`): private
+  addresses are refused unless the call's purpose lists the host from configuration (a model server,
+  an identity provider, the render sidecar, an Asterisk PBX, an SES endpoint, alert webhooks), cloud
+  metadata addresses are refused always, and each redirect hop is checked. Vendor APIs (Twilio, SMS,
+  push, Gmail, Microsoft Graph, Meta, Google, ZATCA) reach public addresses only. Server-initiated calls
+  no longer use `HTTP_PROXY`, `HTTPS_PROXY` or `ALL_PROXY`; a network that needs a proxy sets
+  `deployment.outbound_proxy`, used for public hosts only. See `docs/security/outbound-calls.md`; the
+  `outbound_client_guard` test fails when code builds an HTTP client another way.
 - Legal holds block every delete (K1-T3): a record under an active hold (on it, or on its whole
   entity) now refuses an ordinary delete into the recycle bin with 409, not only a hard delete, on
   every path (single, bulk, agent, portal, merge); a held document also survives its file field
@@ -124,6 +132,20 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Browser push and sharing into Attome (B19-T2): a person turns on browser notifications from the
+  notification panel; a push opens its record when tapped, and the installed app's icon shows the
+  unread count. Files shared from another app on the device land on `/xrm/share` and are saved as
+  documents in the Shared folder of the person's own record. A push to a browser is now sent in the
+  shape the app's service worker shows.
+- My timesheet (V3-T1, `/xrm/project/timesheet/week`): the person's week as a grid of work items by
+  day, with days on approved leave marked and closed, totals, and Submit for approval.
+- Admin console (U10-T3, `/xrm/admin/console`): settings and admin screens by area, one search over
+  both (setting descriptions in English and Arabic), and each setting's change history.
+  `GET /api/v1/admin/settings` items gain `id`, the stored row a value comes from (`null` while the
+  default applies), whose audit trail is the setting's history.
+- Identity provider presets (Q2-T1, `attome_auth::oidc_presets`): Entra ID, Okta, AD FS and Keycloak
+  reached through an OpenID Connect broker, each with its issuer URL shape, email and groups claims,
+  the claim values that mean MFA was done, and whether a forced sign-in reaches the provider.
 - Metadata versions (Y8-T4): every publish records the deployment's next metadata version (its cooked
   manifest kept as an artefact), and `POST /api/v1/admin/metadata/versions/{version}/switch` and
   `POST /api/v1/admin/metadata/rollback` move the current version without cooking anything. Every node
