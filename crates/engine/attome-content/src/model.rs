@@ -263,6 +263,29 @@ pub struct SchedulePageBody {
 const RESERVED_URL_PREFIXES: &[&str] = &["/api", "/xrm", "/assets", "/health", "/version"];
 
 pub fn validate_url_path(path: &str) -> Result<(), String> {
+    validate_url_path_with(path, false)
+}
+
+/// E13-T5: true for an Arabic page's language (`ar`, `ar-SA`, ...).
+pub fn is_arabic_language(language: Option<&str>) -> bool {
+    language.is_some_and(|l| {
+        let l = l.trim().to_ascii_lowercase();
+        l == "ar" || l.starts_with("ar-")
+    })
+}
+
+/// E13-T5: true for a letter or digit in the Unicode Arabic blocks
+/// (U+0600–U+06FF, U+0750–U+077F).
+fn is_arabic_letter(c: char) -> bool {
+    matches!(c, '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}')
+        && (c.is_alphabetic() || c.is_numeric())
+}
+
+/// [`validate_url_path`], also accepting Arabic letters when
+/// `allow_arabic` (the `content.seo_arabic_paths` flag, for an Arabic page).
+/// Everything else is unchanged: `..`, `//`, white space, upper-case Latin
+/// and the reserved prefixes are still refused.
+pub fn validate_url_path_with(path: &str, allow_arabic: bool) -> Result<(), String> {
     if !path.starts_with('/') {
         return Err("url_path must start with \"/\"".to_string());
     }
@@ -272,13 +295,19 @@ pub fn validate_url_path(path: &str) -> Result<(), String> {
     if path.contains("..") || path.contains("//") {
         return Err("url_path must not contain \"..\" or \"//\"".to_string());
     }
-    if !path
-        .chars()
-        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '/' || c == '-')
-    {
-        return Err(
-            "url_path may only contain lowercase letters, digits, \"/\" and \"-\"".to_string(),
-        );
+    if !path.chars().all(|c| {
+        c.is_ascii_lowercase()
+            || c.is_ascii_digit()
+            || c == '/'
+            || c == '-'
+            || (allow_arabic && is_arabic_letter(c))
+    }) {
+        return Err(if allow_arabic {
+            "url_path may only contain lowercase letters, Arabic letters, digits, \"/\" and \"-\""
+                .to_string()
+        } else {
+            "url_path may only contain lowercase letters, digits, \"/\" and \"-\"".to_string()
+        });
     }
     for prefix in RESERVED_URL_PREFIXES {
         if path == *prefix || path.starts_with(&format!("{prefix}/")) {
@@ -298,6 +327,36 @@ mod tests {
     fn accepts_a_normal_custom_path() {
         assert!(validate_url_path("/guide/templates").is_ok());
         assert!(validate_url_path("/").is_ok());
+    }
+
+    #[test]
+    fn arabic_path_rejected_when_flag_off() {
+        assert!(validate_url_path("/دليل-البدء").is_err());
+        assert!(validate_url_path_with("/دليل-البدء", false).is_err());
+    }
+
+    #[test]
+    fn arabic_path_accepted_when_flag_on() {
+        assert!(validate_url_path_with("/دليل-البدء", true).is_ok());
+        assert!(validate_url_path_with("/guide/دليل-2", true).is_ok());
+        assert!(
+            validate_url_path_with("/دليل البدء", true).is_err(),
+            "white space"
+        );
+        assert!(
+            validate_url_path_with("/Guide/دليل", true).is_err(),
+            "upper-case Latin"
+        );
+        assert!(
+            validate_url_path_with("/api/دليل", true).is_err(),
+            "reserved prefix"
+        );
+    }
+
+    #[test]
+    fn dot_dot_still_rejected_with_arabic() {
+        assert!(validate_url_path_with("/دليل/../سر", true).is_err());
+        assert!(validate_url_path_with("/دليل//سر", true).is_err());
     }
 
     #[test]

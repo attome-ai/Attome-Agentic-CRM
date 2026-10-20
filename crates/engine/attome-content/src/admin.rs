@@ -260,6 +260,8 @@ async fn create_page(
                 AppError::internal(e)
             }
         })?;
+    // E13-T5: a page created at a redirected path takes the path over.
+    crate::redirect::release_path(&mut tx, &row.url_path).await?;
 
     attome_audit::security::write_security_event(
         &mut tx,
@@ -343,8 +345,23 @@ async fn update_page(
     {
         return Err(AppError::Validation("title must not be empty".into()));
     }
-    if let Some(url_path) = &body.url_path {
-        validate_url_path(url_path).map_err(AppError::Validation)?;
+    if let Some(url_path) = &body.url_path
+        && validate_url_path(url_path).is_err()
+    {
+        // E13-T5: an Arabic page may have an Arabic path when the flag is on.
+        let language: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT language FROM content_page WHERE id = $1 AND is_deleted = FALSE",
+        )
+        .bind(id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        let arabic = crate::model::is_arabic_language(language.flatten().as_deref())
+            && state
+                .feature_flags()
+                .is_on("content.seo_arabic_paths", &ctx)
+                .await;
+        crate::model::validate_url_path_with(url_path, arabic).map_err(AppError::Validation)?;
     }
     if let Some(page_blocks) = &body.blocks {
         blocks::validate_blocks(page_blocks).map_err(|e| AppError::Validation(e.to_string()))?;
@@ -406,6 +423,14 @@ async fn update_page(
         None => return Err(AppError::NotFound),
     };
     let page: PageDetail = serde_json::from_value(new_row).map_err(AppError::internal)?;
+    // E13-T5: the old path keeps working, in this same transaction.
+    if let Some(old_path) = old_row
+        .as_ref()
+        .and_then(|r| r.get("url_path"))
+        .and_then(Value::as_str)
+    {
+        crate::redirect::record_path_change(&mut tx, page.id, old_path, &page.url_path).await?;
+    }
 
     attome_audit::security::write_security_event(
         &mut tx,

@@ -36,6 +36,7 @@ pub mod audience;
 pub mod blocks;
 pub mod hierarchy;
 pub mod model;
+pub mod redirect;
 pub mod scheduling;
 /// E13-T4: page search settings and JSON-LD.
 pub mod seo;

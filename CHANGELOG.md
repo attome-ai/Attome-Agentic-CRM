@@ -133,6 +133,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Page redirects and Arabic paths (E13-T5): changing a page's `url_path` keeps the old path working —
+  `GET /api/v1/content/view`, `/content/delivery` and `/content/internal` answer an old path with 301 and a
+  `Location` naming the page's current path (percent-encoded), only for a published page the caller's
+  audience may read. With `content.seo_arabic_paths` on, an Arabic page or translation may use Arabic
+  letters in its path.
 - Tracking collection (E14-T5, E14-T6): `POST /api/v1/track/collect` takes the script's batches
   (`text/plain` JSON, at most 50 events and 32 KB), rate-limits per visitor and per truncated
   address, drops unknown or disabled sites and foreign origins with the same 204, and answers 202

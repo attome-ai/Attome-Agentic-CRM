@@ -34,8 +34,6 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::model::validate_url_path;
-
 /// `POST .../translations`.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateTranslationBody {
@@ -137,7 +135,14 @@ async fn create_translation(
     if title.is_empty() {
         return Err(AppError::Validation("title must not be empty".into()));
     }
-    validate_url_path(&body.url_path).map_err(AppError::Validation)?;
+    // E13-T5: an Arabic translation may have an Arabic path when the flag
+    // is on.
+    let arabic = crate::model::is_arabic_language(Some(language))
+        && state
+            .feature_flags()
+            .is_on("content.seo_arabic_paths", &ctx)
+            .await;
+    crate::model::validate_url_path_with(&body.url_path, arabic).map_err(AppError::Validation)?;
 
     let source: Option<(Option<Uuid>, Option<String>)> = sqlx::query_as(
         "SELECT translation_of, language FROM content_page WHERE id = $1 AND is_deleted = FALSE",
@@ -187,6 +192,7 @@ async fn create_translation(
         }
     })?
     .ok_or(AppError::NotFound)?;
+    crate::redirect::release_path(&mut tx, &row.url_path).await?;
     attome_audit::security::write_security_event(
         &mut tx,
         &attome_audit::audit_service(&state),

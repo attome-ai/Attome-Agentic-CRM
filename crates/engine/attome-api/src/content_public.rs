@@ -61,13 +61,14 @@ struct ViewRow {
     params(ViewQuery),
     responses(
         (status = 200, description = "Success", body = PublicPageView),
+        (status = 301, description = "The page moved; `Location` names its current path"),
         (status = 404, description = "No published page at this path (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed on this deployment)", body = ErrorResponse),
     ),
 )]
 async fn view_page(
     State(state): State<EngineState>,
     Query(q): Query<ViewQuery>,
-) -> Result<Json<PublicPageView>, AppError> {
+) -> Result<Response, AppError> {
     if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
@@ -82,7 +83,12 @@ async fn view_page(
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let row = row.ok_or(AppError::NotFound)?;
+    let Some(row) = row else {
+        return moved(&state, &q.path, &["public"], |_, path| {
+            format!("/api/v1/content/view?path={path}")
+        })
+        .await;
+    };
 
     // M37 Phase 2 (D-452): off the request path, same discipline
     // `attome-search/telemetry.rs`'s impression logging documents — a page
@@ -101,7 +107,30 @@ async fn view_page(
         blocks: row.blocks,
         seo_title: row.seo_title,
         seo_description: row.seo_description,
-    }))
+    })
+    .into_response())
+}
+
+/// E13-T5: a page's old path answers with a permanent redirect to the
+/// route `location` builds from the page's space and percent-encoded
+/// current path; a path no redirect covers is the usual 404.
+async fn moved(
+    state: &EngineState,
+    old_path: &str,
+    audiences: &[&str],
+    location: impl FnOnce(Uuid, &str) -> String,
+) -> Result<Response, AppError> {
+    let audiences: Vec<String> = audiences.iter().map(|a| (*a).to_owned()).collect();
+    let (space, path) = attome_content::redirect::resolve(&state.base.db, old_path, &audiences)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let target = location(space, &attome_content::redirect::encode_path(&path));
+    let target = HeaderValue::from_str(&target).map_err(AppError::internal)?;
+    Ok((
+        StatusCode::MOVED_PERMANENTLY,
+        [(axum::http::header::LOCATION, target)],
+    )
+        .into_response())
 }
 
 /// A "was this useful" body-less struct wrapper isn't needed: `VoteBody`
@@ -310,6 +339,7 @@ fn etag_held(if_none_match: Option<&str>, etag: &str) -> bool {
     params(DeliveryQuery),
     responses(
         (status = 200, description = "The page's published version", body = DeliveredPage),
+        (status = 301, description = "The page moved; `Location` names its current path"),
         (status = 304, description = "The client already holds this version"),
         (status = 404, description = "No published page at this path in this space (identical response whether the page doesn't exist, isn't published, or Content Management isn't licensed)", body = ErrorResponse),
     ),
@@ -322,7 +352,7 @@ async fn deliver_page(
     if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
-    delivered(&state, q, &headers, &["public"]).await
+    delivered(&state, q, &headers, &["public"], "/api/v1/content/delivery").await
 }
 
 /// The latest published version of the page at `q` whose audience is one of
@@ -331,10 +361,11 @@ async fn delivered(
     state: &EngineState,
     q: DeliveryQuery,
     headers: &HeaderMap,
-    audiences: &[&str],
+    audience_list: &[&str],
+    route: &str,
 ) -> Result<Response, AppError> {
-    let audiences: Vec<String> = audiences.iter().map(|a| (*a).to_owned()).collect();
-    let row: DeliveryRow = sqlx::query_as(
+    let audiences: Vec<String> = audience_list.iter().map(|a| (*a).to_owned()).collect();
+    let row: Option<DeliveryRow> = sqlx::query_as(
         "SELECT p.id AS page_id, COALESCE(v.version_number, 0) AS version, \
                 COALESCE(v.title, p.title) AS title, \
                 COALESCE(v.blocks, p.blocks_published, '[]'::jsonb) AS blocks, \
@@ -356,8 +387,13 @@ async fn delivered(
     .bind(&audiences)
     .fetch_optional(&state.base.db)
     .await
-    .map_err(AppError::internal)?
-    .ok_or(AppError::NotFound)?;
+    .map_err(AppError::internal)?;
+    let Some(row) = row else {
+        return moved(state, &q.path, audience_list, |space, path| {
+            format!("{route}?space={space}&path={path}")
+        })
+        .await;
+    };
 
     let etag = delivery_etag(row.page_id, row.version);
     let etag_value = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
@@ -401,6 +437,7 @@ async fn delivered(
     params(DeliveryQuery),
     responses(
         (status = 200, description = "The page's published version", body = DeliveredPage),
+        (status = 301, description = "The page moved; `Location` names its current path"),
         (status = 304, description = "The client already holds this version"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 404, description = "No published page at this path in this space that the caller may read", body = ErrorResponse),
@@ -416,7 +453,14 @@ async fn deliver_internal_page(
     if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
-    delivered(&state, q, &headers, &["public", "internal"]).await
+    delivered(
+        &state,
+        q,
+        &headers,
+        &["public", "internal"],
+        "/api/v1/content/internal",
+    )
+    .await
 }
 
 #[derive(Deserialize, IntoParams)]
