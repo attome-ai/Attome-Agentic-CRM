@@ -129,9 +129,17 @@ that makes it; the release gate's contract step refuses a release that breaks th
   refused with `413 payload_too_large` before authentication or any handler reads it.
 - Pages carry `Permissions-Policy` (camera, microphone and location for this origin only) and
   `Cross-Origin-Opener-Policy: same-origin-allow-popups`; API responses deny every browser feature
-  and carry `Cross-Origin-Resource-Policy: same-origin`.
+  and carry `Cross-Origin-Resource-Policy: same-origin`, except the two that other sites embed (the
+  tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Tracking collection (E14-T5, E14-T6): `POST /api/v1/track/collect` takes the script's batches
+  (`text/plain` JSON, at most 50 events and 32 KB), rate-limits per visitor and per truncated
+  address, drops unknown or disabled sites and foreign origins with the same 204, and answers 202
+  after queuing one `marketing_web_event_batch` job; it writes no event on the request path and never
+  queues a full IP (IPv4 /24, IPv6 /48) or the user agent (only its class). The job drops crawlers,
+  staff sessions and office networks, writes each event once (re-running a batch changes nothing) and
+  keeps a session's first landing page, UTM values and click ids.
 - Website tracking script (E14-T4): `GET /api/v1/track/script.js?site=` serves the script (under 10 KB
   gzipped, cached a day) for an enabled tracked site when `marketing.tracking` is on. It sends nothing
   before analytics consent, stays anonymous under Global Privacy Control, uses only first-party

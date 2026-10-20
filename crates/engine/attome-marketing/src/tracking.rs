@@ -3,6 +3,7 @@
 //! feature flag, off by default (`marketing.tracking*`).
 
 pub mod bots;
+pub mod collect;
 pub mod writer;
 
 /// The flags that switch tracking on, in dependency order.

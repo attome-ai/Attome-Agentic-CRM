@@ -3,6 +3,8 @@
 pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // E14-T4: the website tracking script, loaded by a public web page.
     "/api/v1/track/script.js",
+    // E14-T6: the script's batches; queued only, rate-limited per visitor.
+    "/api/v1/track/collect",
     // B13-T5: the published brand, for the sign-in page; no user data.
     "/api/v1/branding/public",
     // B13-T4: published logos, favicons and fonts, served inert; no user data.

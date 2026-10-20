@@ -349,6 +349,9 @@ impl EngineSystem {
             // E14-T4: the website tracking script (own licence and flag
             // checks; an exact bypass path).
             .merge(attome_marketing::tracking_script::public_routes())
+            // E14-T6: tracking batches, queued and never written on the
+            // request path (own licence, flag, rate limits; exact bypass).
+            .merge(attome_marketing::tracking::collect::public_routes())
             // D-486 — M55 moved to `attome-document`. `files::routes()` stays
             // mounted HERE, ungated, because it serves
             // `/api/v1/{entity}/{id}/files/{field}/…` for a `file`-typed

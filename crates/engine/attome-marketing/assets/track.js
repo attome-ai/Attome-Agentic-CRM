@@ -81,10 +81,13 @@
   function flush(useBeacon) {
     if (!queue.length) return;
     var body = JSON.stringify({ site: cfg.site, visitor: visitor(), session: session(), events: queue.splice(0, 20) });
+    // text/plain: a cross-site post a browser sends without a preflight;
+    // the deployment reads the body as JSON.
     if (useBeacon && navigator.sendBeacon) {
-      navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'application/json' }));
+      navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'text/plain' }));
     } else if (window.fetch) {
-      fetch(ENDPOINT, { method: 'POST', body: body, headers: { 'Content-Type': 'application/json' }, keepalive: true, credentials: 'omit' })
+      fetch(ENDPOINT, { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, keepalive: true,
+        credentials: 'omit', mode: 'no-cors' })
         .catch(function () { /* tracking never breaks the page */ });
     }
     if (queue.length) flush(useBeacon);

@@ -106,6 +106,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "empty",
     ),
     (
+        "crates/engine/attome-marketing/src/tracking/collect.rs",
+        "tracked sites by site key",
+        "PostgreSQL marketing_tracked_site",
+        "60 s, at most 10,000 keys",
+        "none; an edited site applies within the TTL on every node",
+        "a failed read is returned and not cached; an unknown key is cached as absent",
+        "empty; the first batch for a site reads it",
+    ),
+    (
         "crates/engine/attome-portal/src/cache.rs",
         "attome-portal:portal and attome-portal:plan",
         "PostgreSQL portal tables",

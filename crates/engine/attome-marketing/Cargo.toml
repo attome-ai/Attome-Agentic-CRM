@@ -34,6 +34,7 @@ axum.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
 flate2.workspace = true
+moka.workspace = true
 quick-xml.workspace = true
 serde.workspace = true
 serde_json.workspace = true

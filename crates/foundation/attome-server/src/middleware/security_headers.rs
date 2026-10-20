@@ -77,6 +77,15 @@ pub fn surface_for(path: &str) -> Surface {
     }
 }
 
+/// API resources other websites embed: the website tracking script (E14-T4,
+/// a `<script>` on a customer's site) and the email open pixel (D16-T1, an
+/// `<img>` in a webmail page). `Cross-Origin-Resource-Policy: same-origin`
+/// would make a browser refuse to load them, so they say `cross-origin`.
+/// Exact paths and one fixed prefix, never a broader `/api/` subtree.
+pub fn is_cross_origin_resource(path: &str) -> bool {
+    path == "/api/v1/track/script.js" || path.starts_with("/api/v1/track/open/")
+}
+
 /// Precomputed once at server boot (`app::apply_outer_layers`) from
 /// `AppConfig.security.csp_enforce` — never rebuilt per request.
 #[derive(Clone)]
@@ -147,6 +156,7 @@ fn hsts_header_value(max_age_secs: u64, include_subdomains: bool) -> Option<Head
 /// built once at boot.
 pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: Next) -> Response {
     let surface = surface_for(req.uri().path());
+    let embeddable = is_cross_origin_resource(req.uri().path());
     let mut response = next.run(req).await;
     let headers = response.headers_mut();
     match surface {
@@ -169,7 +179,11 @@ pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: 
             );
             headers.insert(
                 "cross-origin-resource-policy",
-                HeaderValue::from_static("same-origin"),
+                HeaderValue::from_static(if embeddable {
+                    "cross-origin"
+                } else {
+                    "same-origin"
+                }),
             );
         }
     }
@@ -348,6 +362,27 @@ mod tests {
             "same-origin"
         );
         assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
+
+        // The tracking script and the open pixel are embedded by other sites.
+        let app = Router::new()
+            .route("/api/v1/track/script.js", get(|| async { StatusCode::OK }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                security_headers(values(true), req, next)
+            }));
+        let response = app
+            .oneshot(request_for("/api/v1/track/script.js"))
+            .await
+            .unwrap();
+        assert_eq!(
+            response
+                .headers()
+                .get("cross-origin-resource-policy")
+                .unwrap(),
+            "cross-origin"
+        );
+        assert!(is_cross_origin_resource("/api/v1/track/open/abc.gif"));
+        assert!(!is_cross_origin_resource("/api/v1/track/collect"));
+        assert!(!is_cross_origin_resource("/api/v1/track/script.jsx"));
     }
 
     #[tokio::test]
