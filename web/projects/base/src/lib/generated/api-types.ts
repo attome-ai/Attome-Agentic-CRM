@@ -10902,6 +10902,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contract/contracts/{id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Drafts a contract from its type's template.
+         * @description Adds the contract's next version (source `draft`) and queues a render of
+         *     the contract type's template against the contract; the document is
+         *     attached to the new version when the render finishes. The template is
+         *     rendered as the caller, in the contract's language, with the clauses
+         *     chosen for the contract. The caller needs update rights on the contract
+         *     and create rights on contract versions.
+         */
+        post: operations["post_draft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contract/counterparty-match/run": {
         parameters: {
             query?: never;
@@ -13217,6 +13242,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/call-list-members/{id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Skips a claimed call list member.
+         * @description The member the caller claimed leaves the queue as skipped, with the
+         *     reason given; the dialer's next claim moves on to the next member. Only
+         *     the rep who claimed it may skip it.
+         */
+        post: operations["post_sales_call_skip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/call-lists/{id}/build": {
         parameters: {
             query?: never;
@@ -13345,6 +13392,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/contacts/{id}/manager": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets who a contact reports to.
+         * @description Sets or clears the contact's solid or dotted reporting line. The manager
+         *     must work at the contact's account or at an account in its group, and the
+         *     line may not form a loop. Send the contact's `row_version` in `If-Match`.
+         *     The answer names the previous manager, so setting it back undoes the
+         *     change.
+         */
+        put: operations["put_sales_contact_manager"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/default-team/apply": {
         parameters: {
             query?: never;
@@ -13455,6 +13526,28 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["patch_sales_line"];
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/plays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The plays for a deal.
+         * @description The enabled opportunity playbooks whose condition holds for this deal
+         *     (as the caller reads it), each with its steps in order. A deal sees a
+         *     handful of plays, so the whole list is one page.
+         */
+        get: operations["get_sales_plays"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/sales/opportunities/{id}/schedules/shift": {
@@ -22828,6 +22921,21 @@ export interface components {
             /** Format: int64 */
             expires_in_secs: number;
         };
+        /** @description The answer to a draft request. */
+        DraftQueued: {
+            /**
+             * Format: uuid
+             * @description The render, at `GET /api/v1/docgen/renders/{render_id}`.
+             */
+            render_id: string;
+            /**
+             * Format: uuid
+             * @description The new `contract_version`; its file arrives when the render finishes.
+             */
+            version_id: string;
+            /** Format: int64 */
+            version_no: number;
+        };
         DraftTree: {
             dashboard: components["schemas"]["TreeRecord"];
             /** @description Ordered by `sequence`, then id. */
@@ -25569,6 +25677,11 @@ export interface components {
             /** @description `booked` or `cancelled`. */
             status: string;
         };
+        /**
+         * @description The two kinds of reporting line.
+         * @enum {string}
+         */
+        ManagerLine: "solid" | "dotted";
         /**
          * @description One named bundle's currently-applied state — the highest-version
          *     `succeeded` ledger row for that name.
@@ -31415,6 +31528,27 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SalesPlay: {
+            items: {
+                name?: string | null;
+                name_ar?: string | null;
+                /** Format: uuid */
+                playbook_id: string;
+                steps: components["schemas"]["SalesPlayStep"][];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SalesProductPrice: {
             items: {
                 breaks: components["schemas"]["PriceBreak"][];
@@ -35756,6 +35890,13 @@ export interface components {
             attempt_number: number;
             member_status: string;
         };
+        SalesCallSkipBody: {
+            /** @description Why the member is passed over (shown on the list). */
+            reason: string;
+        };
+        SalesCallSkipped: {
+            member_status: string;
+        };
         SalesChangeOwnerBody: {
             /** @description Move the old owner's splits to the new owner (else they stay). */
             move_splits?: boolean;
@@ -35853,6 +35994,20 @@ export interface components {
             snapshot_id?: string | null;
             total_contract_value: string;
         };
+        SalesManagerSet: {
+            /** Format: uuid */
+            contact_id: string;
+            line: components["schemas"]["ManagerLine"];
+            /** Format: uuid */
+            manager_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The manager before this change: set it back to undo.
+             */
+            previous_manager_id?: string | null;
+            /** Format: int64 */
+            row_version: number;
+        };
         SalesMentionDecided: {
             /** Format: uuid */
             mention_id: string;
@@ -35886,6 +36041,26 @@ export interface components {
             owner_id: string;
             /** Format: int64 */
             splits_moved: number;
+        };
+        /** @description A playbook that applies to the deal. */
+        SalesPlay: {
+            name?: string | null;
+            name_ar?: string | null;
+            /** Format: uuid */
+            playbook_id: string;
+            steps: components["schemas"]["SalesPlayStep"][];
+        };
+        /** @description One step of a play. */
+        SalesPlayStep: {
+            activity_kind?: string | null;
+            /** Format: double */
+            due_after_days?: number | null;
+            guidance?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: double */
+            step_order?: number | null;
+            title?: string | null;
         };
         SalesProductPrice: {
             breaks: components["schemas"]["PriceBreak"][];
@@ -35933,6 +36108,15 @@ export interface components {
              * @description Rows moved now; zero when a job moves them.
              */
             rows_shifted: number;
+        };
+        SalesSetManagerBody: {
+            /** @description `solid` (the default) or `dotted`. */
+            line?: components["schemas"]["ManagerLine"];
+            /**
+             * Format: uuid
+             * @description The new manager, or `null` to clear the line.
+             */
+            manager_id?: string | null;
         };
         SalesSplitsBody: {
             /** @description Required when the deal is won. */
@@ -76046,6 +76230,74 @@ export interface operations {
             };
         };
     };
+    post_draft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contract's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The version is added and its render queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not change the contract or add versions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contract the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another draft of this contract is being added */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contract has no type, or its type no template */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_run: {
         parameters: {
             query?: never;
@@ -82935,6 +83187,69 @@ export interface operations {
             };
         };
     };
+    post_sales_call_skip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call list member */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesCallSkipBody"];
+            };
+        };
+        responses: {
+            /** @description The member is skipped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesCallSkipped"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The member is not claimed by the caller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The reason is empty or too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_build_list: {
         parameters: {
             query?: never;
@@ -83405,6 +83720,81 @@ export interface operations {
             };
             /** @description No such competitor, or competitors are not installed */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_sales_contact_manager: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The contact's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The contact */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesSetManagerBody"];
+            };
+        };
+        responses: {
+            /** @description The line is set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesManagerSet"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the contact */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contact or manager the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contact changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unrelated account, a loop, or a missing If-Match */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -83939,6 +84329,56 @@ export interface operations {
             };
             /** @description If-Match missing or a bad value */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_plays: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plays that apply, all on one page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SalesPlay"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read this opportunity or playbooks */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity, or playbooks are not installed */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

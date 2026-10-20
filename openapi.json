@@ -59854,6 +59854,113 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/contract/contracts/{id}/draft": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Drafts a contract from its type's template.",
+        "description": "Adds the contract's next version (source `draft`) and queues a render of\nthe contract type's template against the contract; the document is\nattached to the new version when the render finishes. The template is\nrendered as the caller, in the contract's language, with the clauses\nchosen for the contract. The caller needs update rights on the contract\nand create rights on contract versions.",
+        "operationId": "post_draft",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The version is added and its render queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not change the contract or add versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another draft of this contract is being added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The contract has no type, or its type no template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/contract/counterparty-match/run": {
       "post": {
         "tags": [
@@ -71174,6 +71281,113 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/call-list-members/{id}/skip": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Skips a claimed call list member.",
+        "description": "The member the caller claimed leaves the queue as skipped, with the\nreason given; the dialer's next claim moves on to the next member. Only\nthe rep who claimed it may skip it.",
+        "operationId": "post_sales_call_skip",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The call list member",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesCallSkipBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The member is skipped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesCallSkipped"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The member is not claimed by the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The reason is empty or too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/call-lists/{id}/build": {
       "post": {
         "tags": [
@@ -71945,6 +72159,132 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/sales/contacts/{id}/manager": {
+      "put": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Sets who a contact reports to.",
+        "description": "Sets or clears the contact's solid or dotted reporting line. The manager\nmust work at the contact's account or at an account in its group, and the\nline may not form a loop. Send the contact's `row_version` in `If-Match`.\nThe answer names the previous manager, so setting it back undoes the\nchange.",
+        "operationId": "put_sales_contact_manager",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contact",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The contact's row_version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesSetManagerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The line is set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesManagerSet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contact or manager the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contact changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unrelated account, a loop, or a missing If-Match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/sales/default-team/apply": {
@@ -72831,6 +73171,84 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/opportunities/{id}/plays": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "The plays for a deal.",
+        "description": "The enabled opportunity playbooks whose condition holds for this deal\n(as the caller reads it), each with its steps in order. A deal sees a\nhandful of plays, so the whole list is one page.",
+        "operationId": "get_sales_plays",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The plays that apply, all on one page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SalesPlay"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read this opportunity or playbooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity, or playbooks are not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/sales/opportunities/{id}/schedules/shift": {
@@ -107467,6 +107885,31 @@
           }
         }
       },
+      "DraftQueued": {
+        "type": "object",
+        "description": "The answer to a draft request.",
+        "required": [
+          "version_id",
+          "version_no",
+          "render_id"
+        ],
+        "properties": {
+          "render_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The render, at `GET /api/v1/docgen/renders/{render_id}`."
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The new `contract_version`; its file arrives when the render finishes."
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "DraftTree": {
         "type": "object",
         "required": [
@@ -114011,6 +114454,14 @@
             "description": "`booked` or `cancelled`."
           }
         }
+      },
+      "ManagerLine": {
+        "type": "string",
+        "description": "The two kinds of reporting line.",
+        "enum": [
+          "solid",
+          "dotted"
+        ]
       },
       "ManifestEntry": {
         "type": "object",
@@ -129540,6 +129991,72 @@
           }
         }
       },
+      "PaginatedResponse_SalesPlay": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A playbook that applies to the deal.",
+              "required": [
+                "playbook_id",
+                "steps"
+              ],
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "playbook_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SalesPlayStep"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SalesProductPrice": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -140411,6 +140928,29 @@
           }
         }
       },
+      "SalesCallSkipBody": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why the member is passed over (shown on the list)."
+          }
+        }
+      },
+      "SalesCallSkipped": {
+        "type": "object",
+        "required": [
+          "member_status"
+        ],
+        "properties": {
+          "member_status": {
+            "type": "string"
+          }
+        }
+      },
       "SalesChangeOwnerBody": {
         "type": "object",
         "required": [
@@ -140739,6 +141279,42 @@
           }
         }
       },
+      "SalesManagerSet": {
+        "type": "object",
+        "required": [
+          "contact_id",
+          "line",
+          "row_version"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "line": {
+            "$ref": "#/components/schemas/ManagerLine"
+          },
+          "manager_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "previous_manager_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The manager before this change: set it back to undo."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "SalesMentionDecided": {
         "type": "object",
         "required": [
@@ -140862,6 +141438,83 @@
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          }
+        }
+      },
+      "SalesPlay": {
+        "type": "object",
+        "description": "A playbook that applies to the deal.",
+        "required": [
+          "playbook_id",
+          "steps"
+        ],
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "playbook_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesPlayStep"
+            }
+          }
+        }
+      },
+      "SalesPlayStep": {
+        "type": "object",
+        "description": "One step of a play.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "activity_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_after_days": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "guidance": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "step_order": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -141014,6 +141667,23 @@
             "format": "int64",
             "description": "Rows moved now; zero when a job moves them.",
             "minimum": 0
+          }
+        }
+      },
+      "SalesSetManagerBody": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "$ref": "#/components/schemas/ManagerLine",
+            "description": "`solid` (the default) or `dotted`."
+          },
+          "manager_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The new manager, or `null` to clear the line."
           }
         }
       },
@@ -150446,6 +151116,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
@@ -150498,6 +151169,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": []
+  }
 }
