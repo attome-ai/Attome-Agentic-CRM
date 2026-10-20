@@ -127,6 +127,15 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             || json!([]),
         ),
         SettingDescriptor::new(
+            "marketing.social_post_approval",
+            "Social posts publish only once someone approved them \
+             (approved_by set) (E17-T1). Off: a scheduled post publishes at its time.",
+            || json!({"type": "boolean"}),
+            DEPLOYMENT,
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
             "marketing.blocklist_ips",
             "The sending IPs the daily blocklist check looks up (E6-T8); the \
              sending domains come from the deliverability rollup.",

@@ -36,6 +36,7 @@ pub mod segment_live;
 pub mod send_time;
 /// E16-T1: SMS campaigns with consent, an estimate and quiet hours.
 pub mod sms_campaign;
+pub mod social_publish;
 /// E7-T5: static list members by hand, view, form, flow and import.
 pub mod static_list;
 pub mod tracking;

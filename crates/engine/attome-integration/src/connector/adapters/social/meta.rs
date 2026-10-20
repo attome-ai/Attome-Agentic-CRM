@@ -248,6 +248,85 @@ pub async fn send_reply(
     }
 }
 
+/// E17-T1: a page post's body. Pure.
+pub fn page_post_body(message: &str, link: Option<&str>) -> Value {
+    let mut body = serde_json::json!({ "message": message });
+    if let Some(link) = link.filter(|l| !l.trim().is_empty()) {
+        body["link"] = Value::String(link.trim().to_owned());
+    }
+    body
+}
+
+/// E17-T1: a post's engagement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PostMetrics {
+    pub likes: i64,
+    pub comments: i64,
+    pub shares: i64,
+}
+
+/// E17-T1: the fields read for a post's engagement. Pure.
+pub fn metrics_url(post_id: &str) -> String {
+    format!(
+        "{GRAPH}/{post_id}?fields=likes.summary(true).limit(0),comments.summary(true).limit(0),shares"
+    )
+}
+
+/// E17-T1: a post's engagement from its fields. Pure.
+pub fn parse_metrics(body: &str) -> Option<PostMetrics> {
+    let v: Value = serde_json::from_str(body).ok()?;
+    let count = |path: &str| v.pointer(path).and_then(Value::as_i64).unwrap_or(0);
+    Some(PostMetrics {
+        likes: count("/likes/summary/total_count"),
+        comments: count("/comments/summary/total_count"),
+        shares: count("/shares/count"),
+    })
+}
+
+/// E17-T1: publishes a post on the page; returns its id.
+pub async fn publish_page_post(
+    page_token: &str,
+    page_id: &str,
+    message: &str,
+    link: Option<&str>,
+) -> Result<String, AppError> {
+    if page_id.is_empty() || !page_id.chars().all(|c| c.is_ascii_digit()) {
+        return Err(AppError::Validation(
+            "the page id is not a Meta page id".into(),
+        ));
+    }
+    let res = client()
+        .post(format!("{GRAPH}/{page_id}/feed"))
+        .bearer_auth(page_token)
+        .json(&page_post_body(message, link))
+        .send()
+        .await
+        .map_err(AppError::internal)?;
+    let status = res.status().as_u16();
+    let answer = res.text().await.unwrap_or_default();
+    reply_id(status, &answer)
+        .ok_or_else(|| AppError::Validation(format!("Meta refused the post ({status})")))
+}
+
+/// E17-T1: a published post's engagement now.
+pub async fn fetch_metrics(page_token: &str, post_id: &str) -> Result<PostMetrics, AppError> {
+    let res = client()
+        .get(metrics_url(post_id))
+        .bearer_auth(page_token)
+        .send()
+        .await
+        .map_err(AppError::internal)?;
+    let status = res.status().as_u16();
+    let answer = res.text().await.unwrap_or_default();
+    if !(200..300).contains(&status) {
+        return Err(AppError::Validation(format!(
+            "Meta refused the metrics request ({status})"
+        )));
+    }
+    parse_metrics(&answer)
+        .ok_or_else(|| AppError::Validation("Meta answered unreadable metrics".into()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
