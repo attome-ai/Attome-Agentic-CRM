@@ -29,6 +29,7 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::TourKind),
         Arc::new(attome_model::kinds::EnvironmentVariableKind),
         Arc::new(attome_model::kinds::RecordTypeKind),
+        Arc::new(attome_model::kinds::FlowTemplateKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));

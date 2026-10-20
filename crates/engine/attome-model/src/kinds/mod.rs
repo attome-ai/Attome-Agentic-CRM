@@ -4,6 +4,7 @@
 pub mod agent;
 pub mod environment_variable;
 pub mod eval_suite;
+pub mod flow_template;
 pub mod form;
 pub mod navigation;
 pub mod option_set;
@@ -15,6 +16,7 @@ pub mod tour;
 pub use agent::{AGENT, AgentKind};
 pub use environment_variable::{ENVIRONMENT_VARIABLE, EnvironmentVariableKind};
 pub use eval_suite::{EVAL_SUITE, EvalSuiteKind};
+pub use flow_template::{FLOW_TEMPLATE, FlowTemplateKind};
 pub use form::{ATTRIBUTE, ENTITY, FORM, FormKind};
 pub use navigation::{NAVIGATION, NavigationKind};
 pub use option_set::{OPTION_SET, OptionSetKind};

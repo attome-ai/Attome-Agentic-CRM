@@ -138,6 +138,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `trust_idp_mfa` (default `true`). When a verified ID token carries one of the values, the session
   records `mfa` after `fed` in its `amr`, so a policy that requires MFA can accept it without
   Attome's own factor. A provider with no values configured, or `trust_idp_mfa: false`, never counts.
+- Flow templates (M6-T1): a `flow_template` metadata kind holds a workflow graph with typed
+  parameters (`entity`, `attribute` of an entity parameter, `user`, `users`, `text`, `number`) written
+  as `{{name}}` placeholders; `attome_model::kinds::flow_template::instantiate` checks the arguments
+  and returns the graph to save as a new flow's draft.
 - Recorded model answers for tests (Z9-T7): `FakeModelServer::recorded` answers by the hash of a
   request's messages from a fixture file (`Recordings::load`), tool calls and streamed chunks
   included; an unrecorded request gets a 404 naming its hash. With `ATTOME_TEST_NO_NETWORK=1`, every
