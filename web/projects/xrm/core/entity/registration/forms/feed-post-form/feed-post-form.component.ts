@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { LangService } from '@attome/base';
+import { LangService, TranslatePipe } from '@attome/base';
 import {
   FieldInputComponent, XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs,
 } from '@attome/xrm/core/entity';
@@ -17,7 +17,7 @@ import type { FieldSchema } from '@attome/xrm';
   selector:   'attome-feed-post-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent],
   styleUrls:  ['../../../../../styles/xrm-form.css', './feed-post-form.component.css'],
   templateUrl: './feed-post-form.component.html',
 })
@@ -26,7 +26,7 @@ export class FeedPostFormComponent extends EngineFormBase {
 
   protected override defineTabs(): XrmFormTabDef[] {
     return [
-      { id: 'details', label: 'Details', icon: 'las la-list-alt' },
+      { id: 'details', label: this.lang.translate('xrmForm.tabs.details'), icon: 'las la-list-alt' },
       // D-773: the platform record tabs, rendered by <xrm-base-form>.
       ...recordTabDefs(this.name(), key => this.lang.translate(key)),
     ];
