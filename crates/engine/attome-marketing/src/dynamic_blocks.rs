@@ -19,7 +19,7 @@ use attome_core::EngineState;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -236,7 +236,7 @@ pub struct PreviewBody {
         (status = 422, description = "The design does not render", body = attome_types::ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit-exempt" = serde_json::json!(attome_audit::security::x_audit_exempt(
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::ReadOnly,
         None,
         "renders a preview; sends and writes nothing",

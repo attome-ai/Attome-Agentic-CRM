@@ -32,7 +32,7 @@ use std::time::Duration;
 
 use attome_core::EngineState;
 use attome_types::AppError;
-use serde_json::Value;
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 use super::{bots, writer};
@@ -254,7 +254,7 @@ pub async fn queue(state: &EngineState, req: CollectRequest) -> Result<Collected
     operation_id = "collect_tracking_events",
     tag = "marketing",
     request_body(content = String, content_type = "text/plain", description = "The script's batch, as JSON: {site, visitor, session, events}"),
-    extensions(("x-audit-exempt" = serde_json::json!(attome_audit::security::x_audit_exempt(
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Telemetry,
         None,
         "public visitor telemetry",
