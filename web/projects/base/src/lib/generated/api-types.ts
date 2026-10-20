@@ -11957,6 +11957,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/lists/{id}/sms/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Estimate an SMS campaign to a list.
+         * @description How many of the list's people can be texted for the purpose, the
+         *     message's encoding and segments, and the cost at the configured price.
+         */
+        post: operations["estimate_sms_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/sms/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an SMS campaign to a list.
+         * @description Fixes the consenting recipients and starts sending in the background,
+         *     holding each message until the recipient's quiet hours end.
+         */
+        post: operations["start_sms_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -37483,6 +37525,46 @@ export interface components {
             end: string;
             /** Format: date-time */
             start: string;
+        };
+        SmsCampaignBody: {
+            /** @description The message (at most 670 characters). */
+            body: string;
+            /**
+             * Format: double
+             * @description `send` only: the cost the sender agreed to; a larger estimate is
+             *     refused.
+             */
+            expected_cost?: number | null;
+            /** @description The consent purpose the message is sent under. */
+            purpose_key: string;
+        };
+        SmsCampaignStarted: {
+            estimate: components["schemas"]["SmsEstimate"];
+            /** Format: uuid */
+            send_id: string;
+        };
+        /** @description The estimate shown before sending. */
+        SmsEstimate: {
+            /**
+             * Format: double
+             * @description `total_segments` at `marketing.sms_price_per_segment`; absent when no
+             *     price is set.
+             */
+            cost?: number | null;
+            /** @description `gsm7` or `ucs2` (Arabic text is UCS-2). */
+            encoding: string;
+            /**
+             * Format: int64
+             * @description People with a phone and SMS consent for the purpose.
+             */
+            recipients: number;
+            /**
+             * Format: int32
+             * @description Segments one message takes.
+             */
+            segments_each: number;
+            /** Format: int64 */
+            total_segments: number;
         };
         SnapshotBreakpoint: {
             breakpoint: string;
@@ -79793,6 +79875,141 @@ export interface operations {
             };
             /** @description No such list */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    estimate_sms_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmsCampaignBody"];
+            };
+        };
+        responses: {
+            /** @description Who can be reached and what it costs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmsEstimate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No body or purpose, or the body is too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_sms_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmsCampaignBody"];
+            };
+        };
+        responses: {
+            /** @description The send has started */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmsCampaignStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The estimate grew past expected_cost */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No body or purpose, or nobody to text */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
