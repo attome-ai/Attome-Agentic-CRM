@@ -2941,6 +2941,10 @@ pub const MEETING_BRIEF_SCAN: attome_jobs::JobType =
 pub const MEETING_BRIEF: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::meeting::run::BRIEF_JOB, 1);
 
+/// AI6-T6: one transcript's meeting notes, made as the person who asked.
+pub const MEETING_NOTES: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::meeting::run::NOTES_JOB, 1);
+
 pub const SURVEY_SEND: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::survey_send::JOB, 1);
 
@@ -3355,6 +3359,22 @@ pub fn register_job_types() {
                 if queued > 0 {
                     tracing::info!(queued, "meeting briefs queued");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MEETING_NOTES,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_AI) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let notes: attome_ai::meeting::run::NotesJob = job.payload()?;
+                let made = attome_ai::meeting::run::run_notes(&state, &notes)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::debug!(meeting = %notes.meeting_id, made, "meeting notes run");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

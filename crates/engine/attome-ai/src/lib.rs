@@ -232,6 +232,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(mcp_client::openapi_fragment());
     // AI4-T6 — `/ai/follow-ups…` and the rule run route.
     doc.merge(followup_routes::openapi_fragment());
+    doc.merge(meeting::routes::openapi_fragment());
     doc
 }
 

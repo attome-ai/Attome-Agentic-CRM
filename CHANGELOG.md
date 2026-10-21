@@ -1416,6 +1416,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   under the `row_version` the person read, makes each chosen action item an open task on the meeting,
   and proposes each chosen record update through `record.update_field` (its allow-list, approval and
   daily cap decide). Each task and proposal records an `agent_task` outcome row.
+- Meeting routes (AI6-T6): `GET /api/v1/ai/meetings/{id}/brief` (anyone who may read the meeting),
+  `POST /api/v1/ai/meetings/{id}/brief/regenerate`, `POST /api/v1/ai/meetings/{id}/notes` with
+  `{transcript_ref}` (202; queues the `ai_meeting_notes` job, one per meeting, transcript and person) and
+  `POST /api/v1/ai/meetings/{id}/notes/confirm` with `If-Match` and the chosen item indexes. The POSTs
+  invoke the meeting actions through the gate as the caller.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

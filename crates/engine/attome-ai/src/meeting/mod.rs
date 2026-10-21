@@ -6,6 +6,7 @@
 
 pub mod brief;
 pub mod notes;
+pub mod routes;
 pub mod run;
 
 use attome_core::EngineState;

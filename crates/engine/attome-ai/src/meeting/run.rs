@@ -32,6 +32,8 @@ use crate::execute::{ActionOutcome, dispatch};
 pub const SCAN_JOB: &str = "ai_meeting_brief_scan";
 /// One meeting's brief job name.
 pub const BRIEF_JOB: &str = "ai_meeting_brief";
+/// AI6-T6: one transcript's notes job name.
+pub const NOTES_JOB: &str = "ai_meeting_notes";
 /// A user's (or the deployment's) switch for briefs made unasked.
 pub const BRIEFS_SETTING: &str = "ai.meeting_briefs";
 /// How far ahead a meeting is briefed, and the window one scan covers.
@@ -44,6 +46,79 @@ pub const MAX_PER_SCAN: i64 = 200;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BriefJob {
     pub meeting_id: Uuid,
+}
+
+/// AI6-T6: notes asked for from a transcript, made as the person who asked.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NotesJob {
+    pub meeting_id: Uuid,
+    pub transcript_ref: Uuid,
+    pub user_id: Uuid,
+}
+
+/// The queue key that keeps one notes job per meeting, transcript and
+/// person waiting. Pure.
+pub fn notes_key(job: &NotesJob) -> String {
+    format!(
+        "ai-meeting-notes:{}:{}:{}",
+        job.meeting_id, job.transcript_ref, job.user_id
+    )
+}
+
+/// Queues a notes job; its key, and whether it was newly queued.
+pub async fn queue_notes(state: &EngineState, job: &NotesJob) -> Result<(String, bool), AppError> {
+    let key = notes_key(job);
+    let registered = attome_core::jobs::JOB_TYPES
+        .job(NOTES_JOB, job)
+        .map_err(AppError::internal)?;
+    let queued = attome_jobs::enqueue_dedup(
+        &state.base.db,
+        attome_core::jobs::EngineJob::Registered(registered),
+        &key,
+    )
+    .await
+    .map_err(AppError::internal)?;
+    Ok((key, queued))
+}
+
+/// Runs `meeting.notes` for a queued job, as the person who asked, through
+/// the gate. A refusal (no access, no AI, no budget, confirmed already) is
+/// logged and not retried; `Ok(false)` says the notes were not made.
+pub async fn run_notes(state: &EngineState, job: &NotesJob) -> Result<bool, AppError> {
+    let security = state.base.security.resolve(job.user_id).await?;
+    let ctx = ActionContext::user(security);
+    let action = super::notes::MEETING_NOTES;
+    let module = crate::engine::REGISTRY
+        .resolve(action)
+        .map(|d| d.module)
+        .ok_or(AppError::NotFound)?;
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+    let inputs = crate::engine::gate_inputs(state, module);
+    let args = json!({ "meeting_id": job.meeting_id, "transcript_ref": job.transcript_ref });
+    match dispatch(
+        state,
+        &crate::engine::REGISTRY,
+        &crate::engine::EXECUTORS,
+        action,
+        &ctx,
+        &inputs,
+        &args,
+    )
+    .await
+    {
+        Ok(ActionOutcome::Completed { .. }) => Ok(true),
+        Ok(_) => Ok(false),
+        Err(
+            error @ (AppError::NotFound
+            | AppError::Forbidden
+            | AppError::Validation(_)
+            | AppError::Conflict(_)),
+        ) => {
+            tracing::info!(meeting = %job.meeting_id, %error, "meeting notes: not made");
+            Ok(false)
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// The start times one scan at `now` briefs: `[now + 60m, now + 75m)`.
