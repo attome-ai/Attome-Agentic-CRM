@@ -52,3 +52,11 @@ export type {
   MeetingRecordUpdate,
   NotesRecord,
 } from './meeting/ai-meeting.service';
+// AI5-T7: the invoice's collections panel, placed by the invoice form.
+export { AiCollectionsPanelComponent } from './collections/ai-collections-panel.component';
+export { AiCollectionsService, awaitsReview, stillOpen } from './collections/ai-collections.service';
+export type {
+  CollectionsReminder,
+  PaymentPromise,
+  PromiseChanged,
+} from './collections/ai-collections.service';

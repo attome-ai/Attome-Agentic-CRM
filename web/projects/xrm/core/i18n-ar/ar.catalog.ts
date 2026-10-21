@@ -456,6 +456,19 @@ export const xrmAr = {
     reason: { stalled_deal: 'صفقة متوقفة', overdue_task: 'مهمة متأخرة', unanswered_customer: 'عميل ينتظر الرد' },
     status: { open: 'مفتوحة', reminded: 'تم التذكير', drafted: 'المسودة جاهزة', sent: 'أُرسلت', dismissed: 'تم التجاهل', resolved: 'تمت' },
   },
+  // AI5-T7 — لوحة التحصيل في الفاتورة.
+  aiCollections: {
+    title: 'التحصيل', promises: 'وعود السداد', reminders: 'التذكيرات',
+    noPromises: 'لا وعود سداد.', noReminders: 'لا تذكيرات بعد.',
+    confirm: 'تأكيد', reject: 'رفض', kept: 'تم الوفاء', broken: 'لم يُوفَ',
+    status: { open: 'مفتوح', kept: 'تم الوفاء', broken: 'لم يُوفَ' },
+    review: { pending: 'بانتظار المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' },
+    reason: { invoice_due: 'مستحقة قريباً', invoice_overdue: 'متأخرة' },
+    reminderStatus: {
+      open: 'مرصودة', reminded: 'تم تذكير المسؤول', drafted: 'المسودة جاهزة', sent: 'أُرسلت',
+      dismissed: 'تم التجاهل', resolved: 'تمت',
+    },
+  },
   // AI6-T7 — لوحتا موجز الاجتماع وملاحظاته.
   aiMeeting: {
     brief: {

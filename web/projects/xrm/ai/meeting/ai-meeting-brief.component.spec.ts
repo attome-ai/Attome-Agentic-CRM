@@ -20,7 +20,7 @@ describe('AiMeetingBriefComponent (AI6-T7)', () => {
         { provide: ApiService, useValue: { get, post } },
         {
           provide: LangService,
-          useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'error' },
+          useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-US' },
         },
       ],
     });

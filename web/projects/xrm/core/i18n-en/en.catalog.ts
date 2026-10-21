@@ -541,6 +541,19 @@ export const xrmEn = {
     reason: { stalled_deal: 'Stalled deal', overdue_task: 'Overdue task', unanswered_customer: 'Customer waiting for an answer' },
     status: { open: 'Open', reminded: 'Reminded', drafted: 'Draft ready', sent: 'Sent', dismissed: 'Dismissed', resolved: 'Resolved' },
   },
+  // AI5-T7 — an invoice's collections panel.
+  aiCollections: {
+    title: 'Collections', promises: 'Payment promises', reminders: 'Reminders',
+    noPromises: 'No payment promises.', noReminders: 'No reminders yet.',
+    confirm: 'Confirm', reject: 'Reject', kept: 'Kept', broken: 'Broken',
+    status: { open: 'Open', kept: 'Kept', broken: 'Broken' },
+    review: { pending: 'Waiting for review', confirmed: 'Confirmed', rejected: 'Rejected' },
+    reason: { invoice_due: 'Coming due', invoice_overdue: 'Overdue' },
+    reminderStatus: {
+      open: 'Found', reminded: 'Owner reminded', drafted: 'Draft ready', sent: 'Sent',
+      dismissed: 'Dismissed', resolved: 'Resolved',
+    },
+  },
   // AI6-T7 — the meeting brief and notes panels.
   aiMeeting: {
     brief: {

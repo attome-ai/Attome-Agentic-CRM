@@ -9,6 +9,7 @@ import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { FieldSchema } from '@attome/xrm';
 
 type EinvoiceStatusModule = typeof import('@attome/xrm/verticals/billing/einvoice-status');
+type AiModule = typeof import('@attome/xrm/ai');
 
 /**
  * F4-T15: the billing pack extends `invoice` (kind, buyer, amounts, notes,
@@ -40,12 +41,19 @@ export class InvoiceFormComponent extends EngineFormBase {
   /** The e-invoice compliance panel (AG2-T4), loaded on its own; it hides
    *  itself when the invoice has no e-invoice. */
   protected readonly einvoicePanel = signal<EinvoiceStatusModule | null>(null);
+  /** AI5-T7: the collections panel (reminders and payment promises),
+   *  loaded on its own; it shows nothing where AI is not licensed. */
+  protected readonly collectionsPanel = signal<AiModule | null>(null);
 
   constructor() {
     super();
     import('@attome/xrm/verticals/billing/einvoice-status').then(
       m => this.einvoicePanel.set(m),
       () => this.einvoicePanel.set(null),
+    );
+    import('@attome/xrm/ai').then(
+      m => this.collectionsPanel.set(m),
+      () => this.collectionsPanel.set(null),
     );
   }
 

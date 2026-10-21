@@ -91,5 +91,10 @@
     @if (einvoicePanel(); as m) {
       <ng-container *ngComponentOutlet="m.EinvoiceStatusComponent; inputs: { invoiceId: id() }" />
     }
+    @if (collectionsPanel(); as m) {
+      @if (id(); as invoiceId) {
+        <ng-container *ngComponentOutlet="m.AiCollectionsPanelComponent; inputs: { invoiceId: invoiceId }" />
+      }
+    }
   </ng-template>
 </xrm-base-form>

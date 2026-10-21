@@ -1439,6 +1439,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   JSON (Arabic or English, Arabic digits included), records a promise with a date as an
   `ai_payment_promise` pending staff review; a duplicate for the same invoice and date is skipped. Prompt
   `collections.extract_promise/v1`.
+- Collections panel (AI5-T7, `@attome/xrm/ai`): the invoice form shows `xrm-ai-collections-panel` with the
+  invoice's reminders and payment promises (amount, date in the viewer's calendar, the customer's words);
+  confirm or reject a promise an agent read, mark an open one kept or broken, each with `If-Match`. English
+  and Arabic labels (`aiCollections.*`).
 - Daily collections (AI5-T5): the follow-up scan finds collection reminders from 08:00 in the deployment's
   `core.time_zone` each day, and a collections item's run sends its reminder as the owner while the rule
   is active and has reminders left (no customer email or an unsent channel reminds the owner instead).
