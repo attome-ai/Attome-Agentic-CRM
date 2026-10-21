@@ -1,6 +1,6 @@
-sha256:189010b2218f8f6e10837b45fdefad13e2ca8ea82441763cdfc1356b6a94594c{
+{
   "author": "packs",
-  "checksum": "",
+  "checksum": "sha256:189010b2218f8f6e10837b45fdefad13e2ca8ea82441763cdfc1356b6a94594c",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "HR case access (W8-T1): the HR Specialist role reads and works every case, confidential ones included, and manages the HR offerings; the Employee role raises cases and reads and updates only its own, and reads the offerings. A new case is not confidential unless set. Any other role that reads service tickets is kept off confidential cases by a grant condition is_confidential = false on its service_ticket.read, which the deployment adds for its own ticket roles (the packs README shows how).",
   "format": "attome-changeset/v1",
