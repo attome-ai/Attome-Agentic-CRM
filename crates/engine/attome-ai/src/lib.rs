@@ -59,6 +59,8 @@ pub mod analytics;
 pub mod approval;
 /// AH8 (V2-D693) — agent autonomy levels, per agent and per action.
 pub mod autonomy;
+/// AH5-T1: each agent's hourly activity and its 28-day baseline.
+pub mod behaviour;
 /// M101 slice 2 — the token budget, actually applied. `attome_inference::budget`
 /// shipped with zero call sites; this is the one that gives it some.
 pub mod budget_guard;

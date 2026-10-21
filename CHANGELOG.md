@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent activity baselines (AH5-T1, migration `0197`): the hourly job `ai_agent_behaviour_rollup` writes each agent's
+  completed record writes, deletes and outside calls or messages per hour, with the entities it wrote
+  (`ai_agent_activity_hourly`), and at 03:00 UTC its 28-day baseline (`ai_agent_baseline`: mean and spread per hour with
+  quiet hours as zero, usual entities and usual hours of the day), which AH5-T2's departure check compares with.
 - Undo run on the agent sessions screen (AH1-T6, `@attome/xrm/ai`): each session row has Undo run, which previews the plan
   in three groups (will be put back; skipped because a person changed it, with the attribute names; cannot be undone,
   with why), then Undo now starts it and follows the run every two seconds until it ends. English and Arabic.
