@@ -1,0 +1,477 @@
+{
+  "author": "packs",
+  "checksum": "sha256:44b39eac4a2a2f42e915206f7d4ab9abbb116db7de425cf31c1790ca841b2d1c",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Schedule builds (G17-T6): who belongs to a planning group, the stored volume forecast per interval, a group's average handling time, and on a schedule the build run that made it and its coverage before and after.",
+  "format": "attome-changeset/v1",
+  "id": "01a14b3c-5d2e-7f10-8a21-0000000006a6",
+  "layer": "product",
+  "name": "workforce-schedule-builds",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Planning Group Member",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "wfm_group_member",
+          "primary_name_attribute": "user_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "wfm_group_member"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Forecast Interval",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "wfm_forecast_interval",
+          "primary_name_attribute": "interval_start"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "wfm_forecast_interval"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Planning Group",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "planning_group_ref",
+          "lookup_entity": "wfm_planning_group",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "wfm_group_member",
+        "field": "planning_group_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Agent",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "wfm_group_member",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rule Set",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "rule_set_ref",
+          "lookup_entity": "wfm_rule_set",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "wfm_group_member",
+        "field": "rule_set_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Planning Group",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "planning_group_ref",
+          "lookup_entity": "wfm_planning_group",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "wfm_forecast_interval",
+        "field": "planning_group_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Interval Start",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "interval_start",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "wfm_forecast_interval",
+        "field": "interval_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Volume",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "volume",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "wfm_forecast_interval",
+        "field": "volume"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Digital Worker Share (0-1)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "digital_share",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "wfm_forecast_interval",
+        "field": "digital_share"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Average Handling Time (s)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "aht_seconds",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "wfm_planning_group",
+        "field": "aht_seconds"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Build Run",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "build_run_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "wfm_schedule",
+        "field": "build_run_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Coverage",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "coverage_json",
+          "lookup_entity": null,
+          "max_length": 20000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "wfm_schedule",
+        "field": "coverage_json"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عضو مجموعة التخطيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_group_member",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فترة التوقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_forecast_interval",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مجموعة التخطيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_group_member.planning_group_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموظف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_group_member.user_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مجموعة القواعد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_group_member.rule_set_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مجموعة التخطيط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_forecast_interval.planning_group_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بداية الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_forecast_interval.interval_start",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحجم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_forecast_interval.volume",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حصة العامل الرقمي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_forecast_interval.digital_share",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "متوسط وقت المعالجة (ث)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_planning_group.aht_seconds",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تشغيل البناء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_schedule.build_run_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التغطية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_schedule.coverage_json",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "workforce",
+  "seq": 2,
+  "title": "Pack: inputs and results of schedule builds"
+}

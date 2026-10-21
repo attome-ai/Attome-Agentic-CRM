@@ -13,10 +13,17 @@ publish.workspace      = true
 [dependencies]
 attome-calendar.workspace = true
 attome-core.workspace = true
+attome-db.workspace = true
+attome-jobs.workspace = true
 attome-modules.workspace = true
+attome-types.workspace = true
 axum.workspace = true
 chrono.workspace = true
 serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
 utoipa.workspace = true
 uuid.workspace = true
 

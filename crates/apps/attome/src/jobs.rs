@@ -2903,6 +2903,11 @@ pub const COMMISSION_ACCEPTANCE: attome_jobs::JobType =
 pub const WARRANTY_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::warranty::JOB, 1);
 
+/// G17-T6: a draft schedule built for a planning group and period (payload
+/// `attome_workforce::build_job::BuildJob`). Only enqueued, never scheduled.
+pub const WORKFORCE_BUILD: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_workforce::build_job::JOB, 1);
+
 /// V5-T1: change requests whose sign-off envelope finished are approved
 /// (and rebaselined) or rejected.
 pub const CHANGE_SIGNOFF: attome_jobs::JobType =
@@ -3271,6 +3276,26 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(written, "asset warranty dates filled");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WORKFORCE_BUILD,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_WORKFORCE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_workforce::build_job::BuildJob = job.payload()?;
+                let built = attome_workforce::build_job::run(&state, &payload)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    schedule = %built.schedule_id,
+                    assignments = built.assignments,
+                    "workforce schedule built"
+                );
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

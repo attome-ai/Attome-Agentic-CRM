@@ -4,6 +4,7 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `workforce` module.
 
+pub mod build_job;
 pub mod model;
 pub mod rules;
 pub mod solver;

@@ -1337,6 +1337,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   request's document to the customer's signer in a K4 envelope; when it is signed, the `change_signoff`
   job approves the change request as the sender (impact applied, project rebaselined), and a declined
   or voided envelope rejects it. `signoff_status` shows where it stands.
+- Schedule builds (G17-T6, workforce pack `0002`): the `workforce_build_schedule` job
+  (`attome_workforce::build_job::enqueue`) reads a planning group's members (`wfm_group_member`), stored
+  forecast (`wfm_forecast_interval`), shift templates and leave, solves each day on a blocking thread
+  under a deadline (300 s by default; at most 2,000 people and 31 days), and writes one draft
+  `wfm_schedule` per run id with its assignments and `coverage_json` (requirement, coverage before and
+  after) under the group's build lock. A retry of the same run replaces its own draft.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
