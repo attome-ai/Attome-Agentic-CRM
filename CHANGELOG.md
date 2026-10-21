@@ -1298,6 +1298,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   leave in its window, and carry its parts in their van stock (`include_without_parts=true` relaxes the
   last); on-time first, then by straight-line travel estimate and slack to `scheduled_end`. It assigns
   nothing.
+- Major incidents (H1-T2, itsm pack `0003`): `POST /api/v1/service/tickets/{id}/major-incident` declares
+  one: sets the commander and `declared_at`, pages whoever is on call on the chosen `oncall_schedule`
+  (layers, members and overrides are now stored) and the commander, opens a bridge on the named video
+  provider, and posts a status page incident with a first update to subscribers. `.../children` links
+  tickets (`parent_ticket_id`); `.../resolve` sets `restored_at` and resolves the status incident.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

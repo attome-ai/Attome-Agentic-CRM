@@ -16,6 +16,7 @@ pub mod inbox;
 mod intake;
 pub mod inventory;
 pub mod maintenance;
+pub mod major_incident;
 pub mod model;
 pub mod offering;
 pub mod oncall;
@@ -61,5 +62,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(inventory::openapi_fragment());
     doc.merge(returns::openapi_fragment());
     doc.merge(schedule_candidates::openapi_fragment());
+    doc.merge(major_incident::openapi_fragment());
     doc
 }

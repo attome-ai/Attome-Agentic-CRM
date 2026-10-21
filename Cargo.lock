@@ -2028,6 +2028,7 @@ dependencies = [
  "attome-db",
  "attome-email",
  "attome-html",
+ "attome-integration",
  "attome-jobs",
  "attome-metadata",
  "attome-modules",
