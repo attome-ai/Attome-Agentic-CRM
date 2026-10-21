@@ -67,7 +67,7 @@ impl PrivilegeKey for ScheduleUpdate {
     const KEY: &'static str = "wfm_schedule.update";
 }
 
-fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
+pub(crate) fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
     let raw = headers
         .get(IF_MATCH)
         .ok_or_else(|| AppError::Validation("If-Match: \"<row_version>\" is required".into()))?;
@@ -146,7 +146,7 @@ async fn start_build(
     Ok(BuildQueued { run_id: job.run_id })
 }
 
-async fn event(
+pub(crate) async fn event(
     tx: &mut attome_db::Tx<'_>,
     state: &EngineState,
     entity: &str,
@@ -363,6 +363,80 @@ type AssignmentRow = (
     Option<Uuid>,
 );
 
+/// Every rule a person's week breaks once they work `start`..`end` (as
+/// shift `id`) in `schedule`, read against their group membership's rule
+/// set; none when they have no rule set.
+pub(crate) async fn person_breaches(
+    tx: &mut attome_db::Tx<'_>,
+    schedule: Option<Uuid>,
+    group: Option<Uuid>,
+    user: Uuid,
+    id: Uuid,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+) -> Result<Vec<RuleBreach>, AppError> {
+    let rules: Option<RuleRow> = sqlx::query_as(
+        "SELECT r.max_hours_day::float8, r.max_hours_week::float8, r.min_rest_hours::float8,                 r.max_nights_week::float8, r.ramadan_max_hours_day::float8            FROM wfm_group_member m JOIN wfm_rule_set r ON r.id = m.rule_set_ref           WHERE m.planning_group_ref = $1 AND m.user_ref = $2             AND (m.is_active IS NULL OR m.is_active = true) LIMIT 1",
+    )
+    .bind(group)
+    .bind(user)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((day, week, rest, nights, ramadan)) = rules else {
+        return Ok(Vec::new());
+    };
+    let (from, to) = week_of(start.date_naive(), Weekday::Sun);
+    let others: Vec<(Uuid, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
+        "SELECT id, start_at::timestamptz, end_at::timestamptz FROM wfm_shift_assignment           WHERE schedule_ref = $1 AND user_ref = $2 AND id <> $3 AND activity = 'work'             AND start_at::date BETWEEN $4 AND $5 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(schedule)
+    .bind(user)
+    .bind(id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let mut week_shifts: Vec<Shift> = others
+        .into_iter()
+        .map(|(sid, s, e)| Shift {
+            id: sid,
+            start: s.naive_utc(),
+            end: e.naive_utc(),
+        })
+        .collect();
+    week_shifts.push(Shift {
+        id,
+        start: start.naive_utc(),
+        end: end.naive_utc(),
+    });
+    let working: HashSet<Weekday> = [
+        Weekday::Sun,
+        Weekday::Mon,
+        Weekday::Tue,
+        Weekday::Wed,
+        Weekday::Thu,
+    ]
+    .into_iter()
+    .collect();
+    let calendar = attome_calendar::BusinessCalendar::simple(
+        chrono_tz::UTC,
+        working,
+        attome_calendar::TimeRange::new(8 * 60, 17 * 60),
+    )
+    .map_err(AppError::internal)?;
+    Ok(crate::rules::check(
+        &week_shifts,
+        &rule_set(day, week, rest, nights, ramadan),
+        &WeekContext {
+            calendar: &calendar,
+            ramadan: None,
+            ramadan_pattern: false,
+        },
+    ))
+}
+
 async fn edit_assignment(
     state: &EngineState,
     ctx: &SecurityContext,
@@ -420,73 +494,9 @@ async fn edit_assignment(
     }
 
     // The person's week against their rule set.
-    let rules: Option<RuleRow> = sqlx::query_as(
-        "SELECT r.max_hours_day::float8, r.max_hours_week::float8, r.min_rest_hours::float8, \
-                r.max_nights_week::float8, r.ramadan_max_hours_day::float8 \
-           FROM wfm_group_member m JOIN wfm_rule_set r ON r.id = m.rule_set_ref \
-          WHERE m.planning_group_ref = $1 AND m.user_ref = $2 \
-            AND (m.is_active IS NULL OR m.is_active = true) LIMIT 1",
-    )
-    .bind(group)
-    .bind(user)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    if let Some((day, week, rest, nights, ramadan)) = rules {
-        let (from, to) = week_of(start.date_naive(), Weekday::Sun);
-        let others: Vec<(Uuid, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
-            "SELECT id, start_at::timestamptz, end_at::timestamptz FROM wfm_shift_assignment \
-              WHERE schedule_ref = $1 AND user_ref = $2 AND id <> $3 AND activity = 'work' \
-                AND start_at::date BETWEEN $4 AND $5 AND (is_active IS NULL OR is_active = true)",
-        )
-        .bind(schedule)
-        .bind(user)
-        .bind(id)
-        .bind(from)
-        .bind(to)
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-        let mut week_shifts: Vec<Shift> = others
-            .into_iter()
-            .map(|(sid, s, e)| Shift {
-                id: sid,
-                start: s.naive_utc(),
-                end: e.naive_utc(),
-            })
-            .collect();
-        week_shifts.push(Shift {
-            id,
-            start: start.naive_utc(),
-            end: end.naive_utc(),
-        });
-        let working: HashSet<Weekday> = [
-            Weekday::Sun,
-            Weekday::Mon,
-            Weekday::Tue,
-            Weekday::Wed,
-            Weekday::Thu,
-        ]
-        .into_iter()
-        .collect();
-        let calendar = attome_calendar::BusinessCalendar::simple(
-            chrono_tz::UTC,
-            working,
-            attome_calendar::TimeRange::new(8 * 60, 17 * 60),
-        )
-        .map_err(AppError::internal)?;
-        let breaches = crate::rules::check(
-            &week_shifts,
-            &rule_set(day, week, rest, nights, ramadan),
-            &WeekContext {
-                calendar: &calendar,
-                ramadan: None,
-                ramadan_pattern: false,
-            },
-        );
-        if !breaches.is_empty() {
-            return Err(AppError::Validation(breach_message(&breaches)));
-        }
+    let breaches = person_breaches(&mut tx, schedule, group, user, id, start, end).await?;
+    if !breaches.is_empty() {
+        return Err(AppError::Validation(breach_message(&breaches)));
     }
 
     let view: AssignmentView = sqlx::query_as(
@@ -544,7 +554,7 @@ async fn edit_assignment(
     Ok(view)
 }
 
-async fn notify(state: &EngineState, user: Uuid, subject: &str, body: &str) {
+pub(crate) async fn notify(state: &EngineState, user: Uuid, subject: &str, body: &str) {
     let req = attome_notification::dispatch::DispatchRequest {
         template_key: None,
         locale: "en".to_string(),

@@ -1368,6 +1368,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   schedule's requirement, coverage and service level with a forecast multiplier, target or handling-time
   overrides and a headcount change, writing nothing; `GET /api/v1/workforce/groups/{id}/hiring-plan?months=6`
   answers required full-time people per month from the stored forecast against current members.
+- Workforce self-service (G17-T8): `GET /api/v1/workforce/me/schedule` (the caller's own published
+  shifts), `PUT /api/v1/workforce/me/preferences`, `POST /api/v1/workforce/swaps` (approved and applied at
+  once when the colleague's rules hold and they are free then, else waiting), `POST
+  /api/v1/workforce/swaps/{id}/decide` for planners, and `GET /api/v1/workforce/coverage-impact` listing
+  the intervals a person's leave would leave short.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

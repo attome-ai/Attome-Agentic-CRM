@@ -8,6 +8,7 @@ pub mod admin;
 pub mod build_job;
 pub mod model;
 pub mod rules;
+pub mod self_service;
 pub mod solver;
 pub mod staffing;
 pub mod what_if;
@@ -23,5 +24,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 39;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(what_if::openapi_fragment());
+    doc.merge(self_service::openapi_fragment());
     doc
 }
