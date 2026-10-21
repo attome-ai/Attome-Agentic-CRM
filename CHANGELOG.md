@@ -1421,6 +1421,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `{transcript_ref}` (202; queues the `ai_meeting_notes` job, one per meeting, transcript and person) and
   `POST /api/v1/ai/meetings/{id}/notes/confirm` with `If-Match` and the chosen item indexes. The POSTs
   invoke the meeting actions through the gate as the caller.
+- Meeting-notes evaluation (AI6-T8): `crates/engine/attome-ai/tests/fixtures/meeting_notes.json` holds five
+  Arabic and five English made-up meetings with their expected decisions and action items and a recorded
+  model output; `ai6_eval_notes_recall` replays them through the notes parser and fails under 80% recall.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

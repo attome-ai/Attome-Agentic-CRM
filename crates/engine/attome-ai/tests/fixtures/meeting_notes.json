@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "note": "AI6-T8 meeting-notes evaluation. Each case is a short, made-up meeting transcript (no real people or data) with the decisions and action items a competent note-taker would list, each written as the terms its text must contain, and the model output recorded for it. `ai6_eval_notes_recall` replays the recorded outputs through `parse_notes` (no live model) and fails when fewer than 80% of the expected action items are found. Re-record `recorded_output` from a real model when `meeting.notes` changes prompt version.",
+  "prompt_version": "meeting.notes/v1",
+  "cases": [
+    {
+      "id": "en-renewal-review",
+      "language": "en",
+      "transcript": "Lena: Thanks for joining the renewal review.\nOmar: We want to renew for two more years.\nLena: Good. I will send the revised quote by Friday.\nOmar: Please also include the training package.\nLena: Agreed, training is in. Marco will book the onboarding session next week.\nOmar: Fine, we sign once legal approves.",
+      "expected_decisions": [
+        [
+          "renew",
+          "two"
+        ],
+        [
+          "training"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "revised",
+          "quote"
+        ],
+        [
+          "onboarding",
+          "session"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"Renewal review: the customer will renew for two years with the training package.\", \"decisions\": [\"Renew for two more years\", \"Include the training package\"], \"action_items\": [{\"text\": \"Send the revised quote\", \"owner_hint\": \"Lena\", \"due_hint\": \"Friday\"}, {\"text\": \"Book the onboarding session\", \"owner_hint\": \"Marco\", \"due_hint\": \"next week\"}], \"record_updates\": []}"
+    },
+    {
+      "id": "en-support-escalation",
+      "language": "en",
+      "transcript": "Priya: The export has failed three times this week.\nTom: Engineering found the cause; a fix ships Tuesday.\nPriya: Until then we need a workaround.\nTom: I will send the manual export steps today, and Ana will call you after the fix ships.\nPriya: And a credit for the downtime?\nTom: Yes, we agreed one month of credit.",
+      "expected_decisions": [
+        [
+          "credit",
+          "month"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "manual",
+          "export"
+        ],
+        [
+          "call",
+          "fix"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"Repeated export failures; a fix ships Tuesday and the customer gets a month of credit.\", \"decisions\": [\"One month of credit for the downtime\"], \"action_items\": [{\"text\": \"Send the manual export steps\", \"owner_hint\": \"Tom\", \"due_hint\": \"today\"}, {\"text\": \"Call the customer after the fix ships\", \"owner_hint\": \"Ana\", \"due_hint\": null}], \"record_updates\": []}"
+    },
+    {
+      "id": "en-pilot-kickoff",
+      "language": "en",
+      "transcript": "Sam: The pilot covers the Riyadh branch only.\nJo: We start on the first of the month.\nSam: I will share the data template tomorrow.\nJo: Our team will clean the customer list before the start.\nSam: Then I set up the sandbox, and Jo invites the branch staff.",
+      "expected_decisions": [
+        [
+          "riyadh",
+          "branch"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "data",
+          "template"
+        ],
+        [
+          "customer",
+          "list"
+        ],
+        [
+          "sandbox"
+        ],
+        [
+          "invite",
+          "staff"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"Pilot kickoff for the Riyadh branch, starting on the first of the month.\", \"decisions\": [\"The pilot covers the Riyadh branch only\"], \"action_items\": [{\"text\": \"Share the data template\", \"owner_hint\": \"Sam\", \"due_hint\": \"tomorrow\"}, {\"text\": \"Clean the customer list\", \"owner_hint\": \"Jo's team\", \"due_hint\": null}, {\"text\": \"Set up the sandbox\", \"owner_hint\": \"Sam\", \"due_hint\": null}], \"record_updates\": []}"
+    },
+    {
+      "id": "en-pricing-negotiation",
+      "language": "en",
+      "transcript": "Mia: Your price is ten percent above budget.\nLeo: We can offer eight percent off on a three-year term.\nMia: That works if payment is quarterly.\nLeo: Agreed. I will update the proposal and send the contract draft.\nMia: I will get the finance sign-off by the end of the month.",
+      "expected_decisions": [
+        [
+          "eight",
+          "percent"
+        ],
+        [
+          "quarterly"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "proposal"
+        ],
+        [
+          "contract",
+          "draft"
+        ],
+        [
+          "finance",
+          "sign-off"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"Price agreed at eight percent off on a three-year term with quarterly payment.\", \"decisions\": [\"Eight percent discount on a three-year term\", \"Quarterly payment\"], \"action_items\": [{\"text\": \"Update the proposal\", \"owner_hint\": \"Leo\", \"due_hint\": null}, {\"text\": \"Send the contract draft\", \"owner_hint\": \"Leo\", \"due_hint\": null}, {\"text\": \"Get the finance sign-off\", \"owner_hint\": \"Mia\", \"due_hint\": \"end of the month\"}], \"record_updates\": []}"
+    },
+    {
+      "id": "en-quarterly-business-review",
+      "language": "en",
+      "transcript": "Kai: Usage is up forty percent this quarter.\nZoe: Support response times slipped in August.\nKai: We will add a second support agent to your account.\nZoe: Good. Please send the usage report monthly from now on.\nKai: I will set that up, and Noor will schedule the next review in January.",
+      "expected_decisions": [
+        [
+          "second",
+          "support",
+          "agent"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "usage",
+          "report"
+        ],
+        [
+          "next",
+          "review"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"Usage grew forty percent; response times slipped in August, so a second support agent is added.\", \"decisions\": [\"Add a second support agent to the account\"], \"action_items\": [{\"text\": \"Send the usage report monthly\", \"owner_hint\": \"Kai\", \"due_hint\": null}, {\"text\": \"Schedule the next review in January\", \"owner_hint\": \"Noor\", \"due_hint\": \"January\"}], \"record_updates\": []}"
+    },
+    {
+      "id": "ar-renewal-review",
+      "language": "ar",
+      "transcript": "سارة: شكراً لحضوركم مراجعة التجديد.\nخالد: نريد التجديد لمدة سنتين.\nسارة: ممتاز، سأرسل عرض السعر المعدل يوم الخميس.\nخالد: أضيفوا باقة التدريب من فضلكم.\nسارة: اتفقنا، التدريب مشمول. ويحجز يوسف جلسة الإعداد الأسبوع القادم.",
+      "expected_decisions": [
+        [
+          "التجديد",
+          "سنتين"
+        ],
+        [
+          "التدريب"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "عرض",
+          "السعر"
+        ],
+        [
+          "جلسة",
+          "الإعداد"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"مراجعة التجديد: سيجدد العميل لمدة سنتين مع باقة التدريب.\", \"decisions\": [\"التجديد لمدة سنتين\", \"إضافة باقة التدريب\"], \"action_items\": [{\"text\": \"إرسال عرض السعر المعدل\", \"owner_hint\": \"سارة\", \"due_hint\": \"الخميس\"}, {\"text\": \"حجز جلسة الإعداد\", \"owner_hint\": \"يوسف\", \"due_hint\": \"الأسبوع القادم\"}], \"record_updates\": []}"
+    },
+    {
+      "id": "ar-support-escalation",
+      "language": "ar",
+      "transcript": "مريم: توقف التصدير ثلاث مرات هذا الأسبوع.\nعلي: وجد الفريق السبب والإصلاح يصدر يوم الثلاثاء.\nمريم: نحتاج حلاً مؤقتاً حتى ذلك الحين.\nعلي: سأرسل خطوات التصدير اليدوي اليوم، وستتصل بكم هدى بعد الإصلاح.\nمريم: وماذا عن التعويض؟\nعلي: اتفقنا على رصيد شهر واحد.",
+      "expected_decisions": [
+        [
+          "رصيد",
+          "شهر"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "خطوات",
+          "التصدير"
+        ],
+        [
+          "تتصل",
+          "الإصلاح"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"تعطل التصدير متكرر؛ الإصلاح يصدر الثلاثاء ويحصل العميل على رصيد شهر.\", \"decisions\": [\"رصيد شهر واحد تعويضاً عن التوقف\"], \"action_items\": [{\"text\": \"إرسال خطوات التصدير اليدوي\", \"owner_hint\": \"علي\", \"due_hint\": \"اليوم\"}, {\"text\": \"هدى تتصل بالعميل بعد الإصلاح\", \"owner_hint\": \"هدى\", \"due_hint\": null}], \"record_updates\": []}"
+    },
+    {
+      "id": "ar-pilot-kickoff",
+      "language": "ar",
+      "transcript": "فهد: التجربة تشمل فرع جدة فقط.\nليلى: نبدأ في أول الشهر.\nفهد: سأشارك نموذج البيانات غداً.\nليلى: فريقنا ينظف قائمة العملاء قبل البدء.\nفهد: ثم أجهز بيئة الاختبار، وتدعو ليلى موظفي الفرع.",
+      "expected_decisions": [
+        [
+          "فرع",
+          "جدة"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "نموذج",
+          "البيانات"
+        ],
+        [
+          "قائمة",
+          "العملاء"
+        ],
+        [
+          "بيئة",
+          "الاختبار"
+        ],
+        [
+          "موظفي",
+          "الفرع"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"انطلاق تجربة فرع جدة في أول الشهر.\", \"decisions\": [\"التجربة تشمل فرع جدة فقط\"], \"action_items\": [{\"text\": \"مشاركة نموذج البيانات\", \"owner_hint\": \"فهد\", \"due_hint\": \"غداً\"}, {\"text\": \"تنظيف قائمة العملاء\", \"owner_hint\": \"فريق ليلى\", \"due_hint\": null}, {\"text\": \"تجهيز بيئة الاختبار\", \"owner_hint\": \"فهد\", \"due_hint\": null}, {\"text\": \"دعوة موظفي الفرع\", \"owner_hint\": \"ليلى\", \"due_hint\": null}], \"record_updates\": []}"
+    },
+    {
+      "id": "ar-pricing-negotiation",
+      "language": "ar",
+      "transcript": "نورة: السعر أعلى من الميزانية بعشرة بالمئة.\nماجد: نقدم خصم ثمانية بالمئة على عقد ثلاث سنوات.\nنورة: موافقون إذا كان الدفع ربع سنوي.\nماجد: اتفقنا، سأعدل العرض وأرسل مسودة العقد.\nنورة: سأحصل على موافقة المالية قبل نهاية الشهر.",
+      "expected_decisions": [
+        [
+          "ثمانية",
+          "بالمئة"
+        ],
+        [
+          "ربع",
+          "سنوي"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "العرض"
+        ],
+        [
+          "مسودة",
+          "العقد"
+        ],
+        [
+          "موافقة",
+          "المالية"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"اتفاق على خصم ثمانية بالمئة لعقد ثلاث سنوات بدفع ربع سنوي.\", \"decisions\": [\"خصم ثمانية بالمئة على عقد ثلاث سنوات\", \"الدفع ربع سنوي\"], \"action_items\": [{\"text\": \"تعديل العرض وإرسال مسودة العقد\", \"owner_hint\": \"ماجد\", \"due_hint\": null}, {\"text\": \"الحصول على موافقة المالية\", \"owner_hint\": \"نورة\", \"due_hint\": \"نهاية الشهر\"}], \"record_updates\": []}"
+    },
+    {
+      "id": "ar-quarterly-business-review",
+      "language": "ar",
+      "transcript": "طارق: ارتفع الاستخدام أربعين بالمئة هذا الربع.\nرنا: تأخرت ردود الدعم في أغسطس.\nطارق: سنضيف موظف دعم ثانياً لحسابكم.\nرنا: جيد، أرسلوا تقرير الاستخدام شهرياً من الآن.\nطارق: سأجهز ذلك، وتحدد سلمى موعد المراجعة القادمة في يناير.",
+      "expected_decisions": [
+        [
+          "موظف",
+          "دعم"
+        ]
+      ],
+      "expected_action_items": [
+        [
+          "تقرير",
+          "الاستخدام"
+        ],
+        [
+          "المراجعة",
+          "القادمة"
+        ]
+      ],
+      "recorded_output": "{\"summary\": \"ارتفع الاستخدام أربعين بالمئة وتأخر الدعم في أغسطس، فيضاف موظف دعم ثانٍ.\", \"decisions\": [\"إضافة موظف دعم ثانٍ للحساب\"], \"action_items\": [{\"text\": \"إرسال تقرير الاستخدام شهرياً\", \"owner_hint\": \"طارق\", \"due_hint\": null}, {\"text\": \"تحديد موعد المراجعة القادمة\", \"owner_hint\": \"سلمى\", \"due_hint\": \"يناير\"}], \"record_updates\": []}"
+    }
+  ]
+}
