@@ -281,6 +281,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // P4-T1: exports write formula-like text as text.
+        SettingDescriptor::new(
+            "records.export_formula_guard",
+            "Whether CSV, XLSX and slide exports write a text cell that starts with =, +, -, @, \
+         a tab or a carriage return as text (prefixed with '), so a spreadsheet does not run it \
+         as a formula.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(true),
+        ),
         SettingDescriptor::new(
             "customer_tests.require_pass_before_publish",
             "Before a changeset apply or a model publish, run every active blocking customer test \

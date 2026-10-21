@@ -468,15 +468,39 @@ pub async fn process(state: &EngineState, run_id: Uuid) -> Result<(), AppError> 
         }
     }
 
+    let guard = crate::render::formula_guard_enabled(state);
     let bytes = match run.format.as_str() {
-        "csv" => crate::render::render_csv(&header, &rows),
-        "xlsx" => match crate::render::render_xlsx(&header, &rows) {
+        "csv" => crate::render::render_csv_with(&header, &rows, guard),
+        "xlsx" => match crate::render::render_xlsx_with(&header, &rows, guard) {
             Ok(b) => b,
             Err(e) => {
                 mark_failed(state, run_id, &format!("xlsx render failed: {e}")).await?;
                 return Ok(());
             }
         },
+        // P4-T1: a slide deck, titled with the report's name.
+        "pptx" => {
+            let name: Option<String> =
+                sqlx::query_scalar("SELECT name FROM attome_report WHERE id = $1")
+                    .bind(run.report_ref)
+                    .fetch_optional(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?
+                    .flatten();
+            let title = name.unwrap_or_else(|| "Report".to_owned());
+            let subtitle = format!(
+                "{} rows · {}",
+                rows.len(),
+                chrono::Utc::now().format("%Y-%m-%d %H:%M UTC")
+            );
+            match crate::pptx::render_pptx(&title, &subtitle, &header, &rows, guard) {
+                Ok(b) => b,
+                Err(e) => {
+                    mark_failed(state, run_id, &format!("pptx render failed: {e}")).await?;
+                    return Ok(());
+                }
+            }
+        }
         other => {
             mark_failed(
                 state,

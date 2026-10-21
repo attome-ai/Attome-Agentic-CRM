@@ -7,15 +7,44 @@
 //! column name plus the ordered header, so the cell formatting, CSV quoting
 //! and XLSX cell typing live here once (CLEANUP-REVIEW 2.8 / R-10).
 //!
-//! No spreadsheet formula-injection guard is applied (a cell starting with
-//! `=`, `+`, `-` or `@` is written as-is); neither former copy had one, and
-//! adding it changes the exported bytes, so it is a separate decision.
+//! **Formula-injection guard (P4-T1), on by default.** A text cell that
+//! starts with `=`, `+`, `-`, `@`, a tab or a carriage return would run as
+//! a formula when a spreadsheet opens the file; [`guard_formula`] prefixes
+//! it with `'` so it shows as text. Numbers are written as numbers and are
+//! never touched. The `records.export_formula_guard` setting
+//! ([`formula_guard_enabled`]) turns it off for a deployment that needs the
+//! raw text; the `*_with` functions take the choice, the plain ones guard.
+
+use std::borrow::Cow;
 
 use serde_json::Value;
 
-fn cell_to_csv_string(value: &Value) -> String {
+/// The setting that turns the formula-injection guard off.
+pub const FORMULA_GUARD_SETTING: &str = "records.export_formula_guard";
+
+/// Whether exports guard formula-like cells: the deployment's
+/// [`FORMULA_GUARD_SETTING`], on unless it is set to `false`.
+pub fn formula_guard_enabled(state: &attome_core::EngineState) -> bool {
+    attome_core::setting_registry()
+        .get(FORMULA_GUARD_SETTING)
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true)
+}
+
+/// A text cell as a spreadsheet will show it: one that would start a
+/// formula is prefixed with `'`. Pure.
+pub fn guard_formula(text: &str) -> Cow<'_, str> {
+    match text.chars().next() {
+        Some('=' | '+' | '-' | '@' | '\t' | '\r') => Cow::Owned(format!("'{text}")),
+        _ => Cow::Borrowed(text),
+    }
+}
+
+fn cell_to_csv_string(value: &Value, guard: bool) -> String {
     match value {
         Value::Null => String::new(),
+        Value::String(s) if guard => guard_formula(s).into_owned(),
         Value::String(s) => s.clone(),
         Value::Bool(b) => b.to_string(),
         Value::Number(n) => n.to_string(),
@@ -41,11 +70,16 @@ pub const CSV_BOM: &str = "\u{feff}";
 /// [`CSV_BOM`] and `header` first. Bytes, not `String` — the caller uploads
 /// this directly.
 pub fn render_csv(header: &[String], rows: &[Value]) -> Vec<u8> {
+    render_csv_with(header, rows, true)
+}
+
+/// [`render_csv`] with the formula guard on or off.
+pub fn render_csv_with(header: &[String], rows: &[Value], guard: bool) -> Vec<u8> {
     let mut out = CSV_BOM.to_owned();
     out.push_str(&csv_header_line(header));
     out.push('\n');
     for row in rows {
-        out.push_str(&csv_line(header, row));
+        out.push_str(&csv_line_with(header, row, guard));
         out.push('\n');
     }
     out.into_bytes()
@@ -64,9 +98,19 @@ pub fn csv_header_line(header: &[String]) -> String {
 /// in `header` order, without a line terminator. A missing column renders
 /// as an empty field.
 pub fn csv_line(header: &[String], row: &Value) -> String {
+    csv_line_with(header, row, true)
+}
+
+/// [`csv_line`] with the formula guard on or off.
+pub fn csv_line_with(header: &[String], row: &Value, guard: bool) -> String {
     header
         .iter()
-        .map(|col| csv_escape(&cell_to_csv_string(row.get(col).unwrap_or(&Value::Null))))
+        .map(|col| {
+            csv_escape(&cell_to_csv_string(
+                row.get(col).unwrap_or(&Value::Null),
+                guard,
+            ))
+        })
         .collect::<Vec<_>>()
         .join(",")
 }
@@ -76,6 +120,7 @@ fn write_xlsx_cell(
     row: u32,
     col: u16,
     value: &Value,
+    guard: bool,
 ) -> Result<(), rust_xlsxwriter::XlsxError> {
     match value {
         Value::Null => Ok(()),
@@ -84,6 +129,9 @@ fn write_xlsx_cell(
             Some(f) => worksheet.write_number(row, col, f).map(|_| ()),
             None => worksheet.write_string(row, col, n.to_string()).map(|_| ()),
         },
+        Value::String(s) if guard => worksheet
+            .write_string(row, col, guard_formula(s).as_ref())
+            .map(|_| ()),
         Value::String(s) => worksheet.write_string(row, col, s).map(|_| ()),
         other => worksheet
             .write_string(row, col, other.to_string())
@@ -96,6 +144,15 @@ fn write_xlsx_cell(
 /// manifest isn't known until every row is written, so it cannot be
 /// streamed row-by-row the way CSV can; callers bound the row count.
 pub fn render_xlsx(header: &[String], rows: &[Value]) -> Result<Vec<u8>, attome_types::AppError> {
+    render_xlsx_with(header, rows, true)
+}
+
+/// [`render_xlsx`] with the formula guard on or off.
+pub fn render_xlsx_with(
+    header: &[String],
+    rows: &[Value],
+    guard: bool,
+) -> Result<Vec<u8>, attome_types::AppError> {
     let mut workbook = rust_xlsxwriter::Workbook::new();
     let worksheet = workbook.add_worksheet();
     for (col, name) in header.iter().enumerate() {
@@ -106,7 +163,7 @@ pub fn render_xlsx(header: &[String], rows: &[Value]) -> Result<Vec<u8>, attome_
     for (row_idx, row) in rows.iter().enumerate() {
         for (col, name) in header.iter().enumerate() {
             let cell = row.get(name).unwrap_or(&Value::Null);
-            write_xlsx_cell(worksheet, (row_idx + 1) as u32, col as u16, cell)
+            write_xlsx_cell(worksheet, (row_idx + 1) as u32, col as u16, cell, guard)
                 .map_err(attome_types::AppError::internal)?;
         }
     }
@@ -118,6 +175,29 @@ pub fn render_xlsx(header: &[String], rows: &[Value]) -> Result<Vec<u8>, attome_
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn formula_like_cells_are_written_as_text() {
+        assert_eq!(guard_formula("=SUM(A1:A9)"), "'=SUM(A1:A9)");
+        assert_eq!(guard_formula("+966 50"), "'+966 50");
+        assert_eq!(guard_formula("-1+1"), "'-1+1");
+        assert_eq!(guard_formula("@cmd"), "'@cmd");
+        assert_eq!(guard_formula("\tx"), "'\tx");
+        assert_eq!(guard_formula("Acme"), "Acme");
+        assert_eq!(guard_formula(""), "");
+        let header = vec!["name".to_owned(), "total".to_owned()];
+        let row = serde_json::json!({ "name": "=HYPERLINK(\"x\")", "total": -5 });
+        assert_eq!(
+            csv_line(&header, &row),
+            "\"'=HYPERLINK(\"\"x\"\")\",-5",
+            "numbers stay numbers"
+        );
+        assert_eq!(
+            csv_line_with(&header, &row, false),
+            "\"=HYPERLINK(\"\"x\"\")\",-5"
+        );
+        assert!(render_xlsx_with(&header, &[row], true).is_ok());
+    }
 
     #[test]
     fn csv_escapes_commas_and_quotes() {

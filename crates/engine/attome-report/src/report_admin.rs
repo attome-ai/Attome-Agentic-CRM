@@ -6,7 +6,7 @@
 //! (generic CRUD stays reachable; the intended write path is this bespoke
 //! one). The one thing generic CRUD cannot express is checked here:
 //! `query_ref` must name a real, live `sql_query` row. `format`
-//! being `csv`/`xlsx` only is instead enforced by the `format` attribute's
+//! being `csv`/`xlsx`/`pptx` is instead enforced by the `format` attribute's
 //! `choice` options (`seed.rs`), so even a caller who goes straight to
 //! generic CRUD gets the same rejection.
 //!
@@ -55,7 +55,7 @@ struct CreateReportBody {
     /// use, so no new binding/whitelisting surface is introduced.
     #[serde(default)]
     parameters: Vec<Filter>,
-    /// `csv` or `xlsx` only for this pass — `pdf`/`html` are rejected by the
+    /// `csv`, `xlsx` or `pptx` (P4-T1) — anything else is rejected by the
     /// `format` attribute's `choice` options (see module doc).
     format: String,
     #[serde(default)]
@@ -103,9 +103,9 @@ async fn create_report(
     ctx: Authorized<Privilege<ReportCreate>>,
     Json(body): Json<CreateReportBody>,
 ) -> Result<(StatusCode, Json<Value>), AppError> {
-    if !matches!(body.format.as_str(), "csv" | "xlsx") {
+    if !matches!(body.format.as_str(), "csv" | "xlsx" | "pptx") {
         return Err(AppError::Validation(
-            "format must be csv or xlsx for this pass".into(),
+            "format must be csv, xlsx or pptx".into(),
         ));
     }
     if !query_ref_exists(&state.base.db, body.query_ref).await? {
@@ -157,10 +157,10 @@ async fn update_report(
     Json(body): Json<UpdateReportBody>,
 ) -> Result<Json<Value>, AppError> {
     if let Some(format) = &body.format
-        && !matches!(format.as_str(), "csv" | "xlsx")
+        && !matches!(format.as_str(), "csv" | "xlsx" | "pptx")
     {
         return Err(AppError::Validation(
-            "format must be csv or xlsx for this pass".into(),
+            "format must be csv, xlsx or pptx".into(),
         ));
     }
     if let Some(query_ref) = body.query_ref

@@ -748,6 +748,9 @@ pub async fn process(
             );
             let header_for_rows = header.clone();
             let dates = DatePresentation::for_user(state, payload.user_id, &attrs).await;
+            // P4-T1: formula-like text is written as text unless the
+            // deployment turned the guard off.
+            let guard = attome_report::render::formula_guard_enabled(state);
             run_query_and_stream(
                 state,
                 &table,
@@ -755,7 +758,9 @@ pub async fn process(
                 &plan,
                 &path,
                 Some(header_line),
-                move |row| attome_report::render::csv_line(&header_for_rows, &dates.apply(row)),
+                move |row| {
+                    attome_report::render::csv_line_with(&header_for_rows, &dates.apply(row), guard)
+                },
             )
             .await
         }
@@ -991,7 +996,11 @@ async fn export_xlsx(
         .map(|raw| serde_json::from_str::<Value>(&raw).map(|row| dates.apply(row)))
         .collect::<Result<Vec<Value>, _>>()
         .map_err(AppError::internal)?;
-    let buffer = attome_report::render::render_xlsx(header, &values)?;
+    let buffer = attome_report::render::render_xlsx_with(
+        header,
+        &values,
+        attome_report::render::formula_guard_enabled(state),
+    )?;
     drop(values);
 
     let mut hasher = Sha256::new();

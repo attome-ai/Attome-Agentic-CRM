@@ -1450,6 +1450,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- Export formats (P4-T1): CSV, XLSX and the new PowerPoint (`pptx`) report format write a text cell that starts with
+  `=`, `+`, `-`, `@`, a tab or a carriage return as text (prefixed with `'`), for report runs and data exports
+  alike; the deployment setting `records.export_formula_guard` (on by default) turns it off. A `pptx` report run
+  is a title slide and the rows as tables, 12 a slide, Arabic laid out right to left, at most 600 rows.
 - Ticket hand-offs (AI7-T2, `attome-service::handoff`): an agent or a person hands a ticket to a person
   (assigned at once), a queue (moved there unassigned) or an agent, with a summary and reasoning, at most one
   waiting per ticket; only the person it names or a member of the queue accepts it, and only the ticket's

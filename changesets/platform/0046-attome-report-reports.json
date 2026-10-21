@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:5d7773b439a9304f56d22fe6b3429b5fe03b7003dba7e1e5d7250175a6dd086f",
+  "checksum": "sha256:b563894df94f6d4bb82e70be4db48e157bd3d0967f958e022fc06d01f875c270",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-report-reports.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -53,7 +53,8 @@
           "options": {
             "choices": [
               "csv",
-              "xlsx"
+              "xlsx",
+              "pptx"
             ],
             "multi": false
           }

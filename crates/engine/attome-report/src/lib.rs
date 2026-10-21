@@ -20,6 +20,7 @@
 pub mod auth;
 pub mod delivery;
 pub mod model;
+pub mod pptx;
 pub mod render;
 pub mod report_admin;
 pub mod run;

@@ -15,7 +15,7 @@
         { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
         { "logicalname": "query_ref", "display_name": "Query", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "parameters", "display_name": "Default Parameters", "field_type": "text" },
-        { "logicalname": "format", "display_name": "Format", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["csv", "xlsx"], "multi": false } },
+        { "logicalname": "format", "display_name": "Format", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["csv", "xlsx", "pptx"], "multi": false } },
         { "logicalname": "owner", "display_name": "Owner", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
         { "logicalname": "is_template", "display_name": "Template", "field_type": "bool", "is_filterable": true }
       ]
