@@ -35,6 +35,7 @@ pub mod followup;
 pub mod graph;
 pub mod knowledge;
 pub mod knowledge_answer;
+pub mod meeting;
 pub mod memory;
 pub mod model_edit;
 pub mod nl_query;
@@ -127,6 +128,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(workforce::descriptors());
     all.extend(crate::meeting::brief::descriptors());
     all.extend(crate::meeting::notes::descriptors());
+    all.extend(meeting::descriptors());
     all
 }
 
@@ -193,5 +195,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(workforce::executors());
     all.extend(crate::meeting::brief::executors());
     all.extend(crate::meeting::notes::executors());
+    all.extend(meeting::executors());
     all
 }

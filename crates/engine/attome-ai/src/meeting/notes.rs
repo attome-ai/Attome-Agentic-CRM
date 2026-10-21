@@ -95,6 +95,8 @@ pub fn descriptor() -> ActionDescriptor {
         &[],
     )
     .input_schema(INPUT)
+    // The notes are logged as a suggestion (`telemetry::record_suggestion`).
+    .outcome_kind("ai_suggestion")
 }
 
 pub fn descriptors() -> Vec<ActionDescriptor> {

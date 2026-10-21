@@ -1412,6 +1412,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   is kept only for the meeting's record or account, a real non-system attribute, a quote found in the
   transcript, and a record the caller may update; nothing is applied. `action_items_json` holds
   `{action_items, record_updates}`; confirmed notes are never rewritten.
+- Confirming meeting notes (AI6-T5): the `meeting.confirm_notes` AI action marks draft notes confirmed
+  under the `row_version` the person read, makes each chosen action item an open task on the meeting,
+  and proposes each chosen record update through `record.update_field` (its allow-list, approval and
+  daily cap decide). Each task and proposal records an `agent_task` outcome row.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
