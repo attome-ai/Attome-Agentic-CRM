@@ -1083,6 +1083,12 @@ export const xrmAr = {
       step: { revert_fields: 'أُعيدت القيم', soft_delete: 'نُقل إلى سلة المحذوفات', restore: 'استُعيد' },
       status: { planned: 'مخطط', running: 'جارٍ التراجع…', done: 'تم', failed: 'انتهى مع إخفاقات' },
     },
+    // AH2-T5 — إرجاع الوكيل إلى وقت سابق.
+    rollback: {
+      button: 'إرجاع الوكيل منذ…', title: 'إرجاع هذا الوكيل',
+      lede: 'يوقف جلسات الوكيل الحية، ثم يتراجع عمّا فعلته كل جلساته منذ الوقت أدناه، الأحدث أولًا. السجل الذي غيّره شخص بعد ذلك يبقى كما هو.',
+      since: 'منذ', sessions: '{count} جلسة منذ ذلك الوقت', confirm: 'أوقف وأرجِع',
+    },
   },
 
   // ── FE-2 second slice (2026-08-25, T0-11): search, webcrawl, workflow ──

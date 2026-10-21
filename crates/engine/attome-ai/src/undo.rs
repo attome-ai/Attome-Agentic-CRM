@@ -36,6 +36,15 @@
 //! next pending item and applies nothing twice. The run ends `done`, or
 //! `failed` when any item failed, with its counts in `summary`.
 //!
+//! **Rolling back an agent** (AH2): [`start_rollback_since`] takes every
+//! session of one agent (its definition or its published agent object)
+//! started at or after a time, or still running then
+//! ([`sessions_of_agent_since`]). It revokes the live ones first, so nothing
+//! new lands while the rollback runs. Then it plans one run over all of them,
+//! their changes merged newest first ([`merge_newest_first`]), with the same
+//! checks as a single session's undo, and stores it with scope
+//! `agent_since`.
+//!
 //! **Values.** A field's old and new values are restorable only when the
 //! audit kept them readably: with crypto-shredding off they are plain text;
 //! with it on they are opened with the record's key
@@ -69,6 +78,9 @@ pub struct UndoRunJob {
 
 /// Most headers one collection reads.
 pub const MAX_CHANGES: i64 = 5_000;
+
+/// Most sessions one rollback covers.
+pub const MAX_ROLLBACK_SESSIONS: i64 = 500;
 
 /// `audit_detail.value_mode` as stored (`attome_audit::value_mode`).
 const MODE_ENCRYPTED: i16 = 0;
@@ -683,6 +695,99 @@ pub fn item_parts(
     }
 }
 
+/// AH2-T1: the sessions of agent `agent_ref` (its definition or its
+/// published agent object) started at or after `since`, or still running
+/// then, newest first so the newest run is undone first. At most
+/// [`MAX_ROLLBACK_SESSIONS`].
+pub async fn sessions_of_agent_since(
+    db: &attome_db::DbPool,
+    agent_ref: Uuid,
+    since: DateTime<Utc>,
+) -> Result<Vec<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "SELECT id FROM agent_session \
+          WHERE (agent_definition_ref = $1 OR agent_object_ref = $1) \
+            AND (started_at >= $2 OR ended_at IS NULL OR ended_at >= $2) \
+          ORDER BY started_at DESC, id DESC LIMIT $3",
+    )
+    .bind(agent_ref)
+    .bind(since)
+    .bind(MAX_ROLLBACK_SESSIONS)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// AH2-T1: several sessions' changes as one list, newest first (ties by the
+/// newer audit header), so the newest run is undone first. Pure.
+pub fn merge_newest_first(per_session: Vec<Vec<RunChange>>) -> Vec<RunChange> {
+    let mut changes: Vec<RunChange> = per_session.into_iter().flatten().collect();
+    changes.sort_by_key(|c| std::cmp::Reverse((c.changed_on, c.audit_header_id)));
+    changes
+}
+
+/// What an undo run covers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UndoScope {
+    /// The sessions named (AH1).
+    Sessions,
+    /// Every session of one agent since a time (AH2).
+    AgentSince {
+        agent_ref: Uuid,
+        since: DateTime<Utc>,
+    },
+}
+
+/// The steps that undo `sessions`, planned as `ctx`. Writes nothing.
+pub async fn plan_sessions(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    sessions: &[Uuid],
+) -> Result<Vec<UndoStep>, AppError> {
+    let mut per_session = Vec::with_capacity(sessions.len());
+    let mut externals = Vec::new();
+    for session in sessions {
+        per_session.push(collect_session_changes(state, *session).await?);
+        externals.extend(collect_external_effects(state, *session).await?);
+    }
+    let changes = merge_newest_first(per_session);
+    let reader = RecordsReader { state, ctx };
+    plan_undo(&reader, &changes, &externals).await
+}
+
+/// AH2-T3: stops agent `agent_ref` and undoes what it did since `since`.
+/// Its live sessions are revoked first (reason `rollback since <time>`), so
+/// no new write lands while the rollback runs; then one run over every
+/// session since then is planned and stored as [`start_undo`] does, with
+/// scope `agent_since`. `422` when the agent has no session since then.
+pub async fn start_rollback_since(
+    state: &EngineState,
+    requester: &attome_server::security::SecurityContext,
+    agent_ref: Uuid,
+    since: DateTime<Utc>,
+) -> Result<Uuid, AppError> {
+    let db = &state.base.db;
+    let sessions = sessions_of_agent_since(db, agent_ref, since).await?;
+    if sessions.is_empty() {
+        return Err(AppError::Validation("the agent has no session since that time".into()));
+    }
+    let live: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM agent_session \
+          WHERE id = ANY($1) AND revoked_at IS NULL AND ended_at IS NULL",
+    )
+    .bind(&sessions)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let reason = format!("rollback since {}", since.to_rfc3339());
+    for session in &live {
+        crate::session::revoke(db, *session, requester.user_id, &reason)
+            .await?;
+    }
+    let scope = UndoScope::AgentSince { agent_ref, since };
+    start_undo_scoped(state, requester, &sessions, scope).await
+}
+
 /// Plans undoing `sessions` as `ctx` and stores the run, its items and the
 /// job in one transaction. Returns the run's id.
 pub async fn start_undo(
@@ -690,23 +795,37 @@ pub async fn start_undo(
     ctx: &attome_server::security::SecurityContext,
     sessions: &[Uuid],
 ) -> Result<Uuid, AppError> {
-    let mut changes = Vec::new();
-    let mut externals = Vec::new();
-    for session in sessions {
-        changes.extend(collect_session_changes(state, *session).await?);
-        externals.extend(collect_external_effects(state, *session).await?);
-    }
-    changes.sort_by_key(|c| std::cmp::Reverse((c.changed_on, c.audit_header_id)));
-    let reader = RecordsReader { state, ctx };
-    let steps = plan_undo(&reader, &changes, &externals).await?;
+    start_undo_scoped(state, ctx, sessions, UndoScope::Sessions).await
+}
+
+async fn start_undo_scoped(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    sessions: &[Uuid],
+    scope: UndoScope,
+) -> Result<Uuid, AppError> {
+    let steps = plan_sessions(state, ctx, sessions).await?;
+    let (scope_name, agent_ref, since) = match scope {
+        UndoScope::Sessions => ("session", None, None),
+        UndoScope::AgentSince { agent_ref, since } => ("agent_since", Some(agent_ref), Some(since)),
+    };
+    let event = if agent_ref.is_some() {
+        "ai.rollback.start"
+    } else {
+        "ai.undo.start"
+    };
     let run = Uuid::now_v7();
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
-        "INSERT INTO ai_undo_run (id, scope, agent_session_ids, requested_by, status) \
-         VALUES ($1, 'session', $2, $3, 'planned')",
+        "INSERT INTO ai_undo_run \
+             (id, scope, agent_session_ids, agent_ref, since, requested_by, status) \
+         VALUES ($1, $2, $3, $4, $5, $6, 'planned')",
     )
     .bind(run)
+    .bind(scope_name)
     .bind(sessions)
+    .bind(agent_ref)
+    .bind(since)
     .bind(ctx.user_id)
     .execute(&mut *tx)
     .await
@@ -755,7 +874,7 @@ pub async fn start_undo(
             "ai_undo_run",
             Some(run),
         )
-        .named("ai.undo.start")
+        .named(event)
         .comment(note),
     )
     .await?;
@@ -919,6 +1038,31 @@ pub async fn run_undo(state: &EngineState, run: Uuid) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn change_at(minutes_ago: i64) -> RunChange {
+        RunChange {
+            changed_on: Utc::now() - chrono::Duration::minutes(minutes_ago),
+            ..change(Uuid::now_v7(), AuditOperation::Update, Vec::new())
+        }
+    }
+
+    #[test]
+    fn merge_puts_the_newest_change_of_any_session_first() {
+        let older_session = vec![change_at(30), change_at(50)];
+        let newer_session = vec![change_at(5), change_at(40)];
+        let merged = merge_newest_first(vec![older_session, newer_session]);
+        let ages: Vec<_> = merged.iter().map(|c| c.changed_on).collect();
+        let mut sorted = ages.clone();
+        sorted.sort_by(|a, b| b.cmp(a));
+        assert_eq!(ages, sorted, "newest first across sessions");
+        assert_eq!(merged.len(), 4, "every change kept");
+    }
+
+    #[test]
+    fn merge_of_no_sessions_is_empty() {
+        assert!(merge_newest_first(Vec::new()).is_empty());
+        assert!(merge_newest_first(vec![Vec::new(), Vec::new()]).is_empty());
+    }
 
     #[test]
     fn undo_reads_only_values_kept_readably() {

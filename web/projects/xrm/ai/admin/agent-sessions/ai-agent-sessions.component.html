@@ -226,6 +226,11 @@
                   <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" data-testid="undo-run"
                           [attr.aria-expanded]="undoFor() === session.id"
                           (click)="previewUndo(session)">{{ 'agentSessions.undo.button' | translate }}</button>
+                  @if (session.agent_definition_ref) {
+                    <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm as__danger-outline" data-testid="rollback-open"
+                            [attr.aria-expanded]="undoFor() === session.id && rollbackAgent() !== null"
+                            (click)="openRollback(session)">{{ 'agentSessions.rollback.button' | translate }}</button>
+                  }
                   <p class="as__refnote">
                     Takes effect now. Editing the policy does not — it reaches the next session only.
                   </p>
@@ -280,7 +285,21 @@
 
     @if (undoFor()) {
       <section class="as__undo" [attr.aria-label]="'agentSessions.undo.title' | translate" data-testid="undo-preview">
-        <h3>{{ 'agentSessions.undo.title' | translate }}</h3>
+        @if (rollbackAgent()) {
+          <h3>{{ 'agentSessions.rollback.title' | translate }}</h3>
+          <p>{{ 'agentSessions.rollback.lede' | translate }}</p>
+          <label class="as__rollback-since">
+            {{ 'agentSessions.rollback.since' | translate }}
+            <input type="datetime-local" class="xf-input" data-testid="rollback-since"
+                   [disabled]="undoRun() !== null"
+                   [ngModel]="rollbackSince()" (ngModelChange)="changeRollbackSince($event)" />
+          </label>
+          @if (!undoBusy() && undoRun() === null) {
+            <p data-testid="rollback-sessions">{{ 'agentSessions.rollback.sessions' | translate: { count: rollbackSessions() } }}</p>
+          }
+        } @else {
+          <h3>{{ 'agentSessions.undo.title' | translate }}</h3>
+        }
         @if (undoError(); as message) {
           <p class="as__undo-error" role="alert">{{ message }}</p>
         }
@@ -323,8 +342,9 @@
           }
           <div class="as__undo-actions">
             <button type="button" class="xf-btn xf-btn-primary xf-btn-sm" data-testid="undo-confirm"
-                    [disabled]="undoRestores().length === 0" (click)="confirmUndo()">
-              {{ 'agentSessions.undo.confirm' | translate }}
+                    [disabled]="rollbackAgent() ? rollbackSessions() === 0 : undoRestores().length === 0"
+                    (click)="confirmUndo()">
+              {{ (rollbackAgent() ? 'agentSessions.rollback.confirm' : 'agentSessions.undo.confirm') | translate }}
             </button>
             <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="cancelUndo()">
               {{ 'agentSessions.undo.cancel' | translate }}

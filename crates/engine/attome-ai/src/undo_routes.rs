@@ -7,6 +7,13 @@
 //!   `Ai`/`Create` security event is written in the same transaction.
 //! - `GET /api/v1/ai/undo-runs/{id}`: the run and a page of its items.
 //!
+//! - `GET /api/v1/admin/ai/agents/{id}/rollback-preview?since=` and
+//!   `POST /api/v1/admin/ai/agents/{id}/rollback` (AH2-T4): the same for
+//!   every session of one agent since a time; the post revokes the agent's
+//!   live sessions first ([`crate::undo::start_rollback_since`]). Admin or
+//!   `ai_agent.supervise` only; `since` must be in the past and within the
+//!   audit retention window (`retention.audit_days`), or `422`.
+//!
 //! The session's owner may undo it, and so may anyone holding
 //! `ai_agent.supervise`; anyone else gets `403`. A run is read by whoever
 //! asked for it or a supervisor.
@@ -22,9 +29,9 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::actions::agent_supervise::AgentSupervise;
@@ -33,6 +40,48 @@ use crate::undo::{UndoStep, collect_external_effects, collect_session_changes, p
 /// Whether `ctx` may undo or read what `owner` started. Pure.
 pub fn may_undo(ctx: &SecurityContext, owner: Uuid) -> bool {
     ctx.user_id == owner || ctx.is_admin || ctx.privileges.contains(AgentSupervise::KEY)
+}
+
+/// Whether `ctx` may roll back an agent: an admin or a supervisor. Pure.
+pub fn may_supervise(ctx: &SecurityContext) -> bool {
+    ctx.is_admin || ctx.privileges.contains(AgentSupervise::KEY)
+}
+
+/// AH2-T4: a rollback's start must be in the past and, when the audit keeps
+/// a bounded window (`retention.audit_days`), inside it. Pure.
+pub fn check_since(
+    since: DateTime<Utc>,
+    now: DateTime<Utc>,
+    audit_days: Option<u32>,
+) -> Result<(), AppError> {
+    if since > now {
+        return Err(AppError::Validation("since: a time in the past".into()));
+    }
+    if let Some(days) = audit_days
+        && since < now - chrono::Duration::days(i64::from(days))
+    {
+        return Err(AppError::Validation(format!(
+            "since: within the last {days} days, the audit retention window"
+        )));
+    }
+    Ok(())
+}
+
+/// AH2-T4: when to roll an agent back from.
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct RollbackSince {
+    /// Undo what the agent did at or after this time (UTC, ISO-8601).
+    pub since: DateTime<Utc>,
+}
+
+/// AH2-T4: what rolling an agent back would do.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RollbackPreview {
+    /// The agent's sessions since the time.
+    pub session_ids: Vec<Uuid>,
+    /// The steps, newest record first.
+    pub steps: PaginatedResponse<UndoStep>,
 }
 
 /// The session's owner, or `404`.
@@ -149,6 +198,75 @@ pub(crate) async fn post_undo(
     ))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ai/agents/{id}/rollback-preview",
+    tag = "ai",
+    params(("id" = Uuid, Path, description = "The agent (definition or agent object)"), RollbackSince),
+    responses(
+        (status = 200, description = "The agent's sessions since the time and what undoing them would do; nothing is written", body = RollbackPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Neither an admin nor a supervisor", body = ErrorResponse),
+        (status = 422, description = "since is in the future or older than the audit keeps", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn get_rollback_preview(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(agent): Path<Uuid>,
+    Query(query): Query<RollbackSince>,
+) -> Result<Json<RollbackPreview>, AppError> {
+    if !may_supervise(&ctx) {
+        return Err(AppError::Forbidden);
+    }
+    let audit_days = state.base.config.retention.audit_days;
+    check_since(query.since, Utc::now(), audit_days)?;
+    let db = &state.base.db;
+    let sessions = crate::undo::sessions_of_agent_since(db, agent, query.since)
+        .await?;
+    let steps = crate::undo::plan_sessions(&state, &ctx, &sessions).await?;
+    let total = i64::try_from(steps.len()).map_err(AppError::internal)?;
+    Ok(Json(RollbackPreview {
+        session_ids: sessions,
+        steps: PaginatedResponse::new(steps, total, 1, total.max(1)),
+    }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/ai/agents/{id}/rollback",
+    tag = "ai",
+    params(("id" = Uuid, Path, description = "The agent (definition or agent object)")),
+    request_body = RollbackSince,
+    responses(
+        (status = 202, description = "The agent's live sessions are revoked and the rollback is planned and queued; read its progress at /api/v1/ai/undo-runs/{id}", body = UndoStarted),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Neither an admin nor a supervisor", body = ErrorResponse),
+        (status = 422, description = "since is in the future or older than the audit keeps, or the agent has no session since then", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Ai, attome_audit::AuditOperation::Create)])))),
+)]
+pub(crate) async fn post_rollback(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(agent): Path<Uuid>,
+    Json(body): Json<RollbackSince>,
+) -> Result<(StatusCode, Json<UndoStarted>), AppError> {
+    if !may_supervise(&ctx) {
+        return Err(AppError::Forbidden);
+    }
+    let audit_days = state.base.config.retention.audit_days;
+    check_since(body.since, Utc::now(), audit_days)?;
+    let run = crate::undo::start_rollback_since(&state, &ctx, agent, body.since)
+        .await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(UndoStarted { undo_run_id: run }),
+    ))
+}
+
 type RunRow = (
     String,
     Vec<Uuid>,
@@ -227,12 +345,30 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/ai/agent-sessions/{id}/undo", post(post_undo))
         .route("/api/v1/ai/undo-runs/{id}", get(get_undo_run))
+        .route(
+            "/api/v1/admin/ai/agents/{id}/rollback-preview",
+            get(get_rollback_preview),
+        )
+        .route("/api/v1/admin/ai/agents/{id}/rollback", post(post_rollback))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(get_undo_preview, post_undo, get_undo_run),
-    components(schemas(UndoStep, UndoStarted, UndoItemView, UndoRunView))
+    paths(
+        get_undo_preview,
+        post_undo,
+        get_undo_run,
+        get_rollback_preview,
+        post_rollback
+    ),
+    components(schemas(
+        UndoStep,
+        UndoStarted,
+        UndoItemView,
+        UndoRunView,
+        RollbackSince,
+        RollbackPreview
+    ))
 )]
 struct ApiDocFragment;
 

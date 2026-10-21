@@ -4195,6 +4195,28 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/admin/ai/agents/{id}/rollback" => {
+            // AH2-T4: an agent with one ended session rolls back to a run
+            // with nothing to do, which still writes its Ai event.
+            let agent = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO agent_session \
+                     (owner_user_id, surface, agent_definition_ref, ended_at) \
+                 VALUES ($1, 'emission', $2, now())",
+            )
+            .bind(fx.admin_id)
+            .bind(agent)
+            .execute(&fx.base.db)
+            .await
+            .expect("an agent session");
+            let since = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+            request(
+                "POST",
+                &format!("/api/v1/admin/ai/agents/{agent}/rollback"),
+                t,
+                Some(json!({ "since": since })),
+            )
+        }
         "POST /api/v1/ai/deferred-actions/{id}/cancel" => {
             let id: Uuid = sqlx::query_scalar(
                 "INSERT INTO ai_deferred_action (action_id, args, initiator, acting_user_id, run_at) \

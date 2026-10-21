@@ -67,6 +67,13 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
               total: 3, page: 1, page_size: 3,
             })),
             startUndo: vi.fn().mockReturnValue(of({ undo_run_id: 'u1' })),
+            // AH2-T5: two sessions of the agent since the chosen time.
+            rollbackPreview: vi.fn().mockReturnValue(of({
+              session_ids: ['s-2', 's-3'],
+              steps: { items: [{ step: 'revert_fields', entity: 'deal', record_id: 'r1', expected_row_version: 3, set: {} }],
+                       total: 1, page: 1, page_size: 1 },
+            })),
+            rollback: vi.fn().mockReturnValue(of({ undo_run_id: 'u1' })),
             undoRun: vi.fn().mockReturnValue(of({
               id: 'u1', status: 'done', created_at: '2026-10-21T00:00:00Z', finished_at: '2026-10-21T00:00:05Z',
               summary: { restored: 1, skipped_changed: 1, not_undoable: 1 },
@@ -157,6 +164,26 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
     const progress = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="undo-progress"]');
     expect(progress?.textContent).toContain('agentSessions.undo.status.done');
     expect(cmp.undoBusy()).toBe(false);
+  });
+
+  it('sends the chosen time in rollback', async () => {
+    await render([session({})]);
+    const cmp = fixture.componentInstance;
+    const admin = TestBed.inject(AdminAiService) as unknown as Record<string, ReturnType<typeof vi.fn>>;
+    cmp.openRollback(cmp.sessions()[0]);
+    cmp.changeRollbackSince('2026-10-21T10:00');
+    fixture.detectChanges();
+    const expected = new Date('2026-10-21T10:00').toISOString();
+    expect(admin['rollbackPreview']).toHaveBeenLastCalledWith('a-1-cccccccc', expected);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="rollback-sessions"]')).not.toBeNull();
+    cmp.confirmUndo();
+    expect(admin['rollback']).toHaveBeenCalledWith('a-1-cccccccc', expected);
+    expect(admin['startUndo']).not.toHaveBeenCalled();
+  });
+
+  it('offers no rollback for a session without an agent', async () => {
+    await render([session({ agent_definition_ref: null, agent_retrieval_mode: null })]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="rollback-open"]')).toBeNull();
   });
 
   it('shows no configured mode for a session without a definition', async () => {

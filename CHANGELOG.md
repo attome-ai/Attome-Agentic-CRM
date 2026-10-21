@@ -1454,6 +1454,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Roll an agent back to a time (AH2): `GET /api/v1/admin/ai/agents/{id}/rollback-preview?since=` and
+  `POST /api/v1/admin/ai/agents/{id}/rollback` (admin or `ai_agent.supervise`; `since` in the past and inside
+  `retention.audit_days`) revoke the agent's live sessions, then undo every session of the agent since then in one
+  `agent_since` undo run, newest first, with the session undo's checks. The agent sessions screen gains "Roll back agent
+  since…" with a time picker, the session count and the preview. `tests/agent_run_undo.rs` covers single-session undo
+  (AH1-T7) and the rollback.
 - Bulk edit without automation (B5-T3, migration `0200`): `POST /api/v1/{entity}/bulk-edit`, its `/undo` and
   `POST /api/v1/{entity}/bulk` accept `quiet: true` with the new `records.bulk_quiet` privilege (platform changeset
   `0070`); the records change through the normal path but their change events are marked `quiet`, so they start no

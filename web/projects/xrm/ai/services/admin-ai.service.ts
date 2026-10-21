@@ -248,12 +248,32 @@ export class AdminAiService {
     );
   }
 
+  /** AH2-T4: what rolling an agent back to `since` (ISO-8601) would do. */
+  rollbackPreview(agentId: string, since: string): Observable<RollbackPreview> {
+    return this.api.get<RollbackPreview>(
+      `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/rollback-preview`, { since },
+    );
+  }
+
+  /** AH2-T4: revokes the agent's live sessions and undoes what it did since `since`. */
+  rollback(agentId: string, since: string): Observable<{ undo_run_id: string }> {
+    return this.api.post<{ undo_run_id: string }>(
+      `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/rollback`, { since },
+    );
+  }
+
   /** AH1-T5: an undo run's status, counts and first items. */
   undoRun(runId: string): Observable<UndoRun> {
     return this.api.get<UndoRun>(`/api/v1/ai/undo-runs/${encodeURIComponent(runId)}`, {
       page: '1', page_size: '200',
     });
   }
+}
+
+/** AH2-T4: an agent's sessions since a time and the steps undoing them. */
+export interface RollbackPreview {
+  session_ids: string[];
+  steps: Page<UndoStep>;
 }
 
 /** One planned undo step (`attome_ai::undo::UndoStep`). */

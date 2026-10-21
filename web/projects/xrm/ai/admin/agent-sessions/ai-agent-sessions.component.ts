@@ -18,6 +18,12 @@ import type {
   AgentSessionPackRef, AgentSessionStatusFilter, AgentSessionSummary,
 } from '../../services/admin-ai.service';
 
+/** A time as a `datetime-local` input value (`YYYY-MM-DDTHH:mm`) in the viewer's own zone. */
+function localInputValue(at: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
 /** How a session's snapshotted allow-list reads, without ever collapsing null and []. */
 type GrantState = 'unrestricted' | 'nothing' | 'listed' | 'unreadable';
 
@@ -93,6 +99,15 @@ export class AiAgentSessionsComponent implements OnInit {
     this.undoSteps().filter(s => s.step === 'revert_fields' || s.step === 'soft_delete' || s.step === 'restore'));
   readonly undoSkipped = computed(() => this.undoSteps().filter(s => s.step === 'skip'));
   readonly undoImpossible = computed(() => this.undoSteps().filter(s => s.step === 'not_undoable'));
+  /**
+   * AH2-T5: the same preview for every session of one agent since a time.
+   * Set while rolling an agent back; `undoFor` then holds the row it was
+   * opened from.
+   */
+  readonly rollbackAgent = signal<string | null>(null);
+  /** The `datetime-local` value, in the viewer's own time. */
+  readonly rollbackSince = signal('');
+  readonly rollbackSessions = signal(0);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
@@ -137,12 +152,62 @@ export class AiAgentSessionsComponent implements OnInit {
       });
   }
 
-  /** AH1-T6: previews undoing a session, or closes the preview. */
-  previewUndo(session: AgentSessionSummary): void {
-    if (this.undoFor() === session.id) {
+  /** AH2-T5: opens the rollback of this session's agent, from one hour ago. */
+  openRollback(session: AgentSessionSummary): void {
+    const agent = session.agent_definition_ref;
+    if (!agent) return;
+    if (this.rollbackAgent() === agent && this.undoFor() === session.id) {
       this.cancelUndo();
       return;
     }
+    this.cancelUndo();
+    this.undoFor.set(session.id);
+    this.rollbackAgent.set(agent);
+    this.rollbackSince.set(localInputValue(new Date(Date.now() - 3600_000)));
+    this.loadRollbackPreview();
+  }
+
+  /** Re-plans the rollback for the chosen time. */
+  changeRollbackSince(value: string): void {
+    this.rollbackSince.set(value);
+    this.loadRollbackPreview();
+  }
+
+  private loadRollbackPreview(): void {
+    const agent = this.rollbackAgent();
+    const since = this.rollbackSinceIso();
+    if (!agent || !since) return;
+    this.undoSteps.set([]);
+    this.undoError.set(null);
+    this.undoBusy.set(true);
+    this.adminAi
+      .rollbackPreview(agent, since)
+      .pipe(takeUntilDestroyed(this.viewDestroyRef))
+      .subscribe({
+        next: (preview) => {
+          this.rollbackSessions.set(preview.session_ids.length);
+          this.undoSteps.set(preview.steps.items ?? []);
+          this.undoBusy.set(false);
+        },
+        error: (e: ApiError) => { this.undoBusy.set(false); this.undoError.set(e.message); },
+      });
+  }
+
+  /** The chosen time as UTC ISO-8601, or null while the field is empty or invalid. */
+  rollbackSinceIso(): string | null {
+    const value = this.rollbackSince();
+    if (!value) return null;
+    const at = new Date(value);
+    return Number.isNaN(at.getTime()) ? null : at.toISOString();
+  }
+
+  /** AH1-T6: previews undoing a session, or closes the preview. */
+  previewUndo(session: AgentSessionSummary): void {
+    if (this.undoFor() === session.id && !this.rollbackAgent()) {
+      this.cancelUndo();
+      return;
+    }
+    this.cancelUndo();
     this.undoFor.set(session.id);
     this.undoSteps.set([]);
     this.undoRun.set(null);
@@ -162,16 +227,21 @@ export class AiAgentSessionsComponent implements OnInit {
     this.undoSteps.set([]);
     this.undoRun.set(null);
     this.undoError.set(null);
+    this.rollbackAgent.set(null);
+    this.rollbackSessions.set(0);
   }
 
   /** Starts the previewed undo, then follows its run every two seconds until it ends. */
   confirmUndo(): void {
     const sessionId = this.undoFor();
     if (!sessionId || this.undoBusy()) return;
+    const agent = this.rollbackAgent();
+    const since = this.rollbackSinceIso();
+    if (agent && !since) return;
     this.undoBusy.set(true);
     this.undoError.set(null);
-    this.adminAi
-      .startUndo(sessionId)
+    const started = agent && since ? this.adminAi.rollback(agent, since) : this.adminAi.startUndo(sessionId);
+    started
       .pipe(
         switchMap(({ undo_run_id }) => timer(0, 2000).pipe(switchMap(() => this.adminAi.undoRun(undo_run_id)))),
         takeWhile(run => run.status === 'planned' || run.status === 'running', true),

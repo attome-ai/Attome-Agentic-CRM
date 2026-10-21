@@ -1121,6 +1121,12 @@ export const xrmEn = {
       step: { revert_fields: 'values set back', soft_delete: 'moved to the recycle bin', restore: 'restored' },
       status: { planned: 'Planned', running: 'Undoing…', done: 'Done', failed: 'Finished with failures' },
     },
+    // AH2-T5 — rolling an agent back to a time.
+    rollback: {
+      button: 'Roll back agent since…', title: 'Roll back this agent',
+      lede: 'Stops the agent\'s live sessions, then undoes what all its sessions did since the time below, newest first. A record a person changed since is left as it is.',
+      since: 'Since', sessions: '{count} session(s) since then', confirm: 'Stop and roll back',
+    },
   },
 
   // ── FE-2 second slice (2026-08-25, T0-11): search, webcrawl, workflow ──
