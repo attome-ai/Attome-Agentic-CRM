@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   row id (what the entity list, AI evidence and others sent before) is `400 invalid_cursor`; start
   again from the first page. The key derives from `auth.jwt_secret`, so all nodes agree and a key
   rotation keeps lists paging.
+- Act on review (AH8-T13, V2-D702): a new autonomy level, `act_on_review`, stages an agent's action
+  instead of running it; the person applies or discards an agent session's staged actions together
+  (`POST /api/v1/ai/deferred-actions/apply|discard`), and they run in order, each re-checked. New
+  outcome `awaiting_review`. Migration 0192.
 - Agent autonomy levels (AH8, V2-D693): an administrator can now let an agent run an action on its
   own, per agent and per action (`/api/v1/admin/ai/agents/{agent}/autonomy`), including a
   consequential one, which until now always waited for a second person's approval. With no level set
@@ -157,6 +161,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- A record read with a matching `If-None-Match` answers `304` from a cached row version instead of a
+  database probe (AA7-T8); a write drops the cached version on every node.
 - `GET /api/v1/schema/{logicalname}` answers from in-memory metadata and sends an `ETag`; a request
   with a matching `If-None-Match` gets `304 Not Modified` with no body (AA7-T2).
 - Users share their own records without admin rights (Q14-T1): `GET/POST /api/v1/{entity}/{id}/shares`

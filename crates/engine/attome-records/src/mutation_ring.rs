@@ -359,6 +359,9 @@ impl<'a> MutationRing<'a> {
         };
 
         attome_db::tx::commit(tx).await?;
+        // AA7-T8: this node stops answering a conditional read from the
+        // record's old version at once; other nodes follow from the feed.
+        crate::entity_crud::row_version_cache::forget(entity_name, result.record_id).await;
         // Z3-T5: every node's cache invalidation bus reads the feed now.
         attome_core::cache_invalidation::ring_after_commit(&self.state.base.redis);
 

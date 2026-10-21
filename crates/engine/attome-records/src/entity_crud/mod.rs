@@ -35,6 +35,7 @@ mod related;
 mod resolve;
 mod response;
 mod row_version;
+pub(crate) mod row_version_cache;
 /// B16-T5: `GET /api/v1/scan/find`, a scanned value to the readable records
 /// holding it.
 pub mod scan;

@@ -261,14 +261,23 @@ pub(super) async fn get_record(
     // this optimization validated â€” see coding-guidelines.md Â§14
     // (performance work is evidence-driven).
     if let Some(if_none_match) = if_none_match_row_version(&headers) {
-        let current_version: Option<i64> = sqlx::query_scalar(&attome_db::tag_dynamic(
-            "entity.mutations",
-            &format!("SELECT row_version FROM {table} WHERE id = $1 AND is_active = true"),
-        ))
-        .bind(record_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(AppError::internal)?;
+        // AA7-T8: the version comes from process memory when this node
+        // holds it (access was checked above), else from the probe.
+        let current_version = super::row_version_cache::live_row_version(
+            &entity_name,
+            record_id,
+            async {
+                sqlx::query_scalar::<_, i64>(&attome_db::tag_dynamic(
+                    "entity.mutations",
+                    &format!("SELECT row_version FROM {table} WHERE id = $1 AND is_active = true"),
+                ))
+                .bind(record_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(AppError::internal)
+            },
+        )
+        .await?;
 
         // `None` (record missing/inactive) deliberately falls through to the
         // full read below, which resolves to the correct `AppError::NotFound`
