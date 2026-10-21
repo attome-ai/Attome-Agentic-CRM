@@ -320,7 +320,7 @@ pub async fn rollup_day(state: &EngineState, day: NaiveDate) -> Result<u64, AppE
                (agent_definition_ref, day, tasks_done, tasks_resolved, tasks_measured, \
                 effectiveness_sum, handoffs, input_tokens, output_tokens, cost_micros, cost_unit, \
                 time_saved_seconds, computed_at) \
-             SELECT r.agent, $2, r.done::int, r.resolved::int, r.measured::int, r.eff, \
+             SELECT r.agent, $2::date, r.done::int, r.resolved::int, r.measured::int, r.eff, \
                     r.handoffs::int, r.input, r.output, r.cost, r.unit, r.saved, now() \
                FROM unnest($1::uuid[], $3::bigint[], $4::bigint[], $5::bigint[], \
                            $6::float8[], $7::bigint[], $8::bigint[], $9::bigint[], \
