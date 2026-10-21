@@ -27,7 +27,6 @@ use std::pin::Pin;
 
 use attome_core::EngineState;
 use attome_core::meta_registry::EntityMeta;
-use attome_inference::GenerationRequest;
 use attome_modules::MODULE_AI;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
@@ -38,7 +37,6 @@ use uuid::Uuid;
 use crate::context::ActionContext;
 use crate::descriptor::{ActionDescriptor, ActionId, Effect, RetryClass, RiskTier};
 use crate::execute::{Action, ActionResult, Provenance};
-use crate::prompt::Segment;
 
 pub const MEETING_BRIEF: &str = "meeting.brief";
 pub(crate) const BRIEF_PROMPT_VERSION: &str = "meeting.brief/v1";
@@ -55,7 +53,7 @@ pub const MAX_TASKS: usize = 10;
 pub const BRIEF_BUDGET_CHARS: usize = crate::context_window::DEFAULT_LIMITS.max_result_chars;
 
 /// The meeting entity, the account entity and the brief entity.
-const MEETING_ENTITY: &str = "activity";
+pub(crate) const MEETING_ENTITY: &str = "activity";
 const ACCOUNT_ENTITY: &str = "account";
 const BRIEF_ENTITY: &str = "ai_meeting_brief";
 
@@ -241,7 +239,7 @@ pub(crate) fn brief_system_prompt(language: &str) -> String {
 /// The record as every reader may see it, or `None` when one of them cannot
 /// read it or its subject restricted processing. Only the fields all of
 /// them may see are kept.
-async fn visible(
+pub(crate) async fn visible(
     state: &EngineState,
     readers: &[&SecurityContext],
     entity: &str,
@@ -382,6 +380,63 @@ async fn activities_about(
         .map_err(AppError::internal)
 }
 
+/// The record a meeting is about and the account it belongs to.
+pub(crate) type Related = (Option<(String, Uuid)>, Option<(Uuid, Value)>);
+
+/// The record a meeting is about (`entity_name`/`record_id`) and its
+/// account — that record when it is an account, else that record's lookup
+/// to the account — as every reader may see them.
+pub(crate) async fn regarding_and_account(
+    state: &EngineState,
+    readers: &[&SecurityContext],
+    meeting: &Value,
+) -> Result<Related, AppError> {
+    let regarding = meeting
+        .get("entity_name")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+        .zip(
+            meeting
+                .get("record_id")
+                .and_then(Value::as_str)
+                .and_then(|s| Uuid::parse_str(s).ok()),
+        );
+    let account_entity = state
+        .entities
+        .load()
+        .get(ACCOUNT_ENTITY)
+        .map(|meta| meta.entity_id);
+
+    // The account: the record the meeting is about, or that record's
+    // lookup to the account.
+    let mut account = None;
+    if let (Some((entity, id)), Some(account_entity)) = (&regarding, account_entity) {
+        let account_id = if entity == ACCOUNT_ENTITY {
+            Some(*id)
+        } else {
+            let lookup = state
+                .entities
+                .load()
+                .get(entity)
+                .and_then(|meta| account_lookup_attr(meta, account_entity));
+            match lookup {
+                Some(lookup) => visible(state, readers, entity, *id).await?.and_then(|row| {
+                    row.get(&lookup)
+                        .and_then(Value::as_str)
+                        .and_then(|s| Uuid::parse_str(s).ok())
+                }),
+                None => None,
+            }
+        };
+        if let Some(account_id) = account_id
+            && let Some(row) = visible(state, readers, ACCOUNT_ENTITY, account_id).await?
+        {
+            account = Some((account_id, row));
+        }
+    }
+    Ok((regarding, account))
+}
+
 /// Gathers a meeting's brief input as `acting` (see the module doc for
 /// whose access applies).
 pub async fn build_brief(
@@ -420,51 +475,12 @@ pub async fn build_brief(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let regarding = meeting
-        .get("entity_name")
-        .and_then(Value::as_str)
-        .map(str::to_owned)
-        .zip(
-            meeting
-                .get("record_id")
-                .and_then(Value::as_str)
-                .and_then(|s| Uuid::parse_str(s).ok()),
-        );
+    let (regarding, account) = regarding_and_account(state, &readers, &meeting).await?;
     let account_entity = state
         .entities
         .load()
         .get(ACCOUNT_ENTITY)
         .map(|meta| meta.entity_id);
-
-    // The account: the record the meeting is about, or that record's
-    // lookup to the account.
-    let mut account = None;
-    if let (Some((entity, id)), Some(account_entity)) = (&regarding, account_entity) {
-        let account_id = if entity == ACCOUNT_ENTITY {
-            Some(*id)
-        } else {
-            let lookup = state
-                .entities
-                .load()
-                .get(entity)
-                .and_then(|meta| account_lookup_attr(meta, account_entity));
-            match lookup {
-                Some(lookup) => visible(state, &readers, entity, *id)
-                    .await?
-                    .and_then(|row| {
-                        row.get(&lookup)
-                            .and_then(Value::as_str)
-                            .and_then(|s| Uuid::parse_str(s).ok())
-                    }),
-                None => None,
-            }
-        };
-        if let Some(account_id) = account_id
-            && let Some(row) = visible(state, &readers, ACCOUNT_ENTITY, account_id).await?
-        {
-            account = Some((account_id, row));
-        }
-    }
 
     let mut sections = Sections::default();
     if let (Some((account_id, _)), Some(account_entity)) = (&account, account_entity) {
@@ -587,67 +603,6 @@ struct BriefArgs {
     meeting_id: Uuid,
 }
 
-/// The generated brief.
-struct Generated {
-    text: String,
-    truncated: bool,
-    model_id: String,
-    prompt_version: String,
-    prompt_tokens: u32,
-    completion_tokens: u32,
-    latency_ms: i32,
-}
-
-/// Asks the model for the brief, inside the budget guard.
-async fn generate(
-    state: &EngineState,
-    ctx: &ActionContext,
-    input: &BriefInput,
-) -> Result<Generated, AppError> {
-    let client = crate::inference_client::client_for(state, MEETING_BRIEF).await?;
-    crate::model_registry::require_approved_model(&state.base.db, client.model_id(), MEETING_BRIEF)
-        .await?;
-    let layer = crate::prompt_layer::effective(
-        &state.base.db,
-        MEETING_BRIEF,
-        BRIEF_PROMPT_VERSION,
-        &brief_system_prompt(input.language),
-        &ctx.security.user_id.to_string(),
-    )
-    .await;
-    let started = std::time::Instant::now();
-    let mut request = GenerationRequest::new(crate::prompt::assemble(&[
-        Segment::trusted(layer.system.clone()),
-        Segment::untrusted("meeting", &input.context(BRIEF_BUDGET_CHARS)),
-    ]));
-    let grant = crate::budget_guard::admit(
-        state,
-        ctx,
-        attome_inference::budget::Priority::Chat,
-        MEETING_BRIEF,
-        &mut request,
-    )
-    .await?;
-    let generated = client.generate(request).await.map_err(|e| {
-        tracing::warn!(error = %e, "meeting.brief generation failed");
-        AppError::internal("brief generation failed")
-    })?;
-    grant.settle(state, &generated.usage).await;
-    let text = generated.text.trim().to_owned();
-    if text.is_empty() {
-        return Err(AppError::internal("the model wrote an empty brief"));
-    }
-    Ok(Generated {
-        text,
-        truncated: generated.truncated,
-        model_id: generated.usage.model_id.clone(),
-        prompt_version: layer.version.clone(),
-        prompt_tokens: generated.usage.prompt_tokens,
-        completion_tokens: generated.usage.completion_tokens,
-        latency_ms: i32::try_from(started.elapsed().as_millis()).unwrap_or(i32::MAX),
-    })
-}
-
 struct MeetingBrief;
 
 impl Action for MeetingBrief {
@@ -666,7 +621,15 @@ impl Action for MeetingBrief {
                 AppError::Validation(format!("invalid meeting.brief arguments: {e}"))
             })?;
             let input = build_brief(state, args.meeting_id, &ctx.security).await?;
-            let generated = match generate(state, ctx, &input).await {
+            let ask = super::Ask {
+                feature: MEETING_BRIEF,
+                prompt_id: MEETING_BRIEF,
+                version: BRIEF_PROMPT_VERSION,
+                system: brief_system_prompt(input.language),
+                label: "meeting",
+                data: &input.context(BRIEF_BUDGET_CHARS),
+            };
+            let generated = match super::generate(state, ctx, &ask).await {
                 Ok(generated) => generated,
                 Err(error) => {
                     if let Err(write_error) = write_brief(state, &input, "failed", None).await {

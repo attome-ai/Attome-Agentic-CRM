@@ -1405,6 +1405,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ai_meeting_brief` job for each meeting starting 60 to 75 minutes ahead that is not cancelled and has
   no brief; the job runs `meeting.brief` as the meeting owner through the AI gate and sends them an
   in-app notice. The new setting `ai.meeting_briefs` (user or deployment, on by default) turns it off.
+- Meeting notes (AI6-T4): the `meeting.notes` AI action reads a recording's transcript (`transcript_ref`
+  is the recording document; its N22 transcript, under the document's access) and writes draft
+  `ai_meeting_notes`: summary, decisions, action items and proposed record updates in the transcript's
+  language. Long transcripts are summarised in parts and merged (`meeting.notes_merge`). A proposed update
+  is kept only for the meeting's record or account, a real non-system attribute, a quote found in the
+  transcript, and a record the caller may update; nothing is applied. `action_items_json` holds
+  `{action_items, record_updates}`; confirmed notes are never rewritten.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

@@ -134,6 +134,19 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::meeting::brief::brief_system_prompt("en"),
         },
         PromptEntry {
+            action_id: crate::meeting::notes::MEETING_NOTES,
+            version: crate::meeting::notes::NOTES_PROMPT_VERSION,
+            // Rendered with a representative record list; the runtime one
+            // names the meeting's own records.
+            text: crate::meeting::notes::notes_system_prompt("en", "opportunity <id>"),
+        },
+        PromptEntry {
+            // The merge step of a long transcript's notes.
+            action_id: crate::meeting::notes::MEETING_NOTES_MERGE,
+            version: crate::meeting::notes::MERGE_PROMPT_VERSION,
+            text: crate::meeting::notes::merge_system_prompt("en"),
+        },
+        PromptEntry {
             // Not a registered action: the conversational turn itself
             // (`turn::run`). Its version keys C10-C's live-evaluation
             // baselines, so an admin comparing a quality change needs to see
