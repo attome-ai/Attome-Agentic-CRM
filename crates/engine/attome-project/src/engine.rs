@@ -62,5 +62,6 @@ impl EngineModel for ProjectModel {
             .merge(crate::change_request::routes())
             .merge(crate::timesheet::routes())
             .merge(crate::budget_link::routes())
+            .merge(crate::change_signoff::routes())
     }
 }

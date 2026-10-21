@@ -4,6 +4,7 @@ pub mod baseline;
 pub mod budget_link;
 pub mod capacity;
 pub mod change_request;
+pub mod change_signoff;
 pub mod critical_path;
 pub mod engine;
 pub mod model;
@@ -44,5 +45,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(change_request::openapi_fragment());
     doc.merge(timesheet::openapi_fragment());
     doc.merge(budget_link::openapi_fragment());
+    doc.merge(change_signoff::openapi_fragment());
     doc
 }

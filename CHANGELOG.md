@@ -1332,6 +1332,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   deliverable's `invoice_amount`, `time_and_materials` for billable hours on approved timesheets at each
   person's billable rate. Deliverables and time entries keep the request in `invoice_request_ref`, so
   nothing is proposed twice; people without a rate are left out and named.
+- Customer sign-off of change requests (V5-T1, platform changeset `0063`):
+  `POST /api/v1/project/change-request/{id}/send-for-signoff` sends a pending, customer-facing change
+  request's document to the customer's signer in a K4 envelope; when it is signed, the `change_signoff`
+  job approves the change request as the sender (impact applied, project rebaselined), and a declined
+  or voided envelope rejects it. `signoff_status` shows where it stands.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

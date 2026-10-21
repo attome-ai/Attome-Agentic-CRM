@@ -1718,6 +1718,7 @@ dependencies = [
  "attome-config",
  "attome-core",
  "attome-db",
+ "attome-document",
  "attome-jobs",
  "attome-metadata",
  "attome-modules",

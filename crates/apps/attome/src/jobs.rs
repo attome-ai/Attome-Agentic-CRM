@@ -2792,6 +2792,8 @@ const DEDUP_KEY_STOCK_LEDGER: &str = "stock-ledger";
 const DEDUP_KEY_WORK_ORDER_INVOICING: &str = "work-order-invoicing";
 /// F10-T10: commission plan acceptance (a registered job type).
 const DEDUP_KEY_COMMISSION_ACCEPTANCE: &str = "commission-acceptance";
+/// V5-T1: change requests decided by their customer sign-off (a registered job type).
+const DEDUP_KEY_CHANGE_SIGNOFF: &str = "change-signoff";
 /// W3-T4: sealed RFQ bids opened at the deadline (a registered job type).
 const DEDUP_KEY_RFQ_OPEN: &str = "rfq-open";
 /// W2-T1: vendor compliance document reminder timers (a registered job type).
@@ -2900,6 +2902,11 @@ pub const COMMISSION_ACCEPTANCE: attome_jobs::JobType =
 /// person who confirmed (payload `attome_service::warranty::BackfillJob`).
 pub const WARRANTY_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::warranty::JOB, 1);
+
+/// V5-T1: change requests whose sign-off envelope finished are approved
+/// (and rebaselined) or rejected.
+pub const CHANGE_SIGNOFF: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_project::change_signoff::JOB, 1);
 
 /// W3-T4: requests for quotation past their deadline have their sealed bids
 /// opened and are closed.
@@ -3264,6 +3271,20 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(written, "asset warranty dates filled");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CHANGE_SIGNOFF,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let decided = attome_project::change_signoff::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if decided > 0 {
+                    tracing::info!(decided, "change requests decided by customer sign-off");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3738,6 +3759,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_COMPLIANCE_EXPIRY
         }
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
+        EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
         }
@@ -4299,6 +4321,21 @@ pub fn spawn_work_order_invoicing_scheduler(db: DbPool, interval: std::time::Dur
             "work order invoicing",
         ),
         Err(error) => tracing::error!(%error, "work order invoicing: not scheduled"),
+    }
+}
+
+/// V5-T1: every minute, change requests decided by customer sign-off.
+pub fn spawn_change_signoff_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CHANGE_SIGNOFF.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CHANGE_SIGNOFF,
+            "change sign-off",
+        ),
+        Err(error) => tracing::error!(%error, "change sign-off: not scheduled"),
     }
 }
 
