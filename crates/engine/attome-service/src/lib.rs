@@ -33,6 +33,7 @@ pub mod sla;
 pub mod status_page;
 pub mod status_static;
 pub mod supplier_sla;
+pub mod survey_send;
 pub mod timeline;
 pub mod token;
 pub mod warranty;
@@ -63,5 +64,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(returns::openapi_fragment());
     doc.merge(schedule_candidates::openapi_fragment());
     doc.merge(major_incident::openapi_fragment());
+    doc.merge(survey_send::openapi_fragment());
     doc
 }

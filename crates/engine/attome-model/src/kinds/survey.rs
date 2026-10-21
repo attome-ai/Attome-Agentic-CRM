@@ -52,12 +52,42 @@ pub const MAX_QUESTIONS: usize = 100;
 pub const MAX_OPTIONS: usize = 50;
 const MAX_LABEL_CHARS: usize = 300;
 /// Fields every response entity has besides its questions.
-const SYSTEM_FIELDS: [&str; 4] = [
+const SYSTEM_FIELDS: [&str; 5] = [
     "respondent_ref",
+    "respondent_email",
     "regarding_entity",
     "regarding_id",
     "submitted_at",
 ];
+
+/// G14-T2: when a survey is sent. A record of `entity` whose `field`
+/// becomes `value` gets one survey, emailed to the user or contact its
+/// `recipient` lookup names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SendOn {
+    pub entity: String,
+    pub field: String,
+    pub value: String,
+    pub recipient: String,
+}
+
+/// The survey's `send_on`, when it has a valid one. Pure.
+pub fn send_on_of(doc: &Value) -> Option<SendOn> {
+    let s = doc.get("send_on")?;
+    let text = |k: &str| s.get(k).and_then(Value::as_str).map(str::trim);
+    let (entity, field, recipient) = (text("entity")?, text("field")?, text("recipient")?);
+    let value = text("value")?;
+    (logical_name_ok(entity)
+        && logical_name_ok(field)
+        && logical_name_ok(recipient)
+        && !value.is_empty())
+    .then(|| SendOn {
+        entity: entity.to_owned(),
+        field: field.to_owned(),
+        value: value.to_owned(),
+        recipient: recipient.to_owned(),
+    })
+}
 
 /// The survey kind.
 #[derive(Debug, Clone, Copy, Default)]
@@ -119,6 +149,17 @@ impl Kind for SurveyKind {
                 "response_entity": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,59}$" },
                 "display_name": { "type": "string", "maxLength": MAX_LABEL_CHARS },
                 "display_name_ar": { "type": "string", "maxLength": MAX_LABEL_CHARS },
+                "send_on": {
+                    "type": "object",
+                    "required": ["entity", "field", "value", "recipient"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "entity": { "type": "string" },
+                        "field": { "type": "string" },
+                        "value": { "type": "string" },
+                        "recipient": { "type": "string" }
+                    }
+                },
                 "questions": {
                     "type": "array", "minItems": 1, "maxItems": MAX_QUESTIONS,
                     "items": {
@@ -153,6 +194,7 @@ impl Kind for SurveyKind {
                 "response_entity",
                 "display_name",
                 "display_name_ar",
+                "send_on",
                 "questions",
             ]
             .contains(&key.as_str())
@@ -183,6 +225,13 @@ impl Kind for SurveyKind {
                 "/display_name_ar",
                 "invalid",
                 "display_name_ar is text",
+            ));
+        }
+        if doc.get("send_on").is_some() && send_on_of(doc).is_none() {
+            issues.push(issue(
+                "/send_on",
+                "invalid",
+                "send_on names an entity, a field, the value that sends, and the recipient lookup",
             ));
         }
         let questions = doc.get("questions").and_then(Value::as_array);
@@ -377,6 +426,7 @@ pub fn changeset_for(survey: Uuid, doc: &Value, seq: i32) -> Value {
         ),
         ("regarding_entity", "About Entity", "text", None),
         ("regarding_id", "About Record", "text", None),
+        ("respondent_email", "Respondent Email", "text", None),
         ("submitted_at", "Submitted", "date", None),
     ] {
         push(
@@ -569,5 +619,27 @@ mod tests {
         changed["questions"][2]["label"] = json!("Anything more?");
         assert_ne!(a, changeset_id(Uuid::from_u128(1), &changed));
         assert_ne!(a, changeset_id(Uuid::from_u128(2), &survey()));
+    }
+
+    #[test]
+    fn send_on_names_the_trigger_and_the_recipient() {
+        let mut doc = survey();
+        doc["send_on"] = json!({
+            "entity": "service_ticket", "field": "status", "value": "closed",
+            "recipient": "requester_id"
+        });
+        assert!(SurveyKind.validate_shape(&doc).is_ok());
+        assert_eq!(
+            send_on_of(&doc),
+            Some(SendOn {
+                entity: "service_ticket".into(),
+                field: "status".into(),
+                value: "closed".into(),
+                recipient: "requester_id".into(),
+            })
+        );
+        doc["send_on"]["entity"] = json!("Service Ticket");
+        assert!(SurveyKind.validate_shape(&doc).is_err());
+        assert_eq!(send_on_of(&survey()), None);
     }
 }

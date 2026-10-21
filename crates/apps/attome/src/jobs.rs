@@ -2792,6 +2792,8 @@ const DEDUP_KEY_STOCK_LEDGER: &str = "stock-ledger";
 const DEDUP_KEY_WORK_ORDER_INVOICING: &str = "work-order-invoicing";
 /// F10-T10: commission plan acceptance (a registered job type).
 const DEDUP_KEY_COMMISSION_ACCEPTANCE: &str = "commission-acceptance";
+/// G14-T2: surveys sent on record changes (a registered job type).
+const DEDUP_KEY_SURVEY_SEND: &str = "survey-send";
 /// V5-T1: change requests decided by their customer sign-off (a registered job type).
 const DEDUP_KEY_CHANGE_SIGNOFF: &str = "change-signoff";
 /// W3-T4: sealed RFQ bids opened at the deadline (a registered job type).
@@ -2902,6 +2904,11 @@ pub const COMMISSION_ACCEPTANCE: attome_jobs::JobType =
 /// person who confirmed (payload `attome_service::warranty::BackfillJob`).
 pub const WARRANTY_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::warranty::JOB, 1);
+
+/// G14-T2: published surveys sent, from the change feed, when a record
+/// reaches their trigger value (a closed case).
+pub const SURVEY_SEND: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::survey_send::JOB, 1);
 
 /// G17-T6: a draft schedule built for a planning group and period (payload
 /// `attome_workforce::build_job::BuildJob`). Only enqueued, never scheduled.
@@ -3276,6 +3283,23 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(written, "asset warranty dates filled");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SURVEY_SEND,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let sent = attome_service::survey_send::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if sent > 0 {
+                    tracing::info!(sent, "surveys sent");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3785,6 +3809,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
+        EngineJob::Registered(job) if job.name == SURVEY_SEND.name => DEDUP_KEY_SURVEY_SEND,
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
         }
@@ -4346,6 +4371,21 @@ pub fn spawn_work_order_invoicing_scheduler(db: DbPool, interval: std::time::Dur
             "work order invoicing",
         ),
         Err(error) => tracing::error!(%error, "work order invoicing: not scheduled"),
+    }
+}
+
+/// G14-T2: every minute, surveys sent on record changes.
+pub fn spawn_survey_send_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(SURVEY_SEND.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_SURVEY_SEND,
+            "survey sending",
+        ),
+        Err(error) => tracing::error!(%error, "survey sending: not scheduled"),
     }
 }
 

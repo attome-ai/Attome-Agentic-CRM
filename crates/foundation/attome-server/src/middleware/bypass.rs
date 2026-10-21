@@ -78,6 +78,11 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/status/subscribe",
     "/api/v1/status/confirm",
     "/api/v1/status/unsubscribe",
+    // G14-T2: a survey link's page and its JSON twin; the signed link is
+    // the credential, answers one response once, and every miss is the
+    // same 404 (or the same "no longer valid" page).
+    "/api/v1/surveys/form",
+    "/api/v1/surveys/respond",
     // E12-T2: a site's page by host, its theme stylesheet and its blog's
     // RSS feed: published public content only, the same identical 404.
     "/api/v1/content/site",

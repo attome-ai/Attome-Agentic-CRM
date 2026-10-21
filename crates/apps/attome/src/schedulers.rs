@@ -132,6 +132,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // G14-T2: surveys sent on record changes, every minute.
+    crate::jobs::spawn_survey_send_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // V5-T1: change requests decided by customer sign-off, every minute.
     crate::jobs::spawn_change_signoff_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // W3-T4: sealed RFQ bids opened at their deadline, every five minutes.

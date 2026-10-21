@@ -1350,6 +1350,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   published shift, which the person is told; `POST /api/v1/workforce/schedules/{id}/publish`
   (`If-Match`) books every shift on the person's time (`resource_allocation`), supersedes the group's
   overlapping published schedule and tells everyone scheduled.
+- Surveys on events (G14-T2): a survey's `send_on` (entity, field, value, recipient lookup; for example
+  `service_ticket.status = closed`, `requester_id`) makes the `survey_send` job email the recipient a
+  signed 30-day link when a record reaches the value, one per record. The link opens
+  `GET /api/v1/surveys/form` (a public bilingual form; `/api/v1/surveys/respond` is its JSON twin), and
+  the answers are checked against each question and stored once on the survey's response row.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

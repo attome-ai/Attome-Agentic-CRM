@@ -2047,6 +2047,7 @@ dependencies = [
  "attome-integration",
  "attome-jobs",
  "attome-metadata",
+ "attome-model",
  "attome-modules",
  "attome-notification",
  "attome-project",

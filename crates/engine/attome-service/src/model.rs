@@ -68,5 +68,6 @@ impl EngineModel for ServiceModel {
             .merge(crate::returns::routes())
             .merge(crate::schedule_candidates::routes())
             .merge(crate::major_incident::routes())
+            .merge(crate::survey_send::routes())
     }
 }

@@ -173,6 +173,26 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "GET",
+        "/api/v1/surveys/form",
+        "G14-T2: the signed survey link (HMAC under the survey-response domain, 30 days, over one response row) is the credential; it shows only that survey's questions. Bypass-listed.",
+    ),
+    (
+        "POST",
+        "/api/v1/surveys/form",
+        "G14-T2: the signed survey link is the credential and answers its one response row once. Bypass-listed.",
+    ),
+    (
+        "GET",
+        "/api/v1/surveys/respond",
+        "G14-T2: the JSON twin of the survey page, under the same signed link. Bypass-listed.",
+    ),
+    (
+        "POST",
+        "/api/v1/surveys/respond",
+        "G14-T2: the JSON twin of the survey form post, under the same signed link, answering one response once. Bypass-listed.",
+    ),
+    (
+        "GET",
         "/api/v1/esign/sign/{token}",
         "K4-T1 signer's page: the signed link (HMAC under the esign domain, 30 days, over one signer) is the credential and shows only that envelope's title, documents' names and hashes and the signer's own status; a draft or voided envelope is the same 404. Bypass-listed by an exact single-segment match.",
     ),
