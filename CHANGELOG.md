@@ -157,6 +157,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Users share their own records without admin rights (Q14-T1): `GET/POST /api/v1/{entity}/{id}/shares`
+  and `DELETE .../shares/{share_id}`, with the new per-entity `{entity}.share` privilege. A view share
+  needs read access to the record and an action share update access, so nobody gives more than they
+  hold; every change is a security event.
 - Job kinds can cap how many of their jobs run at once across all workers (Z7-T3, migration 0191);
   validation clean-up scans run at most two at a time.
 - A flow run replayed after a crash no longer repeats an action step (S9-T5): each module step claims

@@ -17788,6 +17788,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The record's shares, newest first (Q14-T1). Needs `{entity}.share` and read access to the record. */
+        get: operations["list_record_shares_for_record"];
+        put?: never;
+        /** @description Shares the record with a user or a team (Q14-T1). Needs `{entity}.share`; a `view` share needs read access to the record and an `action` share update access, so nobody gives more than they hold. */
+        post: operations["share_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/shares/{share_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Removes a share from the record (Q14-T1). Needs `{entity}.share` and the access the share gives; a deny row and the creator's own share are left to administrators. */
+        delete: operations["unshare_record"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/tags": {
         parameters: {
             query?: never;
@@ -33498,6 +33533,34 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RecordShare: {
+            items: {
+                /** @description `view` or `action` (`deny` rows are listed too, read-only). */
+                capability: string;
+                /** Format: date-time */
+                granted_at: string;
+                /** Format: uuid */
+                granted_by?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                principal_id: string;
+                /** @description `user` or `team`. */
+                principal_type: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_RecordShareItem: {
             items: {
                 capability: string;
@@ -37027,6 +37090,21 @@ export interface components {
             key_fields: string[];
             rows?: Record<string, never>[];
         };
+        /** @description One share on a record. */
+        RecordShare: {
+            /** @description `view` or `action` (`deny` rows are listed too, read-only). */
+            capability: string;
+            /** Format: date-time */
+            granted_at: string;
+            /** Format: uuid */
+            granted_by?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            principal_id: string;
+            /** @description `user` or `team`. */
+            principal_type: string;
+        };
         RecordShareItem: {
             capability: string;
             entity: string;
@@ -39522,6 +39600,18 @@ export interface components {
             object_key: string;
             /** Format: date-time */
             revoked_at?: string | null;
+        };
+        /**
+         * @description `POST /api/v1/{entity}/{id}/shares`: exactly one of `user_id` and
+         *     `team_id`.
+         */
+        ShareRecordBody: {
+            /** @description `view` or `action`. */
+            capability: string;
+            /** Format: uuid */
+            team_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
         };
         /** @description What opening a password link answers. */
         SharedFileUrl: {
@@ -100504,6 +100594,168 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_record_shares_for_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's shares (page 1 holds them all) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RecordShare"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's share privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    share_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareRecordBody"];
+            };
+        };
+        responses: {
+            /** @description The share */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordShare"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the share privilege, or asks for `deny` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller lacks the access the share would give */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown capability or principal */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unshare_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                share_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The share is gone */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the share privilege, or the share is a deny row or the creator's own */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such share on this record, or the caller lacks its access */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

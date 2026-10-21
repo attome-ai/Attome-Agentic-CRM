@@ -28,6 +28,7 @@ mod merge;
 mod mutations;
 pub mod new_record;
 pub mod recycle_bin;
+mod record_shares;
 /// M01 Core P3 gap (D-455): `/{entity}/{id}/related/{relationship}` — the
 /// generic M:M link/unlink/list API.
 mod related;
@@ -163,6 +164,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(related::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(feed::openapi_fragment());
+    doc.merge(record_shares::openapi_fragment());
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
     doc.merge(clone::openapi_fragment());
@@ -328,6 +330,14 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/history",
             get(history::get_record_history),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/shares",
+            get(record_shares::list_shares).post(record_shares::share_record),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/shares/{share_id}",
+            axum::routing::delete(record_shares::unshare_record),
         )
         .route(
             "/api/v1/{entity}/{id}/merge",

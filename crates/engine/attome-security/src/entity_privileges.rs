@@ -18,10 +18,14 @@ pub const BULK_ACTION: &str = "bulk";
 /// A18-T6: permanently deleting a record (past the recycle bin) is its own
 /// privilege, beside `delete`.
 pub const HARD_DELETE_ACTION: &str = "hard_delete";
+/// Q14-T1: sharing a record the holder can reach, without admin rights
+/// (`/api/v1/{entity}/{id}/shares`).
+pub const SHARE_ACTION: &str = "share";
 /// The per-entity keys beside the CRUD four, with how each is described.
-pub const EXTRA_ACTIONS: [(&str, &str); 2] = [
+pub const EXTRA_ACTIONS: [(&str, &str); 3] = [
     (BULK_ACTION, "bulk mutations"),
     (HARD_DELETE_ACTION, "permanent deletes"),
+    (SHARE_ACTION, "sharing records"),
 ];
 
 fn privilege_key(logicalname: &str, action: &str) -> String {

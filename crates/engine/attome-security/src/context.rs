@@ -80,6 +80,13 @@ pub mod record_action {
         const ACTIONS: &'static [&'static str] = &["bulk"];
     }
 
+    /// Q14-T1: shares a record (beside the record access the share gives).
+    #[derive(Debug)]
+    pub struct Share;
+    impl RecordActionKind for Share {
+        const ACTIONS: &'static [&'static str] = &["share"];
+    }
+
     /// Upsert: it decides insert-or-update from the payload's match key, so
     /// the caller must be entitled to both outcomes before either is chosen.
     #[derive(Debug)]
