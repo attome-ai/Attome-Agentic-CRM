@@ -588,7 +588,7 @@ pub async fn resolve(
         return Err(AppError::Conflict("declare the major incident first"));
     }
     let status_incident = uuid_of(data, "status_incident_ref");
-    if let Some(restored) = text(data, "restored_at").and_then(attome_core::timer::date_value) {
+    if let Some(restored) = data.get("restored_at").and_then(attome_core::timer::date_value) {
         // Resolved before: answer it again.
         return Ok(Resolved {
             ticket_id: ticket,

@@ -424,7 +424,7 @@ async fn generate(
 async fn owner_ctx(
     state: &EngineState,
     plan: &PlanRow,
-) -> Result<attome_server::security::SecurityContext, AppError> {
+) -> Result<std::sync::Arc<attome_server::security::SecurityContext>, AppError> {
     let owner = plan
         .owner
         .ok_or_else(|| AppError::Validation("the maintenance plan has no owner".into()))?;
