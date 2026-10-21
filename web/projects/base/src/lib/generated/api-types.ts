@@ -10183,6 +10183,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/accounts/{id}/credit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_credit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/accounts/{id}/statement": {
         parameters: {
             query?: never;
@@ -15300,6 +15316,22 @@ export interface paths {
         patch: operations["patch_sales_line"];
         trace?: never;
     };
+    "/api/v1/sales/opportunities/{id}/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_opportunity_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/opportunities/{id}/plays": {
         parameters: {
             query?: never;
@@ -15434,6 +15466,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/orders/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_order_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/orgchart-drafts/{id}/decide": {
         parameters: {
             query?: never;
@@ -15484,6 +15532,22 @@ export interface paths {
         put?: never;
         /** Makes a sent quote's guest link. */
         post: operations["post_guest_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/quotes/{id}/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_quote_order"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25000,6 +25064,21 @@ export interface components {
             account_id: string;
             payments: components["schemas"]["PaymentRecorded"][];
         };
+        /** @description One credit check. */
+        CreditCheck: {
+            /** Format: uuid */
+            account_id: string;
+            allowed: boolean;
+            credit_hold: boolean;
+            /** @description The open invoices' currency; none when there are none. */
+            currency?: string | null;
+            /** @description The account's limit; none means no limit. */
+            limit?: string | null;
+            /** @description What the account owes on its open invoices. */
+            open_balance: string;
+            overdue: boolean;
+            reason?: string | null;
+        };
         /** @description One original line to credit, and how much of it. */
         CreditLine: {
             /** Format: uuid */
@@ -31215,6 +31294,17 @@ export interface components {
              */
             vendor_id?: string | null;
         };
+        /** @description A confirmed order. */
+        OrderConfirmed: {
+            /**
+             * Format: uuid
+             * @description The billing invoice request it handed off.
+             */
+            invoice_request_id: string;
+            /** Format: uuid */
+            order_id: string;
+            status: string;
+        };
         /** @description One item of an order, as its owner sees it. */
         OrderItemView: {
             /** Format: uuid */
@@ -31234,6 +31324,14 @@ export interface components {
             offering_id: string;
             /** Format: int64 */
             quantity?: number;
+        };
+        /** @description An order made, or the one already made from the same source. */
+        OrderMade: {
+            /** @description False when the source had already been ordered. */
+            created: boolean;
+            lines: number;
+            /** Format: uuid */
+            order_id: string;
         };
         /** @description What an order placed. */
         OrderPlaced: {
@@ -79597,6 +79695,71 @@ export interface operations {
             };
         };
     };
+    get_credit: {
+        parameters: {
+            query?: {
+                /**
+                 * @description An amount about to be sold on credit, to check with the open
+                 *     balance (default 0).
+                 */
+                amount?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The account */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The credit limit, open balance, hold and whether the amount may be sold on credit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditCheck"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read payments or accounts */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such account, or not one the caller can read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description amount is not a non-negative number */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_statement: {
         parameters: {
             query?: {
@@ -95137,6 +95300,74 @@ export interface operations {
             };
         };
     };
+    post_sales_opportunity_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The won opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order is made from the accepted quote or the deal's lines, or the one already made is returned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderMade"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create orders or read the opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The opportunity is not won, or it is being ordered */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No lines and no accepted quote to order */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_sales_plays: {
         parameters: {
             query?: never;
@@ -95761,6 +95992,74 @@ export interface operations {
             };
         };
     };
+    post_sales_order_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The draft order */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order passed the credit check, its prices are locked, billing has its invoice request and it is confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderConfirmed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change this order */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such order */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The order is not a draft, or it is being confirmed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No lines, no account or currency, a line without a price, or the credit check refused (the reason is given) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_orgchart_draft_decide: {
         parameters: {
             query?: never;
@@ -95936,6 +96235,65 @@ export interface operations {
                 };
             };
             /** @description The quote is not sent, or has expired */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_quote_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The accepted quote */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order is made, or the one already made from this quote is returned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderMade"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create orders or read the quote */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The quote is not accepted, or it is being ordered */
             409: {
                 headers: {
                     [name: string]: unknown;

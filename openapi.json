@@ -56155,6 +56155,101 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/billing/accounts/{id}/credit": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_credit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The account",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "description": "An amount about to be sold on credit, to check with the open\nbalance (default 0).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The credit limit, open balance, hold and whether the amount may be sold on credit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read payments or accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such account, or not one the caller can read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "amount is not a non-negative number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "billing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/billing/accounts/{id}/statement": {
       "get": {
         "tags": [
@@ -81595,6 +81690,111 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/opportunities/{id}/order": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_opportunity_order",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The won opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The order is made from the accepted quote or the deal's lines, or the one already made is returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderMade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create orders or read the opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The opportunity is not won, or it is being ordered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No lines and no accepted quote to order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/opportunities/{id}/plays": {
       "get": {
         "tags": [
@@ -82594,6 +82794,111 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/sales/orders/{id}/confirm": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_order_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The draft order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order passed the credit check, its prices are locked, billing has its invoice request and it is confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderConfirmed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change this order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The order is not a draft, or it is being confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No lines, no account or currency, a line without a price, or the credit check refused (the reason is given)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/sales/orgchart-drafts/{id}/decide": {
       "post": {
         "tags": [
@@ -82917,6 +83222,101 @@
             {
               "category": "business_event",
               "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "sales",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/sales/quotes/{id}/order": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_quote_order",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The accepted quote",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The order is made, or the one already made from this quote is returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderMade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create orders or read the quote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such quote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The quote is not accepted, or it is being ordered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
             }
           ],
           "policy": "entity_policy"
@@ -119260,6 +119660,56 @@
           }
         }
       },
+      "CreditCheck": {
+        "type": "object",
+        "description": "One credit check.",
+        "required": [
+          "account_id",
+          "open_balance",
+          "overdue",
+          "credit_hold",
+          "allowed"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "credit_hold": {
+            "type": "boolean"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The open invoices' currency; none when there are none."
+          },
+          "limit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The account's limit; none means no limit."
+          },
+          "open_balance": {
+            "type": "string",
+            "description": "What the account owes on its open invoices."
+          },
+          "overdue": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "CreditLine": {
         "type": "object",
         "description": "One original line to credit, and how much of it.",
@@ -134904,6 +135354,29 @@
           }
         }
       },
+      "OrderConfirmed": {
+        "type": "object",
+        "description": "A confirmed order.",
+        "required": [
+          "order_id",
+          "status",
+          "invoice_request_id"
+        ],
+        "properties": {
+          "invoice_request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The billing invoice request it handed off."
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "OrderItemView": {
         "type": "object",
         "description": "One item of an order, as its owner sees it.",
@@ -134957,6 +135430,29 @@
           "quantity": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "OrderMade": {
+        "type": "object",
+        "description": "An order made, or the one already made from the same source.",
+        "required": [
+          "order_id",
+          "created",
+          "lines"
+        ],
+        "properties": {
+          "created": {
+            "type": "boolean",
+            "description": "False when the source had already been ordered."
+          },
+          "lines": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -171973,6 +172469,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -172024,7 +172522,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }
