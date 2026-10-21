@@ -50,6 +50,11 @@ pub struct StepInvocation {
     /// dry run.
     #[serde(default)]
     pub run_as_user: Option<Uuid>,
+    /// S9-T5: the step's effect key (`run:node[:round]`), the same on every
+    /// replay of this step, for a handler whose target dedupes by key. `None`
+    /// in a dry run.
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
 }
 
 /// What a node did.

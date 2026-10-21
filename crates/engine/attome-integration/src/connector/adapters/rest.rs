@@ -178,12 +178,16 @@ impl Connector for RestAdapter {
             let url = validate_target(&system.base_url).await?;
             let client = guarded_client(system, credential).await?;
             let body = serde_json::to_vec(event).map_err(AppError::internal)?;
-            let request = apply_auth(
+            let mut request = apply_auth(
                 guarded_request(&client, reqwest::Method::POST, url)?,
                 system,
                 credential,
                 &body,
             )?;
+            // S9-T5: the same key on every retry of this effect.
+            if let Some(key) = system.idempotency_header() {
+                request = request.header("Idempotency-Key", key);
+            }
             let response = request
                 .header("Content-Type", "application/json")
                 .body(body)

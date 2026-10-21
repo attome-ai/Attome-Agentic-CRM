@@ -1470,19 +1470,116 @@ async fn execute_module_step(
         });
     }
     let handler = module_step_handler(state, node)?;
+    let config = node.config.get("config").cloned().unwrap_or(Value::Null);
+    let step_input = input.get("input").cloned().unwrap_or(Value::Null);
+    // S9-T5: the step claims its effect key in the durable idempotency
+    // ledger before the handler runs, so a replay of the run (a crash before
+    // the checkpoint recorded the step) serves the step's stored output
+    // instead of running the action again. The handler gets the key too
+    // (`StepInvocation::idempotency_key`, and the task-scoped
+    // `request_scope::idempotency_key` an outbound call reads), for the
+    // narrow window the ledger cannot close: a crash after the action ran
+    // and before its completion is written, retried once the claim is stale.
+    let key = effect_key(instance.id, &node.id, round);
+    let body_hash = module_step_body_hash(handler.key(), &config, &step_input);
+    let principal = instance.started_by.unwrap_or(ctx.user_id);
+    let claim = match idempotency_durable::acquire_or_check(
+        &state.base,
+        principal,
+        "WORKFLOW",
+        "workflow.module_step",
+        &key,
+        &body_hash,
+    )
+    .await?
+    {
+        idempotency_durable::AcquireOutcome::Replay(cached) => {
+            let output: Value = serde_json::from_slice(&cached.body)
+                .map_err(|e| AppError::internal(format!("corrupt idempotency replay body: {e}")))?;
+            fired.insert(fired_key(&node.id, round));
+            return Ok(NodeOutcome::Succeeded { output });
+        }
+        idempotency_durable::AcquireOutcome::InProgress => {
+            return Err(AppError::Conflict(
+                "another attempt at this workflow step is already in progress",
+            ));
+        }
+        idempotency_durable::AcquireOutcome::DifferentRequest => {
+            return Err(AppError::internal(
+                "workflow step idempotency key reused with different input — the same \
+                 (instance_id, node_id, round) must always resolve identical input",
+            ));
+        }
+        idempotency_durable::AcquireOutcome::Acquired { record_id } => record_id,
+    };
     let invocation = attome_core::workflow_step::StepInvocation {
         instance_id: instance.id,
         node_id: node.id.clone(),
         correlation_entity_id: correlation_of(state, instance.id).await?,
-        config: node.config.get("config").cloned().unwrap_or(Value::Null),
-        input: input.get("input").cloned().unwrap_or(Value::Null),
+        config,
+        input: step_input,
         simulate: false,
         run_as_user: Some(ctx.user_id),
+        idempotency_key: Some(key.clone()),
     };
+    let ran = attome_types::request_scope::with_idempotency_key(
+        Some(&key),
+        handler.run(state, invocation),
+    )
+    .await;
+    let outcome = match ran {
+        Ok(outcome) => step_node_outcome(node, &node.id, round, fired, outcome),
+        Err(e) => {
+            // Nothing to replay: the next attempt claims the key again.
+            idempotency_durable::release_on_failure(&state.base, claim).await;
+            return Err(e);
+        }
+    };
+    match &outcome {
+        NodeOutcome::Succeeded { output } => {
+            let mut tx = attome_db::tx::begin(&state.base.db).await?;
+            idempotency_durable::complete_in_tx(
+                &mut tx,
+                claim,
+                None,
+                200,
+                &[],
+                &serde_json::to_vec(output).unwrap_or_default(),
+            )
+            .await
+            .map_err(AppError::internal)?;
+            attome_db::tx::commit(tx).await?;
+        }
+        // A wait runs the handler again when it is due: not a replay.
+        _ => idempotency_durable::release_on_failure(&state.base, claim).await,
+    }
+    Ok(outcome)
+}
+
+/// S9-T5: what a module step's input is, for its idempotency claim.
+fn module_step_body_hash(handler: &str, config: &Value, input: &Value) -> String {
+    use sha2::{Digest, Sha256};
+    let canonical = serde_json::to_vec(&serde_json::json!({
+        "handler": handler,
+        "config": config,
+        "input": input,
+    }))
+    .unwrap_or_default();
+    format!("{:x}", Sha256::digest(&canonical))
+}
+
+/// The node outcome a module step's handler outcome gives.
+fn step_node_outcome(
+    node: &GraphNode,
+    node_id: &str,
+    round: i32,
+    fired: &mut HashSet<String>,
+    outcome: attome_core::workflow_step::StepOutcome,
+) -> NodeOutcome {
     use attome_core::workflow_step::StepOutcome;
-    Ok(match handler.run(state, invocation).await? {
+    match outcome {
         StepOutcome::Done(output) => {
-            fired.insert(fired_key(&node.id, round));
+            fired.insert(fired_key(node_id, round));
             NodeOutcome::Succeeded { output }
         }
         StepOutcome::Waiting {
@@ -1510,7 +1607,7 @@ async fn execute_module_step(
             reason,
             continue_after: true,
         } => {
-            fired.insert(fired_key(&node.id, round));
+            fired.insert(fired_key(node_id, round));
             NodeOutcome::Succeeded {
                 output: serde_json::json!({ "blocked": reason }),
             }
@@ -1534,7 +1631,7 @@ async fn execute_module_step(
             }
         }
         StepOutcome::Exit { reason } => NodeOutcome::Exit { reason },
-    })
+    }
 }
 
 /// E8-T2: the guard of the instance's definition kind, if one is registered.

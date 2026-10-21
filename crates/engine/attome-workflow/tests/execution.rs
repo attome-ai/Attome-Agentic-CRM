@@ -4227,6 +4227,48 @@ impl attome_core::workflow_step::WorkflowStepHandler for EchoStep {
     }
 }
 
+/// S9-T5: counts its runs per idempotency key (an action with an effect).
+struct CountStep;
+
+static COUNT_STEP_RUNS: std::sync::LazyLock<
+    std::sync::Mutex<std::collections::HashMap<String, usize>>,
+> = std::sync::LazyLock::new(Default::default);
+
+impl attome_core::workflow_step::WorkflowStepHandler for CountStep {
+    fn key(&self) -> &'static str {
+        "test.count"
+    }
+    fn module_id(&self) -> attome_modules::ModuleId {
+        attome_modules::MODULE_WORKFLOW
+    }
+    fn validate_config(&self, _config: &serde_json::Value) -> Result<(), String> {
+        Ok(())
+    }
+    fn run<'a>(
+        &'a self,
+        _state: &'a EngineState,
+        inv: attome_core::workflow_step::StepInvocation,
+    ) -> attome_core::workflow_step::StepFuture<'a> {
+        Box::pin(async move {
+            let key = inv.idempotency_key.clone().unwrap_or_default();
+            // The outbound-call scope carries the same key.
+            assert_eq!(
+                attome_types::request_scope::idempotency_key().as_deref(),
+                Some(key.as_str())
+            );
+            let runs = {
+                let mut runs = COUNT_STEP_RUNS.lock().expect("count lock");
+                let n = runs.entry(key.clone()).or_default();
+                *n += 1;
+                *n
+            };
+            Ok(attome_core::workflow_step::StepOutcome::Done(
+                json!({ "key": key, "runs": runs }),
+            ))
+        })
+    }
+}
+
 /// Ends every journey instance before its first node.
 struct GoalGuard;
 
@@ -4254,8 +4296,12 @@ fn with_module_steps(mut state: EngineState) -> EngineState {
         )));
     let handler: std::sync::Arc<dyn attome_core::workflow_step::WorkflowStepHandler> =
         std::sync::Arc::new(EchoStep);
-    state.workflow_step_handlers =
-        std::sync::Arc::new(std::collections::HashMap::from([("test.echo", handler)]));
+    let counting: std::sync::Arc<dyn attome_core::workflow_step::WorkflowStepHandler> =
+        std::sync::Arc::new(CountStep);
+    state.workflow_step_handlers = std::sync::Arc::new(std::collections::HashMap::from([
+        ("test.echo", handler),
+        ("test.count", counting),
+    ]));
     let guard: std::sync::Arc<dyn attome_core::workflow_step::WorkflowKindGuard> =
         std::sync::Arc::new(GoalGuard);
     state.workflow_kind_guards =
@@ -4320,6 +4366,62 @@ async fn module_step_runs_registered_handler() {
     .await
     .expect("read the module step's output");
     assert_eq!(output, json!({"ran": {"ok": true}, "simulate": false}));
+}
+
+/// S9-T5: a flow run replayed after a crash before its checkpoint serves
+/// the step's stored outcome and never runs the action a second time.
+#[tokio::test]
+async fn idempotent_step_replay_does_not_run_the_action_twice() {
+    let state = with_module_steps(skip_if_no_db!(test_state().await));
+    let user_id = seed_user(&state.base.db).await;
+    let graph = module_step_graph("test.count", json!({}));
+    let version_id = publish_workflow(&state.base.db, "idempotent-step-test", graph).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start instance");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "completed");
+    let key = format!("{instance_id}:m");
+    let runs = || {
+        COUNT_STEP_RUNS
+            .lock()
+            .expect("count lock")
+            .get(&key)
+            .copied()
+    };
+    assert_eq!(runs(), Some(1));
+
+    // The crash: the checkpoint (node run, node data, fired effects) never
+    // committed, though the step ran and its claim completed.
+    sqlx::query("DELETE FROM workflow_node_run WHERE instance_id = $1 AND node_id = 'm'")
+        .bind(instance_id)
+        .execute(&state.base.db)
+        .await
+        .expect("delete node_run to simulate a pre-checkpoint crash");
+    sqlx::query(
+        "UPDATE workflow_instance          SET status = 'running', node_data = jsonb_build_object('t', context),              fired_side_effects = '[]'::jsonb, completed_at = NULL          WHERE id = $1",
+    )
+    .bind(instance_id)
+    .execute(&state.base.db)
+    .await
+    .expect("reset instance to running to simulate a pre-checkpoint crash");
+
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "completed");
+    assert_eq!(runs(), Some(1), "the replay must not run the action again");
+    let output: serde_json::Value = sqlx::query_scalar(
+        "SELECT output FROM workflow_node_run WHERE instance_id = $1 AND node_id = 'm'",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read the replayed step's output");
+    assert_eq!(output, json!({ "key": key, "runs": 1 }));
 }
 
 #[tokio::test]

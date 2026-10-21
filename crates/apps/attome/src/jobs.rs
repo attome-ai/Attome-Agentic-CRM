@@ -72,15 +72,21 @@ pub async fn handle_platform_job(
     };
     let profiler_enabled = config.observability.profiler_enabled;
     let started = std::time::Instant::now();
-    let (mut result, probes) = attome_profiler::scope(dispatch_platform_job(
-        job,
-        db.clone(),
-        db_migrator,
-        config,
-        attome_state.clone(),
-        attempt.current(),
-        task_id.to_string(),
-    ))
+    // S9-T5: an outbound call the job makes carries `job:<task id>`, the
+    // same on every retry of this job.
+    let job_key = format!("job:{task_id}");
+    let (mut result, probes) = attome_types::request_scope::with_idempotency_key(
+        Some(&job_key),
+        attome_profiler::scope(dispatch_platform_job(
+            job,
+            db.clone(),
+            db_migrator,
+            config,
+            attome_state.clone(),
+            attempt.current(),
+            task_id.to_string(),
+        )),
+    )
     .await;
 
     if profiler_enabled {

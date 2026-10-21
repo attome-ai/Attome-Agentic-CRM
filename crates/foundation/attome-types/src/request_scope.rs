@@ -9,6 +9,7 @@ use std::future::Future;
 tokio::task_local! {
     static REQUEST_ID: String;
     static OVERRIDE_REASON: Option<String>;
+    static IDEMPOTENCY_KEY: Option<String>;
 }
 
 /// The longest override reason kept (A3-T4); the rest is cut.
@@ -41,6 +42,19 @@ pub async fn with_override_reason<F: Future>(reason: Option<&str>, fut: F) -> F:
     OVERRIDE_REASON.scope(reason, fut).await
 }
 
+/// S9-T5: the idempotency key of the effect the current task is carrying
+/// out (a flow step's `run:node[:round]`, or a job's `job:<task id>`), so
+/// an outbound call to a system that dedupes by key sends the same key on
+/// every retry. The innermost scope wins.
+pub fn idempotency_key() -> Option<String> {
+    IDEMPOTENCY_KEY.try_with(Clone::clone).ok().flatten()
+}
+
+/// Runs `fut` with `key` as the current idempotency key.
+pub async fn with_idempotency_key<F: Future>(key: Option<&str>, fut: F) -> F::Output {
+    IDEMPOTENCY_KEY.scope(key.map(str::to_owned), fut).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,6 +65,20 @@ mod tests {
         let seen = scope("req-1".to_owned(), async { current() }).await;
         assert_eq!(seen.as_deref(), Some("req-1"));
         assert_eq!(current(), None);
+    }
+
+    #[tokio::test]
+    async fn idempotent_step_key_is_seen_inside_its_scope_and_the_inner_one_wins() {
+        assert_eq!(idempotency_key(), None);
+        let seen = with_idempotency_key(Some("job:1"), async {
+            let outer = idempotency_key();
+            let inner = with_idempotency_key(Some("run:node"), async { idempotency_key() }).await;
+            (outer, inner)
+        })
+        .await;
+        assert_eq!(seen.0.as_deref(), Some("job:1"));
+        assert_eq!(seen.1.as_deref(), Some("run:node"));
+        assert_eq!(idempotency_key(), None);
     }
 
     #[tokio::test]

@@ -157,6 +157,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- A flow run replayed after a crash no longer repeats an action step (S9-T5): each module step claims
+  its run-and-step key in the idempotency ledger and a replay returns the step's stored result. Jobs and
+  flow steps carry that key to outbound calls, and the REST connector sends it as `Idempotency-Key` to
+  a system whose configuration sets `"supports_idempotency": true`.
 - Rejections and validity per entity (A3-T8): every write a check refuses is logged, in batches
   off the request path, with its rule, field, channel and user (migration 0183); a nightly sweep scores
   each entity by the share of its stored records passing every active check.
