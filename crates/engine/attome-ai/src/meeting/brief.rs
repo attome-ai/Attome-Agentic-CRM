@@ -202,14 +202,13 @@ pub fn brief_language(meeting: Option<&str>, owner_locale: &str) -> &'static str
 /// The attribute on `meta` that looks up the account entity: one named
 /// `account…` first, else the first such lookup. Pure.
 pub fn account_lookup_attr(meta: &EntityMeta, account_entity: Uuid) -> Option<String> {
-    let lookups = || {
-        meta.attrs
-            .iter()
-            .filter(move |a| a.lookup_entity_ref == Some(account_entity))
-    };
-    lookups()
+    let looks_up =
+        |a: &&attome_core::meta_registry::AttrInfo| a.lookup_entity_ref == Some(account_entity);
+    meta.attrs
+        .iter()
+        .filter(looks_up)
         .find(|a| a.logicalname.starts_with("account"))
-        .or_else(|| lookups().next())
+        .or_else(|| meta.attrs.iter().find(looks_up))
         .map(|a| a.logicalname.clone())
 }
 
@@ -468,7 +467,7 @@ pub async fn build_brief(
         Some(state.base.security.resolve(owner).await?)
     };
     let readers: Vec<&SecurityContext> = match &owner_ctx {
-        Some(owner_ctx) => vec![owner_ctx.as_ref(), acting],
+        Some(owner_ctx) => vec![&**owner_ctx, acting],
         None => vec![acting],
     };
     let meeting = visible(state, &readers, MEETING_ENTITY, meeting_id)
@@ -561,7 +560,7 @@ async fn write_brief(
     let owner_ctx = state.base.security.resolve(input.owner).await?;
     let body = brief_body(input, status, text);
     let existing: Option<(Uuid, i64)> = sqlx::query_as(
-        "SELECT id, row_version FROM ai_meeting_brief \
+        "SELECT id, row_version::bigint FROM ai_meeting_brief \
           WHERE meeting_entity = $1 AND meeting_id = $2 \
             AND (is_active IS NULL OR is_active = true) \
           ORDER BY created_at DESC LIMIT 1",

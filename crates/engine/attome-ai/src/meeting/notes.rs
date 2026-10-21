@@ -515,7 +515,7 @@ async fn existing_notes(
         return Err(AppError::NotFound);
     }
     sqlx::query_as(
-        "SELECT id, row_version, status::text FROM ai_meeting_notes \
+        "SELECT id, row_version::bigint, status::text FROM ai_meeting_notes \
           WHERE meeting_entity = $1 AND meeting_id = $2 AND transcript_ref = $3 \
             AND (is_active IS NULL OR is_active = true) \
           ORDER BY created_at DESC LIMIT 1",
