@@ -446,6 +446,7 @@ dependencies = [
  "attome-storage",
  "attome-testkit",
  "attome-types",
+ "attome-workforce",
  "axum",
  "chrono",
  "chrono-tz",

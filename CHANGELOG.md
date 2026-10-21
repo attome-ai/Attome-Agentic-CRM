@@ -1373,6 +1373,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   once when the colleague's rules hold and they are free then, else waiting), `POST
   /api/v1/workforce/swaps/{id}/decide` for planners, and `GET /api/v1/workforce/coverage-impact` listing
   the intervals a person's leave would leave short.
+- Workforce agent tools (G17-T15): `workforce.coverage`, `workforce.explain_gap`, `workforce.my_next_day_off`
+  and `workforce.propose_fix` (free members who could cover each short interval, as a proposal). They read
+  only, work on draft schedules and refuse a published one.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

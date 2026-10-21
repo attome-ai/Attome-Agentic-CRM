@@ -65,6 +65,7 @@ pub mod table;
 pub mod transition;
 pub mod translate;
 pub mod workflow;
+pub mod workforce;
 
 use crate::descriptor::ActionDescriptor;
 
@@ -123,6 +124,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(sales_orgchart::descriptors());
     all.extend(sales_team::descriptors());
     all.extend(scan::descriptors());
+    all.extend(workforce::descriptors());
     all
 }
 
@@ -186,5 +188,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(sales_orgchart::executors());
     all.extend(sales_team::executors());
     all.extend(scan::executors());
+    all.extend(workforce::executors());
     all
 }

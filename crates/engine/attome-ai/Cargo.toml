@@ -31,6 +31,7 @@ attome-outbound.workspace     = true
 attome-records.workspace      = true
 attome-search.workspace       = true
 attome-sales.workspace        = true
+attome-workforce.workspace    = true
 attome-billing.workspace      = true
 attome-marketing.workspace    = true
 attome-security.workspace     = true
