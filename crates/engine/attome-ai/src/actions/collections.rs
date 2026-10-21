@@ -631,6 +631,79 @@ pub fn promise_values(args: &Value) -> Result<(Option<f64>, chrono::NaiveDate, S
     Ok((amount, date, note))
 }
 
+/// Records a promise to pay on a collections item's invoice, `pending`
+/// review: the body of `collections.record_promise`, also called by the
+/// promise reader (AI5-T4) for a promise found in a customer's reply.
+pub async fn record_promise(
+    state: &EngineState,
+    ctx: &ActionContext,
+    item_id: Uuid,
+    amount: Option<f64>,
+    date: chrono::NaiveDate,
+    note: &str,
+) -> Result<Value, AppError> {
+    let item = load_item(state, ctx, item_id).await?;
+    if item.reason == "renewal_due" {
+        return Err(AppError::Validation(
+            "a payment promise is for an invoice".into(),
+        ));
+    }
+    // The invoice must be one the caller may read.
+    let invoice = attome_records::entity_crud::read_record_bulk(
+        state,
+        &ctx.security,
+        &item.entity,
+        item.record_id,
+    )
+    .await?;
+    let data = invoice.data();
+    let customer = [("contact", "contact_ref"), ("account", "account_ref")]
+        .into_iter()
+        .find_map(|(entity, key)| {
+            data.get(key)
+                .and_then(Value::as_str)
+                .map(|id| (entity, id.to_owned()))
+        });
+    session_caps(state, ctx, RECORD_PROMISE, PROMISES_PER_DAY).await?;
+    let note: String = note.trim().chars().take(MAX_NOTE_CHARS).collect();
+    let body = json!({
+        "invoice_entity": item.entity,
+        "invoice_id": item.record_id.to_string(),
+        "invoice_number": data.get("invoice_number").cloned().unwrap_or(Value::Null),
+        "customer_entity": customer.as_ref().map(|(entity, _)| *entity),
+        "customer_id": customer.as_ref().map(|(_, id)| id.clone()),
+        "promised_amount": amount,
+        "promised_date": date.to_string(),
+        "source": "agent",
+        "status": "open",
+        // AI5-T6: a person confirms or rejects what an agent recorded.
+        "review_status": "pending",
+        "note": note,
+    });
+    let (promise_id, _) = attome_records::entity_crud::create_record_for(
+        state,
+        &ctx.security,
+        ctx.security.user_id,
+        "ai_payment_promise",
+        body,
+    )
+    .await?;
+    record_outcome(
+        state,
+        ctx,
+        RECORD_PROMISE,
+        &item,
+        json!({ "promise_id": promise_id, "promised_date": date.to_string() }),
+    )
+    .await;
+    Ok(json!({
+        "promise_id": promise_id,
+        "item_id": item_id,
+        "promised_date": date.to_string(),
+        "status": "open",
+    }))
+}
+
 struct RecordPromise;
 
 impl Action for RecordPromise {
@@ -647,65 +720,9 @@ impl Action for RecordPromise {
         Box::pin(async move {
             let item_id = uuid_arg(args, "item_id")?;
             let (amount, date, note) = promise_values(args)?;
-            let item = load_item(state, ctx, item_id).await?;
-            if item.reason == "renewal_due" {
-                return Err(AppError::Validation(
-                    "a payment promise is for an invoice".into(),
-                ));
-            }
-            // The invoice must be one the caller may read.
-            let invoice = attome_records::entity_crud::read_record_bulk(
-                state,
-                &ctx.security,
-                &item.entity,
-                item.record_id,
-            )
-            .await?;
-            let data = invoice.data();
-            let customer = [("contact", "contact_ref"), ("account", "account_ref")]
-                .into_iter()
-                .find_map(|(entity, key)| {
-                    data.get(key)
-                        .and_then(Value::as_str)
-                        .map(|id| (entity, id.to_owned()))
-                });
-            session_caps(state, ctx, RECORD_PROMISE, PROMISES_PER_DAY).await?;
-            let body = json!({
-                "invoice_entity": item.entity,
-                "invoice_id": item.record_id.to_string(),
-                "invoice_number": data.get("invoice_number").cloned().unwrap_or(Value::Null),
-                "customer_entity": customer.as_ref().map(|(entity, _)| *entity),
-                "customer_id": customer.as_ref().map(|(_, id)| id.clone()),
-                "promised_amount": amount,
-                "promised_date": date.to_string(),
-                "source": "agent",
-                "status": "open",
-                // AI5-T6: a person confirms or rejects what an agent recorded.
-                "review_status": "pending",
-                "note": note,
-            });
-            let (promise_id, _) = attome_records::entity_crud::create_record_for(
-                state,
-                &ctx.security,
-                ctx.security.user_id,
-                "ai_payment_promise",
-                body,
-            )
-            .await?;
-            record_outcome(
-                state,
-                ctx,
-                RECORD_PROMISE,
-                &item,
-                json!({ "promise_id": promise_id, "promised_date": date.to_string() }),
-            )
-            .await;
-            Ok(ActionResult::plain(json!({
-                "promise_id": promise_id,
-                "item_id": item_id,
-                "promised_date": date.to_string(),
-                "status": "open",
-            })))
+            Ok(ActionResult::plain(
+                record_promise(state, ctx, item_id, amount, date, &note).await?,
+            ))
         })
     }
 

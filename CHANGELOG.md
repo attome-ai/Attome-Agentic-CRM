@@ -1434,6 +1434,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Promises read from replies (AI5-T4): every five minutes the `ai_promise_extract` job reads new inbound
+  messages on invoices with an open collections item and, through one budgeted model call answering strict
+  JSON (Arabic or English, Arabic digits included), records a promise with a date as an
+  `ai_payment_promise` pending staff review; a duplicate for the same invoice and date is skipped. Prompt
+  `collections.extract_promise/v1`.
 - Daily collections (AI5-T5): the follow-up scan finds collection reminders from 08:00 in the deployment's
   `core.time_zone` each day, and a collections item's run sends its reminder as the owner while the rule
   is active and has reminders left (no customer email or an unsent channel reminds the owner instead).
