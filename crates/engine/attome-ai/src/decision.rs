@@ -414,9 +414,17 @@ async fn execute_decision(
     )
     .await?;
 
+    // O10-T1: when it ran, and the outcome metric's latest value then, the
+    // "before" its measurement later compares with.
     let rows_affected = sqlx::query(
-        "UPDATE dashboard_decision SET status = 'executed', action_invocation_ref = $2, \
-         refusal_reason = NULL, modified_at = NOW(), row_version = row_version + 1 \
+        "UPDATE dashboard_decision d SET status = 'executed', action_invocation_ref = $2, \
+         refusal_reason = NULL, executed_at = NOW(), \
+         outcome_before = (SELECT s.actual FROM metric_snapshot s \
+                            WHERE s.metric_ref = COALESCE(d.expected_metric_ref, d.metric_ref) \
+                              AND s.dimension_attribute IS NULL AND s.status <> 'failed' \
+                              AND s.actual IS NOT NULL \
+                            ORDER BY s.computed_at DESC, s.id DESC LIMIT 1), \
+         modified_at = NOW(), row_version = row_version + 1 \
          WHERE id = $1 AND row_version = $3",
     )
     .bind(id)

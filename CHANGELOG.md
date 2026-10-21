@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Decision outcomes (O10-T1, platform changeset `0069`, `attome-dashboard`): executing a decision records `executed_at` and
+  its outcome metric's latest value as `outcome_before`; the daily job `dashboard_decision_measure` takes each executed
+  decision whose `measure_at` has passed, reads the metric's first value since then as `outcome_after`, and writes
+  `actual_delta`, `effectiveness` (actual ÷ expected delta) and status `measured` with a business event.
 - Metadata versions page (Y8-T12, `@attome/xrm/core/admin/metadata-versions`, `/xrm/admin/metadata-versions`): the
   published configuration versions newest first with the current one marked, each version's node switch times, and a
   Roll back button that asks first and then points every node at the version before the current one. New route

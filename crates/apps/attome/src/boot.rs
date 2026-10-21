@@ -1181,6 +1181,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-inbox-agent",
         // AK2-T1: the operations agent and its read-only policy.
         "attome-ai-ops-agent",
+        // O10-T1: when a decision ran and its metric before and after.
+        "attome-dashboard-decision-outcomes",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

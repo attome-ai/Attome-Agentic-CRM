@@ -2,6 +2,8 @@ pub(crate) mod access;
 pub mod auth;
 pub mod context;
 pub mod decision;
+/// O10-T1: decisions measured before and after.
+pub mod decision_outcome;
 pub mod declarative_widget;
 pub mod drill;
 pub mod execution;

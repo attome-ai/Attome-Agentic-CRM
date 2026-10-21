@@ -136,6 +136,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_intraday_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // AI8-T3: yesterday's agent performance, checked hourly, rolled up once.
     crate::jobs::spawn_agent_stats_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // O10-T1: executed decisions measured after their measure date, daily.
+    crate::jobs::spawn_decision_measure_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // F5-T12: overdue accounts put on credit hold, once a day.
     crate::jobs::spawn_credit_hold_scheduler(
         db.clone(),

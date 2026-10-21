@@ -1,0 +1,67 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "entities": [],
+  "attribute_patches": [
+    {
+      "entity": "dashboard_decision",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Executed At",
+        "field_type": "date",
+        "is_customized": false,
+        "is_filterable": true,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": true,
+        "logicalname": "executed_at",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_decision",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Metric Before",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "outcome_before",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "dashboard_decision",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Metric After",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "outcome_after",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    }
+  ]
+}
