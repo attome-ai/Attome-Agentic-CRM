@@ -839,6 +839,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiAgentSessionsComponent),
           },
           {
+            // AI8-T6 — agent performance from the nightly rollup; the admin
+            // routes behind it answer 403 to anyone else.
+            path: 'ai/agents/performance',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiAgentPerformanceComponent),
+          },
+          {
             // M26 Phase 2 backlog — the new architecture's read-only viewer
             // (`?id=`, `withComponentInputBinding()`): a page/section/widget
             // tree has no business rendering through the generic entity

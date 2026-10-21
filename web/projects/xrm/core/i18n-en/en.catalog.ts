@@ -541,6 +541,18 @@ export const xrmEn = {
     reason: { stalled_deal: 'Stalled deal', overdue_task: 'Overdue task', unanswered_customer: 'Customer waiting for an answer' },
     status: { open: 'Open', reminded: 'Reminded', drafted: 'Draft ready', sent: 'Sent', dismissed: 'Dismissed', resolved: 'Resolved' },
   },
+  // AI8-T6 — agent performance.
+  aiPerformance: {
+    title: 'Agent performance',
+    intro: 'How each agent did over the range, from the nightly figures. Open any day to see the runs behind it.',
+    from: 'From', to: 'To', show: 'Show', agent: 'Agent', tasks: 'Tasks done', resolved: 'Resolved',
+    resolution: 'Resolution', accuracy: 'Accuracy', handoffRate: 'Hand-off rate', handoffs: 'Hand-offs',
+    timeSaved: 'Time saved (estimate)', tokens: 'Tokens', costPerTask: 'Cost per task', cost: 'Cost',
+    noPrice: 'No price set', none: 'No agent work in this range.', day: 'Day', trend: 'Tasks per day',
+    estimate: 'Time saved is an estimate: each task counts a fixed time for its kind of work.',
+    runs: 'Runs', close: 'Close', more: 'More', noRuns: 'No runs.',
+    source: { followup: 'Follow-up', collections: 'Collections', meeting: 'Meeting', handoff: 'Hand-off', other: 'Other' },
+  },
   // AI5-T7 — an invoice's collections panel.
   aiCollections: {
     title: 'Collections', promises: 'Payment promises', reminders: 'Reminders',

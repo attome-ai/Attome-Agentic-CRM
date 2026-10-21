@@ -60,3 +60,19 @@ export type {
   PaymentPromise,
   PromiseChanged,
 } from './collections/ai-collections.service';
+// AI8-T6: agent performance ('ai/agents/performance').
+export {
+  AiAgentPerformanceComponent,
+  costAmount,
+  defaultRange,
+  isoDay,
+  trend,
+} from './admin/agent-performance/ai-agent-performance.component';
+export { AiAgentPerformanceService } from './admin/agent-performance/ai-agent-performance.service';
+export type {
+  AgentPerformance,
+  AgentPerformanceDay,
+  AgentRun,
+  RunsMetric,
+  RunsPage,
+} from './admin/agent-performance/ai-agent-performance.service';

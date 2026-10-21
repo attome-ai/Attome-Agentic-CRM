@@ -1434,6 +1434,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Agent performance screen (AI8-T6, `/ai/agents/performance`): per-agent tasks, resolution, accuracy,
+  hand-off rate, estimated time saved, tokens and cost per task ("no price set" when some tokens had no
+  price) over a date range; an agent's daily trend (the dashboard chart) and days, each day's number
+  opening the runs behind it. English and Arabic (`aiPerformance.*`), numbers in the page's locale.
 - Agent performance routes and action (AI8-T4/T5): `GET /api/v1/admin/ai/agents/performance?from&to`
   (each agent's sums and the rates read from them: resolution, accuracy, hand-off rate, cost per task),
   `GET /api/v1/admin/ai/agents/{id}/performance/daily` and `GET /api/v1/admin/ai/agents/{id}/runs?day&metric`
@@ -1465,6 +1469,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `reviewed_by`, `reviewed_at`) and `POST /api/v1/ai/collections/promises/{id}/status` (`kept` or
   `broken`), each under `If-Match` and update access to the invoice. A rejected promise no longer holds
   reminders back.
+- `docs/agents.md` describes agent performance (AI8-T7): what each figure means, the time-saved estimates, the price
+  source, the nightly recompute and the runs behind each number.
 - `docs/agents.md` describes collections and renewals (AI5-T8): rule kinds, offsets, the email channel, `max_reminders`,
   approval for an agent's send, amounts from the invoice, and the `/api/v1/ai/collections/...` routes.
 - `docs/agents.md` describes meeting briefs and notes (AI6-T9): when briefs are made, what they read and

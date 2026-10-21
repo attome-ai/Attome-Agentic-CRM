@@ -215,6 +215,30 @@ none by default.
 - **Owners** see their open follow-ups at `/ai/follow-ups` (`GET /api/v1/ai/follow-ups`) and dismiss
   them (`POST /api/v1/ai/follow-ups/{id}/dismiss`, `If-Match`).
 
+## Agent performance
+
+`/ai/agents/performance` (administrators; `GET /api/v1/admin/ai/agents/performance?from&to`) shows how
+each agent did over a date range. The figures come from a nightly rollup (`ai_agent_daily_stat`).
+Shortly after 02:00 UTC each night it computes the day before from the outcome ledger, the agent's
+messages and the model prices, and it can be rebuilt for a range
+(`POST /api/v1/admin/ai/agents/performance/backfill`, up to 400 days). A rerun gives the same figures.
+
+- **Tasks done:** the agent's recorded tasks (`agent_task` outcomes: reminders, drafts, messages,
+  promises, notes confirmed into tasks, hand-offs) on that day.
+- **Resolution:** resolved ÷ done, where a task is resolved when its measured outcome says it succeeded.
+- **Accuracy:** the summed effectiveness of the measured tasks ÷ the tasks measured.
+- **Hand-off rate:** hand-offs ÷ tasks done.
+- **Time saved:** an **estimate**. Each task counts a fixed time for its kind of work (follow-up 2 min,
+  collections 3 min, meeting 15 min, hand-off 5 min), not a measurement.
+- **Tokens and cost:** the tokens of the agent's sessions, priced from `inference.spend.prices`, else
+  the approved model catalogue (`ai_model` input and output cost per token). Cost is in the price list's
+  own currency. When any tokens had no price, the screen says "no price set" instead of showing a cost.
+- **The runs behind a number:** choose an agent to see its days; every number of a day opens the
+  outcome rows or sessions behind it (`GET /api/v1/admin/ai/agents/{id}/runs?day&metric`), with ids,
+  times and tokens only, never message text or record values.
+- **Asking an agent:** the read-only `agent.performance` action gives administrators the same figures
+  through the operations agent or MCP.
+
 ## Collections and renewals
 
 Collections reuse the follow-up ledger. Nothing happens until an administrator adds an

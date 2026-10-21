@@ -456,6 +456,18 @@ export const xrmAr = {
     reason: { stalled_deal: 'صفقة متوقفة', overdue_task: 'مهمة متأخرة', unanswered_customer: 'عميل ينتظر الرد' },
     status: { open: 'مفتوحة', reminded: 'تم التذكير', drafted: 'المسودة جاهزة', sent: 'أُرسلت', dismissed: 'تم التجاهل', resolved: 'تمت' },
   },
+  // AI8-T6 — أداء الوكلاء.
+  aiPerformance: {
+    title: 'أداء الوكلاء',
+    intro: 'كيف أدى كل وكيل خلال المدة، من أرقام الليل. افتح أي يوم لترى العمليات وراءه.',
+    from: 'من', to: 'إلى', show: 'اعرض', agent: 'الوكيل', tasks: 'المهام المنجزة', resolved: 'المحلولة',
+    resolution: 'نسبة الحل', accuracy: 'الدقة', handoffRate: 'نسبة التحويل', handoffs: 'التحويلات',
+    timeSaved: 'الوقت الموفَّر (تقديري)', tokens: 'الرموز', costPerTask: 'تكلفة المهمة', cost: 'التكلفة',
+    noPrice: 'لا سعر محدد', none: 'لا عمل للوكلاء في هذه المدة.', day: 'اليوم', trend: 'المهام في اليوم',
+    estimate: 'الوقت الموفَّر تقدير: كل مهمة تُحسب بوقت ثابت لنوع عملها.',
+    runs: 'العمليات', close: 'إغلاق', more: 'المزيد', noRuns: 'لا عمليات.',
+    source: { followup: 'متابعة', collections: 'تحصيل', meeting: 'اجتماع', handoff: 'تحويل', other: 'أخرى' },
+  },
   // AI5-T7 — لوحة التحصيل في الفاتورة.
   aiCollections: {
     title: 'التحصيل', promises: 'وعود السداد', reminders: 'التذكيرات',
