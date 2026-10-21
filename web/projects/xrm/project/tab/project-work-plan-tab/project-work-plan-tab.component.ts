@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnChanges, computed, inject, input, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { ApiError } from '@attome/base';
+import { ApiError, TranslatePipe } from '@attome/base';
 import { ProjectService, ProjectSummary, WorkItemRollupRow } from '../../services/project.service';
+import { ProjectGanttComponent } from '../project-gantt/project-gantt.component';
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: 'Not started', in_progress: 'In progress', done: 'Done', blocked: 'Blocked',
@@ -20,7 +21,7 @@ const STATUS_LABEL: Record<string, string> = {
   selector: 'attome-project-work-plan-tab',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, TranslatePipe, ProjectGanttComponent],
   styleUrls: ['./project-work-plan-tab.component.css'],
   templateUrl: './project-work-plan-tab.component.html',
 })
@@ -34,6 +35,8 @@ export class ProjectWorkPlanTabComponent implements OnChanges {
   readonly summary = signal<ProjectSummary | null>(null);
   private readonly items = signal<WorkItemRollupRow[]>([]);
   readonly expandedItems = signal<Set<string>>(new Set());
+  /** V1-T1: the WBS tree or the Gantt timeline. */
+  readonly view = signal<'wbs' | 'timeline'>('wbs');
 
   private readonly childrenByParent = computed(() => {
     const map = new Map<string, WorkItemRollupRow[]>();

@@ -3457,6 +3457,15 @@ export const xrmEn = {
       procurement: { compliance_expiry: 'Document expiry' },
     },
   },
+  projectGantt: {
+    title: 'Timeline',
+    loading: 'Loading timeline…',
+    empty: 'No work items have dates yet.',
+    planned: 'Planned',
+    critical: 'Critical path',
+    baseline: 'Baseline',
+    noBaseline: 'No baseline captured yet',
+  },
   myJobs: {
     title: 'My background work',
     loading: 'Loading…',

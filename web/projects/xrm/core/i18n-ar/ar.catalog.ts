@@ -3367,6 +3367,15 @@ export const xrmAr = {
       procurement: { compliance_expiry: 'انتهاء مستند' },
     },
   },
+  projectGantt: {
+    title: 'الجدول الزمني',
+    loading: 'جارٍ تحميل الجدول الزمني…',
+    empty: 'لا توجد بنود عمل لها تواريخ بعد.',
+    planned: 'المخطط',
+    critical: 'المسار الحرج',
+    baseline: 'خط الأساس',
+    noBaseline: 'لم يُلتقط خط أساس بعد',
+  },
   myJobs: {
     title: 'أعمالي في الخلفية',
     loading: 'جارٍ التحميل…',

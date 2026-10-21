@@ -107,6 +107,31 @@ export interface WorkItemRollupRow {
   points_total: number;
   points_blocked: number;
   progress_pct: number;
+  /** On the critical path (CPM over the dependencies). */
+  is_critical_path?: boolean;
+  total_float_days?: number | null;
+}
+
+/** V1-T1: one dependency between work items. */
+export interface GanttDependency {
+  predecessor_id: string;
+  successor_id: string;
+  dependency_type: string;
+  lag_days: number | null;
+}
+
+/** V1-T1: one item's planned dates in the latest baseline. */
+export interface GanttBaselineItem {
+  work_item_id: string;
+  planned_start: string | null;
+  planned_due: string | null;
+}
+
+/** V1-T1: what the Gantt chart draws (`GET /project/{id}/gantt`). */
+export interface GanttView {
+  items: WorkItemRollupRow[];
+  dependencies: GanttDependency[];
+  baseline: { baseline_id: string; label: string | null; captured_at: string | null; items: GanttBaselineItem[] } | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -119,6 +144,10 @@ export class ProjectService {
 
   getWorkItemRollup(projectId: string): Observable<Page<WorkItemRollupRow>> {
     return this.api.get<Page<WorkItemRollupRow>>(`/api/v1/project/${projectId}/work-items/rollup`);
+  }
+
+  getGantt(projectId: string): Observable<GanttView> {
+    return this.api.get<GanttView>(`/api/v1/project/${projectId}/gantt`);
   }
 
   /** `POST /project/{id}/baseline` — 200 when a baseline with this label

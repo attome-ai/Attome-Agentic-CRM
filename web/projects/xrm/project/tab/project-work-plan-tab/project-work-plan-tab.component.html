@@ -47,12 +47,14 @@
     }
 
     <div class="pm-view-toggle">
-      <button type="button" class="pm-view-btn pm-view-btn-active">WBS</button>
-      <button type="button" class="pm-view-btn" disabled title="Timeline view is not built yet">Timeline</button>
+      <button type="button" class="pm-view-btn" [class.pm-view-btn-active]="view() === 'wbs'" (click)="view.set('wbs')">WBS</button>
+      <button type="button" class="pm-view-btn" [class.pm-view-btn-active]="view() === 'timeline'" (click)="view.set('timeline')" data-view-timeline>{{ 'projectGantt.title' | translate }}</button>
       <button type="button" class="pm-view-btn" disabled title="Board view is not built yet">Board</button>
     </div>
 
-    @if (rootItems().length === 0) {
+    @if (view() === 'timeline') {
+      <attome-project-gantt [projectId]="projectId()" />
+    } @else if (rootItems().length === 0) {
       <p class="pm-state-msg">No work items yet.</p>
     } @else {
       <div class="pm-wbs-table">

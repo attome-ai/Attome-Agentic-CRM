@@ -7,6 +7,7 @@ pub mod change_request;
 pub mod change_signoff;
 pub mod critical_path;
 pub mod engine;
+pub mod gantt;
 pub mod model;
 pub mod portfolio_program;
 pub mod risk;
@@ -39,6 +40,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 24;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = summary::openapi_fragment();
     doc.merge(work_plan::openapi_fragment());
+    doc.merge(gantt::openapi_fragment());
     doc.merge(portfolio_program::openapi_fragment());
     doc.merge(capacity::openapi_fragment());
     doc.merge(baseline::openapi_fragment());

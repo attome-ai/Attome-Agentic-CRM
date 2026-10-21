@@ -1376,6 +1376,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Workforce agent tools (G17-T15): `workforce.coverage`, `workforce.explain_gap`, `workforce.my_next_day_off`
   and `workforce.propose_fix` (free members who could cover each short interval, as a proposal). They read
   only, work on draft schedules and refuse a published one.
+- Project Gantt (V1-T1): `GET /api/v1/project/{id}/gantt` answers the work items with dates, critical-path
+  flag and float, their dependencies and the latest baseline's planned dates; the work plan tab's
+  Timeline view draws them as bars over a day scale, critical items marked, the baseline under each bar
+  and dependencies as links (English and Arabic labels).
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
