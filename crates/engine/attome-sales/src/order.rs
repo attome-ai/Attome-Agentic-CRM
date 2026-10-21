@@ -761,7 +761,10 @@ mod tests {
         assert_eq!(body["quantity"], json!(2));
         assert_eq!(body["unit_price"].as_f64(), Some(150.5));
         assert_eq!(body["quote_line_ref"], json!(quote_line));
-        assert!(body.get("tax_amount").is_none(), "absent values stay absent");
+        assert!(
+            body.get("tax_amount").is_none(),
+            "absent values stay absent"
+        );
     }
 
     #[test]
@@ -779,8 +782,10 @@ mod tests {
     #[test]
     fn order_from_quote_confirm_needs_a_draft_with_lines() {
         assert!(confirmable(Some("draft"), 1).is_ok());
-        assert!(matches!(confirmable(Some("confirmed"), 1), Err(AppError::Conflict(_))));
-        assert!(matches!(confirmable(Some("draft"), 0), Err(AppError::Validation(_))));
+        let confirmed = confirmable(Some("confirmed"), 1);
+        assert!(matches!(confirmed, Err(AppError::Conflict(_))));
+        let empty = confirmable(Some("draft"), 0);
+        assert!(matches!(empty, Err(AppError::Validation(_))));
     }
 
     #[test]

@@ -179,7 +179,11 @@ mod tests {
         assert_eq!(effectiveness(Some(30.0), Some(20.0)), Some(1.5));
         assert_eq!(effectiveness(Some(-10.0), Some(20.0)), Some(-0.5));
         assert_eq!(effectiveness(Some(10.0), Some(3.0)), Some(3.333));
-        assert_eq!(effectiveness(Some(10.0), Some(0.0)), None, "no expected move, no score");
+        assert_eq!(
+            effectiveness(Some(10.0), Some(0.0)),
+            None,
+            "no expected move, no score"
+        );
         assert_eq!(effectiveness(None, Some(5.0)), None);
         assert_eq!(effectiveness(Some(5.0), None), None);
     }

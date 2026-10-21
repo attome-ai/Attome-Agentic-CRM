@@ -568,7 +568,8 @@ mod tests {
         assert!(p.iter().any(|p| p.text.contains("attome backup drill")));
         report.backups.last_drill_passed = Some(true);
         report.backups.last_drill_at = Some(at(1, 3) - chrono::Duration::days(30));
-        assert!(proposals(&report).iter().any(|p| p.text.contains("restore drill")));
+        let p = proposals(&report);
+        assert!(p.iter().any(|p| p.text.contains("restore drill")));
     }
 
     #[test]
@@ -586,14 +587,17 @@ mod tests {
         let text: Vec<&str> = p.iter().map(|p| p.text.as_str()).collect();
         assert!(text.iter().any(|t| t.starts_with("email is down")));
         assert!(text.iter().any(|t| t.starts_with("Writes are paused")));
-        assert!(text.iter().any(|t| t.starts_with("Node c has not reported")));
+        assert!(text.iter().any(|t| t.starts_with("Node c has not")));
         assert!(text.iter().any(|t| t.contains("(0.1.0, 0.2.0)")));
         assert!(text.iter().any(|t| t.contains("SLO class S1")));
         let first_normal = p
             .iter()
             .position(|p| p.severity == "normal")
             .unwrap_or(p.len());
-        assert!(p[first_normal..].iter().all(|p| p.severity == "normal"), "urgent first");
+        assert!(
+            p[first_normal..].iter().all(|p| p.severity == "normal"),
+            "urgent first"
+        );
         let (subject, body) = digest(&report, &p);
         assert!(subject.contains(&format!("{} things to do", p.len())));
         assert!(body.contains("[urgent] email is down"));
@@ -662,7 +666,10 @@ mod tests {
         for id in &allowed {
             let id = id.as_str().unwrap_or_default();
             let d = registry.resolve(id);
-            assert!(d.is_some_and(|d| d.risk == RiskTier::Read), "{id} is not a read");
+            assert!(
+                d.is_some_and(|d| d.risk == RiskTier::Read),
+                "{id} is not a read"
+            );
         }
         let agent = rows("ai_agent")
             .into_iter()

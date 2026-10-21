@@ -425,7 +425,10 @@ mod tests {
     #[test]
     fn agent_lead_qualifier_contact_needs_consent() {
         assert_eq!(refusal(Decision::Allowed), None);
-        assert!(refusal(Decision::NoConsent).is_some(), "nothing fails closed");
+        assert!(
+            refusal(Decision::NoConsent).is_some(),
+            "nothing fails closed"
+        );
         assert!(refusal(Decision::Withdrawn).is_some());
         assert!(refusal(Decision::AccountOptOut).is_some());
     }

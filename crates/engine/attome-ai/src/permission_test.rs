@@ -276,8 +276,9 @@ mod tests {
         if registry.resolve("record.get").is_some_and(takes_entity) {
             assert!(has(&cases, "record.get", Some("invoice"), Expect::Refused));
             let positive = positive_cases(&g, &registry);
-            assert!(has(&positive, "record.get", Some("account"), Expect::Allowed));
-            assert!(!has(&positive, "record.get", Some("invoice"), Expect::Allowed));
+            let allowed = Expect::Allowed;
+            assert!(has(&positive, "record.get", Some("account"), allowed));
+            assert!(!has(&positive, "record.get", Some("invoice"), allowed));
         }
     }
 
