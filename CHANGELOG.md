@@ -1277,6 +1277,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   cover parts), kept on the line as `covered_pct` and `billable_amount`, and the billable lines go to
   billing as an invoice request keyed `work_order:{id}` by the `work_order_invoicing` job. The request id
   is kept in the work order's `invoice_reference`.
+- Warranty coverage per line (I10-T2, field-service pack `0006`): work order lines gain the `travel`
+  kind, covered by a warranty's `travel_covered_pct` (parts and labour by theirs); an entitlement's own
+  percentages win over its warranty term's. The nightly `warranty_expiry_reminder` job tells a warranty
+  entitlement's owner 30 days before it ends, once per end date (`entitlement.expiry_reminded_on`).
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

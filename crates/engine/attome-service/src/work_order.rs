@@ -7,14 +7,16 @@
 //! cases: [`crate::entitlement::pick`]).
 //!
 //! - A **warranty** (`source = warranty`, field-service pack) covers part
-//!   lines by its `warranty_term`'s `parts_covered_pct` and service lines
-//!   by its `labour_covered_pct` (100% each without a term).
+//!   lines by its `warranty_term`'s `parts_covered_pct`, service lines by
+//!   its `labour_covered_pct` and travel lines by its `travel_covered_pct`
+//!   (I10-T2); the entitlement's own percentages win over its term's, and
+//!   100% applies when neither has one.
 //! - A contract entitlement of kind **hours** covers service lines' hours
 //!   from what remains, line by line in order; each line's use is recorded
 //!   once (`work_order_line:{id}`).
 //! - A contract entitlement of kind **cases** covers every service line
 //!   when a case remains (one case, `work_order:{id}`).
-//! - Contracts do not cover parts. No entitlement covers nothing.
+//! - Contracts do not cover parts or travel. No entitlement covers nothing.
 //!
 //! Each line keeps `covered` (fully covered), `covered_pct` and
 //! `billable_amount`, all written in one transaction with the usage.
@@ -47,6 +49,28 @@ const DEFAULT_CURRENCY: &str = "SAR";
 pub enum LineKind {
     Part,
     Service,
+    /// I10-T2: travel to the site.
+    Travel,
+}
+
+impl LineKind {
+    /// The kind of a `line_kind` value; anything unknown is a part, as
+    /// before travel existed.
+    pub fn parse(value: Option<&str>) -> Self {
+        match value {
+            Some("service") => Self::Service,
+            Some("travel") => Self::Travel,
+            _ => Self::Part,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Part => "part",
+            Self::Service => "service",
+            Self::Travel => "travel",
+        }
+    }
 }
 
 /// One work order line, as the split needs it.
@@ -63,10 +87,11 @@ pub struct Line {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cover {
     None,
-    /// A warranty: percent of parts and of labour covered.
+    /// A warranty: percent of parts, of labour and of travel covered.
     Warranty {
         parts_pct: f64,
         labour_pct: f64,
+        travel_pct: f64,
     },
     /// A contract entitlement of hours with this many left.
     Hours {
@@ -112,6 +137,7 @@ pub fn split(lines: &[Line], cover: Cover) -> Vec<LineCoverage> {
             let (covered_pct, hours_used) = match (cover, line.kind) {
                 (Cover::Warranty { parts_pct, .. }, LineKind::Part) => (pct(parts_pct), 0.0),
                 (Cover::Warranty { labour_pct, .. }, LineKind::Service) => (pct(labour_pct), 0.0),
+                (Cover::Warranty { travel_pct, .. }, LineKind::Travel) => (pct(travel_pct), 0.0),
                 (Cover::Hours { .. }, LineKind::Service) if line.quantity > 0.0 => {
                     let used = consume(hours_left, line.quantity);
                     hours_left = used.remaining;
@@ -234,11 +260,7 @@ async fn invoice_one(state: &EngineState, order: OrderRow) -> Result<(), AppErro
             let quantity = qty.unwrap_or(1.0);
             Line {
                 id: *line,
-                kind: if kind.as_deref() == Some("service") {
-                    LineKind::Service
-                } else {
-                    LineKind::Part
-                },
+                kind: LineKind::parse(kind.as_deref()),
                 quantity,
                 amount: total.unwrap_or(quantity * price.unwrap_or(0.0)),
             }
@@ -301,11 +323,7 @@ async fn invoice_one(state: &EngineState, order: OrderRow) -> Result<(), AppErro
             Some(attome_billing::requests::RequestLine {
                 description: format!(
                     "Work order {label}: {}",
-                    if kind.as_deref() == Some("service") {
-                        "service"
-                    } else {
-                        "part"
-                    }
+                    LineKind::parse(kind.as_deref()).label()
                 ),
                 quantity: serde_json::Number::from_f64(quantity)?,
                 unit_price: serde_json::Number::from_f64(unit)?,
@@ -427,10 +445,11 @@ async fn cover_of(
         return Ok(Cover::None);
     }
     if text("source") == Some("warranty") {
-        let term: Option<(Option<f64>, Option<f64>)> =
+        let term: Option<(Option<f64>, Option<f64>, Option<f64>)> =
             match text("warranty_term_ref").and_then(|t| Uuid::parse_str(t).ok()) {
                 Some(term) => sqlx::query_as(
-                    "SELECT parts_covered_pct::float8, labour_covered_pct::float8 \
+                    "SELECT parts_covered_pct::float8, labour_covered_pct::float8, \
+                            travel_covered_pct::float8 \
                    FROM warranty_term WHERE id = $1",
                 )
                 .bind(term)
@@ -439,10 +458,13 @@ async fn cover_of(
                 .map_err(AppError::internal)?,
                 None => None,
             };
-        let (parts, labour) = term.unwrap_or((None, None));
+        // The entitlement's own percent wins over its term's (I10-T2).
+        let own = |key: &str| num(row.get(key));
+        let (parts, labour, travel) = term.unwrap_or((None, None, None));
         return Ok(Cover::Warranty {
-            parts_pct: parts.unwrap_or(100.0),
-            labour_pct: labour.unwrap_or(100.0),
+            parts_pct: own("parts_covered_pct").or(parts).unwrap_or(100.0),
+            labour_pct: own("labour_covered_pct").or(labour).unwrap_or(100.0),
+            travel_pct: own("travel_covered_pct").or(travel).unwrap_or(100.0),
         });
     }
     let remaining = num(row.get("remaining")).unwrap_or(0.0);
@@ -492,6 +514,7 @@ mod work_order_coverage {
             Cover::Warranty {
                 parts_pct: 100.0,
                 labour_pct: 50.0,
+                travel_pct: 0.0,
             },
         );
         assert_eq!(split[0].covered_pct, 100.0);
@@ -508,6 +531,7 @@ mod work_order_coverage {
             line(3, LineKind::Service, 4.0, 400.0),
         ];
         let split = split(&lines, Cover::Hours { remaining: 5.0 });
+        // (A contract's hours never cover a travel line: see warranty.rs.)
         assert_eq!(split[0].covered_pct, 100.0);
         assert_eq!(split[0].hours_used, 3.0);
         assert_eq!(

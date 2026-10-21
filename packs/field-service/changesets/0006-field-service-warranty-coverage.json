@@ -1,0 +1,95 @@
+{
+  "author": "packs",
+  "checksum": "sha256:cc8c0cced603db2a8357843f098e37d1cd9d17bb5a1732d3e97d99f375a6e03e",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Warranty coverage (I10-T2): a travel line kind covered by the warranty term's travel percent, and the end date a warranty entitlement was last reminded for, so the nightly expiry reminder goes once per end date.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d10-7f11-9a11-11c011c011e1",
+  "layer": "product",
+  "name": "field-service-warranty-coverage",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "part",
+              "service",
+              "travel"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "work_order_line",
+        "field": "line_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Expiry Reminded For",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "expiry_reminded_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "entitlement",
+        "field": "expiry_reminded_on"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تم التذكير بانتهاء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "entitlement.expiry_reminded_on",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "field-service",
+  "seq": 6,
+  "title": "Pack: warranty coverage per line and expiry reminders"
+}
