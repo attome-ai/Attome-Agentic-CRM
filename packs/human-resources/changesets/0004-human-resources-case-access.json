@@ -1,0 +1,305 @@
+sha256:189010b2218f8f6e10837b45fdefad13e2ca8ea82441763cdfc1356b6a94594c{
+  "author": "packs",
+  "checksum": "",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "HR case access (W8-T1): the HR Specialist role reads and works every case, confidential ones included, and manages the HR offerings; the Employee role raises cases and reads and updates only its own, and reads the offerings. A new case is not confidential unless set. Any other role that reads service tickets is kept off confidential cases by a grant condition is_confidential = false on its service_ticket.read, which the deployment adds for its own ticket roles (the packs README shows how).",
+  "format": "attome-changeset/v1",
+  "id": "01a15e5d-9099-7c22-afeb-3524dd89ca72",
+  "layer": "product",
+  "name": "human-resources-case-access",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Raises HR cases and follows their own; sees the HR offerings, no other case and no confidential notes.",
+          "is_customized": false,
+          "name": "Employee",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "role": "Employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on service_ticket",
+          "key": "service_ticket.read",
+          "name": "service_ticket.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "service_ticket.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on service_ticket",
+          "key": "service_ticket.create",
+          "name": "service_ticket.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "service_ticket.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on service_ticket",
+          "key": "service_ticket.update",
+          "name": "service_ticket.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "service_ticket.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on hr_offering",
+          "key": "hr_offering.read",
+          "name": "hr_offering.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "hr_offering.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on hr_offering",
+          "key": "hr_offering.create",
+          "name": "hr_offering.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "hr_offering.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on hr_offering",
+          "key": "hr_offering.update",
+          "name": "hr_offering.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "hr_offering.update"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "service_ticket.read",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "service_ticket.create",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "service_ticket.update",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "hr_offering.read",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "hr_offering.create",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "hr_offering.update",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "service_ticket.read",
+        "role": "Employee"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "service_ticket.create",
+        "role": "Employee"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "service_ticket.update",
+        "role": "Employee"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "hr_offering.read",
+        "role": "Employee"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "service_ticket",
+        "role": "Employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": []
+          },
+          "description": "A new case is not confidential unless whoever raises it, or HR, says so.",
+          "display_name": "Cases are not confidential by default",
+          "display_order": 0,
+          "entity_logicalname": "service_ticket",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "hr_case_not_confidential_default",
+          "policies": [
+            {
+              "field": "is_confidential",
+              "mode": "default",
+              "type": "set_value",
+              "value": false
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "service_ticket",
+        "rule": "hr_case_not_confidential_default"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "service"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "human-resources",
+  "seq": 4,
+  "title": "Pack: HR case access"
+}

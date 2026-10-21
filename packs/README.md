@@ -194,6 +194,13 @@ adds a retention rule that proposes each contract for review seven years after i
 Its `0004` (W1-T13) records where a draft contract came from (`source_kind`, `source_id`): the
 contract engine drafts one sales contract per accepted quote or confirmed order, gives each contract
 type an intake offering, and drafts a contract of that type from each request filed under it.
+The human-resources `0003` (W8-T1) adds HR offerings and HR cases on the service ticket (offering,
+employee, a confidential flag and confidential notes behind the HR Confidential profile), and its
+`0004` gives the HR Specialist role every case and the offerings, and adds an Employee role that
+raises cases and sees only its own. The pack cannot know a deployment's other ticket roles, so keep
+them off confidential cases with a grant condition on their `service_ticket.read`, in a customer
+changeset:
+`{"op": "add_role_grant_condition", "target": {"role": "<ticket role>", "privilege": "service_ticket.read", "condition": "is_confidential|0|false"}, "args": {"definition": {"field": "is_confidential", "operator": 0, "value": false}}}`.
 
 ## regions
 

@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- HR case access (W8-T1, human-resources pack `0004`): the HR Specialist role reads and works every HR case, confidential
+  ones included, and manages the HR offerings; a new Employee role raises cases and sees only its own; a new case is not
+  confidential unless set. Other ticket roles are kept off confidential cases by a grant condition the deployment adds
+  (packs README).
 - Inbox-to-record agent (AI3-T1, platform changeset `0067`): the `inbox_to_record` agent (a draft until an administrator
   activates it) with its Inbox to Record policy: read an inbound email and its attachments, classify it, extract its
   fields, find, create or update the lead, case or order, file the email on that record with the new Reversible action
