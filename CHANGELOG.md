@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent run undo plan (AH1-T3, `attome_ai::undo::plan_undo`): from a session's changes, per record and newest first, plans
+  setting back each attribute still as the agent left it, skips (and names) the attributes a person changed since,
+  soft-deletes what the agent created unless someone edited it, restores what it soft-deleted, and lists hard deletes and
+  every message sent or outside call as not undoable. Writes nothing.
 - Agent run changes (AH1-T2, `attome_ai::undo`): `collect_session_changes` returns every record change one agent session
   made, newest first, with each field's old and new value (opened with the record's audit key when crypto-shredding is
   on; sensitive and credential fields, and records whose key was destroyed, are marked not restorable), and
