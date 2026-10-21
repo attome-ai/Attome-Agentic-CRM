@@ -1450,6 +1450,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- Community forums (G13-T1, new `community` pack): forum categories, threads with an accepted answer, posts,
+  votes and ideas with statuses; business rules hold a new thread, post or idea with a link or a blocked term as
+  `pending` for the moderation queue (a stored query and a Community menu); Community Moderator and Viewer roles.
 - Inter-company postings (W5-T2, ledger pack `0002`): `POST /api/v1/ledger/intercompany` posts both companies' entries in one
   transaction (due-from and income in the first company's books, expense and due-to in the second's, from each pair's
   `gl_intercompany_account`), linked by `intercompany_ref`; `GET /api/v1/ledger/group-trial-balance?from&to` leaves

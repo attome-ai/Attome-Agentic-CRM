@@ -123,6 +123,17 @@ adds product-mix reports and `0013` the team calling metrics); the crm pack's
 adds events, its `0004` nurture programmes, tracks and content with a lifecycle stage on leads
 and contacts, and its `0005` the website tracking sites, visit summaries and watched pages.
 
+## community
+
+Community forums (G13): `forum_category` (with an Arabic name and a portal switch), `forum_thread` (a
+question in a category, open, answered or closed, pinned, with its accepted answer), `forum_post`
+(replies, staff replies and their vote score), `forum_vote` (one voter's vote on a post or an idea) and
+`forum_idea` (new, under review, planned, in progress, done or declined, with the votes and our
+response). A new thread, post or idea that holds a link or a blocked term is set to `pending` by a
+business rule and waits in the Community: Moderation Queue; a moderator approves or rejects it, and an
+empty moderation status reads as published. Edit the rules to add your own blocked terms. Roles:
+Community Moderator and Community Viewer.
+
 ## ledger
 
 General ledger (W5): the chart of accounts, accounting periods that open and close, journals,
