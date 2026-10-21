@@ -1454,6 +1454,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Bulk edit dialog (B5-T4): the entity list's bulk edit now runs through `/bulk-edit`. It edits the selection or every
+  record matching the current filters, with several operations (set, clear, add or remove an option, increase a
+  number) and a preview. Results list each record not changed, linked, with the reason in the user's language. The
+  edit can be undone, run without automation, and saved by name (new per-user setting `records.bulk_actions`) to run
+  again. `POST /api/v1/{entity}/bulk-edit` and its undo now return `record_ids`, the records in item order.
 - Roll an agent back to a time (AH2): `GET /api/v1/admin/ai/agents/{id}/rollback-preview?since=` and
   `POST /api/v1/admin/ai/agents/{id}/rollback` (admin or `ai_agent.supervise`; `since` in the past and inside
   `retention.audit_days`) revoke the agent's live sessions, then undo every session of the agent since then in one

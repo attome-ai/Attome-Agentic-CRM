@@ -91,6 +91,9 @@ pub struct BulkEditSubmitted {
     /// B5-T3: set when the edit is above the approval count; it runs once
     /// that approval is given, and `id` is empty until then.
     pub approval_request_id: Option<Uuid>,
+    /// B5-T4: the records the edit changes, in the order of the bulk
+    /// operation's items, so an item's `index` names its record.
+    pub record_ids: Vec<Uuid>,
 }
 
 /// B5-T3: the approval a large bulk edit waits on.
@@ -638,9 +641,11 @@ async fn bulk_edit(
                 unchanged,
                 undo: Vec::new(),
                 approval_request_id: None,
+                record_ids: Vec::new(),
             }),
         ));
     }
+    let record_ids: Vec<Uuid> = items.iter().filter_map(|i| i.id).collect();
     // B5-T3: above the approval count the edit waits on an approval.
     let threshold = approval_count(&state);
     if threshold > 0 && items.len() > threshold {
@@ -676,6 +681,7 @@ async fn bulk_edit(
                 unchanged,
                 undo,
                 approval_request_id: Some(request.id),
+                record_ids,
             }),
         ));
     }
@@ -698,6 +704,7 @@ async fn bulk_edit(
             unchanged,
             undo,
             approval_request_id: None,
+            record_ids,
         }),
     ))
 }
@@ -774,6 +781,7 @@ async fn bulk_edit_undo(
         ctx.require_key(attome_core::quiet_scope::QUIET_PRIVILEGE)?;
     }
     let count = request.undo.len();
+    let record_ids: Vec<Uuid> = request.undo.iter().map(|i| i.id).collect();
     let items = undo_items(request.undo);
     let submitted = submit_bulk(
         &state,
@@ -794,6 +802,7 @@ async fn bulk_edit_undo(
             unchanged: 0,
             undo: Vec::new(),
             approval_request_id: None,
+            record_ids,
         }),
     ))
 }

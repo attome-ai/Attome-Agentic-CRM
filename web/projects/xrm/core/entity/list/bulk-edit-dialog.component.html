@@ -2,10 +2,10 @@
 <div class="bulk-edit-backdrop" role="presentation" (click)="close()">
   <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
   <section class="bulk-edit-dialog" role="dialog" aria-modal="true"
-    [attr.aria-label]="'entityList.bulkEditTitle' | translate: { count: recordIds().length }"
+    [attr.aria-label]="'entityList.bulkEditTitle' | translate: { count: selectionCount() }"
     (click)="$event.stopPropagation()">
     <header>
-      <h3>{{ 'entityList.bulkEditTitle' | translate: { count: recordIds().length } }}</h3>
+      <h3>{{ 'entityList.bulkEditTitle' | translate: { count: selectionCount() } }}</h3>
       <button type="button" class="close-button" [attr.aria-label]="'entityList.close' | translate"
         [disabled]="applying()" (click)="close()">×</button>
     </header>
@@ -14,38 +14,165 @@
     <p class="bulk-edit-status">{{ 'entityList.loadingRecords' | translate }}</p>
     } @else if (!fields().length) {
     <p class="bulk-edit-status">{{ 'entityList.bulkEditNoFields' | translate }}</p>
-    } @else {
+    } @else if (step() === 'edit') {
+    <fieldset class="bulk-edit-mode">
+      <legend>{{ 'entityList.bulkEditWhich' | translate }}</legend>
+      <label class="bulk-edit-clear">
+        <input type="radio" name="bulk-edit-mode" value="selection" data-testid="mode-selection"
+          [checked]="mode() === 'selection'" [disabled]="!recordIds().length || applying()"
+          (change)="setMode('selection')" />
+        <span>{{ 'entityList.bulkEditModeSelection' | translate: { count: recordIds().length } }}</span>
+      </label>
+      <label class="bulk-edit-clear">
+        <input type="radio" name="bulk-edit-mode" value="filters" data-testid="mode-filters"
+          [checked]="mode() === 'filters'" [disabled]="!filters().length || applying()"
+          (change)="setMode('filters')" />
+        <span>{{ 'entityList.bulkEditModeFilters' | translate }}</span>
+      </label>
+    </fieldset>
+
+    @if (saved().length) {
+    <div class="bulk-edit-saved" data-testid="saved-actions">
+      <span>{{ 'entityList.bulkEditSavedTitle' | translate }}</span>
+      @for (a of saved(); track a.name) {
+      <button type="button" class="btn btn-text" [disabled]="applying()" (click)="useSaved(a)">{{ a.name }}</button>
+      }
+    </div>
+    }
+
+    <form class="bulk-edit-form" [formGroup]="form" (ngSubmit)="runPreview()">
+      @for (d of drafts(); track d.attribute) {
+      <div class="bulk-edit-op" [attr.data-op]="d.attribute">
+        <div class="bulk-edit-op-head">
+          <strong>{{ fieldLabel(d.attribute) }}</strong>
+          <select [ngModel]="d.op" [ngModelOptions]="{ standalone: true }" [disabled]="applying()"
+            [attr.aria-label]="'entityList.bulkEditOperation' | translate"
+            (ngModelChange)="setOp(d.attribute, $event)">
+            @for (o of opsOf(d.attribute); track o) {
+            <option [value]="o">{{ 'entityList.bulkEditOp.' + o | translate }}</option>
+            }
+          </select>
+          <button type="button" class="btn btn-text" [disabled]="applying()"
+            (click)="removeOperation(d.attribute)">{{ 'entityList.bulkEditRemoveOp' | translate }}</button>
+        </div>
+        @if (d.op !== 'clear') {
+        @if (fieldOf(d.attribute); as f) {
+        <attome-field-input [field]="f" [entityName]="entityName()" />
+        }
+        }
+      </div>
+      }
+    </form>
+
+    @if (addable().length) {
     <label class="bulk-edit-field">
-      <span>{{ 'entityList.bulkEditField' | translate }}</span>
-      <select [ngModel]="fieldName()" (ngModelChange)="selectField($event)"
-        [disabled]="applying()">
-        @for (f of fields(); track f.name) {
+      <span>{{ 'entityList.bulkEditAddField' | translate }}</span>
+      <select data-testid="add-field" [disabled]="applying()" (change)="onAddField($event)">
+        <option value="">—</option>
+        @for (f of addable(); track f.name) {
         <option [value]="f.name">{{ f.display_name || f.name }}</option>
         }
       </select>
     </label>
-    @if (field(); as f) {
-    @if (!clear()) {
-    <form class="bulk-edit-form" [formGroup]="form" (ngSubmit)="apply()">
-      <attome-field-input [field]="f" [entityName]="entityName()" />
-    </form>
     }
-    @if (!f.is_required) {
+
     <label class="bulk-edit-clear">
-      <input type="checkbox" [ngModel]="clear()" (ngModelChange)="clear.set($event)"
+      <input type="checkbox" data-testid="quiet" [ngModel]="quiet()" (ngModelChange)="quiet.set($event)"
         [disabled]="applying()" />
-      <span>{{ 'entityList.bulkEditClear' | translate }}</span>
+      <span>{{ 'entityList.bulkEditQuiet' | translate }}</span>
     </label>
+
+    <div class="bulk-edit-save">
+      <input type="text" class="bulk-edit-name" maxlength="100" [ngModel]="saveName()"
+        [attr.aria-label]="'entityList.bulkEditSaveName' | translate"
+        [placeholder]="'entityList.bulkEditSaveName' | translate"
+        (ngModelChange)="saveName.set($event)" />
+      <button type="button" class="btn btn-text" data-testid="save-action"
+        [disabled]="applying() || !saveName().trim() || !drafts().length"
+        (click)="saveAction()">{{ 'entityList.bulkEditSave' | translate }}</button>
+    </div>
+    } @else if (step() === 'preview') {
+    @if (preview(); as p) {
+    <p class="bulk-edit-status" data-testid="preview-summary">
+      {{ 'entityList.bulkEditPreviewSummary' | translate: { change: p.to_change, matched: p.matched, unchanged: p.unchanged } }}
+    </p>
+    @if (p.samples.length) {
+    <table class="bulk-edit-samples">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'entityList.bulkEditRecord' | translate }}</th>
+          <th scope="col">{{ 'entityList.bulkEditBefore' | translate }}</th>
+          <th scope="col">{{ 'entityList.bulkEditAfter' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of p.samples; track s.id) {
+        @for (name of changedNames(s); track name) {
+        <tr>
+          <td><a [routerLink]="['/xrm', entityName(), s.id]">{{ fieldLabel(name) }}</a></td>
+          <td>{{ shown(s.before[name]) }}</td>
+          <td>{{ shown(s.after[name]) }}</td>
+        </tr>
+        }
+        }
+      </tbody>
+    </table>
+    }
+    }
+    } @else {
+    @if (submitted(); as r) {
+    @if (r.approval_request_id) {
+    <p class="bulk-edit-status" role="status" data-testid="awaiting-approval">{{ 'entityList.bulkEditAwaitingApproval' | translate }}</p>
+    } @else if (!r.id) {
+    <p class="bulk-edit-status" role="status">{{ 'entityList.bulkEditNothing' | translate }}</p>
+    } @else if (stillRunning()) {
+    <p class="bulk-edit-status" role="status">{{ 'entityList.bulkEditStillRunning' | translate }}</p>
+    } @else if (status(); as st) {
+    <p class="bulk-edit-status" role="status" data-testid="result-summary">
+      {{ (undone() ? 'entityList.bulkEditUndone' : 'entityList.bulkEditDone') | translate: { done: st.succeeded, total: st.total } }}
+    </p>
+    }
+    @if (failures().length) {
+    <h4>{{ 'entityList.bulkEditFailures' | translate }}</h4>
+    <ul class="bulk-edit-failures" data-testid="failures">
+      @for (f of failures(); track f.index) {
+      <li>
+        @if (f.recordId) {
+        <a [routerLink]="['/xrm', entityName(), f.recordId]" dir="ltr">{{ f.recordId }}</a> ·
+        }
+        @if (f.reason === 'conflict') {
+        {{ 'entityList.bulkEditConflict' | translate }}
+        } @else {
+        {{ 'entityList.bulkEditFailed' | translate: { message: f.message } }}
+        }
+      </li>
+      }
+    </ul>
     }
     }
     }
 
     <footer>
+      @if (step() === 'edit') {
       <button type="button" class="btn btn-text" [disabled]="applying()"
         (click)="close()">{{ 'entityList.cancel' | translate }}</button>
-      <button type="button" class="btn btn-primary"
-        [disabled]="applying() || loading() || !field()"
+      <button type="button" class="btn btn-primary" data-testid="preview"
+        [disabled]="applying() || loading() || !drafts().length"
+        (click)="runPreview()">{{ 'entityList.bulkEditPreview' | translate }}</button>
+      } @else if (step() === 'preview') {
+      <button type="button" class="btn btn-text" [disabled]="applying()"
+        (click)="back()">{{ 'entityList.bulkEditBack' | translate }}</button>
+      <button type="button" class="btn btn-primary" data-testid="apply"
+        [disabled]="applying() || !preview()?.to_change"
         (click)="apply()">{{ 'entityList.bulkEditApply' | translate }}</button>
+      } @else {
+      @if (submitted()?.undo?.length && !undone()) {
+      <button type="button" class="btn btn-text" data-testid="undo" [disabled]="applying() || stillRunning()"
+        (click)="undo()">{{ 'entityList.bulkEditUndo' | translate }}</button>
+      }
+      <button type="button" class="btn btn-primary" [disabled]="applying()"
+        (click)="close()">{{ 'entityList.close' | translate }}</button>
+      }
     </footer>
   </section>
 </div>

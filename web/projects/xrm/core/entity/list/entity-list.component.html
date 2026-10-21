@@ -453,6 +453,7 @@
 
   @defer (when bulkEditRequested()) {
   <xrm-bulk-edit-dialog #bulkEditDialog [entityName]="entityName()" [recordIds]="selectedRecordIdList()"
+    [filters]="bulkEditFilters()"
     (busyChange)="bulkActionRunning.set($event)" (applied)="onBulkEditApplied()" />
   }
 </div>

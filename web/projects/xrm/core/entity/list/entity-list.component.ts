@@ -705,6 +705,9 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     });
   }
 
+  /** B5-T4: the view's filters, for a bulk edit of every matching record. */
+  readonly bulkEditFilters = computed(() => this.buildColumnFilters());
+
   private buildColumnFilters(): QueryFilter[] {
     const filters: QueryFilter[] = [...this.fixedFilters()];
     for (const [colName, draft] of Object.entries(this.activeFilters())) {

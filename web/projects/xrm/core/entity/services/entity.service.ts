@@ -29,6 +29,31 @@ export type BulkRecordEnvelope   = ApiComponents['schemas']['BulkRecordEnvelope'
 export type BulkOperationResponse = ApiComponents['schemas']['BulkOperationResponse'];
 export type BulkOperationStatus   = ApiComponents['schemas']['BulkOperationStatus'];
 
+/** B5-T1..T4: `POST /api/v1/{entity}/bulk-edit` (`attome_records::bulk_edit`). */
+export type BulkEditOp = 'set' | 'clear' | 'add' | 'remove' | 'increment';
+export interface BulkEditOperation { attribute: string; op: BulkEditOp; value?: unknown }
+export interface BulkEditFilter { field: string; op: string; value?: unknown }
+export interface BulkEditRequest {
+  ids?: string[];
+  filters?: BulkEditFilter[];
+  operations: BulkEditOperation[];
+  quiet?: boolean;
+}
+export interface BulkEditPreviewRecord { id: string; before: Record<string, unknown>; after: Record<string, unknown> }
+export interface BulkEditPreview { matched: number; to_change: number; unchanged: number; samples: BulkEditPreviewRecord[] }
+export interface BulkEditUndoItem { id: string; row_version: number; values: Record<string, unknown> }
+export interface BulkEditSubmitted {
+  /** The bulk operation; empty when nothing needed a change or an approval is pending. */
+  id?: string | null;
+  total: number;
+  matched: number;
+  unchanged: number;
+  undo: BulkEditUndoItem[];
+  approval_request_id?: string | null;
+  /** The records in item order: an item result's `index` names its record. */
+  record_ids?: string[];
+}
+
 /** M12 (data management) — `POST /api/v1/{entity}/export` and its status poll,
  * `crates/engine/attome-api/src/data_export.rs`. */
 export type ExportEnqueueResponse = ApiComponents['schemas']['ExportEnqueueResponse'];
@@ -339,8 +364,27 @@ export class EntityService {
     return this.api.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, body);
   }
 
-  bulkStatus(entityName: string, bulkOperationId: string): Observable<BulkOperationStatus> {
-    return this.api.get<BulkOperationStatus>(`/api/v1/${entityName}/bulk/${bulkOperationId}`);
+  /** With `includeItems`, one result per item (`ok`, or a `problem` with its code). */
+  bulkStatus(entityName: string, bulkOperationId: string, includeItems = false): Observable<BulkOperationStatus> {
+    const url = `/api/v1/${entityName}/bulk/${bulkOperationId}`;
+    return includeItems
+      ? this.api.get<BulkOperationStatus>(url, { include_items: 'true', page_size: '200' })
+      : this.api.get<BulkOperationStatus>(url);
+  }
+
+  /** B5-T2: what a bulk edit would change, writing nothing. */
+  bulkEditPreview(entityName: string, body: BulkEditRequest): Observable<BulkEditPreview> {
+    return this.api.post<BulkEditPreview>(`/api/v1/${entityName}/bulk-edit/preview`, body);
+  }
+
+  /** B5-T1: runs a bulk edit; it returns the undo list to keep. */
+  bulkEdit(entityName: string, body: BulkEditRequest): Observable<BulkEditSubmitted> {
+    return this.api.post<BulkEditSubmitted>(`/api/v1/${entityName}/bulk-edit`, body);
+  }
+
+  /** B5-T3: puts a bulk edit back; a record changed since is reported, not overwritten. */
+  bulkEditUndo(entityName: string, undo: BulkEditUndoItem[], quiet = false): Observable<BulkEditSubmitted> {
+    return this.api.post<BulkEditSubmitted>(`/api/v1/${entityName}/bulk-edit/undo`, { undo, quiet });
   }
 
   // ── Export (M12) ─────────────────────────────────────────────────────────

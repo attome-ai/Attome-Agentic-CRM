@@ -281,6 +281,31 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // B5-T4: a person's saved bulk edits.
+        SettingDescriptor::new(
+            "records.bulk_actions",
+            "The person's saved bulk edits, by entity: each a name and the operations it              applies, rerun from the bulk edit dialog.",
+            || {
+                json!({
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "items": {
+                            "type": "object",
+                            "required": ["name", "operations"],
+                            "properties": {
+                                "name": {"type": "string", "minLength": 1, "maxLength": 100},
+                                "operations": {"type": "array", "maxItems": 50}
+                            }
+                        }
+                    }
+                })
+            },
+            &[SettingScope::User],
+            false,
+            || json!({}),
+        ),
         // P4-T1: exports write formula-like text as text.
         SettingDescriptor::new(
             "records.export_formula_guard",

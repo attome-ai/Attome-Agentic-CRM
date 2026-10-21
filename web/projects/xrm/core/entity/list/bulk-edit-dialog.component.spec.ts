@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldSchema } from '@attome/xrm';
 import {
-  buildBulkUpdateEnvelopes, bulkEditableFields, firstBulkError, isBulkTerminal,
+  buildBulkUpdateEnvelopes, buildEditRequest, bulkEditableFields, bulkFailures, firstBulkError, isBulkTerminal,
+  opsFor, savedActionsFor, withSavedAction,
 } from './bulk-edit-dialog.component';
 
 describe('entity-list bulk edit (PROD-12)', () => {
@@ -54,5 +55,58 @@ describe('entity-list bulk edit (PROD-12)', () => {
     expect(isBulkTerminal('failed')).toBe(true);
     expect(isBulkTerminal('running')).toBe(false);
     expect(isBulkTerminal('queued')).toBe(false);
+  });
+
+  // ── B5-T4 ──
+
+  it('offers each field only the operations the server accepts for it', () => {
+    expect(opsFor({ ...field('n', 'number', 0) })).toEqual(['set', 'clear', 'increment']);
+    expect(opsFor({ ...field('t', 'text', 0), is_required: true })).toEqual(['set']);
+    const tags = { ...field('tags', 'choice', 0), options: { choices: ['a', 'b'], multi: true } } as FieldSchema;
+    expect(opsFor(tags)).toEqual(['set', 'clear', 'add', 'remove']);
+  });
+
+  it('builds the request from the selection or the filters, numbers for increment, no value to clear', () => {
+    const drafts = [
+      { attribute: 'amount', op: 'increment' as const, value: '5' },
+      { attribute: 'notes', op: 'clear' as const, value: 'ignored' },
+    ];
+    expect(buildEditRequest('selection', ['a', 'b'], [], drafts, false)).toEqual({
+      ids: ['a', 'b'],
+      operations: [{ attribute: 'amount', op: 'increment', value: 5 }, { attribute: 'notes', op: 'clear' }],
+    });
+    const filters = [{ field: 'status', op: 'eq', value: 'open' }];
+    const byFilter = buildEditRequest('filters', ['a'], filters, drafts, true);
+    expect(byFilter.ids).toBeUndefined();
+    expect(byFilter.filters).toEqual(filters);
+    expect(byFilter.quiet).toBe(true);
+  });
+
+  it('names the record and the reason of every item that was not changed', () => {
+    const status = {
+      items: [
+        { index: 0, ok: { attempts: 1, record_id: 'a' } },
+        { index: 1, problem: { code: 'version_conflict', message: 'stale' } },
+        { index: 2, problem: { code: 'item_failed', message: 'required' } },
+      ],
+    };
+    expect(bulkFailures(status, ['a', 'b', 'c'])).toEqual([
+      { index: 1, recordId: 'b', reason: 'conflict', message: 'stale' },
+      { index: 2, recordId: 'c', reason: 'failed', message: 'required' },
+    ]);
+    expect(bulkFailures({ errors: [{ index: 0, error: 'x' }] }, [])).toEqual([
+      { index: 0, recordId: null, reason: 'failed', message: 'x' },
+    ]);
+    expect(bulkFailures(null, [])).toEqual([]);
+  });
+
+  it('saves a named bulk edit per entity, replacing one of the same name', () => {
+    const first = withSavedAction({}, 'deal', { name: 'Close', operations: [{ attribute: 's', op: 'set', value: 'x' }] });
+    const other = withSavedAction(first, 'lead', { name: 'Close', operations: [] });
+    const again = withSavedAction(other, 'deal', { name: 'Close', operations: [{ attribute: 's', op: 'clear' }] });
+    expect(savedActionsFor(again, 'deal')).toEqual([{ name: 'Close', operations: [{ attribute: 's', op: 'clear' }] }]);
+    expect(savedActionsFor(again, 'lead')).toHaveLength(1);
+    expect(savedActionsFor({ deal: [{ bad: true }] }, 'deal')).toEqual([]);
+    expect(savedActionsFor('nonsense', 'deal')).toEqual([]);
   });
 });
