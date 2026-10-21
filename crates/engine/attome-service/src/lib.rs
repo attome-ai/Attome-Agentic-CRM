@@ -13,6 +13,7 @@ pub mod entitlement;
 pub mod escalation;
 /// G5-T3: agent presence and record viewers.
 pub mod handoff;
+pub mod handoff_routes;
 pub mod inbox;
 mod intake;
 pub mod inventory;
@@ -53,6 +54,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 14;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = convert::openapi_fragment();
     doc.merge(sla::openapi_fragment());
+    doc.merge(handoff_routes::openapi_fragment());
     doc.merge(offering::openapi_fragment());
     doc.merge(order::openapi_fragment());
     doc.merge(clock::openapi_fragment());

@@ -495,6 +495,125 @@ pub async fn return_to_agent(
     Ok(returned)
 }
 
+// ── For people (AI7-T5's routes) ──────────────────────────────────────────
+
+/// The hand-offs waiting for `user`: to them, or to a queue they are an
+/// active member of; newest first.
+pub async fn pending_for(
+    db: &attome_db::DbPool,
+    user: Uuid,
+    page: &attome_types::OnePageQuery,
+) -> Result<attome_types::PaginatedResponse<Handoff>, AppError> {
+    let window = page.window();
+    let mine = "h.status = 'pending' AND ((h.to_kind = 'user' AND h.to_ref = $1) \
+         OR (h.to_kind = 'queue' AND EXISTS (SELECT 1 FROM service_work_queue_member m \
+             WHERE m.queue_ref = h.to_ref AND m.user_ref = $1 \
+               AND (m.is_active IS NULL OR m.is_active = true))))";
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM service_handoff h WHERE {mine}"
+    ))
+    .bind(user)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    let columns = HANDOFF_COLUMNS
+        .split(", ")
+        .map(|c| format!("h.{}", c.trim()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let rows: Vec<HandoffRow> = sqlx::query_as(&format!(
+        "SELECT {columns} FROM service_handoff h WHERE {mine} \
+          ORDER BY h.created_at DESC, h.id LIMIT $2 OFFSET $3"
+    ))
+    .bind(user)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(attome_types::PaginatedResponse::new(
+        rows.into_iter().map(from_row).collect(),
+        total,
+        window.page,
+        window.page_size,
+    ))
+}
+
+/// A person accepts a hand-off, in its own transaction.
+pub async fn accept(
+    state: &EngineState,
+    user: Uuid,
+    id: Uuid,
+    expected: i64,
+) -> Result<Handoff, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let accepted = accept_handoff(&mut tx, state, id, user, expected).await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(accepted)
+}
+
+/// A person returns a hand-off to the agent, in its own transaction.
+pub async fn give_back(
+    state: &EngineState,
+    user: Uuid,
+    id: Uuid,
+    note: &str,
+    expected: i64,
+) -> Result<Handoff, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let returned = return_to_agent(&mut tx, state, id, user, note, expected).await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(returned)
+}
+
+/// A person hands a ticket they can see to a person, a queue or an agent
+/// member of a queue they can see; the hand-off's id.
+pub async fn hand_off_by_person(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    ticket: Uuid,
+    to_kind: ToKind,
+    to_ref: Uuid,
+    summary: &str,
+    reasoning: &str,
+) -> Result<Uuid, AppError> {
+    attome_records::entity_crud::read_record_bulk(state, ctx, "service_ticket", ticket).await?;
+    let target = match to_kind {
+        ToKind::User => "user_account",
+        ToKind::Queue => "service_work_queue",
+        ToKind::Agent => "ai_agent",
+    };
+    match attome_records::entity_crud::read_record_bulk(state, ctx, target, to_ref).await {
+        Ok(_) => {}
+        Err(AppError::NotFound | AppError::Forbidden) => {
+            return Err(AppError::Validation(format!(
+                "no {} you can see has that id",
+                to_kind.as_str()
+            )));
+        }
+        Err(error) => return Err(error),
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let id = create_handoff(
+        &mut tx,
+        state,
+        NewHandoff {
+            ticket_id: ticket,
+            from_kind: FromKind::User,
+            from_ref: ctx.user_id,
+            to_kind,
+            to_ref,
+            summary: summary.to_owned(),
+            reasoning: reasoning.to_owned(),
+            agent_session_ref: None,
+        },
+        ctx.user_id,
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

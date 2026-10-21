@@ -1434,6 +1434,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Hand-off routes (AI7-T5): `GET /api/v1/service/handoffs` (waiting for me or my queues),
+  `POST /api/v1/service/handoffs/{id}/accept` and `.../return` (`{note}`), both with `If-Match`, and
+  `POST /api/v1/service/tickets/{id}/handoff` (`{to_kind, to_ref, summary, reasoning}`) for a person handing a
+  ticket to a person, a queue or an agent.
 - Hand-back to the agent (AI7-T4): the `ai_handback` job resumes the agent session that handed the ticket off
   with the person's note as its next turn when that session is still live, or starts a new session of the
   same agent for the person who returned it, its first turn carrying the ticket, the summary, the reasoning
