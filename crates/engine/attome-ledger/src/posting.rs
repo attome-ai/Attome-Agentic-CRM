@@ -1,7 +1,7 @@
 //! W5-T1: the posting engine.
 //!
 //! **Entries.** A journal entry (`gl_entry`, ledger pack) and its lines
-//! (`gl_entry_line`) are append-only: [`post_entry`] writes them once, in one
+//! (`gl_entry_line`) are append-only: [`post_journal`] writes them once, in one
 //! transaction, and nothing updates them; a correction is another entry.
 //! An entry is refused (`422`) unless:
 //!
@@ -182,7 +182,7 @@ pub struct Posted {
 
 /// Posts one balanced entry as `ctx`, or answers the entry its source
 /// already made.
-pub async fn post_entry(
+pub async fn post_journal(
     state: &EngineState,
     ctx: &SecurityContext,
     entry: &NewEntry,
@@ -392,7 +392,7 @@ pub async fn post_from_rule(
         source.description.clone().or(rule_text).unwrap_or_else(|| {
             format!("{} {}", source.source_kind.trim(), source.source_ref.trim())
         });
-    post(
+    post_journal(
         state,
         ctx,
         &NewEntry {
@@ -497,7 +497,7 @@ async fn post_entry(
     ctx: Authorized<Privilege<EntryCreate>>,
     Json(body): Json<NewEntry>,
 ) -> Result<Json<Posted>, AppError> {
-    Ok(Json(post_entry(&state, &ctx, &body).await?))
+    Ok(Json(post_journal(&state, &ctx, &body).await?))
 }
 
 #[utoipa::path(
