@@ -91,6 +91,7 @@ use attome_core::EngineState;
 use attome_inference::budget::{self, Budget, BudgetVerdict, Priority};
 use attome_inference::{GenerationRequest, Usage};
 use attome_types::AppError;
+use uuid::Uuid;
 
 use crate::context::ActionContext;
 
@@ -249,6 +250,61 @@ pub struct Grant {
     priority: Priority,
     /// The money reserved, when a money budget applies (N24-T1).
     spend: Option<SpendGrant>,
+    /// Z9-T5: whose call this is, for its usage row.
+    meter: Meter,
+}
+
+/// Z9-T5: who a model call is for, kept from admission to settlement.
+#[derive(Debug, Clone)]
+struct Meter {
+    user_id: Uuid,
+    agent_session_id: Option<Uuid>,
+    feature: String,
+    started: std::time::Instant,
+}
+
+/// Z9-T5: a call's cost in millionths of the price unit, when its model has
+/// a configured price. Pure.
+pub fn usage_cost(
+    prices: &std::collections::BTreeMap<String, ModelPrice>,
+    usage: &Usage,
+) -> Option<u64> {
+    prices.get(&usage.model_id).map(|price| {
+        cost_micros(
+            price,
+            u64::from(usage.prompt_tokens),
+            u64::from(usage.completion_tokens),
+        )
+    })
+}
+
+/// Z9-T5: writes the call's usage row. Best-effort, like the rest of
+/// settling: a failed write is logged, never the caller's error.
+async fn record_usage(state: &EngineState, meter: &Meter, usage: &Usage) {
+    let cost = usage_cost(&state.base.config.inference.spend.prices, usage)
+        .and_then(|c| i64::try_from(c).ok());
+    let latency = i32::try_from(meter.started.elapsed().as_millis()).unwrap_or(i32::MAX);
+    let written = sqlx::query(
+        "INSERT INTO ai_usage_event \
+             (user_id, agent_session_id, feature, model_id, prompt_tokens, completion_tokens, \
+              cached_prompt_tokens, reported, cost_micros, latency_ms) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+    )
+    .bind(meter.user_id)
+    .bind(meter.agent_session_id)
+    .bind(&meter.feature)
+    .bind(&usage.model_id)
+    .bind(i32::try_from(usage.prompt_tokens).unwrap_or(i32::MAX))
+    .bind(i32::try_from(usage.completion_tokens).unwrap_or(i32::MAX))
+    .bind(usage.cached_prompt_tokens.and_then(|t| i32::try_from(t).ok()))
+    .bind(usage.reported)
+    .bind(cost)
+    .bind(latency)
+    .execute(&state.base.db)
+    .await;
+    if let Err(error) = written {
+        tracing::warn!(%error, feature = %meter.feature, "model usage row not written");
+    }
 }
 
 impl std::fmt::Debug for Grant {
@@ -377,6 +433,12 @@ pub async fn admit(
         estimated,
         priority,
         spend,
+        meter: Meter {
+            user_id: ctx.security.user_id,
+            agent_session_id: ctx.agent_session_id,
+            feature: feature.to_owned(),
+            started: std::time::Instant::now(),
+        },
     })
 }
 
@@ -744,6 +806,8 @@ impl Grant {
         )
         .increment(u64::from(usage.completion_tokens));
 
+        record_usage(state, &self.meter, usage).await;
+
         // A model server that reports no usage at all leaves the estimate in
         // place rather than zeroing the charge (BIN-G3: `reported` is false
         // when the response omitted the block); treating "unknown" as "free"
@@ -800,6 +864,31 @@ fn priority_label(priority: Priority) -> &'static str {
 mod tests {
     use super::*;
     use attome_inference::ChatMessage;
+
+    #[test]
+    fn usage_cost_needs_a_price_for_the_answering_model() {
+        let usage = Usage {
+            model_id: "m1".into(),
+            prompt_tokens: 1_000,
+            completion_tokens: 200,
+            reported: true,
+            cached_prompt_tokens: None,
+        };
+        let mut prices = std::collections::BTreeMap::new();
+        assert_eq!(
+            usage_cost(&prices, &usage),
+            None,
+            "an unpriced model costs unknown"
+        );
+        prices.insert(
+            "m1".to_owned(),
+            ModelPrice {
+                prompt_per_million: 3.0,
+                completion_per_million: 15.0,
+            },
+        );
+        assert_eq!(usage_cost(&prices, &usage), Some(6_000));
+    }
 
     fn request_of(chars: usize) -> GenerationRequest {
         GenerationRequest::new(vec![ChatMessage::user("x".repeat(chars))])

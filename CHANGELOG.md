@@ -1454,6 +1454,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Model usage rows (Z9-T5, migration `0199`): every budgeted model call writes an `ai_usage_event` row with the person,
+  the agent session when an agent made it, the feature, the model that answered, its prompt, completion and cached tokens,
+  its cost when the model has a configured price, and its latency.
 - Agent discount limit (AH4-T1): an agent object may set `limits.max_discount_percent` (0–100); an agent's step whose
   `discount_percent` is above it is refused with `discount_above_agent_limit` before it runs, so a person gives that
   discount.
