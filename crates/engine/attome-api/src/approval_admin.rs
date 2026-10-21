@@ -110,6 +110,8 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     ACTION_SECURITY_REWRAP,
     attome_billing::issue::ACTION_ISSUE,
     attome_billing::writeoff::ACTION_WRITE_OFF,
+    attome_procurement::po::ACTION_REQUISITION_APPROVE,
+    attome_procurement::po::ACTION_PO_CHANGE,
     attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
     attome_commission::close::ACTION_PERIOD_CLOSE,
     attome_sales::split_store::ACTION_SPLIT_CHANGE,
@@ -1140,6 +1142,18 @@ async fn dispatch_approved(
             let response =
                 attome_sales::split_store::do_apply_proposal(state, &proposal, approver_id).await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
+        }
+        attome_procurement::po::ACTION_REQUISITION_APPROVE
+        | attome_procurement::po::ACTION_PO_CHANGE => {
+            // W3-T2: an approved requisition commits its budget; an approved
+            // change order applies, each once.
+            attome_procurement::po::dispatch_approved(
+                state,
+                request.action_type.as_str(),
+                &request.payload,
+                approver_id,
+            )
+            .await?
         }
         attome_billing::issue::ACTION_ISSUE => {
             // F4-T6: an invoice above the issue threshold, issued once

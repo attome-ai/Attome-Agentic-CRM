@@ -38,6 +38,7 @@ attome-modules.workspace      = true
 attome-notification.workspace = true
 attome-outbound.workspace     = true
 attome-profiler.workspace     = true
+attome-procurement.workspace  = true
 attome-project.workspace      = true
 attome-billing.workspace = true
 attome-commission.workspace = true

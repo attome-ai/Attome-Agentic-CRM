@@ -497,6 +497,7 @@ dependencies = [
  "attome-modules",
  "attome-notification",
  "attome-outbound",
+ "attome-procurement",
  "attome-profiler",
  "attome-project",
  "attome-records",
@@ -1665,10 +1666,15 @@ dependencies = [
 name = "attome-procurement"
 version = "0.1.0"
 dependencies = [
+ "attome-approval",
+ "attome-audit",
  "attome-core",
  "attome-db",
  "attome-modules",
  "attome-notification",
+ "attome-records",
+ "attome-security",
+ "attome-server",
  "attome-types",
  "axum",
  "base64 0.23.1",

@@ -126,6 +126,43 @@ pub async fn gate_regarding_required(
         .ok_or_else(|| AppError::internal("a required approval was not opened"))
 }
 
+/// W3-T2: an approval that is always required, with a plan the caller built
+/// (a procurement delegation-of-authority table picking approvers by
+/// amount, category and cost centre) instead of the action's single policy.
+/// The plan and its approver tokens are checked as a saved policy's are,
+/// and the `Submitted` event commits with the request, as in [`gate`].
+pub async fn gate_with_plan_regarding(
+    state: &EngineState,
+    action_type: &str,
+    payload: Value,
+    requester: Uuid,
+    plan: ApprovalPlan,
+    regarding: Option<(&str, Uuid)>,
+) -> Result<ApprovalRequest, AppError> {
+    plan.validate()?;
+    validate_plan_approvers(&plan)?;
+    let (user_ctx, organization_ref) = fetch_audit_ctx(state, requester).await;
+    let submitted = SubmittedAudit {
+        state,
+        action_type,
+        organization_ref,
+        user_ctx,
+    };
+    let backstop_ttl = plan_backstop_ttl(&plan);
+    attome_approval::submit_with_plan_regarding_with(
+        &state.base.db,
+        action_type,
+        payload,
+        requester,
+        plan,
+        backstop_ttl,
+        None,
+        regarding,
+        &submitted,
+    )
+    .await
+}
+
 async fn gate_inner(
     state: &EngineState,
     action_type: &str,

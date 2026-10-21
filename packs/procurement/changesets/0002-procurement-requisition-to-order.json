@@ -1,0 +1,898 @@
+{
+  "author": "packs",
+  "checksum": "sha256:252574db351a7ff4054edc128a36613aa30665ad478246c6834385a6a372c073",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Requisition to order (W3-T2): a delegation of authority table by amount, category and cost centre; the budget line a requisition and order commit against with what they committed; an order's approved total and a change waiting for approval; a budget line's overspend setting. Approving a requisition by hand needs purchase_requisition.approve; an approved requisition may be cancelled. Needs the finance pack's budget lines.",
+  "format": "attome-changeset/v1",
+  "id": "01a14b3c-5d2e-7f10-8a21-0000000002a2",
+  "layer": "product",
+  "name": "procurement-requisition-to-order",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Delegation of Authority Rule",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "procurement_doa_rule",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "procurement_doa_rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "From Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "min_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "min_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Up To Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "max_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Category",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "category",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cost Centre",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cost_center_ref",
+          "lookup_entity": "cost_center",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "cost_center_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approver",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approver_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "approver_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Second Approver",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "second_approver_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "second_approver_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Requester's Manager First",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "manager_first",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "manager_first"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Change Order Tolerance (%)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "change_tolerance_pct",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "change_tolerance_pct"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Priority",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "priority",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "procurement_doa_rule",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Budget Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "budget_line_ref",
+          "lookup_entity": "budget_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "budget_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Category",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "category",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approval",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approval_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "approval_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Committed",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "committed_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "committed_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Budget Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "budget_line_ref",
+          "lookup_entity": "budget_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "purchase_order",
+        "field": "budget_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Committed",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "committed_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "purchase_order",
+        "field": "committed_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approved Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approved_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "purchase_order",
+        "field": "approved_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Change Awaiting Approval",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "pending_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "purchase_order",
+        "field": "pending_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Change Approval",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "change_approval_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "purchase_order",
+        "field": "change_approval_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Over Budget",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "overspend",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "block",
+              "warn"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "budget_line",
+        "field": "overspend"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Approve a purchase requisition by hand (the approval does it otherwise)",
+          "key": "purchase_requisition.approve",
+          "name": "purchase_requisition.approve"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "purchase_requisition.approve"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Approve",
+          "required_privilege": "purchase_requisition.approve",
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "submitted->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "approved",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "approved->cancelled"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قاعدة تفويض الصلاحيات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "من مبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.min_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حتى مبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.max_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.category",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مركز التكلفة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.cost_center_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.approver_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعتمد الثاني"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.second_approver_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مدير مقدم الطلب أولاً"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.manager_first",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "هامش أوامر التغيير (%)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.change_tolerance_pct",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأولوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "ar",
+        "object_key": "procurement_doa_rule.priority",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الميزانية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.budget_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.category",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب الاعتماد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.approval_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ المحجوز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.committed_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الميزانية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.budget_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ المحجوز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.committed_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي المعتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.approved_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تغيير بانتظار الاعتماد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.pending_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اعتماد التغيير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.change_approval_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عند تجاوز الميزانية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "budget_line.overspend",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "procurement",
+  "seq": 2,
+  "title": "Pack: delegation of authority and budget commitment"
+}

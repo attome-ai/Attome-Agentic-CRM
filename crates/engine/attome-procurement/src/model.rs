@@ -22,6 +22,6 @@ impl EngineModel for ProcurementModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new()
+        crate::po::routes()
     }
 }

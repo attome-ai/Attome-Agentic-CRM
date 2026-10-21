@@ -11,10 +11,15 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+attome-approval.workspace = true
+attome-audit.workspace = true
 attome-core.workspace = true
 attome-db.workspace = true
 attome-modules.workspace = true
 attome-notification.workspace = true
+attome-records.workspace = true
+attome-security.workspace = true
+attome-server.workspace = true
 attome-types.workspace = true
 axum.workspace = true
 base64.workspace = true

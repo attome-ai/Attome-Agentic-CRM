@@ -1307,6 +1307,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   expiry date gets an M10 timer (`procurement.compliance_expiry`) 30 days before it, following the date;
   when it fires the vendor's owner and the document's owner are told once per expiry date
   (`reminded_for`), and again after the document is renewed to a new date.
+- Requisition to purchase order (W3-T2, procurement pack `0002`, needs the finance pack's budget lines):
+  `POST /api/v1/procurement/requisitions/{id}/submit` checks the requisition's `budget_line_ref` (block
+  unless the line's `overspend` is `warn`) and opens a `procurement.requisition_approve` approval whose
+  approvers come from the `procurement_doa_rule` matching its amount, category and cost centre;
+  approval commits the amount on the budget line. `.../order` makes a draft purchase order (not for a
+  vendor on hold) and moves the commitment to it; `.../cancel` and
+  `POST /api/v1/procurement/purchase-orders/{id}/cancel` release it; `.../change` applies a new total
+  within the rule's tolerance (10% by default) or opens a `procurement.po_change` re-approval.
+  Approving a requisition by hand now needs `purchase_requisition.approve`.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
