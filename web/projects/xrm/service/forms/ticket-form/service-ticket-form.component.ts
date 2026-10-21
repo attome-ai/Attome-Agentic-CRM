@@ -8,6 +8,7 @@ import type { EntityRecordResponse, RecordTabId, XrmFormTabDef } from '@attome/x
 import type { FieldSchema } from '@attome/xrm';
 import { SlaBadgeComponent } from '../../sla/sla-badge/sla-badge.component';
 import { TicketSlaActionsComponent } from '../../sla/ticket-sla-actions/ticket-sla-actions.component';
+import { ServiceHandoffCardComponent } from '../../handoff/service-handoff-card.component';
 
 /** The shared record tabs a ticket carries (U14), with U2's Activities and U3/U6's Timeline and History. */
 export const TICKET_RECORD_TABS: readonly RecordTabId[] = [
@@ -39,7 +40,7 @@ export const TICKET_RECORD_TABS: readonly RecordTabId[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent,
-    SlaBadgeComponent, TicketSlaActionsComponent,
+    SlaBadgeComponent, TicketSlaActionsComponent, ServiceHandoffCardComponent,
   ],
   styleUrls:  ['../../../styles/xrm-form.css', './service-ticket-form.component.css'],
   templateUrl: './service-ticket-form.component.html',

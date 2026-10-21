@@ -539,6 +539,40 @@ pub async fn pending_for(
     ))
 }
 
+/// A ticket's hand-offs, newest first, after the caller's read of the
+/// ticket.
+pub async fn for_ticket(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    ticket: Uuid,
+    page: &attome_types::OnePageQuery,
+) -> Result<attome_types::PaginatedResponse<Handoff>, AppError> {
+    attome_records::entity_crud::read_record_bulk(state, ctx, "service_ticket", ticket).await?;
+    let window = page.window();
+    let total: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM service_handoff WHERE ticket_id = $1")
+            .bind(ticket)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let rows: Vec<HandoffRow> = sqlx::query_as(&format!(
+        "SELECT {HANDOFF_COLUMNS} FROM service_handoff WHERE ticket_id = $1 \
+          ORDER BY created_at DESC, id LIMIT $2 OFFSET $3"
+    ))
+    .bind(ticket)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(attome_types::PaginatedResponse::new(
+        rows.into_iter().map(from_row).collect(),
+        total,
+        window.page,
+        window.page_size,
+    ))
+}
+
 /// A person accepts a hand-off, in its own transaction.
 pub async fn accept(
     state: &EngineState,

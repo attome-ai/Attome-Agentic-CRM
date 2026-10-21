@@ -5,7 +5,9 @@
 //! - `POST /api/v1/service/handoffs/{id}/accept` and `.../return` (`{note}`)
 //!   under `If-Match`;
 //! - `POST /api/v1/service/tickets/{id}/handoff` — a person hands a ticket to
-//!   a person, a queue or an agent.
+//!   a person, a queue or an agent;
+//! - `GET /api/v1/service/tickets/{id}/handoffs` — a ticket's hand-offs, for
+//!   its hand-off card (AI7-T6).
 //!
 //! Each handler parses, calls one `crate::handoff` function and shapes the
 //! answer; the permission rules and the SQL live there.
@@ -84,6 +86,30 @@ async fn list_handoffs(
 ) -> Result<Json<PaginatedResponse<Handoff>>, AppError> {
     Ok(Json(
         crate::handoff::pending_for(&state.base.db, ctx.user_id, &page).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/service/tickets/{id}/handoffs",
+    tag = "service",
+    params(("id" = Uuid, Path, description = "The ticket"), OnePageQuery),
+    responses(
+        (status = 200, description = "The ticket's hand-offs, newest first", body = PaginatedResponse<Handoff>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks service_ticket.read", body = ErrorResponse),
+        (status = 404, description = "No such ticket the caller can see", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_ticket_handoffs(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<TicketRead>>,
+    Path(ticket): Path<Uuid>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<Handoff>>, AppError> {
+    Ok(Json(
+        crate::handoff::for_ticket(&state, &ctx, ticket, &page).await?,
     ))
 }
 
@@ -202,11 +228,21 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/service/tickets/{id}/handoff",
             post(post_ticket_handoff),
         )
+        .route(
+            "/api/v1/service/tickets/{id}/handoffs",
+            get(list_ticket_handoffs),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(list_handoffs, accept_handoff, return_handoff, post_ticket_handoff),
+    paths(
+        list_handoffs,
+        list_ticket_handoffs,
+        accept_handoff,
+        return_handoff,
+        post_ticket_handoff
+    ),
     components(schemas(Handoff, HandoffReturn, NewTicketHandoff, HandoffCreated, ToKind))
 )]
 struct ApiDocFragment;

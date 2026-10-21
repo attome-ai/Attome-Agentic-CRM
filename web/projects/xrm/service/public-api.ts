@@ -21,3 +21,8 @@ export type { SlaBadgeKind, SlaBadgeState } from './sla/sla-status';
 export { SlaBadgeComponent } from './sla/sla-badge/sla-badge.component';
 export { SlaBadgeCellComponent } from './sla/sla-badge-cell/sla-badge-cell.component';
 export { TicketSlaActionsComponent } from './sla/ticket-sla-actions/ticket-sla-actions.component';
+// AI7-T6: ticket hand-offs — the card on the ticket and my hand-offs ('service/handoffs').
+export { ServiceHandoffCardComponent } from './handoff/service-handoff-card.component';
+export { ServiceHandoffsListComponent } from './handoff/service-handoffs-list.component';
+export { ServiceHandoffService, canHandBack, partyIcon } from './handoff/service-handoff.service';
+export type { ServiceHandoff } from './handoff/service-handoff.service';

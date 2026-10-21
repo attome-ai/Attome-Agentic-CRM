@@ -541,6 +541,14 @@ export const xrmEn = {
     reason: { stalled_deal: 'Stalled deal', overdue_task: 'Overdue task', unanswered_customer: 'Customer waiting for an answer' },
     status: { open: 'Open', reminded: 'Reminded', drafted: 'Draft ready', sent: 'Sent', dismissed: 'Dismissed', resolved: 'Resolved' },
   },
+  // AI7-T6 — ticket hand-offs between agents and people.
+  serviceHandoff: {
+    title: 'Hand-off', mine: 'My hand-offs', none: 'Nothing is waiting for you.',
+    agent: 'Agent', person: 'Person', queue: 'Queue', summary: 'Summary:', reasoning: 'Why:',
+    accept: 'Accept', handBack: 'Hand back to agent', note: 'Note for the agent', send: 'Hand back',
+    cancel: 'Cancel', noteRequired: 'Write a note for the agent.', openTicket: 'Open ticket',
+    status: { pending: 'Waiting', accepted: 'Accepted', returned: 'Handed back', cancelled: 'Cancelled' },
+  },
   // AI8-T6 — agent performance.
   aiPerformance: {
     title: 'Agent performance',

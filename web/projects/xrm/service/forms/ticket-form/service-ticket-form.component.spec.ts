@@ -7,6 +7,7 @@ import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { EntitySchema } from '@attome/xrm';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ServiceHandoffService } from '../../handoff/service-handoff.service';
 import { SlaService } from '../../sla/sla.service';
 import { ServiceTicketFormComponent } from './service-ticket-form.component';
 
@@ -42,6 +43,8 @@ describe('ServiceTicketFormComponent', () => {
       providers: [
         { provide: EntityService, useValue: svc },
         { provide: SlaService, useValue: sla },
+        // AI7-T6: the hand-off card on the form; no hand-off here.
+        { provide: ServiceHandoffService, useValue: { forTicket: () => of({ items: [], total: 0, page: 1, page_size: 20 }), personName: (id: string) => of(id) } },
         { provide: Router, useValue: { navigate: vi.fn(), parseUrl: () => ({ queryParamMap: { get: () => null } }), url: '/' } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },

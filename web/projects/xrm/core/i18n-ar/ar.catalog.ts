@@ -456,6 +456,14 @@ export const xrmAr = {
     reason: { stalled_deal: 'صفقة متوقفة', overdue_task: 'مهمة متأخرة', unanswered_customer: 'عميل ينتظر الرد' },
     status: { open: 'مفتوحة', reminded: 'تم التذكير', drafted: 'المسودة جاهزة', sent: 'أُرسلت', dismissed: 'تم التجاهل', resolved: 'تمت' },
   },
+  // AI7-T6 — تحويل التذاكر بين الوكلاء والموظفين.
+  serviceHandoff: {
+    title: 'التحويل', mine: 'تحويلاتي', none: 'لا شيء بانتظارك.',
+    agent: 'وكيل', person: 'موظف', queue: 'قائمة عمل', summary: 'الملخص:', reasoning: 'السبب:',
+    accept: 'قبول', handBack: 'إعادة إلى الوكيل', note: 'ملاحظة للوكيل', send: 'إعادة',
+    cancel: 'إلغاء', noteRequired: 'اكتب ملاحظة للوكيل.', openTicket: 'فتح التذكرة',
+    status: { pending: 'بانتظار القبول', accepted: 'مقبول', returned: 'أُعيد', cancelled: 'ملغى' },
+  },
   // AI8-T6 — أداء الوكلاء.
   aiPerformance: {
     title: 'أداء الوكلاء',

@@ -10,6 +10,10 @@
   </ng-container>
 
   <ng-template xrmTab="details">
+    @if (id(); as ticketId) {
+      <!-- AI7-T6 — the ticket's hand-off, when it has one. -->
+      <xrm-service-handoff-card [ticketId]="ticketId" />
+    }
     <section class="xf-section">
       <div class="xf-section-header">
         <div class="xf-section-icon"><i class="las la-list-alt"></i></div>

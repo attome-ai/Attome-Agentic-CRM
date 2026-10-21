@@ -451,6 +451,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.TriageBoardComponent),
           },
           {
+            // AI7-T6: the tickets handed to me or my queues.
+            path: 'service/handoffs',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/service').then(m => m.ServiceHandoffsListComponent),
+          },
+          {
             // D-365 — Web Crawling for Knowledge Base.
             path: 'webcrawl/targets',
             canActivate: [authGuard],
