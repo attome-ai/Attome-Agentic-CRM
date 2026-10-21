@@ -1911,6 +1911,7 @@ version = "0.1.0"
 dependencies = [
  "attome-audit",
  "attome-auth",
+ "attome-billing",
  "attome-calendar",
  "attome-core",
  "attome-db",

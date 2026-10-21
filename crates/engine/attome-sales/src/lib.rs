@@ -25,6 +25,8 @@ pub mod forecast;
 pub mod leavers;
 pub mod model;
 pub mod opportunity_lines;
+/// D10-T2: orders from accepted quotes and won deals, and their confirmation.
+pub mod order;
 pub mod orgchart;
 pub mod owner_change;
 /// D26-T2: the plays that apply to a deal.
@@ -66,6 +68,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<schedules::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<order::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::skip::ApiDocFragment as utoipa::OpenApi>::openapi());

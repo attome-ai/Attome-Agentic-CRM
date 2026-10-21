@@ -1,0 +1,290 @@
+{
+  "author": "packs",
+  "checksum": "sha256:930276fef459fdd5adc2bb4e4f5f38c67837c26dcdb4b6eb490ef37c731162cd",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Orders from deals (D10-T2): the won opportunity an order came from, a description and a price lock on each order line, and rules that lock a confirmed order and its confirmed lines.",
+  "format": "attome-changeset/v1",
+  "id": "01a15e6e-1fda-7be4-ac9c-7a46ed31df5d",
+  "layer": "product",
+  "name": "sales-orders-from-deals",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "order",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "order.opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Price Locked",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_locked",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "order_line",
+        "field": "is_locked"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السعر مقفل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "order_line.is_locked",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "order_line",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوصف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "order_line.description",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "status",
+            "op": "in",
+            "value": [
+              "confirmed",
+              "fulfilled",
+              "cancelled"
+            ]
+          },
+          "description": "Once an order is confirmed its customer, currency, terms and amounts never change; a change is a new order or an amendment.",
+          "display_name": "Confirmed orders are locked",
+          "display_order": 0,
+          "entity_logicalname": "order",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "order_locked_after_confirm",
+          "policies": [
+            {
+              "field": "name",
+              "type": "disabled"
+            },
+            {
+              "field": "currency",
+              "type": "disabled"
+            },
+            {
+              "field": "account_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "quote_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "opportunity_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "payment_terms",
+              "type": "disabled"
+            },
+            {
+              "field": "delivery_address",
+              "type": "disabled"
+            },
+            {
+              "field": "subtotal",
+              "type": "disabled"
+            },
+            {
+              "field": "discount_total",
+              "type": "disabled"
+            },
+            {
+              "field": "tax_total",
+              "type": "disabled"
+            },
+            {
+              "field": "grand_total",
+              "type": "disabled"
+            },
+            {
+              "field": "ordered_on",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "order",
+        "rule": "order_locked_after_confirm"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "field": "is_locked",
+            "op": "eq",
+            "value": true
+          },
+          "description": "A line of a confirmed order keeps its product, quantity and prices.",
+          "display_name": "Confirmed order lines are locked",
+          "display_order": 0,
+          "entity_logicalname": "order_line",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "order_line_locked_after_confirm",
+          "policies": [
+            {
+              "field": "order_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "product_ref",
+              "type": "disabled"
+            },
+            {
+              "field": "description",
+              "type": "disabled"
+            },
+            {
+              "field": "quantity",
+              "type": "disabled"
+            },
+            {
+              "field": "unit_price",
+              "type": "disabled"
+            },
+            {
+              "field": "discount_amount",
+              "type": "disabled"
+            },
+            {
+              "field": "tax_amount",
+              "type": "disabled"
+            },
+            {
+              "field": "line_total",
+              "type": "disabled"
+            },
+            {
+              "field": "quote_line_ref",
+              "type": "disabled"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "order_line",
+        "rule": "order_line_locked_after_confirm"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 26,
+  "title": "Pack: orders from quotes and won deals"
+}

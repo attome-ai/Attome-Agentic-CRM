@@ -88,3 +88,27 @@ it with `POST /api/v1/sales/undo/{snapshot_id}`:
 
 Undo puts the earlier lines back and reprices the deal. Snapshots older than a day are removed
 nightly.
+
+## Orders
+
+An accepted quote or a won deal becomes a sales order (sales pack `0026`):
+
+- `POST /api/v1/sales/quotes/{id}/order` (`order.create`) makes a draft order from an accepted
+  quote: its account, currency, payment terms and totals, and one order line per quote line.
+- `POST /api/v1/sales/opportunities/{id}/order` (`order.create`) orders a `closed_won` deal's
+  accepted primary quote; without one it copies the deal's own lines (the sales price as the unit
+  price) and the order names the opportunity.
+
+Either way a source is ordered once: asking again returns the order already made.
+
+`POST /api/v1/sales/orders/{id}/confirm` (`order.update`) confirms a draft order with lines:
+
+1. The account's credit check for the order's grand total (on hold, over its credit limit, or
+   overdue with `billing.credit.block_overdue`) refuses with the reason.
+2. The lines are locked (`is_locked`), so their product, quantity and prices no longer change.
+3. Billing gets an invoice request keyed on the order (`source_kind` `order`), which its request
+   sweep turns into a draft invoice.
+4. The order moves to `confirmed`, after which its customer, currency, terms and amounts are
+   locked, and the `sales.order.confirmed` event is written.
+
+Each step is safe to repeat, so a confirm that failed half way can simply be retried.

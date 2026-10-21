@@ -1454,6 +1454,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Sales orders from quotes and won deals (D10-T2, `attome-sales`, sales pack `0026`):
+  `POST /api/v1/sales/quotes/{id}/order` and `POST /api/v1/sales/opportunities/{id}/order` make a draft order, once per
+  source, with the quote's or deal's lines; `POST /api/v1/sales/orders/{id}/confirm` runs the account's credit check for
+  the grand total, locks the lines' prices, files a billing invoice request keyed on the order and moves the order to
+  `confirmed`, which the pack's new rules then lock. Orders gain `opportunity_ref`; order lines gain `description` and
+  `is_locked`. `attome-sales` now depends on `attome-billing`.
 - Credit limits and credit hold (F5-T12, `attome-billing`): `payment::credit::credit_check` refuses a sale on credit to an
   account on hold, over its credit limit (open balance from its invoices' stored open totals plus the new amount) or,
   with `billing.credit.block_overdue`, with an overdue invoice; `GET /api/v1/billing/accounts/{id}/credit` shows it. With

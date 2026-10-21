@@ -126,6 +126,19 @@ impl EngineModel for SalesModel {
                 "/api/v1/sales/undo/{snapshot_id}",
                 post(crate::undo::post_sales_undo),
             )
+            // D10-T2: orders from quotes and won deals, and confirmation.
+            .route(
+                "/api/v1/sales/quotes/{id}/order",
+                post(crate::order::post_sales_quote_order),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/order",
+                post(crate::order::post_sales_opportunity_order),
+            )
+            .route(
+                "/api/v1/sales/orders/{id}/confirm",
+                post(crate::order::post_sales_order_confirm),
+            )
             .route(
                 "/api/v1/sales/opportunities/{id}/sync",
                 post(crate::quote_sync::post_sales_quote_sync),

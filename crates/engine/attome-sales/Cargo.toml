@@ -13,6 +13,7 @@ publish.workspace      = true
 [dependencies]
 attome-audit.workspace   = true
 attome-auth.workspace    = true
+attome-billing.workspace = true
 attome-calendar.workspace = true
 attome-core.workspace    = true
 attome-db.workspace      = true
