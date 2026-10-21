@@ -1104,6 +1104,16 @@ export const xrmEn = {
     modeConfigured: 'agent now: {mode}',
     modeDiffers: 'differs — applies to new sessions only',
     trace: 'Steps', traceTitle: 'What this session did', traceEmpty: 'This session has not invoked anything yet.',
+    // AH1-T6 — undoing what a session wrote.
+    undo: {
+      button: 'Undo run', title: 'Undo what this session did', loading: 'Working out what can be undone…',
+      nothing: 'This session changed nothing that can be undone.',
+      restore: 'Will be put back', skipped: 'Skipped: a person changed these since', impossible: 'Cannot be undone',
+      confirm: 'Undo now', cancel: 'Cancel',
+      restoredCount: '{count} put back', skippedCount: '{count} skipped', failedCount: '{count} failed',
+      step: { revert_fields: 'values set back', soft_delete: 'moved to the recycle bin', restore: 'restored' },
+      status: { planned: 'Planned', running: 'Undoing…', done: 'Done', failed: 'Finished with failures' },
+    },
   },
 
   // ── FE-2 second slice (2026-08-25, T0-11): search, webcrawl, workflow ──

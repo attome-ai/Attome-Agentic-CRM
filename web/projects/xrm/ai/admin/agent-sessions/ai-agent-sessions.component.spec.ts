@@ -56,6 +56,22 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
                         started_at: '2026-10-14T00:00:00Z', revoked_at: '2026-10-14T00:01:00Z' }],
               total: 1, page: 1, page_size: 200,
             })),
+            // AH1-T6: one record put back, one a person changed, one email sent.
+            undoPreview: vi.fn().mockReturnValue(of({
+              items: [
+                { step: 'revert_fields', entity: 'deal', record_id: 'r1', expected_row_version: 3, set: { stage: 'open' } },
+                { step: 'skip', entity: 'deal', record_id: 'r2', reason: 'changed', changed_attributes: ['amount'] },
+                { step: 'not_undoable', entity: 'action_invocation', record_id: 'i1', action_id: 'email.send',
+                  reason: 'the message was already sent' },
+              ],
+              total: 3, page: 1, page_size: 3,
+            })),
+            startUndo: vi.fn().mockReturnValue(of({ undo_run_id: 'u1' })),
+            undoRun: vi.fn().mockReturnValue(of({
+              id: 'u1', status: 'done', created_at: '2026-10-21T00:00:00Z', finished_at: '2026-10-21T00:00:05Z',
+              summary: { restored: 1, skipped_changed: 1, not_undoable: 1 },
+              items: { items: [], total: 3, page: 1, page_size: 200 },
+            })),
           },
         },
         { provide: AiActionsService, useValue: { invoke: vi.fn() } },
@@ -114,6 +130,33 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
     cmp.toggleChild('c1');
     fixture.detectChanges();
     expect(el.querySelector('[data-child-step="record.get"]')).toBeNull();
+  });
+
+  it('shows not-undoable items separately in the undo preview', async () => {
+    await render([session({})]);
+    const cmp = fixture.componentInstance;
+    cmp.previewUndo(cmp.sessions()[0]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="undo-restore"]')?.textContent).toContain('r1');
+    expect(el.querySelector('[data-testid="undo-skipped"]')?.textContent).toContain('amount');
+    const impossible = el.querySelector('[data-testid="undo-impossible"]');
+    expect(impossible?.textContent).toContain('email.send');
+    expect(impossible?.textContent).toContain('the message was already sent');
+    expect(el.querySelector('[data-testid="undo-restore"]')?.textContent).not.toContain('email.send');
+  });
+
+  it('starts the undo and shows its finished run', async () => {
+    await render([session({})]);
+    const cmp = fixture.componentInstance;
+    cmp.previewUndo(cmp.sessions()[0]);
+    cmp.confirmUndo();
+    // The run is read on a timer; let its first tick fire.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    const progress = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="undo-progress"]');
+    expect(progress?.textContent).toContain('agentSessions.undo.status.done');
+    expect(cmp.undoBusy()).toBe(false);
   });
 
   it('shows no configured mode for a session without a definition', async () => {

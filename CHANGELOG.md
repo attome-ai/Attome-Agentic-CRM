@@ -1454,6 +1454,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Undo run on the agent sessions screen (AH1-T6, `@attome/xrm/ai`): each session row has Undo run, which previews the plan
+  in three groups (will be put back; skipped because a person changed it, with the attribute names; cannot be undone,
+  with why), then Undo now starts it and follows the run every two seconds until it ends. English and Arabic.
 - Agent run undo routes (AH1-T5): `GET /api/v1/ai/agent-sessions/{id}/undo-preview` lists the planned steps,
   `POST /api/v1/ai/agent-sessions/{id}/undo` (202) starts the undo with an `Ai` audit event, and
   `GET /api/v1/ai/undo-runs/{id}` gives the run's status, counts and items; the session's owner or a holder of

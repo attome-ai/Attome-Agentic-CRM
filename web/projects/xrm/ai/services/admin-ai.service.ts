@@ -235,6 +235,57 @@ export class AdminAiService {
   sessionChildren(id: string): Observable<Page<AgentChildSession>> {
     return this.api.get<Page<AgentChildSession>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/children`);
   }
+
+  /** AH1-T5: what undoing a session would do; nothing is written. */
+  undoPreview(sessionId: string): Observable<Page<UndoStep>> {
+    return this.api.get<Page<UndoStep>>(`/api/v1/ai/agent-sessions/${encodeURIComponent(sessionId)}/undo-preview`);
+  }
+
+  /** AH1-T5: starts the undo; the run is applied in the background. */
+  startUndo(sessionId: string): Observable<{ undo_run_id: string }> {
+    return this.api.post<{ undo_run_id: string }>(
+      `/api/v1/ai/agent-sessions/${encodeURIComponent(sessionId)}/undo`, {},
+    );
+  }
+
+  /** AH1-T5: an undo run's status, counts and first items. */
+  undoRun(runId: string): Observable<UndoRun> {
+    return this.api.get<UndoRun>(`/api/v1/ai/undo-runs/${encodeURIComponent(runId)}`, {
+      page: '1', page_size: '200',
+    });
+  }
+}
+
+/** One planned undo step (`attome_ai::undo::UndoStep`). */
+export interface UndoStep {
+  step: 'revert_fields' | 'soft_delete' | 'restore' | 'skip' | 'not_undoable';
+  entity?: string | null;
+  record_id?: string | null;
+  set?: Record<string, unknown>;
+  reason?: string;
+  changed_attributes?: string[];
+  action_id?: string | null;
+}
+
+/** One item of an undo run (`undo_routes::UndoItemView`). */
+export interface UndoItem {
+  seq: number;
+  entity: string;
+  record_id: string;
+  operation: string;
+  outcome: 'pending' | 'restored' | 'skipped_changed' | 'not_undoable' | 'failed';
+  changed_attributes: string[];
+  detail: string | null;
+}
+
+/** An undo run (`undo_routes::UndoRunView`). */
+export interface UndoRun {
+  id: string;
+  status: 'planned' | 'running' | 'done' | 'failed';
+  created_at: string;
+  finished_at: string | null;
+  summary: Record<string, number> | null;
+  items: Page<UndoItem>;
 }
 
 /** One delegated session (`session_admin::ChildSession`). */

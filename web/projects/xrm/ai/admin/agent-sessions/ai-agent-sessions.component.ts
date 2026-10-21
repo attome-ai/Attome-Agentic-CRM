@@ -3,12 +3,15 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { switchMap, takeWhile, timer } from 'rxjs';
 import { LocalDatePipe, TranslatePipe } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import { AiActionsService } from '../../services/ai-actions.service';
 import type { ActionOutcome } from '../../services/ai-actions.service';
 import { AdminAiService } from '../../services/admin-ai.service';
-import type { AgentChildSession, AgentTraceStep } from '../../services/admin-ai.service';
+import type {
+  AgentChildSession, AgentTraceStep, UndoRun, UndoStep,
+} from '../../services/admin-ai.service';
 import { AiRuntimeSwitchComponent } from '../runtime-switch/ai-runtime-switch.component';
 import { AiBotAnalyticsComponent } from '../bot-analytics/ai-bot-analytics.component';
 import type {
@@ -79,6 +82,18 @@ export class AiAgentSessionsComponent implements OnInit {
   /** A delegated session's steps, by its id, once opened. */
   readonly childTrace = signal<Record<string, AgentTraceStep[]>>({});
 
+  /** AH1-T6: the session whose undo is previewed, its plan and its run. */
+  readonly undoFor = signal<string | null>(null);
+  readonly undoSteps = signal<UndoStep[]>([]);
+  readonly undoRun = signal<UndoRun | null>(null);
+  readonly undoBusy = signal(false);
+  readonly undoError = signal<string | null>(null);
+  /** The plan in three groups: what will be put back, what a person changed, what cannot be undone. */
+  readonly undoRestores = computed(() =>
+    this.undoSteps().filter(s => s.step === 'revert_fields' || s.step === 'soft_delete' || s.step === 'restore'));
+  readonly undoSkipped = computed(() => this.undoSteps().filter(s => s.step === 'skip'));
+  readonly undoImpossible = computed(() => this.undoSteps().filter(s => s.step === 'not_undoable'));
+
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
   readonly statusFilters: { value: AgentSessionStatusFilter; label: string }[] = [
@@ -120,6 +135,60 @@ export class AiAgentSessionsComponent implements OnInit {
         next: (page) => this.trace.set(page.items ?? []),
         error: (e: ApiError) => this.error.set(e.message),
       });
+  }
+
+  /** AH1-T6: previews undoing a session, or closes the preview. */
+  previewUndo(session: AgentSessionSummary): void {
+    if (this.undoFor() === session.id) {
+      this.cancelUndo();
+      return;
+    }
+    this.undoFor.set(session.id);
+    this.undoSteps.set([]);
+    this.undoRun.set(null);
+    this.undoError.set(null);
+    this.undoBusy.set(true);
+    this.adminAi
+      .undoPreview(session.id)
+      .pipe(takeUntilDestroyed(this.viewDestroyRef))
+      .subscribe({
+        next: (page) => { this.undoSteps.set(page.items ?? []); this.undoBusy.set(false); },
+        error: (e: ApiError) => { this.undoBusy.set(false); this.undoError.set(e.message); },
+      });
+  }
+
+  cancelUndo(): void {
+    this.undoFor.set(null);
+    this.undoSteps.set([]);
+    this.undoRun.set(null);
+    this.undoError.set(null);
+  }
+
+  /** Starts the previewed undo, then follows its run every two seconds until it ends. */
+  confirmUndo(): void {
+    const sessionId = this.undoFor();
+    if (!sessionId || this.undoBusy()) return;
+    this.undoBusy.set(true);
+    this.undoError.set(null);
+    this.adminAi
+      .startUndo(sessionId)
+      .pipe(
+        switchMap(({ undo_run_id }) => timer(0, 2000).pipe(switchMap(() => this.adminAi.undoRun(undo_run_id)))),
+        takeWhile(run => run.status === 'planned' || run.status === 'running', true),
+        takeUntilDestroyed(this.viewDestroyRef),
+      )
+      .subscribe({
+        next: (run) => {
+          this.undoRun.set(run);
+          if (run.status === 'done' || run.status === 'failed') this.undoBusy.set(false);
+        },
+        error: (e: ApiError) => { this.undoBusy.set(false); this.undoError.set(e.message); },
+      });
+  }
+
+  /** The undo run's count of one outcome. */
+  undoCount(outcome: string): number {
+    return this.undoRun()?.summary?.[outcome] ?? 0;
   }
 
   /** Shows a delegated session's steps, or hides them. */

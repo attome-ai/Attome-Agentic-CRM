@@ -1066,6 +1066,16 @@ export const xrmAr = {
     modeConfigured: 'الوكيل الآن: {mode}',
     modeDiffers: 'مختلف — ينطبق على الجلسات الجديدة فقط',
     trace: 'الخطوات', traceTitle: 'ما الذي فعلته هذه الجلسة', traceEmpty: 'لم تستدعِ هذه الجلسة شيئًا بعد.',
+    // AH1-T6 — التراجع عمّا كتبته الجلسة.
+    undo: {
+      button: 'تراجع عن التشغيل', title: 'التراجع عمّا فعلته هذه الجلسة', loading: 'جارٍ تحديد ما يمكن التراجع عنه…',
+      nothing: 'لم تغيّر هذه الجلسة شيئًا يمكن التراجع عنه.',
+      restore: 'سيُعاد كما كان', skipped: 'تم تخطّيه: غيّره شخص بعد ذلك', impossible: 'لا يمكن التراجع عنه',
+      confirm: 'تراجع الآن', cancel: 'إلغاء',
+      restoredCount: 'أُعيد {count}', skippedCount: 'تُخطّي {count}', failedCount: 'فشل {count}',
+      step: { revert_fields: 'أُعيدت القيم', soft_delete: 'نُقل إلى سلة المحذوفات', restore: 'استُعيد' },
+      status: { planned: 'مخطط', running: 'جارٍ التراجع…', done: 'تم', failed: 'انتهى مع إخفاقات' },
+    },
   },
 
   // ── FE-2 second slice (2026-08-25, T0-11): search, webcrawl, workflow ──

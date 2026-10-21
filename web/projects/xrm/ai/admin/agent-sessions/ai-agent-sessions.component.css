@@ -320,3 +320,28 @@
 .as__trace-steps { padding-inline-start: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
 .as__trace-steps li { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 .as__trace-outcome { color: var(--muted-color, #5b6472); }
+
+/* AH1-T6 — the undo preview and progress. */
+.as__undo {
+  margin-block-start: 1rem;
+  padding-block: 0.75rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.as__undo-list {
+  margin-block: 0.25rem 0.75rem;
+  padding-inline-start: 1.25rem;
+}
+
+.as__undo-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-block-start: 0.5rem;
+}
+
+.as__undo-error {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}

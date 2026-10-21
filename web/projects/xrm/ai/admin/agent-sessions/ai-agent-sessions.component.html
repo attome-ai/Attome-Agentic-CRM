@@ -223,6 +223,9 @@
                   <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
                           [attr.aria-expanded]="traceFor() === session.id"
                           (click)="toggleTrace(session)">{{ 'agentSessions.trace' | translate }}</button>
+                  <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" data-testid="undo-run"
+                          [attr.aria-expanded]="undoFor() === session.id"
+                          (click)="previewUndo(session)">{{ 'agentSessions.undo.button' | translate }}</button>
                   <p class="as__refnote">
                     Takes effect now. Editing the policy does not — it reaches the next session only.
                   </p>
@@ -271,6 +274,62 @@
               </li>
             }
           </ul>
+        }
+      </section>
+    }
+
+    @if (undoFor()) {
+      <section class="as__undo" [attr.aria-label]="'agentSessions.undo.title' | translate" data-testid="undo-preview">
+        <h3>{{ 'agentSessions.undo.title' | translate }}</h3>
+        @if (undoError(); as message) {
+          <p class="as__undo-error" role="alert">{{ message }}</p>
+        }
+        @if (undoRun(); as run) {
+          <p role="status" data-testid="undo-progress">
+            {{ 'agentSessions.undo.status.' + run.status | translate }} ·
+            {{ 'agentSessions.undo.restoredCount' | translate: { count: undoCount('restored') } }} ·
+            {{ 'agentSessions.undo.skippedCount' | translate: { count: undoCount('skipped_changed') } }} ·
+            {{ 'agentSessions.undo.failedCount' | translate: { count: undoCount('failed') } }}
+          </p>
+        } @else if (undoBusy()) {
+          <p>{{ 'agentSessions.undo.loading' | translate }}</p>
+        } @else {
+          @if (undoSteps().length === 0) {
+            <p>{{ 'agentSessions.undo.nothing' | translate }}</p>
+          }
+          @if (undoRestores().length > 0) {
+            <h4>{{ 'agentSessions.undo.restore' | translate }}</h4>
+            <ul class="as__undo-list" data-testid="undo-restore">
+              @for (s of undoRestores(); track $index) {
+                <li><code dir="ltr">{{ s.entity }} {{ s.record_id }}</code> · {{ 'agentSessions.undo.step.' + s.step | translate }}</li>
+              }
+            </ul>
+          }
+          @if (undoSkipped().length > 0) {
+            <h4>{{ 'agentSessions.undo.skipped' | translate }}</h4>
+            <ul class="as__undo-list" data-testid="undo-skipped">
+              @for (s of undoSkipped(); track $index) {
+                <li><code dir="ltr">{{ s.entity }} {{ s.record_id }}</code> · <span dir="ltr">{{ (s.changed_attributes ?? []).join(', ') }}</span></li>
+              }
+            </ul>
+          }
+          @if (undoImpossible().length > 0) {
+            <h4>{{ 'agentSessions.undo.impossible' | translate }}</h4>
+            <ul class="as__undo-list" data-testid="undo-impossible">
+              @for (s of undoImpossible(); track $index) {
+                <li><code dir="ltr">{{ s.action_id ?? s.entity }}</code> · {{ s.reason }}</li>
+              }
+            </ul>
+          }
+          <div class="as__undo-actions">
+            <button type="button" class="xf-btn xf-btn-primary xf-btn-sm" data-testid="undo-confirm"
+                    [disabled]="undoRestores().length === 0" (click)="confirmUndo()">
+              {{ 'agentSessions.undo.confirm' | translate }}
+            </button>
+            <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="cancelUndo()">
+              {{ 'agentSessions.undo.cancel' | translate }}
+            </button>
+          </div>
         }
       </section>
     }
