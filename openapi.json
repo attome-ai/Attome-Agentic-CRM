@@ -1539,6 +1539,187 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/ai/agents/{id}/rollback": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "post_rollback",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent (definition or agent object)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackSince"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The agent's live sessions are revoked and the rollback is planned and queued; read its progress at /api/v1/ai/undo-runs/{id}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither an admin nor a supervisor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "since is in the future or older than the audit keeps, or the agent has no session since then",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/agents/{id}/rollback-preview": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_rollback_preview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent (definition or agent object)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "description": "Undo what the agent did at or after this time (UTC, ISO-8601).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The agent's sessions since the time and what undoing them would do; nothing is written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither an admin nor a supervisor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "since is in the future or older than the audit keeps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/ai/agents/{id}/runs": {
       "get": {
         "tags": [
@@ -3503,6 +3684,285 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/work-share": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_work_share",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per process: completions by agents and by people, hand-offs, the agents' share and the days",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ProcessShare"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "from after to, or a range over a year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/ai/work-share/rebuild": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "post_rebuild",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RebuildRange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The recount is queued; it clears the range and counts it again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebuildQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "from after to, or a range over a year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/work-share/{process_key}/events": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_work_share_events",
+        "parameters": [
+          {
+            "name": "process_key",
+            "in": "path",
+            "description": "The measure's process key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "description": "`agent` or `person`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The previous page's `next_cursor`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The completions behind the count, newest first, while the feed retains them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPage_ShareEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such measure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A cursor this route did not issue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/admin/ai/write-policies": {
@@ -112970,7 +113430,8 @@
           "total",
           "matched",
           "unchanged",
-          "undo"
+          "undo",
+          "record_ids"
         ],
         "properties": {
           "approval_request_id": {
@@ -112993,6 +113454,14 @@
             "type": "integer",
             "description": "Records picked that the caller can read.",
             "minimum": 0
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "B5-T4: the records the edit changes, in the order of the bulk\noperation's items, so an item's `index` names its record."
           },
           "total": {
             "type": "integer",
@@ -121060,6 +121529,67 @@
           }
         }
       },
+      "CursorPage_ShareEvent": {
+        "type": "object",
+        "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One completion behind a number.",
+              "required": [
+                "id",
+                "entity",
+                "record_id",
+                "at"
+              ],
+              "properties": {
+                "agent_session_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Exact size of the whole window, when the route counts it (first page\nonly); absent otherwise."
+          }
+        }
+      },
       "CursorPage_TimelineEntry": {
         "type": "object",
         "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
@@ -124033,6 +124563,14 @@
             "format": "uuid"
           }
         }
+      },
+      "DoneBy": {
+        "type": "string",
+        "description": "Whose completions to list.",
+        "enum": [
+          "agent",
+          "person"
+        ]
       },
       "DownloadUrlResponse": {
         "type": "object",
@@ -147794,6 +148332,95 @@
           }
         }
       },
+      "PaginatedResponse_ProcessShare": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One process over the range.",
+              "required": [
+                "process_key",
+                "done_by_agent",
+                "done_by_person",
+                "handed_between",
+                "days"
+              ],
+              "properties": {
+                "days": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShareDay"
+                  },
+                  "description": "The days with counts, oldest first."
+                },
+                "done_by_agent": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "done_by_person": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "handed_between": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "label_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "process_key": {
+                  "type": "string"
+                },
+                "share": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "`done_by_agent / (done_by_agent + done_by_person)`; none while nothing was done."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_QualityIssueView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -155395,6 +156022,61 @@
           }
         }
       },
+      "ProcessShare": {
+        "type": "object",
+        "description": "One process over the range.",
+        "required": [
+          "process_key",
+          "done_by_agent",
+          "done_by_person",
+          "handed_between",
+          "days"
+        ],
+        "properties": {
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareDay"
+            },
+            "description": "The days with counts, oldest first."
+          },
+          "done_by_agent": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "done_by_person": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "handed_between": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "process_key": {
+            "type": "string"
+          },
+          "share": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "`done_by_agent / (done_by_agent + done_by_person)`; none while nothing was done."
+          }
+        }
+      },
       "ProcurementStep": {
         "type": "object",
         "description": "What a submit, order, cancel or change did.",
@@ -157496,6 +158178,42 @@
           "message": "re-authentication is required for this operation",
           "operation": "api_key_create",
           "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
+        }
+      },
+      "RebuildQueued": {
+        "type": "object",
+        "description": "A started rebuild.",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "RebuildRange": {
+        "type": "object",
+        "description": "The rebuild job's payload: the UTC days to recount, both included.",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
         }
       },
       "RecalculateUnresolvedRequest": {
@@ -160454,6 +161172,42 @@
           },
           "rollback_status": {
             "type": "string"
+          }
+        }
+      },
+      "RollbackPreview": {
+        "type": "object",
+        "description": "AH2-T4: what rolling an agent back would do.",
+        "required": [
+          "session_ids",
+          "steps"
+        ],
+        "properties": {
+          "session_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The agent's sessions since the time."
+          },
+          "steps": {
+            "$ref": "#/components/schemas/PaginatedResponse_UndoStep",
+            "description": "The steps, newest record first."
+          }
+        }
+      },
+      "RollbackSince": {
+        "type": "object",
+        "description": "AH2-T4: when to roll an agent back from.",
+        "required": [
+          "since"
+        ],
+        "properties": {
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Undo what the agent did at or after this time (UTC, ISO-8601)."
           }
         }
       },
@@ -164322,6 +165076,68 @@
           "error",
           "warning"
         ]
+      },
+      "ShareDay": {
+        "type": "object",
+        "description": "One day of one process.",
+        "required": [
+          "day",
+          "done_by_agent",
+          "done_by_person",
+          "handed_between"
+        ],
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "done_by_agent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "done_by_person": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "handed_between": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ShareEvent": {
+        "type": "object",
+        "description": "One completion behind a number.",
+        "required": [
+          "id",
+          "entity",
+          "record_id",
+          "at"
+        ],
+        "properties": {
+          "agent_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "ShareLinkSummary": {
         "type": "object",
@@ -173711,6 +174527,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -173763,6 +174580,5 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-version-adapters": []
 }

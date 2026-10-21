@@ -355,6 +355,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/agents/{id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_rollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/rollback-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_rollback_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/agents/{id}/runs": {
         parameters: {
             query?: never;
@@ -774,6 +806,54 @@ export interface paths {
          *     back on (by a different administrator from the one who turned it off).
          */
         put: operations["put_switch"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/work-share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_work_share"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/work-share/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_rebuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/work-share/{process_key}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_work_share_events"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -22379,6 +22459,11 @@ export interface components {
             /** @description Records picked that the caller can read. */
             matched: number;
             /**
+             * @description B5-T4: the records the edit changes, in the order of the bulk
+             *     operation's items, so an item's `index` names its record.
+             */
+            record_ids: string[];
+            /**
              * Format: int32
              * @description Records the edit will change.
              */
@@ -25570,6 +25655,32 @@ export interface components {
             total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_ShareEvent: {
+            items: {
+                /** Format: uuid */
+                agent_session_id?: string | null;
+                /** Format: date-time */
+                at: string;
+                entity: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                record_id: string;
+            }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_TimelineEntry: {
             items: {
                 /**
@@ -26693,6 +26804,11 @@ export interface components {
             /** Format: uuid */
             steward_ref?: string | null;
         };
+        /**
+         * @description Whose completions to list.
+         * @enum {string}
+         */
+        DoneBy: "agent" | "person";
         DownloadUrlResponse: {
             download_url: string;
             /** Format: int64 */
@@ -35926,6 +36042,38 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ProcessShare: {
+            items: {
+                /** @description The days with counts, oldest first. */
+                days: components["schemas"]["ShareDay"][];
+                /** Format: int64 */
+                done_by_agent: number;
+                /** Format: int64 */
+                done_by_person: number;
+                /** Format: int64 */
+                handed_between: number;
+                label?: string | null;
+                label_ar?: string | null;
+                process_key: string;
+                /**
+                 * Format: double
+                 * @description `done_by_agent / (done_by_agent + done_by_person)`; none while nothing was done.
+                 */
+                share?: number | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_QualityIssueView: {
             items: {
                 detail: string;
@@ -38811,6 +38959,25 @@ export interface components {
             detail?: Record<string, never> | null;
             message: string;
         };
+        /** @description One process over the range. */
+        ProcessShare: {
+            /** @description The days with counts, oldest first. */
+            days: components["schemas"]["ShareDay"][];
+            /** Format: int64 */
+            done_by_agent: number;
+            /** Format: int64 */
+            done_by_person: number;
+            /** Format: int64 */
+            handed_between: number;
+            label?: string | null;
+            label_ar?: string | null;
+            process_key: string;
+            /**
+             * Format: double
+             * @description `done_by_agent / (done_by_agent + done_by_person)`; none while nothing was done.
+             */
+            share?: number | null;
+        };
         /** @description What a submit, order, cancel or change did. */
         ProcurementStep: {
             /**
@@ -39684,6 +39851,20 @@ export interface components {
             title?: string | null;
             /** @description Z14-T1 (RFC 9457) members, as on [`ErrorResponse`]. */
             type?: string | null;
+        };
+        /** @description A started rebuild. */
+        RebuildQueued: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        /** @description The rebuild job's payload: the UTC days to recount, both included. */
+        RebuildRange: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
         };
         RecalculateUnresolvedRequest: {
             /**
@@ -40922,6 +41103,21 @@ export interface components {
             record_id: string;
             rollback_error?: string | null;
             rollback_status: string;
+        };
+        /** @description AH2-T4: what rolling an agent back would do. */
+        RollbackPreview: {
+            /** @description The agent's sessions since the time. */
+            session_ids: string[];
+            /** @description The steps, newest record first. */
+            steps: components["schemas"]["PaginatedResponse_UndoStep"];
+        };
+        /** @description AH2-T4: when to roll an agent back from. */
+        RollbackSince: {
+            /**
+             * Format: date-time
+             * @description Undo what the agent did at or after this time (UTC, ISO-8601).
+             */
+            since: string;
         };
         /**
          * @description The release report's open work (the fleet's notification rule reads
@@ -42375,6 +42571,29 @@ export interface components {
          * @enum {string}
          */
         Severity: "error" | "warning";
+        /** @description One day of one process. */
+        ShareDay: {
+            /** Format: date */
+            day: string;
+            /** Format: int32 */
+            done_by_agent: number;
+            /** Format: int32 */
+            done_by_person: number;
+            /** Format: int32 */
+            handed_between: number;
+        };
+        /** @description One completion behind a number. */
+        ShareEvent: {
+            /** Format: uuid */
+            agent_session_id?: string | null;
+            /** Format: date-time */
+            at: string;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            record_id: string;
+        };
         /** @description One link of a field, as its owner sees it (never the token). */
         ShareLinkSummary: {
             /** Format: date-time */
@@ -46899,6 +47118,113 @@ export interface operations {
             };
         };
     };
+    post_rollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent (definition or agent object) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollbackSince"];
+            };
+        };
+        responses: {
+            /** @description The agent's live sessions are revoked and the rollback is planned and queued; read its progress at /api/v1/ai/undo-runs/{id} */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither an admin nor a supervisor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description since is in the future or older than the audit keeps, or the agent has no session since then */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_rollback_preview: {
+        parameters: {
+            query: {
+                /** @description Undo what the agent did at or after this time (UTC, ISO-8601). */
+                since: string;
+            };
+            header?: never;
+            path: {
+                /** @description The agent (definition or agent object) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent's sessions since the time and what undoing them would do; nothing is written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RollbackPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither an admin nor a supervisor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description since is in the future or older than the audit keeps */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_runs: {
         parameters: {
             query: {
@@ -48069,6 +48395,172 @@ export interface operations {
                 };
             };
             /** @description Unknown kind, empty key or reason too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_work_share: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per process: completions by agents and by people, hand-offs, the agents' share and the days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ProcessShare"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description from after to, or a range over a year */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_rebuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RebuildRange"];
+            };
+        };
+        responses: {
+            /** @description The recount is queued; it clears the range and counts it again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebuildQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description from after to, or a range over a year */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_work_share_events: {
+        parameters: {
+            query: {
+                day: string;
+                /** @description `agent` or `person`. */
+                by: string;
+                /** @description The previous page's `next_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The measure's process key */
+                process_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The completions behind the count, newest first, while the feed retains them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_ShareEvent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such measure */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A cursor this route did not issue */
             422: {
                 headers: {
                     [name: string]: unknown;
