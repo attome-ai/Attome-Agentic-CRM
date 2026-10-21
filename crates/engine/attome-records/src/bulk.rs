@@ -215,6 +215,11 @@ struct BulkRequestBody {
     /// them with their attributes' defaults. Default true.
     #[serde(default)]
     apply_defaults: Option<bool>,
+    /// B5-T3: `true` runs the operation without automation: its changes start
+    /// no flow (nor an agent a flow runs) and notify no follower. Needs the
+    /// `records.bulk_quiet` privilege. Default false.
+    #[serde(default)]
+    quiet: Option<bool>,
     records: Vec<BulkRecordEnvelope>,
 }
 
@@ -637,6 +642,7 @@ pub async fn submit_bulk(
     operation: &str,
     items: Vec<BulkItem>,
     atomic: bool,
+    quiet: bool,
 ) -> Result<BulkSubmitted, AppError> {
     state
         .base
@@ -649,6 +655,7 @@ pub async fn submit_bulk(
         mapping_ref: None,
         mode: None,
         apply_defaults: None,
+        quiet: Some(quiet),
         records: items
             .into_iter()
             .map(|item| BulkRecordEnvelope {
@@ -695,6 +702,11 @@ async fn enqueue_inner(
     if is_append_only {
         return Err(AppError::Forbidden);
     }
+    // B5-T3: running without automation is its own privilege.
+    let quiet = body.quiet == Some(true);
+    if quiet {
+        ctx.require_key(attome_core::quiet_scope::QUIET_PRIVILEGE)?;
+    }
 
     let bulk_op_id = Uuid::now_v7();
     let total = body.records.len() as i32;
@@ -722,8 +734,8 @@ async fn enqueue_inner(
     }
 
     sqlx::query(
-        "INSERT INTO automation_bulk_operation (id, entity_logicalname, operation, status, total, created_by, batch_mode)
-         VALUES ($1, $2, $3, 'pending', $4, $5, $6)",
+        "INSERT INTO automation_bulk_operation (id, entity_logicalname, operation, status, total, created_by, batch_mode, quiet)
+         VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7)",
     )
     .bind(bulk_op_id)
     .bind(&entity_name)
@@ -731,6 +743,7 @@ async fn enqueue_inner(
     .bind(total)
     .bind(user_id)
     .bind(&batch_mode)
+    .bind(quiet)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -2031,7 +2044,16 @@ pub async fn process(
     raw_records: Vec<Value>,
     user_id: Uuid,
 ) -> Result<(), AppError> {
-    process_ledger(
+    // B5-T3: an operation submitted without automation writes its items'
+    // change events quiet.
+    let quiet: bool =
+        sqlx::query_scalar("SELECT quiet FROM automation_bulk_operation WHERE id = $1")
+            .bind(bulk_op_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+            .unwrap_or(false);
+    let work = process_ledger(
         state,
         LedgerTable::BulkItem,
         bulk_op_id,
@@ -2039,8 +2061,12 @@ pub async fn process(
         operation,
         raw_records,
         user_id,
-    )
-    .await
+    );
+    if quiet {
+        attome_core::quiet_scope::quiet(work).await
+    } else {
+        work.await
+    }
 }
 
 /// Returns the underlying [`MutationResult`] (never persisted — the

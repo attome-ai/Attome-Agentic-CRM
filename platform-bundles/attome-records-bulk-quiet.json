@@ -1,0 +1,18 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "privileges": [
+    {
+      "key": "records.bulk_quiet",
+      "name": "Bulk Edit Without Automation",
+      "description": "Runs a bulk edit or its undo without starting flows, agents or follower notifications."
+    }
+  ],
+  "entities": []
+}

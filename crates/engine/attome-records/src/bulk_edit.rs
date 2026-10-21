@@ -16,7 +16,7 @@ use attome_core::filter::{
     FieldCastError, Filter, FilterSchema, cast_for_attr, is_multi_choice_attr,
 };
 use attome_core::{AttrInfo, EngineState, FieldType, quote_ident};
-use attome_security::RecordAction;
+use attome_security::{RecordAction, SecurityContextExt};
 use attome_security::record_action::Bulk;
 use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::capability::{Available, BatchJobs};
@@ -53,6 +53,11 @@ pub struct BulkEditRequest {
     pub filters: Vec<Filter>,
     /// The changes, applied in order to each record.
     pub operations: Vec<EditOperation>,
+    /// B5-T3: run the edit without automation: its changes start no flow
+    /// (nor an agent a flow runs) and notify no follower. Needs the
+    /// `records.bulk_quiet` privilege.
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 /// One change to one attribute.
@@ -109,6 +114,9 @@ pub struct BulkEditApprovalPayload {
     pub entity: String,
     pub items: Vec<BulkEditApprovalItem>,
     pub requested_by: Uuid,
+    /// B5-T3: run without automation once approved.
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 /// The approval count, 0 when unset.
@@ -142,7 +150,16 @@ pub async fn do_apply_bulk_edit(
             data: i.data.clone(),
         })
         .collect();
-    submit_bulk(state, &ctx, &payload.entity, "update", items, false).await
+    submit_bulk(
+        state,
+        &ctx,
+        &payload.entity,
+        "update",
+        items,
+        false,
+        payload.quiet,
+    )
+    .await
 }
 
 /// B5-T3: one record's values before a bulk edit, and the row version the
@@ -163,6 +180,36 @@ pub struct UndoItem {
 pub struct BulkEditUndoRequest {
     /// The `undo` list the bulk edit returned.
     pub undo: Vec<UndoItem>,
+    /// Put the records back without automation, as for the edit itself.
+    #[serde(default)]
+    pub quiet: bool,
+}
+
+/// B5-T3: the undo entry for one record the edit changes: the changed
+/// attributes' current values, at the row version the edit will leave. A
+/// record read without a row version gets none (it cannot be guarded).
+fn undo_item(id: Uuid, row: &Map<String, Value>, patch: &Map<String, Value>) -> Option<UndoItem> {
+    let version = row.get("row_version").and_then(Value::as_i64)?;
+    Some(UndoItem {
+        id,
+        row_version: version + 1,
+        values: patch
+            .keys()
+            .map(|name| (name.clone(), row.get(name).cloned().unwrap_or(Value::Null)))
+            .collect(),
+    })
+}
+
+/// B5-T3: an undo list as bulk-update items, each guarded by the row version
+/// the edit left, so a record changed since is reported, not overwritten.
+fn undo_items(undo: Vec<UndoItem>) -> Vec<BulkItem> {
+    undo.into_iter()
+        .map(|item| BulkItem {
+            id: Some(item.id),
+            expected_row_version: Some(item.row_version),
+            data: Value::Object(item.values),
+        })
+        .collect()
 }
 
 /// B5-T2: one record as the edit would change it.
@@ -530,16 +577,7 @@ pub async fn plan_bulk_edit(
             });
         }
         let row_version = row.get("row_version").and_then(Value::as_i64);
-        if let Some(version) = row_version {
-            undo.push(UndoItem {
-                id,
-                row_version: version + 1,
-                values: patch
-                    .keys()
-                    .map(|name| (name.clone(), row.get(name).cloned().unwrap_or(Value::Null)))
-                    .collect(),
-            });
-        }
+        undo.extend(undo_item(id, &row, &patch));
         items.push(BulkItem {
             id: Some(id),
             expected_row_version: row_version,
@@ -580,6 +618,9 @@ async fn bulk_edit(
     Path(entity): Path<String>,
     Json(request): Json<BulkEditRequest>,
 ) -> Result<(StatusCode, Json<BulkEditSubmitted>), AppError> {
+    if request.quiet {
+        ctx.require_key(attome_core::quiet_scope::QUIET_PRIVILEGE)?;
+    }
     let BulkEditPlan {
         items,
         matched,
@@ -615,6 +656,7 @@ async fn bulk_edit(
                 })
                 .collect(),
             requested_by: ctx.user_id,
+            quiet: request.quiet,
         };
         let value = serde_json::to_value(&payload).map_err(AppError::internal)?;
         let request = attome_audit::approval::gate_regarding_required(
@@ -637,7 +679,16 @@ async fn bulk_edit(
             }),
         ));
     }
-    let submitted = submit_bulk(&state, &ctx, &entity, "update", items, false).await?;
+    let submitted = submit_bulk(
+        &state,
+        &ctx,
+        &entity,
+        "update",
+        items,
+        false,
+        request.quiet,
+    )
+    .await?;
     Ok((
         StatusCode::ACCEPTED,
         Json(BulkEditSubmitted {
@@ -719,17 +770,21 @@ async fn bulk_edit_undo(
             "undo: 1 to {MAX_BULK_EDIT_RECORDS} records"
         )));
     }
+    if request.quiet {
+        ctx.require_key(attome_core::quiet_scope::QUIET_PRIVILEGE)?;
+    }
     let count = request.undo.len();
-    let items: Vec<BulkItem> = request
-        .undo
-        .into_iter()
-        .map(|item| BulkItem {
-            id: Some(item.id),
-            expected_row_version: Some(item.row_version),
-            data: Value::Object(item.values),
-        })
-        .collect();
-    let submitted = submit_bulk(&state, &ctx, &entity, "update", items, false).await?;
+    let items = undo_items(request.undo);
+    let submitted = submit_bulk(
+        &state,
+        &ctx,
+        &entity,
+        "update",
+        items,
+        false,
+        request.quiet,
+    )
+    .await?;
     Ok((
         StatusCode::ACCEPTED,
         Json(BulkEditSubmitted {
@@ -772,6 +827,56 @@ mod tests {
             op: op.to_owned(),
             value,
         }
+    }
+
+    #[test]
+    fn bulk_edit_undo_keeps_the_values_before_the_edit() {
+        let id = Uuid::now_v7();
+        let row = json!({"id": id, "row_version": 4, "status": "open", "owner": "a"});
+        let Value::Object(row) = row else { panic!() };
+        let patch = patch_for(&row, &[op("status", "set", Some(json!("closed")))]);
+        let item = undo_item(id, &row, &patch).expect("versioned");
+        assert_eq!(item.row_version, 5, "guarded at the post-edit version");
+        assert_eq!(Value::Object(item.values), json!({"status": "open"}));
+    }
+
+    #[test]
+    fn bulk_edit_undo_skips_a_record_without_a_row_version() {
+        let row = json!({"status": "open"});
+        let Value::Object(row) = row else { panic!() };
+        let patch = patch_for(&row, &[op("status", "clear", None)]);
+        assert!(undo_item(Uuid::now_v7(), &row, &patch).is_none());
+    }
+
+    #[test]
+    fn bulk_edit_undo_reverts_only_records_still_at_the_edit_version() {
+        let id = Uuid::now_v7();
+        let undo = vec![UndoItem {
+            id,
+            row_version: 5,
+            values: Map::from_iter([("status".to_owned(), json!("open"))]),
+        }];
+        let items = undo_items(undo);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].id, Some(id));
+        assert_eq!(items[0].expected_row_version, Some(5));
+        assert_eq!(items[0].data, json!({"status": "open"}));
+    }
+
+    #[test]
+    fn bulk_edit_undo_approval_payload_keeps_quiet() {
+        let payload = BulkEditApprovalPayload {
+            entity: "account".into(),
+            items: Vec::new(),
+            requested_by: Uuid::now_v7(),
+            quiet: true,
+        };
+        let value = serde_json::to_value(&payload).expect("serializes");
+        let back: BulkEditApprovalPayload = serde_json::from_value(value).expect("parses");
+        assert_eq!(back, payload);
+        let older = json!({"entity": "account", "items": [], "requested_by": Uuid::now_v7()});
+        let older: BulkEditApprovalPayload = serde_json::from_value(older).expect("parses");
+        assert!(!older.quiet, "an older request keeps automation");
     }
 
     #[test]

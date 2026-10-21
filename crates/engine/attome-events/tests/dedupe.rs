@@ -66,6 +66,7 @@ fn fake_event(entity: &str, operation: ChangeOperation) -> ChangeEvent {
         event_name: None,
         created_at: chrono::Utc::now(),
         changed_attributes: Vec::new(),
+        quiet: false,
     }
 }
 

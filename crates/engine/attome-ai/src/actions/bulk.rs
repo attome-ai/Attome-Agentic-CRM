@@ -407,6 +407,7 @@ impl Action for BulkApply {
                 plan.operation,
                 items,
                 false,
+                false,
             )
             .await?;
             Ok(ActionResult::plain(json!({

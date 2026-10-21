@@ -1,0 +1,37 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:66a23e80d8a528f0ad0ef08291e35d79b0300822870b21f503fadcdf0a916b01",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-records-bulk-quiet.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "17d35c3e-2480-4b83-b80e-ac816427a1a3",
+  "layer": "platform",
+  "name": "attome-records-bulk-quiet",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Runs a bulk edit or its undo without starting flows, agents or follower notifications.",
+          "key": "records.bulk_quiet",
+          "name": "Bulk Edit Without Automation"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "records.bulk_quiet"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 70,
+  "title": "Platform definitions: attome-records-bulk-quiet"
+}

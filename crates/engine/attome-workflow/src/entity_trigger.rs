@@ -371,6 +371,11 @@ pub(crate) async fn start_entry_instances(
     event: &ChangeEvent,
     system_user_id: Uuid,
 ) -> Result<u64, AppError> {
+    // B5-T3: a quiet write (a bulk edit run without automation) starts no
+    // flow; a running flow waiting on the record still resumes.
+    if event.quiet {
+        return Ok(0);
+    }
     let mut count = 0u64;
     // M1-T1: a merge survivor's named event starts `merge` triggers only
     // (its ordinary update has its own event); every other event matches

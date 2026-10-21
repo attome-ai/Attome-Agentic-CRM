@@ -405,6 +405,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0069-attome-dashboard-decision-outcomes.json"
         ),
     },
+    PlatformChangeset {
+        file: "0070-attome-records-bulk-quiet.json",
+        name: "attome-records-bulk-quiet",
+        json: include_str!(
+            "../../../../../changesets/platform/0070-attome-records-bulk-quiet.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

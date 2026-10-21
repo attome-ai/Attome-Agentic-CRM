@@ -98,7 +98,9 @@ pub async fn sweep(state: &EngineState) -> Result<u64, AppError> {
         let Some(verb) = event.operation().and_then(verb) else {
             continue;
         };
-        if event.entity_logicalname == "follow" || event.event_name.is_some() {
+        // B5-T3: a quiet write (a bulk edit run without automation) tells
+        // no follower.
+        if event.quiet || event.entity_logicalname == "follow" || event.event_name.is_some() {
             continue;
         }
         let (entity_id, display) = {

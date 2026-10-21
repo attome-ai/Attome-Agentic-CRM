@@ -232,6 +232,7 @@ mod tests {
             event_name: name.map(str::to_owned),
             created_at: Utc::now(),
             changed_attributes: Vec::new(),
+            quiet: false,
         }
     }
 

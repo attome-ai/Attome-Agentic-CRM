@@ -168,6 +168,7 @@ mod tests {
             event_name: None,
             created_at: Utc::now(),
             changed_attributes: Vec::new(),
+            quiet: false,
         }
     }
 

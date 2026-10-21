@@ -106,6 +106,10 @@ pub struct ChangeEvent {
     /// Y7-T1: the attributes the write changed (empty for a row written
     /// before the outbox carried them, or by a path that does not know).
     pub changed_attributes: Vec<String>,
+    /// B5-T3: written inside [`crate::quiet_scope::quiet`] (a bulk edit run
+    /// without automation): starts no flow and sends no follower
+    /// notification. Every other consumer reads it as usual.
+    pub quiet: bool,
 }
 
 /// M1-T1: the event name on a merge survivor's change event, which a
@@ -137,11 +141,12 @@ pub async fn emit_with(
     payload: &ChangePayload,
 ) -> Result<(), AppError> {
     let (initiator, agent_session) = crate::agent_scope::columns();
+    let quiet = crate::quiet_scope::is_quiet();
     sqlx::query(
         "INSERT INTO entity_change_event \
              (entity_logicalname, record_id, operation, event_name, changed_attributes, before, after, \
-              row_version, initiator, agent_session_id) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+              row_version, initiator, agent_session_id, quiet) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -153,6 +158,7 @@ pub async fn emit_with(
     .bind(payload.row_version)
     .bind(initiator)
     .bind(agent_session)
+    .bind(quiet)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -188,16 +194,18 @@ pub async fn emit(
     operation: ChangeOperation,
 ) -> Result<(), AppError> {
     let (initiator, agent_session) = crate::agent_scope::columns();
+    let quiet = crate::quiet_scope::is_quiet();
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, initiator, agent_session_id) \
-         VALUES ($1, $2, $3, $4, $5)",
+             (entity_logicalname, record_id, operation, initiator, agent_session_id, quiet) \
+         VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
     .bind(operation.as_str())
     .bind(initiator)
     .bind(agent_session)
+    .bind(quiet)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -229,10 +237,12 @@ pub async fn emit_named(
     event_name: &str,
 ) -> Result<(), AppError> {
     let (initiator, agent_session) = crate::agent_scope::columns();
+    let quiet = crate::quiet_scope::is_quiet();
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, event_name, initiator, agent_session_id) \
-         VALUES ($1, $2, $3, $4, $5, $6)",
+             (entity_logicalname, record_id, operation, event_name, initiator, agent_session_id, \
+              quiet) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -240,6 +250,7 @@ pub async fn emit_named(
     .bind(event_name)
     .bind(initiator)
     .bind(agent_session)
+    .bind(quiet)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -264,16 +275,18 @@ pub async fn emit_many(
         return Ok(());
     }
     let (initiator, agent_session) = crate::agent_scope::columns();
+    let quiet = crate::quiet_scope::is_quiet();
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, initiator, agent_session_id) \
-         SELECT $1, r, $3, $4, $5 FROM UNNEST($2::uuid[]) AS r",
+             (entity_logicalname, record_id, operation, initiator, agent_session_id, quiet) \
+         SELECT $1, r, $3, $4, $5, $6 FROM UNNEST($2::uuid[]) AS r",
     )
     .bind(entity_logicalname)
     .bind(record_ids)
     .bind(operation.as_str())
     .bind(initiator)
     .bind(agent_session)
+    .bind(quiet)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -348,9 +361,10 @@ pub async fn read_batch(
         Option<String>,
         chrono::DateTime<chrono::Utc>,
         Vec<String>,
+        bool,
     )> = sqlx::query_as(
         "SELECT id, entity_logicalname, record_id, operation, event_name, created_at, \
-                changed_attributes \
+                changed_attributes, quiet \
          FROM entity_change_event \
          WHERE commit_xid > $1::text::xid8 \
            AND commit_xid < pg_snapshot_xmin(pg_current_snapshot()) \
@@ -374,6 +388,7 @@ pub async fn read_batch(
                 event_name,
                 created_at,
                 changed_attributes,
+                quiet,
             )| ChangeEvent {
                 id,
                 entity_logicalname,
@@ -382,6 +397,7 @@ pub async fn read_batch(
                 event_name,
                 created_at,
                 changed_attributes,
+                quiet,
             },
         )
         .collect())
@@ -424,10 +440,11 @@ pub async fn read_after(
         Option<String>,
         chrono::DateTime<chrono::Utc>,
         Vec<String>,
+        bool,
         i64,
     )> = sqlx::query_as(
         "SELECT id, entity_logicalname, record_id, operation, event_name, created_at, \
-                changed_attributes, commit_xid::text::bigint \
+                changed_attributes, quiet, commit_xid::text::bigint \
          FROM entity_change_event \
          WHERE (commit_xid > $1::text::xid8 \
                 OR (commit_xid = $1::text::xid8 AND id > $2)) \
@@ -443,7 +460,7 @@ pub async fn read_after(
     .map_err(AppError::internal)?;
 
     let next = rows.last().map_or(position, |row| CursorPosition {
-        last_commit_xid: row.7,
+        last_commit_xid: row.8,
         last_id: Some(row.0),
     });
     let events = rows
@@ -457,6 +474,7 @@ pub async fn read_after(
                 event_name,
                 created_at,
                 changed_attributes,
+                quiet,
                 _,
             )| ChangeEvent {
                 id,
@@ -466,6 +484,7 @@ pub async fn read_after(
                 event_name,
                 created_at,
                 changed_attributes,
+                quiet,
             },
         )
         .collect();

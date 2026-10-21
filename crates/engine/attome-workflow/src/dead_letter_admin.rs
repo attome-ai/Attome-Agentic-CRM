@@ -182,6 +182,7 @@ pub async fn replay(
         event_name: None,
         created_at: row.first_failed_at,
         changed_attributes: Vec::new(),
+        quiet: false,
     };
     let what = format!(
         "{} {} {}",

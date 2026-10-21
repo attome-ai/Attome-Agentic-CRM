@@ -1454,6 +1454,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Bulk edit without automation (B5-T3, migration `0200`): `POST /api/v1/{entity}/bulk-edit`, its `/undo` and
+  `POST /api/v1/{entity}/bulk` accept `quiet: true` with the new `records.bulk_quiet` privilege (platform changeset
+  `0070`); the records change through the normal path but their change events are marked `quiet`, so they start no
+  workflow entry trigger (nor an agent a flow runs) and notify no follower. Change events gain a `quiet` column, and a
+  quiet edit waiting on its approval runs quiet once approved.
 - Agent-drafted label translations (A20-T2): with languages named in the new setting `i18n.draft_locales` (none by
   default), an hourly job (`label_translation_drafts`) translates up to 100 untranslated entity, attribute and choice
   labels per language through `text.translate` (glossary, cache, model approval and budget as usual) and stores them as
