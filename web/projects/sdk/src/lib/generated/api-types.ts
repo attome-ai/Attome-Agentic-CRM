@@ -303,6 +303,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/agents/{id}/behaviour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_behaviour"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/agents/{id}/go-live": {
         parameters: {
             query?: never;
@@ -20449,6 +20465,22 @@ export interface components {
             over_90: string;
             total: string;
         };
+        /** @description An agent's behaviour. */
+        AgentBehaviour: {
+            /** Format: uuid */
+            agent_id: string;
+            baseline?: null | components["schemas"]["BaselineView"];
+            /** @description The last 24 hours with activity, oldest first. */
+            hours: components["schemas"]["HourView"][];
+            last_trip?: null | components["schemas"]["TripView"];
+            name?: string | null;
+            /**
+             * Format: int64
+             * @description `None` for a published agent object.
+             */
+            row_version?: number | null;
+            status?: string | null;
+        };
         /** @description One agent a partner can hand work to. */
         AgentCard: {
             /** Format: uuid */
@@ -21774,6 +21806,23 @@ export interface components {
              */
             same_disk: boolean;
         };
+        /** @description The baseline as the screen shows it. */
+        BaselineView: {
+            /** Format: date-time */
+            computed_at: string;
+            /** Format: date-time */
+            first_activity_at?: string | null;
+            /** Format: float */
+            mean_deletes_per_hour?: number | null;
+            /** Format: float */
+            mean_writes_per_hour?: number | null;
+            /** Format: float */
+            stddev_deletes_per_hour?: number | null;
+            /** Format: float */
+            stddev_writes_per_hour?: number | null;
+            usual_entities: string[];
+            usual_hours: number[];
+        };
         BatchDecideBody: {
             comment?: string | null;
             /** @description `"approve"` or `"reject"`, for every request. */
@@ -22306,6 +22355,12 @@ export interface components {
             ids?: string[];
             /** @description The changes, applied in order to each record. */
             operations: components["schemas"]["EditOperation"][];
+            /**
+             * @description B5-T3: run the edit without automation: its changes start no flow
+             *     (nor an agent a flow runs) and notify no follower. Needs the
+             *     `records.bulk_quiet` privilege.
+             */
+            quiet?: boolean;
         };
         /** @description The bulk edit as submitted. */
         BulkEditSubmitted: {
@@ -22339,6 +22394,8 @@ export interface components {
         };
         /** @description B5-T3: a bulk edit to put back. */
         BulkEditUndoRequest: {
+            /** @description Put the records back without automation, as for the edit itself. */
+            quiet?: boolean;
             /** @description The `undo` list the bulk edit returned. */
             undo: components["schemas"]["UndoItem"][];
         };
@@ -22400,6 +22457,12 @@ export interface components {
             mapping_ref?: string | null;
             mode?: string | null;
             operation: string;
+            /**
+             * @description B5-T3: `true` runs the operation without automation: its changes start
+             *     no flow (nor an agent a flow runs) and notify no follower. Needs the
+             *     `records.bulk_quiet` privilege. Default false.
+             */
+            quiet?: boolean | null;
             records: components["schemas"]["BulkRecordEnvelope"][];
             strict?: boolean | null;
         };
@@ -28867,6 +28930,18 @@ export interface components {
              *     calendar). Only a changeset of that layer may remove it.
              */
             owner_layer: string;
+        };
+        /** @description One hour of activity. */
+        HourView: {
+            /** Format: int32 */
+            deletes: number;
+            entities: string[];
+            /** Format: int32 */
+            external_calls: number;
+            /** Format: date-time */
+            hour: string;
+            /** Format: int32 */
+            writes: number;
         };
         HrAvailability: {
             /** @description The days the user is away on approved leave. */
@@ -44451,6 +44526,13 @@ export interface components {
              */
             dispatched: number;
         };
+        /** @description The last automatic stop. */
+        TripView: {
+            /** Format: date-time */
+            at: string;
+            /** @description The departure, e.g. `automatic: volume: observed 200, expected 5`. */
+            reason?: string | null;
+        };
         TrustedAccountInfo: {
             /**
              * @description Masked (`z***@example.com`): the owner recognises it; the caller
@@ -46642,6 +46724,47 @@ export interface operations {
             };
             /** @description No level is set for this action */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_behaviour: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent (ai_agent) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status, baseline, the last 24 hours and the last automatic stop */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentBehaviour"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

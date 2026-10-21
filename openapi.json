@@ -1263,6 +1263,72 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/ai/agents/{id}/behaviour": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_behaviour",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent (ai_agent)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status, baseline, the last 24 hours and the last automatic stop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentBehaviour"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/ai/agents/{id}/go-live": {
       "post": {
         "tags": [
@@ -108183,6 +108249,67 @@
           }
         }
       },
+      "AgentBehaviour": {
+        "type": "object",
+        "description": "An agent's behaviour.",
+        "required": [
+          "agent_id",
+          "hours"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "baseline": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BaselineView"
+              }
+            ]
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HourView"
+            },
+            "description": "The last 24 hours with activity, oldest first."
+          },
+          "last_trip": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TripView"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "`None` for a published agent object."
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "AgentCard": {
         "type": "object",
         "description": "One agent a partner can hand work to.",
@@ -111360,6 +111487,69 @@
           }
         }
       },
+      "BaselineView": {
+        "type": "object",
+        "description": "The baseline as the screen shows it.",
+        "required": [
+          "computed_at",
+          "usual_entities",
+          "usual_hours"
+        ],
+        "properties": {
+          "computed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "first_activity_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "mean_deletes_per_hour": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "mean_writes_per_hour": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "stddev_deletes_per_hour": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "stddev_writes_per_hour": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "usual_entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "usual_hours": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
       "BatchDecideBody": {
         "type": "object",
         "required": [
@@ -112766,6 +112956,10 @@
               "$ref": "#/components/schemas/EditOperation"
             },
             "description": "The changes, applied in order to each record."
+          },
+          "quiet": {
+            "type": "boolean",
+            "description": "B5-T3: run the edit without automation: its changes start no flow\n(nor an agent a flow runs) and notify no follower. Needs the\n`records.bulk_quiet` privilege."
           }
         }
       },
@@ -112826,6 +113020,10 @@
           "undo"
         ],
         "properties": {
+          "quiet": {
+            "type": "boolean",
+            "description": "Put the records back without automation, as for the edit itself."
+          },
           "undo": {
             "type": "array",
             "items": {
@@ -113003,6 +113201,13 @@
           },
           "operation": {
             "type": "string"
+          },
+          "quiet": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "B5-T3: `true` runs the operation without automation: its changes start\nno flow (nor an agent a flow runs) and notify no follower. Needs the\n`records.bulk_quiet` privilege. Default false."
           },
           "records": {
             "type": "array",
@@ -129140,6 +129345,41 @@
           "owner_layer": {
             "type": "string",
             "description": "Solution 7 (D-785) — the layer that owns this holiday row (it may\ndiffer from its calendar's: a project may add a holiday to a platform\ncalendar). Only a changeset of that layer may remove it."
+          }
+        }
+      },
+      "HourView": {
+        "type": "object",
+        "description": "One hour of activity.",
+        "required": [
+          "hour",
+          "writes",
+          "deletes",
+          "external_calls",
+          "entities"
+        ],
+        "properties": {
+          "deletes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "external_calls": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hour": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "writes": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -169753,6 +169993,26 @@
           }
         }
       },
+      "TripView": {
+        "type": "object",
+        "description": "The last automatic stop.",
+        "required": [
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The departure, e.g. `automatic: volume: observed 200, expected 5`."
+          }
+        }
+      },
       "TrustedAccountInfo": {
         "type": "object",
         "required": [
@@ -173451,8 +173711,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -173504,5 +173762,7 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }
