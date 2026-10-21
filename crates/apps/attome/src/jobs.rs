@@ -1168,6 +1168,23 @@ async fn dispatch_platform_job(
                     }
                 }
             }
+            // AI5-T2: the collection rules write to the same ledger.
+            let today = now.date_naive();
+            for rule in attome_ai::followup_collections::active_rules(&attome_state.base.db).await?
+            {
+                match attome_ai::followup_collections::detect_collections(
+                    &attome_state,
+                    &rule,
+                    today,
+                )
+                .await
+                {
+                    Ok(n) => found += n,
+                    Err(e) => {
+                        tracing::warn!(rule = %rule.id, error = %e, "collections scan: rule skipped")
+                    }
+                }
+            }
             if found > 0 {
                 tracing::info!(found, "follow-up scan: new stalls recorded");
             }

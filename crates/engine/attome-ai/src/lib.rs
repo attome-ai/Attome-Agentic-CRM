@@ -101,6 +101,7 @@ pub mod execute;
 /// C10-B — thumbs feedback on a turn's answer.
 pub mod feedback;
 pub mod followup;
+pub mod followup_collections;
 pub mod followup_routes;
 pub mod followup_run;
 pub mod gate;

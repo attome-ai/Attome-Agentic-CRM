@@ -1386,6 +1386,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   one person, and time off for each run over. `POST /api/v1/workforce/offers/{id}/send` tells the people
   who could take it; `POST /api/v1/workforce/offers/{id}/accept` lets the first one take it, adding or
   trimming their shift. Both are audited.
+- Collections follow-ups (AI5-T2, migration `0195`): the follow-up scan also runs each active
+  `ai_collection_rule`, writing invoices coming due, overdue invoices and subscriptions coming up for
+  renewal to the follow-up ledger (new reasons `invoice_due`, `invoice_overdue`, `renewal_due`), at most
+  once a day per record, skipping invoices with an open payment promise and records at the rule's
+  `max_reminders`.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
