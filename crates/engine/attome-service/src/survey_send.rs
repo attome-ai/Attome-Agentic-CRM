@@ -496,7 +496,7 @@ async fn store(
     }
     attome_audit::write_business_event_in_tx(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         attome_audit::BusinessEvent::new(
             entity,
             row,

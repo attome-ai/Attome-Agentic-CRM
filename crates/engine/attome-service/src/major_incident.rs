@@ -778,7 +778,7 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 }
 
 #[cfg(test)]
-mod major_incident {
+mod tests {
     use super::*;
 
     fn at(h: u32) -> DateTime<Utc> {

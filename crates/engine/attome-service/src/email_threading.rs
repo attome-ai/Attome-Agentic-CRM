@@ -272,7 +272,7 @@ pub fn thread_entry(
 }
 
 #[cfg(test)]
-mod email_threading {
+mod tests {
     use super::*;
 
     #[test]

@@ -37,6 +37,9 @@ use uuid::Uuid;
 use crate::solver::{Agent, GreedySolver, Problem, ScheduleSolver, Template};
 use crate::staffing::{ChannelKind, IntervalForecast, PlanningGroup, requirement_for_group};
 
+/// Shift start and end times.
+type Spans = Vec<(DateTime<Utc>, DateTime<Utc>)>;
+
 /// The registered job.
 pub const JOB: &str = "workforce_build_schedule";
 /// The solving deadline when the caller gives none, in seconds.
@@ -446,8 +449,7 @@ pub async fn run(state: &EngineState, job: &BuildJob) -> Result<BuildResult, App
         .collect();
     let mut rows: Vec<(Uuid, DateTime<Utc>, DateTime<Utc>)> = Vec::new();
     let mut coverage = Vec::new();
-    let mut by_day_before: BTreeMap<NaiveDate, Vec<(DateTime<Utc>, DateTime<Utc>)>> =
-        BTreeMap::new();
+    let mut by_day_before: BTreeMap<NaiveDate, Spans> = BTreeMap::new();
     for (s, e) in &published {
         by_day_before
             .entry(s.date_naive())

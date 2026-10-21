@@ -544,7 +544,7 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 }
 
 #[cfg(test)]
-mod schedule_candidates {
+mod tests {
     use super::*;
 
     fn tech(n: u128) -> Technician {

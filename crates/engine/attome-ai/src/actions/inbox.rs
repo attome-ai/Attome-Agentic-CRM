@@ -101,7 +101,8 @@ pub async fn file_message(
         return Err(AppError::Validation("only an inbound email can be filed".into()));
     }
     if field("entity_name") == Some(entity) && field("record_id") == Some(&record_id.to_string()) {
-        return Ok(json!({ "communication_id": communication_id, "filed": false }));
+        let unchanged = json!({ "communication_id": communication_id, "filed": false });
+        return Ok(unchanged);
     }
     ctx.security.require(entity, "update")?;
     let entity_id = state

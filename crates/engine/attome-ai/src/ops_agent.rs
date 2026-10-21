@@ -400,7 +400,10 @@ pub fn digest_due(now: DateTime<Utc>) -> bool {
 
 fn done_key(now: DateTime<Utc>) -> String {
     let week = now.iso_week();
-    format!("attome-ai:ops_digest:done:{}-W{:02}", week.year(), week.week())
+    format!(
+        "attome-ai:ops_digest:done:{}-W{:02}",
+        week.year(), week.week()
+    )
 }
 
 /// The weekly run (job [`WEEKLY_JOB`], hourly): sends the digest once a
@@ -429,7 +432,11 @@ pub async fn weekly(state: &EngineState, now: DateTime<Utc>) -> Result<Option<us
     if let Err(error) = state
         .base
         .redis
-        .set(&key, "1".to_owned(), Some(Duration::from_secs(8 * 24 * 3600)))
+        .set(
+            &key,
+            "1".to_owned(),
+            Some(Duration::from_secs(8 * 24 * 3600)),
+        )
         .await
     {
         tracing::warn!(%error, "ops digest: marker not stored");

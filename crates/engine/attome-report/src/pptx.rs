@@ -50,7 +50,7 @@ pub fn crc32(data: &[u8]) -> u32 {
 }
 
 /// A zip archive of stored entries.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ZipWriter {
     out: Vec<u8>,
     central: Vec<u8>,

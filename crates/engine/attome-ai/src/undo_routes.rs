@@ -143,7 +143,10 @@ pub(crate) async fn post_undo(
 ) -> Result<(StatusCode, Json<UndoStarted>), AppError> {
     require_session(&state, &ctx, session).await?;
     let run = crate::undo::start_undo(&state, &ctx, &[session]).await?;
-    Ok((StatusCode::ACCEPTED, Json(UndoStarted { undo_run_id: run })))
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(UndoStarted { undo_run_id: run }),
+    ))
 }
 
 type RunRow = (

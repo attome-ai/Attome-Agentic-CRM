@@ -221,8 +221,12 @@ mod tests {
         };
         let cases = negative_cases(&g, &registry);
         let refused = ids(&cases, Expect::Refused);
-        let allowed: BTreeSet<&str> =
-            BTreeSet::from(["record.get", "record.update", "email.send", "record.summarize"]);
+        let allowed: BTreeSet<&str> = BTreeSet::from([
+            "record.get",
+            "record.update",
+            "email.send",
+            "record.summarize",
+        ]);
         for d in registry.all() {
             let id = d.id.as_str();
             if !allowed.contains(id) {

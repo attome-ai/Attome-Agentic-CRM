@@ -447,8 +447,8 @@ mod tests {
         let group = eliminate(&lines);
         assert_eq!(group.get(&cash), Some(&(d("500"), Decimal::ZERO)));
         assert_eq!(group.get(&income), Some(&(Decimal::ZERO, d("500"))));
-        assert!(group.get(&due_from).is_none() && group.get(&due_to).is_none());
-        assert!(group.get(&expense).is_none());
+        assert!(!group.contains_key(&due_from) && !group.contains_key(&due_to));
+        assert!(!group.contains_key(&expense));
     }
 
     #[test]

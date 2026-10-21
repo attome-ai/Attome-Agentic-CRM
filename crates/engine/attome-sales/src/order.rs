@@ -501,8 +501,7 @@ async fn confirm_locked(
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let (status, account, currency, grand, number_text, version) =
-        row.ok_or(AppError::NotFound)?;
+    let (status, account, currency, grand, number_text, version) = row.ok_or(AppError::NotFound)?;
     let lines: Vec<(Uuid, i64, Option<bool>, LineRow)> = sqlx::query_as::<_, ConfirmLineRow>(
         "SELECT l.id, l.row_version::bigint, l.is_locked, l.product_ref, \
                 COALESCE(l.description, p.name), l.quantity::text, l.unit_price::text, \

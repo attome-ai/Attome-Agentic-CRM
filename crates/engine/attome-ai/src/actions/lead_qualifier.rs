@@ -167,9 +167,8 @@ async fn contactable_lead(
         RecordAction::Update,
     )
     .await?;
-    let row =
-        attome_records::entity_crud::read_record_bulk(state, &ctx.security, "lead", lead_id)
-            .await?;
+    let row = attome_records::entity_crud::read_record_bulk(state, &ctx.security, "lead", lead_id)
+        .await?;
     let data = row.data();
     let text = |key: &str| {
         data.get(key)
@@ -287,7 +286,14 @@ pub async fn send_message(
         None,
     )
     .await?;
-    record_outcome(state, ctx, SEND_MESSAGE, lead_id, json!({ "action": "message" })).await;
+    record_outcome(
+        state,
+        ctx,
+        SEND_MESSAGE,
+        lead_id,
+        json!({ "action": "message" }),
+    )
+    .await;
     Ok(json!({ "lead_id": lead_id, "communication_id": sent.id }))
 }
 
