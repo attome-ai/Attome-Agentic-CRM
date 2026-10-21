@@ -30,6 +30,9 @@ const EXECUTOR_TO_NODE_TYPE: Record<string, string[]> = {
   execute_webhook:           ['webhook'],
   execute_module_step:       ['module_step'],
   module_step_handler:       ['module_step'],
+  // A blocked step's retry wait (`retry_after_seconds`) is read when its
+  // outcome is mapped.
+  step_node_outcome:         ['module_step'],
   join_mode_and_threshold:   ['join'],
   rebuild_entry_rows:        ['trigger'],
   entry_condition:           ['trigger'],
