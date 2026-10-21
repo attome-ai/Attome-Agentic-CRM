@@ -100,6 +100,8 @@ pub mod deferred;
 /// pub/sub, never persisted, never replayed, never on the public widget.
 pub mod delta_stream;
 pub mod descriptor;
+/// AH4-T1: the money rule, an agent's cap on the discount its steps give.
+pub mod discount_rule;
 pub mod engine;
 pub mod eval_capture;
 pub mod eval_runner;

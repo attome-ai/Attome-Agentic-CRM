@@ -1454,6 +1454,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent discount limit (AH4-T1): an agent object may set `limits.max_discount_percent` (0–100); an agent's step whose
+  `discount_percent` is above it is refused with `discount_above_agent_limit` before it runs, so a person gives that
+  discount.
 - Agent attribution on engine writes (AK3-T1, migration `0198`): every agent action now runs inside
   `attome_core::agent_scope`, so the record audit headers and change events its engine writes name the agent's session
   (`initiator` 1) instead of reading as the person's own; `entity_change_event` gains `initiator` and `agent_session_id`.

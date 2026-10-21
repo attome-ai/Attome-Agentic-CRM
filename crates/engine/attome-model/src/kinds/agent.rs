@@ -127,6 +127,7 @@ impl Kind for AgentKind {
                         "max_steps": { "type": "integer", "minimum": 1, "maximum": MAX_STEPS_CEILING },
                         "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_CALLS_CEILING },
                         "max_tokens": { "type": "integer", "minimum": 1, "maximum": MAX_TOKENS_CEILING },
+                        "max_discount_percent": { "type": "number", "minimum": 0, "maximum": 100 },
                         "daily": {
                             "type": "object",
                             "additionalProperties": false,
@@ -265,6 +266,16 @@ impl Kind for AgentKind {
                     )),
                 }
             }
+        }
+        // AH4-T1: the money rule's cap, a percentage.
+        if let Some(cap) = limits.get("max_discount_percent")
+            && !cap.as_f64().is_some_and(|c| (0.0..=100.0).contains(&c))
+        {
+            issues.push(Issue::new(
+                "/limits/max_discount_percent",
+                "limit_exceeded",
+                "max_discount_percent is a number from 0 to 100",
+            ));
         }
         if let Some(daily) = limits.get("daily") {
             match daily.as_object() {
@@ -545,15 +556,18 @@ mod tests {
     fn daily_limits_and_persona_are_checked() {
         let mut doc = agent();
         doc["limits"]["daily"] = json!({ "deletes": 5, "record_changes": 100 });
+        doc["limits"]["max_discount_percent"] = json!(15);
         doc["persona"] =
             json!({ "model": Uuid::now_v7().to_string(), "language": "ar", "temperature": 0.3 });
         assert!(AgentKind.validate_shape(&doc).is_ok());
 
         doc["limits"]["daily"] = json!({ "deletes": -1, "naps": 2 });
+        doc["limits"]["max_discount_percent"] = json!(120);
         doc["persona"] = json!({ "model": "x", "temperature": 9, "mood": "calm" });
         let issues = AgentKind.validate_shape(&doc).unwrap_err();
         let paths: Vec<&str> = issues.iter().map(|i| i.path.as_str()).collect();
         for path in [
+            "/limits/max_discount_percent",
             "/limits/daily/deletes",
             "/limits/daily/naps",
             "/persona/model",

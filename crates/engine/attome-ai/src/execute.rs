@@ -706,6 +706,12 @@ async fn run_executor(
             AppError::internal("action has no executor")
         })?;
 
+    // AH4-T1: the money rule, before the step runs.
+    if let Err(refusal) = crate::discount_rule::check(state, ctx, args).await {
+        release_claim(state, claim).await;
+        return Err(refusal);
+    }
+
     // AK3-T1: the engine writes an agent's action makes (record audit
     // headers, change events) name the agent and its session.
     let run = executor.execute(state, ctx, args);
