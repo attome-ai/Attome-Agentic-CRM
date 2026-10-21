@@ -537,6 +537,15 @@ fn ops_settings() -> Vec<SettingDescriptor> {
 fn core_settings() -> Vec<SettingDescriptor> {
     vec![
         SettingDescriptor::new(
+            "i18n.draft_locales",
+            "Languages (BCP-47 tags such as ar-SA) whose missing metadata label translations an \
+             agent drafts for review each hour (A20-T2); none by default.",
+            || json!({"type": "array", "items": {"type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$"}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
+        SettingDescriptor::new(
             "core.locale",
             "Preferred BCP-47 locale tag used for date/number formatting and \
              (future) localized content. Inheritable at every scope: a user's \

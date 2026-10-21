@@ -948,38 +948,10 @@ async fn label_workbench(
             "status is untranslated, stale, draft or reviewed".into(),
         ));
     }
-    let units = label_units(&state, &query.locale).await?;
-    let stored: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
-        "SELECT object_kind, object_ref, source_hash, status FROM metadata_label \
-         WHERE locale = $1 AND is_deleted = false",
-    )
-    .bind(&query.locale)
-    .fetch_all(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
-    let meta: std::collections::HashMap<String, (Option<String>, bool)> = stored
+    let items: Vec<WorkbenchRow> = workbench_rows(&state, &query.locale)
+        .await?
         .into_iter()
-        .map(|(kind, reference, hash, status)| {
-            (format!("{kind}:{reference}"), (hash, status == "reviewed"))
-        })
-        .collect();
-    let items: Vec<WorkbenchRow> = units
-        .into_iter()
-        .map(|unit| {
-            let (hash, reviewed) = meta.get(&unit.id).cloned().unwrap_or((None, true));
-            let status = workbench_status(
-                &unit.source,
-                unit.target.as_deref(),
-                hash.as_deref(),
-                reviewed,
-            );
-            WorkbenchRow {
-                key: unit.id,
-                source: unit.source,
-                target: unit.target,
-                status,
-            }
-        })
+        .map(|(row, _)| row)
         .filter(|row| wanted.is_none_or(|w| row.status == w))
         .collect();
     let total = i64::try_from(items.len()).map_err(AppError::internal)?;
@@ -989,6 +961,53 @@ async fn label_workbench(
         1,
         total.max(1),
     )))
+}
+
+/// Every label-able text in `locale` with its status, and whether its stored
+/// translation was reviewed by a person (A20-T2 redraws only unreviewed ones).
+pub(crate) async fn workbench_rows(
+    state: &EngineState,
+    locale: &str,
+) -> Result<Vec<(WorkbenchRow, bool)>, AppError> {
+    let units = label_units(state, locale).await?;
+    let stored: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
+        "SELECT object_kind, object_ref, source_hash, status FROM metadata_label \
+         WHERE locale = $1 AND is_deleted = false",
+    )
+    .bind(locale)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let meta: std::collections::HashMap<String, (Option<String>, bool)> = stored
+        .into_iter()
+        .map(|(kind, reference, hash, status)| {
+            (format!("{kind}:{reference}"), (hash, status == "reviewed"))
+        })
+        .collect();
+    Ok(units
+        .into_iter()
+        .map(|unit| {
+            let (hash, reviewed) = meta.get(&unit.id).cloned().unwrap_or((None, true));
+            let status = workbench_status(
+                &unit.source,
+                unit.target.as_deref(),
+                hash.as_deref(),
+                reviewed,
+            );
+            let row = WorkbenchRow {
+                key: unit.id,
+                source: unit.source,
+                target: unit.target,
+                status,
+            };
+            (row, reviewed)
+        })
+        .collect())
+}
+
+/// A20-T2: this node's label cache refreshed after drafts were written.
+pub(crate) async fn refresh_labels(state: &EngineState) {
+    refresh_local_labels(state).await;
 }
 
 /// Every label-able text with its default and the `locale` translation.

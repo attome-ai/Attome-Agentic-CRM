@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent-drafted label translations (A20-T2): with languages named in the new setting `i18n.draft_locales` (none by
+  default), an hourly job (`label_translation_drafts`) translates up to 100 untranslated entity, attribute and choice
+  labels per language through `text.translate` (glossary, cache, model approval and budget as usual) and stores them as
+  `draft` for the workbench's review; a person's reviewed translation is never replaced.
 - Model usage rows (Z9-T5, migration `0199`): every budgeted model call writes an `ai_usage_event` row with the person,
   the agent session when an agent made it, the feature, the model that answered, its prompt, completion and cached tokens,
   its cost when the model has a configured price, and its latency.

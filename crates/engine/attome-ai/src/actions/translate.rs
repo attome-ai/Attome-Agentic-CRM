@@ -175,6 +175,27 @@ struct CachedTranslation {
     model_id: String,
 }
 
+/// A20-T2: translates `text` as `ctx` exactly as `text.translate` does (the
+/// glossary, the cache, the model approval and the budget), for engine
+/// callers that need the translation itself.
+pub async fn translate(
+    state: &EngineState,
+    ctx: &ActionContext,
+    text: &str,
+    from: Option<&str>,
+    to: &str,
+) -> Result<String, AppError> {
+    let mut args = json!({ "text": text, "to": to });
+    if let Some(from) = from {
+        args["from"] = json!(from);
+    }
+    let result = TextTranslate.execute(state, ctx, &args).await?;
+    result.value["translation"]
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| AppError::internal("the translation had no text"))
+}
+
 pub(crate) struct TextTranslate;
 
 impl Action for TextTranslate {

@@ -2827,6 +2827,8 @@ const DEDUP_KEY_MEETING_BRIEF_SCAN: &str = "ai-meeting-brief-scan";
 const DEDUP_KEY_PROMISE_EXTRACT: &str = "ai-promise-extract";
 /// AI8-T3: the nightly agent performance rollup (a registered job type).
 const DEDUP_KEY_AGENT_STATS: &str = "ai-agent-stats-rollup";
+/// A20-T2: the hourly label translation drafts (a registered job type).
+const DEDUP_KEY_LABEL_DRAFTS: &str = "label-translation-drafts";
 /// AH5-T2: the five-minute agent departure check (a registered job type).
 const DEDUP_KEY_AGENT_CHECK: &str = "ai-agent-behaviour-check";
 /// AH5-T1: the hourly agent activity roll-up (a registered job type).
@@ -2964,6 +2966,10 @@ pub const AGENT_STATS_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::NIGHTLY_JOB, 1);
 pub const AGENT_STATS_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::BACKFILL_JOB, 1);
+
+/// A20-T2: missing label translations drafted for review.
+pub const LABEL_DRAFTS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::label_drafts::DRAFT_JOB, 1);
 
 /// AH5-T2: each agent's current hour compared with its baseline.
 pub const AGENT_CHECK: attome_jobs::JobType =
@@ -3434,6 +3440,17 @@ pub fn register_job_types() {
                 {
                     tracing::info!(written, "agent performance: yesterday rolled up");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            LABEL_DRAFTS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                attome_api::label_drafts::draft_missing(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -4137,6 +4154,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CREDIT_HOLD.name => DEDUP_KEY_CREDIT_HOLD,
         EngineJob::Registered(job) if job.name == AGENT_BEHAVIOUR.name => DEDUP_KEY_AGENT_BEHAVIOUR,
         EngineJob::Registered(job) if job.name == AGENT_CHECK.name => DEDUP_KEY_AGENT_CHECK,
+        EngineJob::Registered(job) if job.name == LABEL_DRAFTS.name => DEDUP_KEY_LABEL_DRAFTS,
         EngineJob::Registered(job) if job.name == DECISION_MEASURE.name => {
             DEDUP_KEY_DECISION_MEASURE
         }
@@ -4733,6 +4751,21 @@ pub fn spawn_agent_stats_scheduler(db: DbPool, interval: std::time::Duration) {
             "agent performance rollup",
         ),
         Err(error) => tracing::error!(%error, "agent performance rollup: not scheduled"),
+    }
+}
+
+/// A20-T2: every hour, missing label translations drafted for review.
+pub fn spawn_label_drafts_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(LABEL_DRAFTS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_LABEL_DRAFTS,
+            "label translation drafts",
+        ),
+        Err(error) => tracing::error!(%error, "label translation drafts: not scheduled"),
     }
 }
 
