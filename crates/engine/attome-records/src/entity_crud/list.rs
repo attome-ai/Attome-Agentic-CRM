@@ -23,7 +23,6 @@ use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use serde_json::Value;
 use utoipa::IntoParams;
-use uuid::Uuid;
 
 use crate::query_exec::ExecuteQueryRequest;
 
@@ -58,8 +57,9 @@ pub struct ListParams {
     pub sort: Option<String>,
     /// 1 to 200; 50 when absent.
     pub page_size: Option<i64>,
-    /// The previous page's `next_cursor`.
-    pub cursor: Option<Uuid>,
+    /// The previous page's `next_cursor`, verbatim (a cursor this
+    /// deployment did not issue is a 400 `invalid_cursor`).
+    pub cursor: Option<String>,
 }
 
 /// Every `filter[<field>][<op>]` pair among `pairs`.
@@ -152,7 +152,7 @@ pub(super) async fn list_records(
         order_by,
         order_dir,
         page_size,
-        params.cursor,
+        attome_types::cursor::open_uuid(params.cursor.as_deref())?,
         select,
     );
     let response =

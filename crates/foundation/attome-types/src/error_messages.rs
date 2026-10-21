@@ -151,6 +151,11 @@ const MESSAGES: &[(&str, &str, &str)] = &[
     ),
     ("request_rejected", "The request was refused.", "رُفض الطلب."),
     (
+        "invalid_cursor",
+        "This page link is not valid. Start again from the first page.",
+        "رابط الصفحة هذا غير صالح. ابدأ من الصفحة الأولى.",
+    ),
+    (
         "idempotency_outcome_unknown",
         "It is not known whether the earlier request finished. Check before retrying.",
         "لا يُعرف إن كان الطلب السابق قد اكتمل. تحقّق قبل إعادة المحاولة.",

@@ -790,7 +790,10 @@ pub(crate) async fn list_messages(
         .page_size
         .unwrap_or(DEFAULT_MESSAGE_PAGE)
         .clamp(1, MAX_MESSAGE_PAGE);
-    let cursor = query.cursor.as_deref().map(decode_cursor).transpose()?;
+    let cursor = attome_types::cursor::open_opt(query.cursor.as_deref())?
+        .as_deref()
+        .map(decode_cursor)
+        .transpose()?;
     let (at, after) = cursor.map_or((None, None), |(t, i)| (Some(t), Some(i)));
     let mut rows: Vec<MessageRow> = match query.thread {
         // A thread reads forward from its root.

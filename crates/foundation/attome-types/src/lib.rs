@@ -32,6 +32,7 @@ pub mod api_version;
 /// Z14-T6 — per-item batch results and response warnings.
 pub mod batch;
 pub mod clock;
+pub mod cursor;
 pub mod error;
 pub mod error_codes;
 /// Z14-T3 — error titles in English and Arabic.

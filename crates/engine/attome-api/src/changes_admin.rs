@@ -837,7 +837,10 @@ async fn list_changes(
         .page_size
         .unwrap_or(DEFAULT_PAGE_SIZE)
         .clamp(1, MAX_PAGE_SIZE);
-    let cursor = q.cursor.as_deref().map(Cursor::decode).transpose()?;
+    let cursor = attome_types::cursor::open_opt(q.cursor.as_deref())?
+        .as_deref()
+        .map(Cursor::decode)
+        .transpose()?;
 
     let to = q.to.unwrap_or_else(Utc::now);
     let from = q

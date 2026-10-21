@@ -267,6 +267,11 @@ pub enum AppError {
     #[error("the request was refused")]
     RequestRejected(&'static str),
 
+    /// Z14-T5: a keyset cursor this deployment did not issue (forged,
+    /// altered or cut short); the client starts again from the first page.
+    #[error("the cursor is not valid; start again from the first page")]
+    InvalidCursor,
+
     /// A same-key retry of an earlier request whose outcome the server cannot
     /// know: it timed out, panicked, lost its client mid-request, or failed
     /// with an error that may have followed a write. The server will not run
@@ -407,6 +412,7 @@ impl IntoResponse for AppError {
             AppError::ReadOnly => (StatusCode::SERVICE_UNAVAILABLE, "read_only"),
             AppError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
             AppError::RequestRejected(_) => (StatusCode::BAD_REQUEST, "request_rejected"),
+            AppError::InvalidCursor => (StatusCode::BAD_REQUEST, "invalid_cursor"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
             }
@@ -1393,6 +1399,7 @@ mod tests {
             AppError::LimitExceeded { .. } => 29,
             AppError::CustomerTestsFailed(_) => 30,
             AppError::RequestRejected(_) => 31,
+            AppError::InvalidCursor => 32,
         }
     }
 
@@ -1470,6 +1477,7 @@ mod tests {
             AppError::ReadOnly,
             AppError::PayloadTooLarge,
             AppError::RequestRejected("x"),
+            AppError::InvalidCursor,
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,
             AppError::Internal("x".to_string()),
@@ -1553,7 +1561,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=31).collect::<Vec<_>>(),
+            (0..=32).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

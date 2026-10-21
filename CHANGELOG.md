@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Keyset cursors are signed (Z14-T5). **Breaking:** every `next_cursor` a list returns is now an opaque
+  signed value; send it back verbatim. A cursor the deployment did not issue, a tampered one or a bare
+  row id (what the entity list, AI evidence and others sent before) is `400 invalid_cursor`; start
+  again from the first page. The key derives from `auth.jwt_secret`, so all nodes agree and a key
+  rotation keeps lists paging.
 - Agent autonomy levels (AH8, V2-D693): an administrator can now let an agent run an action on its
   own, per agent and per action (`/api/v1/admin/ai/agents/{agent}/autonomy`), including a
   consequential one, which until now always waited for a second person's approval. With no level set

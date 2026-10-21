@@ -84,8 +84,9 @@ async fn list_provider(
         .limit
         .unwrap_or(DEFAULT_PAGE_SIZE)
         .clamp(1, MAX_PAGE_SIZE) as usize;
+    let cursor = attome_types::cursor::open_opt(query.cursor.as_deref())?;
     let page = provider
-        .list(&state, &ctx, query.cursor.as_deref(), limit)
+        .list(&state, &ctx, cursor.as_deref(), limit)
         .await?;
     Ok(Json(page))
 }

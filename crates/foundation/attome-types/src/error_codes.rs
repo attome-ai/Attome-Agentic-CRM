@@ -151,6 +151,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "invalid_cursor",
+        "The cursor was not issued by this deployment; start again from the first page.",
+        false,
+    ),
+    code(
         "idempotency_outcome_unknown",
         "An earlier attempt with this key did not finish; its outcome is unknown.",
         false,

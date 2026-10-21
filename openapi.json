@@ -1541,14 +1541,13 @@
           {
             "name": "cursor",
             "in": "path",
-            "description": "The last row's id from the previous page.",
+            "description": "The previous page's `next_cursor`, verbatim.",
             "required": true,
             "schema": {
               "type": [
                 "string",
                 "null"
-              ],
-              "format": "uuid"
+              ]
             }
           }
         ],
@@ -89057,11 +89056,10 @@
           {
             "name": "cursor",
             "in": "query",
-            "description": "The previous page's `next_cursor`.",
+            "description": "The previous page's `next_cursor`, verbatim (a cursor this\ndeployment did not issue is a 400 `invalid_cursor`).",
             "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           }
         ],
@@ -111957,7 +111955,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112055,7 +112054,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112146,7 +112146,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112203,7 +112204,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112270,7 +112272,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112353,7 +112356,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112441,7 +112445,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112537,7 +112542,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112599,7 +112605,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -112626,7 +112633,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
           },
           "total": {
             "type": [
@@ -116950,7 +116958,7 @@
       },
       "ErrorCode": {
         "type": "string",
-        "description": "Every `error` code the API answers with.\n\n`not_found`: No such resource, or the caller may not see it.\n`unauthorized`: Missing or invalid credentials.\n`forbidden`: The caller lacks the privilege for this action.\n`attribute_not_writable`: The write sets an attribute the caller may not write; `field` names it.\n`limit_exceeded`: The request is past a limit; `limit`, `value` and `next` say which and what to do.\n`conflict`: The request conflicts with the current state.\n`version_conflict`: The record changed since the caller read it; read it again and retry.\n`duplicate_detected`: The save matches existing records under a blocking duplicate rule.\n`idempotency_conflict`: The idempotency key was used for a different request.\n`validation_error`: The request failed validation.\n`customer_tests_failed`: A publish was refused because blocking customer tests failed; `tests` names them.\n`rule_violation`: A business rule refused the write; `rule_id` names it.\n`field_locked`: A business rule locks a field the write changed.\n`field_locked_required`: A locked field is required and was left empty.\n`feature_unavailable`: The feature is not available on this deployment.\n`feature_hidden`: The feature is switched off for this deployment.\n`rate_limit_exceeded` (retryable): Too many requests; wait for `Retry-After`.\n`overloaded` (retryable): The server is overloaded; retry shortly.\n`capability_unavailable` (retryable): A service the request needs is down; retry after `Retry-After`.\n`metadata_authoring_locked`: Metadata changes are locked on this deployment.\n`transition_not_allowed`: The state model does not allow this change of state.\n`reauth_required`: The action needs a fresh sign-in or second factor first.\n`server_timeout` (retryable): The request took too long; it may be retried.\n`query_timeout`: An interactive query ran past its limit; run it as an export.\n`read_only` (retryable): Changes are paused on this deployment; reads still work.\n`payload_too_large`: The request body is too large or too deeply nested.\n`request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.\n`idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.\n`idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.\n`method_not_allowed`: The path exists but not for this method; see `Allow`.\n`api_version_sunset`: The API version this request is answered at was retired; `supported` lists the current ones.\n`unsupported_api_version`: The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.\n`internal_error` (retryable): An unexpected error; the request id finds it in the logs.",
+        "description": "Every `error` code the API answers with.\n\n`not_found`: No such resource, or the caller may not see it.\n`unauthorized`: Missing or invalid credentials.\n`forbidden`: The caller lacks the privilege for this action.\n`attribute_not_writable`: The write sets an attribute the caller may not write; `field` names it.\n`limit_exceeded`: The request is past a limit; `limit`, `value` and `next` say which and what to do.\n`conflict`: The request conflicts with the current state.\n`version_conflict`: The record changed since the caller read it; read it again and retry.\n`duplicate_detected`: The save matches existing records under a blocking duplicate rule.\n`idempotency_conflict`: The idempotency key was used for a different request.\n`validation_error`: The request failed validation.\n`customer_tests_failed`: A publish was refused because blocking customer tests failed; `tests` names them.\n`rule_violation`: A business rule refused the write; `rule_id` names it.\n`field_locked`: A business rule locks a field the write changed.\n`field_locked_required`: A locked field is required and was left empty.\n`feature_unavailable`: The feature is not available on this deployment.\n`feature_hidden`: The feature is switched off for this deployment.\n`rate_limit_exceeded` (retryable): Too many requests; wait for `Retry-After`.\n`overloaded` (retryable): The server is overloaded; retry shortly.\n`capability_unavailable` (retryable): A service the request needs is down; retry after `Retry-After`.\n`metadata_authoring_locked`: Metadata changes are locked on this deployment.\n`transition_not_allowed`: The state model does not allow this change of state.\n`reauth_required`: The action needs a fresh sign-in or second factor first.\n`server_timeout` (retryable): The request took too long; it may be retried.\n`query_timeout`: An interactive query ran past its limit; run it as an export.\n`read_only` (retryable): Changes are paused on this deployment; reads still work.\n`payload_too_large`: The request body is too large or too deeply nested.\n`request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.\n`invalid_cursor`: The cursor was not issued by this deployment; start again from the first page.\n`idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.\n`idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.\n`method_not_allowed`: The path exists but not for this method; see `Allow`.\n`api_version_sunset`: The API version this request is answered at was retired; `supported` lists the current ones.\n`unsupported_api_version`: The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.\n`internal_error` (retryable): An unexpected error; the request id finds it in the logs.",
         "enum": [
           "not_found",
           "unauthorized",
@@ -116979,6 +116987,7 @@
           "read_only",
           "payload_too_large",
           "request_rejected",
+          "invalid_cursor",
           "idempotency_outcome_unknown",
           "idempotency_replay_unavailable",
           "method_not_allowed",
@@ -117057,7 +117066,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "errors": {
             "type": [
@@ -161627,6 +161636,7 @@
     }
   ],
   "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -161678,6 +161688,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

@@ -23463,6 +23463,11 @@ export interface components {
                 occurred_at: string;
                 reference: string;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23493,6 +23498,11 @@ export interface components {
                 /** Format: uuid */
                 user_id?: string | null;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23530,6 +23540,11 @@ export interface components {
                 /** @description The record's primary name, when its entity declares one. */
                 record_name?: string | null;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23550,6 +23565,11 @@ export interface components {
                 /** @description `agent` or `customer`. */
                 sender: string;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23571,6 +23591,11 @@ export interface components {
                 record_id: string;
                 user_display_name?: string | null;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23603,6 +23628,11 @@ export interface components {
                 /** Format: uuid */
                 thread_root_id?: string | null;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23656,6 +23686,11 @@ export interface components {
                 state: string;
                 title: string;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23702,6 +23737,11 @@ export interface components {
                 /** Format: uuid */
                 user_id?: string | null;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23735,6 +23775,11 @@ export interface components {
                 /** @description Short, human-readable description of the event. */
                 summary: string;
             }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -23746,6 +23791,11 @@ export interface components {
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_Value: {
             items: unknown[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
             next_cursor?: string | null;
             /**
              * Format: int64
@@ -25417,6 +25467,7 @@ export interface components {
          *     `read_only` (retryable): Changes are paused on this deployment; reads still work.
          *     `payload_too_large`: The request body is too large or too deeply nested.
          *     `request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.
+         *     `invalid_cursor`: The cursor was not issued by this deployment; start again from the first page.
          *     `idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.
          *     `idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.
          *     `method_not_allowed`: The path exists but not for this method; see `Allow`.
@@ -25425,7 +25476,7 @@ export interface components {
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
@@ -25475,7 +25526,7 @@ export interface components {
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
              *     `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
-             *     `request_rejected`,
+             *     `request_rejected`, `invalid_cursor`,
              *     `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
              *     `method_not_allowed`, or
              *     `internal_error` — one per `AppError` variant (`FieldLocked` answers
@@ -43691,7 +43742,7 @@ export interface operations {
                 model: string | null;
                 from: string | null;
                 to: string | null;
-                /** @description The last row's id from the previous page. */
+                /** @description The previous page's `next_cursor`, verbatim. */
                 cursor: string | null;
             };
             cookie?: never;
@@ -96879,7 +96930,10 @@ export interface operations {
                 sort?: string;
                 /** @description 1 to 200; 50 when absent. */
                 page_size?: number;
-                /** @description The previous page's `next_cursor`. */
+                /**
+                 * @description The previous page's `next_cursor`, verbatim (a cursor this
+                 *     deployment did not issue is a 400 `invalid_cursor`).
+                 */
                 cursor?: string;
             };
             header?: never;

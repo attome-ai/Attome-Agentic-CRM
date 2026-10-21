@@ -973,21 +973,24 @@ async fn malformed_cursor_is_a_422() {
     );
     assert_eq!(
         get(&state, &format!("{base}/timeline?cursor=not-a-cursor")).await,
-        StatusCode::UNPROCESSABLE_ENTITY
+        StatusCode::BAD_REQUEST
     );
     assert_eq!(
         get(&state, &format!("{base}/history?cursor=not-a-cursor")).await,
-        StatusCode::UNPROCESSABLE_ENTITY
+        StatusCode::BAD_REQUEST
     );
     assert_eq!(
         get(&state, &format!("{base}/timeline?kinds=note,bogus")).await,
         StatusCode::UNPROCESSABLE_ENTITY
     );
-    // Well-formed base64, wrong route's tag.
+    // Z14-T5: signed by the server, but the history route's tag: the
+    // timeline route's own 422.
     let history_cursor = {
         use base64::Engine as _;
-        base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .encode(format!("1:change:{}", Uuid::now_v7()))
+        attome_types::cursor::seal(
+            &base64::engine::general_purpose::URL_SAFE_NO_PAD
+                .encode(format!("1:change:{}", Uuid::now_v7())),
+        )
     };
     assert_eq!(
         get(&state, &format!("{base}/timeline?cursor={history_cursor}")).await,

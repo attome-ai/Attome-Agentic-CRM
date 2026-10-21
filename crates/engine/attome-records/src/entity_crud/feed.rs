@@ -407,8 +407,9 @@ pub async fn feed(
 pub(super) async fn get_feed(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
-    Query(query): Query<FeedQuery>,
+    Query(mut query): Query<FeedQuery>,
 ) -> Result<Json<CursorPage<FeedItem>>, AppError> {
+    query.cursor = attome_types::cursor::open_opt(query.cursor.as_deref())?;
     Ok(Json(feed(&state, &ctx, &query).await?))
 }
 

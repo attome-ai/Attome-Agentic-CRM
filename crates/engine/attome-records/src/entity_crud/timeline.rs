@@ -1049,8 +1049,9 @@ pub(super) async fn get_record_timeline(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
-    Query(query): Query<TimelineQuery>,
+    Query(mut query): Query<TimelineQuery>,
 ) -> Result<Json<CursorPage<TimelineEntry>>, AppError> {
+    query.cursor = attome_types::cursor::open_opt(query.cursor.as_deref())?;
     let opts = TimelineOptions::from_query(&query)?;
     Ok(Json(
         record_timeline(&state, &ctx, &entity_input, record_id, &opts).await?,

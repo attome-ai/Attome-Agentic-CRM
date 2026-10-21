@@ -46,9 +46,9 @@ pub struct EvidenceQuery {
     pub from: Option<DateTime<Utc>>,
     #[serde(default)]
     pub to: Option<DateTime<Utc>>,
-    /// The last row's id from the previous page.
+    /// The previous page's `next_cursor`, verbatim.
     #[serde(default)]
-    pub cursor: Option<Uuid>,
+    pub cursor: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
@@ -91,7 +91,7 @@ async fn evidence(
     if from > to {
         return Err(AppError::Validation("from must be before to".into()));
     }
-    let cursor = q.cursor.unwrap_or(Uuid::nil());
+    let cursor = attome_types::cursor::open_uuid(q.cursor.as_deref())?.unwrap_or(Uuid::nil());
     let rows: Vec<EvidenceRow> = match q.kind.as_deref().unwrap_or("actions") {
         "actions" => sqlx::query_as(
             "SELECT i.id, i.created_at AS at, i.action_id, i.outcome, \

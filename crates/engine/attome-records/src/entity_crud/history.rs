@@ -757,8 +757,9 @@ pub(super) async fn get_record_history(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
-    Query(query): Query<RecordHistoryQuery>,
+    Query(mut query): Query<RecordHistoryQuery>,
 ) -> Result<Json<CursorPage<RecordHistoryChange>>, AppError> {
+    query.cursor = attome_types::cursor::open_opt(query.cursor.as_deref())?;
     Ok(Json(
         record_history(&state, &ctx, &entity_input, record_id, &query).await?,
     ))
@@ -1235,8 +1236,9 @@ const SEARCH_CURSOR_TAG: &str = "hsearch";
 pub(super) async fn search_history_route(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
-    Query(query): Query<HistorySearchQuery>,
+    Query(mut query): Query<HistorySearchQuery>,
 ) -> Result<Json<CursorPage<HistoryMatch>>, AppError> {
+    query.cursor = attome_types::cursor::open_opt(query.cursor.as_deref())?;
     Ok(Json(search_history(&state, &ctx, &query).await?))
 }
 

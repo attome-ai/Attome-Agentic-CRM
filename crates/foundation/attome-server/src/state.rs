@@ -219,6 +219,15 @@ impl AppState {
         );
         // Z4-T3: the Ed25519 token-signing ring, when configured.
         attome_auth::jwt::install_signing_keys(&config.auth.jwt_signing_keys);
+        // Z14-T5: keyset cursors are signed with a key derived from the
+        // deployment's JWT secret ring, the same on every node.
+        {
+            let ring = &config.auth.jwt_secret;
+            attome_types::cursor::install_keys(
+                ring.keys.get(&ring.active_key_id).map(String::as_bytes),
+                ring.keys.values().map(String::as_bytes),
+            );
+        }
         Self {
             config: Arc::new(config),
             db,

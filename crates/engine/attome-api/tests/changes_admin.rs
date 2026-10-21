@@ -689,7 +689,8 @@ fn malformed_cursor_is_validation_error() {
         let (_, admin_cookie) = seed_admin(&db).await;
         let app = full_app(system);
 
-        // "djE6MDow" is base64url for "v1:0:0" — well-formed base64, too few parts.
+        // Z14-T5: a cursor the server did not sign is refused before it is
+        // read. "djE6MDow" is base64url for "v1:0:0".
         for cursor in ["not-a-cursor", "djE6MDow", "%21%21%21"] {
             let resp = app
                 .clone()
@@ -699,7 +700,19 @@ fn malformed_cursor_is_validation_error() {
                 ))
                 .await
                 .unwrap();
-            assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY, "{cursor}");
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "{cursor}");
         }
+        // A signed cursor whose text is malformed (well-formed base64, too
+        // few parts) is still the route's own 422.
+        let signed = attome_types::cursor::seal("djE6MDow");
+        let resp = app
+            .clone()
+            .oneshot(get_req(
+                &format!("/api/v1/admin/changes?cursor={signed}"),
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY, "{signed}");
     })
 }

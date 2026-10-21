@@ -143,7 +143,7 @@ pub struct ErrorResponse {
     /// `metadata_authoring_locked`, `transition_not_allowed`,
     /// `rule_violation`, `field_locked`, `field_locked_required`,
     /// `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
-    /// `request_rejected`,
+    /// `request_rejected`, `invalid_cursor`,
     /// `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
     /// `method_not_allowed`, or
     /// `internal_error` — one per `AppError` variant (`FieldLocked` answers
@@ -354,7 +354,15 @@ impl<T> PaginatedResponse<T> {
 )]
 pub struct CursorPage<T> {
     pub items: Vec<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Opaque and signed: send it back verbatim as `cursor` for the next
+    /// page. A cursor this deployment did not issue is a 400
+    /// `invalid_cursor`.
+    // Z14-T5: in the process this is the route's own cursor text; it
+    // leaves sealed (`crate::cursor`).
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "crate::cursor::serialize_sealed"
+    )]
     pub next_cursor: Option<String>,
     /// Exact size of the whole window, when the route counts it (first page
     /// only); absent otherwise.
@@ -526,7 +534,10 @@ mod tests {
     fn cursor_page_includes_next_cursor_from_json_when_some() {
         let page = CursorPage::new(vec![1], Some("xyz".to_owned()));
         let json = serde_json::to_value(&page).unwrap();
-        assert_eq!(json["next_cursor"], "xyz");
+        // Z14-T5: sent sealed; it opens back to the route's own text.
+        let sent = json["next_cursor"].as_str().unwrap();
+        assert_ne!(sent, "xyz");
+        assert_eq!(crate::cursor::open(sent).unwrap(), "xyz");
     }
 
     // ── BTY-P0.1 → BTY-F1 (S1): the published paging text must be true ───────
