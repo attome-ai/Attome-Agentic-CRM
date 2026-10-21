@@ -583,6 +583,18 @@ export const xrmEn = {
     status: { pending: 'Waiting', accepted: 'Accepted', returned: 'Handed back', cancelled: 'Cancelled' },
   },
   // AI8-T6 — agent performance.
+  // AK3-T7 — the share of each process's work agents do.
+  aiWorkShare: {
+    title: 'Work done by agents',
+    intro: 'For each process, how many tasks agents and people completed, the hand-offs between them, and the agents\' share. Open any day to see the records behind it.',
+    from: 'From', to: 'To', show: 'Show',
+    share: 'Agents: {pct}%', noShare: 'Nothing completed yet',
+    byAgent: 'By agents: {count}', byPerson: 'By people: {count}', handed: 'Hand-offs: {count}',
+    trend: 'Agents\' share per day', none: 'No work measure is active.',
+    events: 'Completions', eventsOf: 'Completed on {day} {by}', by: { agent: 'by agents', person: 'by people' },
+    close: 'Close', noEvents: 'No completions are kept for this day.', more: 'More',
+    link: 'Work done by agents',
+  },
   aiPerformance: {
     title: 'Agent performance',
     intro: 'How each agent did over the range, from the nightly figures. Open any day to see the runs behind it.',

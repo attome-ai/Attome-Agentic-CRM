@@ -1,6 +1,7 @@
 import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiError, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import type { ChartCategory, ChartSeries } from '@attome/xrm/dashboard/chart';
 
@@ -64,11 +65,12 @@ export function trend(days: AgentPerformanceDay[], names: { done: string; resolv
   selector: 'xrm-ai-agent-performance',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LocalDatePipe, NgComponentOutlet, TranslatePipe],
+  imports: [FormsModule, LocalDatePipe, NgComponentOutlet, RouterLink, TranslatePipe],
   template: `
     <section class="aap">
       <h2>{{ 'aiPerformance.title' | translate }}</h2>
       <p class="aap-muted">{{ 'aiPerformance.intro' | translate }}</p>
+      <a class="aap-link" routerLink="/xrm/ai/agents/work-share">{{ 'aiWorkShare.link' | translate }}</a>
       <form class="aap-range" (ngSubmit)="load()">
         <label>{{ 'aiPerformance.from' | translate }} <input type="date" name="from" [(ngModel)]="from" /></label>
         <label>{{ 'aiPerformance.to' | translate }} <input type="date" name="to" [(ngModel)]="to" /></label>

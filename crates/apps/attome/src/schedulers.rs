@@ -138,6 +138,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_agent_stats_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // A20-T2: missing label translations drafted for review, hourly.
     crate::jobs::spawn_label_drafts_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // AK3-T5: the change feed counted into the work share every minute.
+    crate::jobs::spawn_work_share_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // AH5-T2: agents compared with their baselines every five minutes.
     crate::jobs::spawn_agent_check_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // AH5-T1: agent activity rolled up hourly, baselines at 03:00 UTC.

@@ -1454,6 +1454,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Work done by agents (AK3, migration `0201`): a change-feed consumer counts, each minute, the completions of
+  every active work measure (`ai_work_measure`) by agents and by people, from each event's initiator, with the
+  day's ticket hand-offs. Counts are kept in `ai_work_share_daily` and rebuildable through
+  `POST /api/v1/admin/ai/work-share/rebuild`. `GET /api/v1/admin/ai/work-share` and `.../{process_key}/events`
+  read them, and the new page `/ai/agents/work-share` is linked from agent performance.
 - Bulk edit dialog (B5-T4): the entity list's bulk edit now runs through `/bulk-edit`. It edits the selection or every
   record matching the current filters, with several operations (set, clear, add or remove an option, increase a
   number) and a preview. Results list each record not changed, linked, with the reason in the user's language. The

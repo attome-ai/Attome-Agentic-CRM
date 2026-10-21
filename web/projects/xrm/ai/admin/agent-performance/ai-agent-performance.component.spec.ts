@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ApiService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -44,6 +45,7 @@ describe('AiAgentPerformanceComponent (AI8-T6)', () => {
     TestBed.configureTestingModule({
       imports: [AiAgentPerformanceComponent],
       providers: [
+        provideRouter([]),
         { provide: ApiService, useValue: { get } },
         {
           provide: LangService,

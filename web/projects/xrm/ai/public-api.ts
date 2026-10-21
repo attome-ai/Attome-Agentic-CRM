@@ -60,6 +60,15 @@ export type {
   PaymentPromise,
   PromiseChanged,
 } from './collections/ai-collections.service';
+// AK3-T7: work done by agents ('ai/agents/work-share').
+export {
+  AiWorkShareComponent,
+  dayBar,
+  sharePercent,
+  workShareRange,
+} from './admin/work-share/ai-work-share.component';
+export { AiWorkShareService } from './admin/work-share/ai-work-share.service';
+export type { DoneBy, ProcessShare, ShareDay, ShareEvent, ShareEventsPage } from './admin/work-share/ai-work-share.service';
 // AI8-T6: agent performance ('ai/agents/performance').
 export {
   AiAgentPerformanceComponent,

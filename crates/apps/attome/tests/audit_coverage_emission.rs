@@ -4195,6 +4195,16 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/admin/ai/work-share/rebuild" => {
+            // AK3-T6: queuing a recount writes its Ai event.
+            let today = chrono::Utc::now().date_naive();
+            request(
+                "POST",
+                "/api/v1/admin/ai/work-share/rebuild",
+                t,
+                Some(json!({ "from": today, "to": today })),
+            )
+        }
         "POST /api/v1/admin/ai/agents/{id}/rollback" => {
             // AH2-T4: an agent with one ended session rolls back to a run
             // with nothing to do, which still writes its Ai event.

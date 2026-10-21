@@ -116,6 +116,7 @@ impl EngineModel for ActionModel {
             .merge(crate::agent_stats_routes::routes())
             .merge(crate::undo_routes::routes())
             .merge(crate::behaviour_routes::routes())
+            .merge(crate::work_share_routes::routes())
             // AI5-T6 — collections promises and reminders.
             .merge(crate::collections_routes::routes())
             // AI6-T6 — meeting briefs and notes.

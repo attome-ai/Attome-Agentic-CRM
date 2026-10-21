@@ -858,6 +858,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiAgentPerformanceComponent),
           },
           {
+            // AK3-T7 — the share of each process's work agents do; the admin
+            // routes behind it answer 403 to anyone else.
+            path: 'ai/agents/work-share',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiWorkShareComponent),
+          },
+          {
             // M26 Phase 2 backlog — the new architecture's read-only viewer
             // (`?id=`, `withComponentInputBinding()`): a page/section/widget
             // tree has no business rendering through the generic entity

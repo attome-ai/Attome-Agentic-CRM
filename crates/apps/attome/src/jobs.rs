@@ -2829,6 +2829,8 @@ const DEDUP_KEY_PROMISE_EXTRACT: &str = "ai-promise-extract";
 const DEDUP_KEY_AGENT_STATS: &str = "ai-agent-stats-rollup";
 /// A20-T2: the hourly label translation drafts (a registered job type).
 const DEDUP_KEY_LABEL_DRAFTS: &str = "label-translation-drafts";
+/// AK3-T5: the one-minute work-share consumer (a registered job type).
+const DEDUP_KEY_WORK_SHARE: &str = "ai-work-share-consume";
 /// AH5-T2: the five-minute agent departure check (a registered job type).
 const DEDUP_KEY_AGENT_CHECK: &str = "ai-agent-behaviour-check";
 /// AH5-T1: the hourly agent activity roll-up (a registered job type).
@@ -2970,6 +2972,14 @@ pub const AGENT_STATS_BACKFILL: attome_jobs::JobType =
 /// A20-T2: missing label translations drafted for review.
 pub const LABEL_DRAFTS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::label_drafts::DRAFT_JOB, 1);
+
+/// AK3-T5: the change feed counted into the work share.
+pub const WORK_SHARE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::work_share::CONSUME_JOB, 1);
+
+/// AK3-T5: one date range of the work share recounted.
+pub const WORK_SHARE_REBUILD: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::work_share::REBUILD_JOB, 1);
 
 /// AH5-T2: each agent's current hour compared with its baseline.
 pub const AGENT_CHECK: attome_jobs::JobType =
@@ -3449,6 +3459,32 @@ pub fn register_job_types() {
             LABEL_DRAFTS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 attome_api::label_drafts::draft_missing(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WORK_SHARE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_AI) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_ai::work_share::consume(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WORK_SHARE_REBUILD,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let range: attome_ai::work_share::RebuildRange = job.payload()?;
+                attome_ai::work_share::rebuild(&state, range)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
@@ -4154,6 +4190,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CREDIT_HOLD.name => DEDUP_KEY_CREDIT_HOLD,
         EngineJob::Registered(job) if job.name == AGENT_BEHAVIOUR.name => DEDUP_KEY_AGENT_BEHAVIOUR,
         EngineJob::Registered(job) if job.name == AGENT_CHECK.name => DEDUP_KEY_AGENT_CHECK,
+        EngineJob::Registered(job) if job.name == WORK_SHARE.name => DEDUP_KEY_WORK_SHARE,
         EngineJob::Registered(job) if job.name == LABEL_DRAFTS.name => DEDUP_KEY_LABEL_DRAFTS,
         EngineJob::Registered(job) if job.name == DECISION_MEASURE.name => {
             DEDUP_KEY_DECISION_MEASURE
@@ -4766,6 +4803,21 @@ pub fn spawn_label_drafts_scheduler(db: DbPool, interval: std::time::Duration) {
             "label translation drafts",
         ),
         Err(error) => tracing::error!(%error, "label translation drafts: not scheduled"),
+    }
+}
+
+/// AK3-T5: every minute, the change feed counted into the work share.
+pub fn spawn_work_share_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(WORK_SHARE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_WORK_SHARE,
+            "work share",
+        ),
+        Err(error) => tracing::error!(%error, "work share: not scheduled"),
     }
 }
 

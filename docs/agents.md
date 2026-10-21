@@ -265,6 +265,32 @@ messages and the model prices, and it can be rebuilt for a range
 - **Asking an agent:** the read-only `agent.performance` action gives administrators the same figures
   through the operations agent or MCP.
 
+## Work done by agents
+
+`/ai/agents/work-share` (administrators; `GET /api/v1/admin/ai/work-share?from&to`, the last 30 days by
+default) shows, for each process, how many tasks agents and people completed, the hand-offs between them,
+and the agents' share (agents ÷ (agents + people)), with a bar per day.
+
+- **A process is a work measure.** Each `ai_work_measure` record names an entity, an attribute and the
+  values that mean a task of the process is done, comma-separated (`service.ticket_resolved`:
+  `service_ticket`, `status`, `resolved,closed`). Add one through the generic entity API
+  (`POST /api/v1/ai_work_measure`) and set `is_active` to false to stop counting it. Values are trimmed
+  and compared exactly, case included.
+- **Counting.** Every minute a change-feed consumer (`attome-ai/work_share`) counts each create or update
+  that sets a measure's attribute to one of its values. It attributes the completion by the change event's
+  initiator: an agent acting for a person counts as the agent's, anything else as the person's. Counts and
+  the consumer's cursor move together, so each event is counted exactly once. Results are kept per
+  process and UTC day in `ai_work_share_daily`.
+- **Only completions after this release are attributed.** Change events written before events carried
+  their initiator count as a person's.
+- **Hand-offs** are the day's ticket hand-offs (`service_handoff`), shown for measures on `service_ticket`.
+- **The records behind a number:** every count of a day opens the change events behind it
+  (`GET /api/v1/admin/ai/work-share/{process_key}/events?day&by=agent|person`), each linked to its
+  record, while the change feed still keeps them.
+- **Rebuilding.** `POST /api/v1/admin/ai/work-share/rebuild` (`{ "from", "to" }`, up to a year) clears the
+  range and counts it again from the change events still kept. The table is derived and can always be
+  rebuilt; days older than the feed's retention cannot.
+
 ## Collections and renewals
 
 Collections reuse the follow-up ledger. Nothing happens until an administrator adds an

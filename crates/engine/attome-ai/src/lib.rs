@@ -188,6 +188,10 @@ pub mod undo;
 /// AH1-T5: the undo preview, start and progress routes.
 pub mod undo_routes;
 pub mod webchat;
+/// AK3-T4/T5: how much of each process's work agents do, from the change feed.
+pub mod work_share;
+/// AK3-T6: the work-share summary, drill-down and rebuild routes.
+pub mod work_share_routes;
 pub mod write_guard;
 pub mod write_policy;
 
@@ -256,6 +260,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(agent_stats_routes::openapi_fragment());
     doc.merge(undo_routes::openapi_fragment());
     doc.merge(behaviour_routes::openapi_fragment());
+    doc.merge(work_share_routes::openapi_fragment());
     doc.merge(meeting::routes::openapi_fragment());
     doc
 }
