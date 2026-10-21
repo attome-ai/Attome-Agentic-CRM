@@ -1424,6 +1424,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Meeting-notes evaluation (AI6-T8): `crates/engine/attome-ai/tests/fixtures/meeting_notes.json` holds five
   Arabic and five English made-up meetings with their expected decisions and action items and a recorded
   model output; `ai6_eval_notes_recall` replays them through the notes parser and fails under 80% recall.
+- Meeting panels (AI6-T7, `@attome/xrm/ai`): `xrm-ai-meeting-brief` shows a meeting's brief in its own
+  language's direction with a "make again" button; `xrm-ai-meeting-notes` asks for notes from a recording,
+  shows the summary and decisions, and lists action items and proposed record updates (each with its
+  transcript quote) as checkboxes; confirm sends only the checked ones under `If-Match`. English and
+  Arabic labels (`aiMeeting.*`).
 - `docs/agents.md` describes meeting briefs and notes (AI6-T9): when briefs are made, what they read and
   how they respect record access, notes from transcripts, and confirmation with gated record updates.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)

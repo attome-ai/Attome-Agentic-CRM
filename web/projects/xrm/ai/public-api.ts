@@ -35,3 +35,20 @@ export { AiSpendComponent, forecastOver, spendState, type SpendLine, type SpendR
 export type { ScopeSwitch } from './admin/scope-switches/ai-scope-switches.component';
 // AI4-T7: my follow-ups ('ai/follow-ups').
 export { AiFollowupsComponent, ageInDays, type AiFollowupItem } from './followups/ai-followups.component';
+// AI6-T7: the meeting brief and notes panels, for the meeting form to place.
+export { AiMeetingBriefComponent, textDir } from './meeting/ai-meeting-brief.component';
+export { AiMeetingNotesComponent, valueText } from './meeting/ai-meeting-notes.component';
+export {
+  AiMeetingService,
+  checkedIndexes,
+  parseNotesItems,
+  toMeetingNotes,
+} from './meeting/ai-meeting.service';
+export type {
+  MeetingActionItem,
+  MeetingBrief,
+  MeetingNotes,
+  MeetingNotesQueued,
+  MeetingRecordUpdate,
+  NotesRecord,
+} from './meeting/ai-meeting.service';

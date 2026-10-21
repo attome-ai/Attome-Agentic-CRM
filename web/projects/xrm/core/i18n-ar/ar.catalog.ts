@@ -456,6 +456,28 @@ export const xrmAr = {
     reason: { stalled_deal: 'صفقة متوقفة', overdue_task: 'مهمة متأخرة', unanswered_customer: 'عميل ينتظر الرد' },
     status: { open: 'مفتوحة', reminded: 'تم التذكير', drafted: 'المسودة جاهزة', sent: 'أُرسلت', dismissed: 'تم التجاهل', resolved: 'تمت' },
   },
+  // AI6-T7 — لوحتا موجز الاجتماع وملاحظاته.
+  aiMeeting: {
+    brief: {
+      title: 'موجز الاجتماع', regenerate: 'أعد الإعداد', working: 'جارٍ الكتابة…',
+      none: 'لا موجز بعد. يُعدّ قبل الاجتماع بساعة.',
+      failed: 'تعذّر إعداد الموجز. حاول إعداده مرة أخرى.',
+      generated: 'أُعدّ في',
+      pending: {
+        confirmation_required: 'الموجز ينتظر تأكيدك.',
+        approval_required: 'الموجز ينتظر الموافقة.',
+      },
+    },
+    notes: {
+      title: 'ملاحظات الاجتماع', recording: 'التسجيل (معرّف المستند)', make: 'أعدّ الملاحظات',
+      queued: 'تُكتب الملاحظات الآن. افتحها هنا عندما تجهز.',
+      decisions: 'القرارات', actionItems: 'المهام', noItems: 'لا مهام.',
+      updates: 'تحديثات مقترحة على السجلات',
+      updatesHint: 'كل تحديث تختاره يُقترح للموافقة، مع الكلمات التي جاء منها.',
+      confirm: 'أكّد الملاحظات', confirmed: 'هذه الملاحظات مؤكدة.',
+      done: 'أُنشئت {tasks} مهام، واقتُرحت {updates} تحديثات.',
+    },
+  },
   aiSpend: {
     title: 'إنفاق الذكاء الاصطناعي', intro: 'هذا الشهر مقابل كل حدّ، للنموذج', days: 'يومًا',
     unpriced: 'لا سعر لهذا النموذج، فلا يُحتسب شيء على أي حدّ مالي.',

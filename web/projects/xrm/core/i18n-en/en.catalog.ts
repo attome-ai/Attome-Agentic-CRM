@@ -541,6 +541,28 @@ export const xrmEn = {
     reason: { stalled_deal: 'Stalled deal', overdue_task: 'Overdue task', unanswered_customer: 'Customer waiting for an answer' },
     status: { open: 'Open', reminded: 'Reminded', drafted: 'Draft ready', sent: 'Sent', dismissed: 'Dismissed', resolved: 'Resolved' },
   },
+  // AI6-T7 — the meeting brief and notes panels.
+  aiMeeting: {
+    brief: {
+      title: 'Meeting brief', regenerate: 'Make again', working: 'Writing…',
+      none: 'No brief yet. One is made an hour before the meeting.',
+      failed: 'The brief could not be written. Try making it again.',
+      generated: 'Written',
+      pending: {
+        confirmation_required: 'The brief waits for your confirmation.',
+        approval_required: 'The brief waits for approval.',
+      },
+    },
+    notes: {
+      title: 'Meeting notes', recording: 'Recording (document id)', make: 'Make notes',
+      queued: 'The notes are being written. Open them here when they are ready.',
+      decisions: 'Decisions', actionItems: 'Action items', noItems: 'No action items.',
+      updates: 'Proposed record updates',
+      updatesHint: 'Each checked update is proposed for approval, with the words it came from.',
+      confirm: 'Confirm notes', confirmed: 'These notes are confirmed.',
+      done: '{tasks} tasks made, {updates} updates proposed.',
+    },
+  },
   aiSpend: {
     title: 'AI spend', intro: 'This month against each cap, for', days: 'days',
     unpriced: 'This model has no price, so nothing is counted against a money cap.',
