@@ -179,6 +179,8 @@ pub mod turn_cancel;
 pub mod turn_metrics;
 /// AH1-T2: what one agent session wrote, for undoing a run.
 pub mod undo;
+/// AH1-T5: the undo preview, start and progress routes.
+pub mod undo_routes;
 pub mod webchat;
 pub mod write_guard;
 pub mod write_policy;
@@ -246,6 +248,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(collections_routes::openapi_fragment());
     doc.merge(agent_stats::openapi_fragment());
     doc.merge(agent_stats_routes::openapi_fragment());
+    doc.merge(undo_routes::openapi_fragment());
     doc.merge(meeting::routes::openapi_fragment());
     doc
 }

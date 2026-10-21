@@ -53,6 +53,7 @@ use attome_types::AppError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::descriptor::{Effect, is_message_send};
@@ -297,13 +298,14 @@ pub async fn collect_external_effects(
 }
 
 /// One planned undo step.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "step", rename_all = "snake_case")]
 pub enum UndoStep {
     RevertFields {
         entity: String,
         record_id: Uuid,
         expected_row_version: i64,
+        #[schema(value_type = Object)]
         set: Map<String, Value>,
     },
     SoftDelete {
@@ -740,6 +742,23 @@ pub async fn start_undo(
     attome_jobs::enqueue_in_tx(&mut tx, attome_core::jobs::EngineJob::Registered(job))
         .await
         .map_err(AppError::internal)?;
+    // AH1-T5: an undo changes what an agent did, so it is an Ai event,
+    // written with the run it starts.
+    let note = format!("{} step(s) for {} session(s)", steps.len(), sessions.len());
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Ai,
+            AuditOperation::Create,
+            ctx.user_id,
+            "ai_undo_run",
+            Some(run),
+        )
+        .named("ai.undo.start")
+        .comment(note),
+    )
+    .await?;
     attome_db::tx::commit(tx).await?;
     tracing::info!(%run, steps = steps.len(), "undo run planned");
     Ok(run)

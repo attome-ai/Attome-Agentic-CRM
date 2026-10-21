@@ -4177,6 +4177,24 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/ai/agent-sessions/{id}/undo" => {
+            // AH1-T5: a session with nothing to undo still starts a run and
+            // writes its Ai event.
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO agent_session (owner_user_id, surface) VALUES ($1, 'emission') \
+                 RETURNING id",
+            )
+            .bind(fx.admin_id)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("an agent session");
+            request(
+                "POST",
+                &format!("/api/v1/ai/agent-sessions/{id}/undo"),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/ai/deferred-actions/{id}/cancel" => {
             let id: Uuid = sqlx::query_scalar(
                 "INSERT INTO ai_deferred_action (action_id, args, initiator, acting_user_id, run_at) \
