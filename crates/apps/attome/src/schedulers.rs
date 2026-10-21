@@ -132,6 +132,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // G17-T9: intraday offers, every fifteen minutes.
+    crate::jobs::spawn_intraday_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // G14-T2: surveys sent on record changes, every minute.
     crate::jobs::spawn_survey_send_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // V5-T1: change requests decided by customer sign-off, every minute.

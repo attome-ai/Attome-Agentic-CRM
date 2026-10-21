@@ -1,0 +1,253 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1ff7d30fafa087de56fc565e12c697d381baf3f0bb1df5559690ae8df0d6828f",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Intraday management (G17-T9): a planning group's intraday switch, and on an offer its schedule, how many people, the key that keeps a proposal from repeating and why it was proposed; offers gain the proposed and sent states.",
+  "format": "attome-changeset/v1",
+  "id": "01a14b3c-5d2e-7f10-8a21-0000000006a7",
+  "layer": "product",
+  "name": "workforce-intraday",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "proposed",
+              "sent",
+              "open",
+              "taken",
+              "withdrawn"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "wfm_offer",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Intraday Management",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "intraday_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "wfm_planning_group",
+        "field": "intraday_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Schedule",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "schedule_ref",
+          "lookup_entity": "wfm_schedule",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "wfm_offer",
+        "field": "schedule_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "People",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "people",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "wfm_offer",
+        "field": "people"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Proposal Key",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "proposal_key",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "wfm_offer",
+        "field": "proposal_key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "wfm_offer",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إدارة اليوم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_planning_group.intraday_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الجدول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_offer.schedule_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عدد الأشخاص"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_offer.people",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفتاح الاقتراح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_offer.proposal_key",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "locale": "ar",
+        "object_key": "wfm_offer.reason",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "workforce",
+  "seq": 3,
+  "title": "Pack: intraday offers"
+}

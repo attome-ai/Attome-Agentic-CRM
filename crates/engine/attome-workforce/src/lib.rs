@@ -6,6 +6,7 @@
 
 pub mod admin;
 pub mod build_job;
+pub mod intraday;
 pub mod model;
 pub mod rules;
 pub mod self_service;
@@ -25,5 +26,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(what_if::openapi_fragment());
     doc.merge(self_service::openapi_fragment());
+    doc.merge(intraday::openapi_fragment());
     doc
 }

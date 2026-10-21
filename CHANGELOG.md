@@ -1380,6 +1380,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   flag and float, their dependencies and the latest baseline's planned dates; the work plan tab's
   Timeline view draws them as bars over a day scale, critical items marked, the baseline under each bar
   and dependencies as links (English and Arabic labels).
+- Intraday management (G17-T9, workforce pack `0003`): for planning groups with `intraday_enabled`, the
+  `workforce_intraday` job (every 15 minutes) scales the rest of today's forecast by actual volume so far
+  (service tickets on the group's channel) and proposes an overtime offer for each run short by more than
+  one person, and time off for each run over. `POST /api/v1/workforce/offers/{id}/send` tells the people
+  who could take it; `POST /api/v1/workforce/offers/{id}/accept` lets the first one take it, adding or
+  trimming their shift. Both are audited.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

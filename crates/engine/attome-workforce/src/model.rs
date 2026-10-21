@@ -24,5 +24,6 @@ impl EngineModel for WorkforceModel {
         crate::admin::routes()
             .merge(crate::what_if::routes())
             .merge(crate::self_service::routes())
+            .merge(crate::intraday::routes())
     }
 }
