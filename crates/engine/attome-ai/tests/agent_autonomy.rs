@@ -486,3 +486,55 @@ async fn a_row_interrupted_mid_run_ends_failed_and_never_runs_again() {
         "an interrupted action is never re-run"
     );
 }
+
+#[tokio::test]
+async fn automatic_runs_are_recorded_and_summarized_once() {
+    let f = skip_if_no_db!(fixture().await);
+    let definition = Uuid::now_v7();
+    set_level(&f, definition, AutonomyLevel::Automatic, None).await;
+    let session = definition_session(&f, definition, false).await;
+    let id = f.insert_record("open").await;
+
+    let outcome = f
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, id),
+        )
+        .await
+        .expect("dispatch");
+    assert!(
+        matches!(outcome, ActionOutcome::Completed { .. }),
+        "{outcome:?}"
+    );
+
+    let runs = |summarized: bool| {
+        let db = f.db().clone();
+        let session = session.id;
+        async move {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM ai_autonomous_run \
+                 WHERE agent_session_id = $1 AND (summarized_at IS NOT NULL) = $2 AND level = 4",
+            )
+            .bind(session)
+            .bind(summarized)
+            .fetch_one(&db)
+            .await
+            .expect("count")
+        }
+    };
+    assert_eq!(runs(false).await, 1, "the automatic run is recorded");
+
+    let stats = attome_ai::autonomy::daily_summary(&f.state)
+        .await
+        .expect("summary");
+    assert!(stats.people >= 1 && stats.actions >= 1, "{stats:?}");
+    assert_eq!(runs(false).await, 0);
+    assert_eq!(runs(true).await, 1, "summarized once, kept for 30 days");
+
+    let again = attome_ai::autonomy::daily_summary(&f.state)
+        .await
+        .expect("summary");
+    assert_eq!(runs(true).await, 1);
+    let _ = again;
+}

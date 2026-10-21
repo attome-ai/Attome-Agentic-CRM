@@ -359,6 +359,8 @@ pub async fn dispatch(
     };
 
     let outcome = run_executor(state, executors, descriptor, ctx, args, claim).await?;
+    // AH8-T8: an action the agent ran on its own feeds the daily summary.
+    crate::autonomy::record_autonomous_run(state, ctx, descriptor).await;
     if report_to_owner {
         crate::deferred::notify(
             state,

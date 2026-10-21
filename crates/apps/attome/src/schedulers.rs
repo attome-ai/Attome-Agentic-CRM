@@ -388,6 +388,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         std::time::Duration::from_secs(15),
     );
 
+    // AH8-T8: the daily summary of what agents ran on their own.
+    crate::jobs::spawn_ai_autonomy_summary_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
     // Audit plan 3.5 (D-541 rule 6): summary events for closed
     // failed-login windows. Once a minute, inside the counters' 10-minute
     // TTL.

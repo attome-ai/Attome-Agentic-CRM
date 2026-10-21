@@ -652,6 +652,9 @@ pub enum EngineJob {
     /// none runs twice. Bare unit variant, same re-derive-current-state
     /// shape as `ReportScheduleSweep`: the rows are the queue.
     AiDeferredActionSweep,
+    /// AH8-T8: daily; one in-app summary per person of the actions their
+    /// agents ran on their own at `automatic`, then prunes summarized rows.
+    AiAutonomySummary,
     /// M23 Records Management (D-456) — runs one `audit_legal_matter`'s
     /// "collect": scans its `scope_entity` under `scope_filter` in bounded
     /// batches, places a hold (`legal_hold`, tagged
@@ -1096,6 +1099,7 @@ impl EngineJob {
             | Self::DataQualityScoreSweep
             | Self::ReportScheduleSweep
             | Self::AiDeferredActionSweep
+            | Self::AiAutonomySummary
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -1245,6 +1249,7 @@ impl EngineJob {
             EngineJob::ReportRun { .. } => "ReportRun",
             EngineJob::ReportScheduleSweep => "ReportScheduleSweep",
             EngineJob::AiDeferredActionSweep => "AiDeferredActionSweep",
+            EngineJob::AiAutonomySummary => "AiAutonomySummary",
             EngineJob::LegalMatterCollect { .. } => "LegalMatterCollect",
             EngineJob::LegalMatterRelease { .. } => "LegalMatterRelease",
             EngineJob::LicenseExpiryCheck => "LicenseExpiryCheck",
@@ -1392,6 +1397,7 @@ impl EngineJob {
             | Self::DataQualityScoreSweep
             | Self::ReportScheduleSweep
             | Self::AiDeferredActionSweep
+            | Self::AiAutonomySummary
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -1554,6 +1560,7 @@ impl EngineJob {
             | Self::DataQualityScoreSweep
             | Self::ReportScheduleSweep
             | Self::AiDeferredActionSweep
+            | Self::AiAutonomySummary
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -2536,6 +2543,7 @@ mod tests {
     fn report_schedule_sweep_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::ReportScheduleSweep);
         assert_round_trips(EngineJob::AiDeferredActionSweep);
+        assert_round_trips(EngineJob::AiAutonomySummary);
         assert!(!EngineJob::AiDeferredActionSweep.is_batch());
         assert!(!EngineJob::ReportScheduleSweep.is_batch());
     }

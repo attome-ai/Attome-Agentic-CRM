@@ -389,6 +389,157 @@ async fn targets_owned_record(
     Ok(owner.flatten() == Some(ctx.security.user_id))
 }
 
+// ── What agents ran on their own (AH8-T8) ───────────────────────────────────
+
+/// The level the gate applied to this agent invocation: the granted level,
+/// lowered by one on a tainted context. `None` when no level applied.
+pub fn effective_level(
+    ctx: &ActionContext,
+    descriptor: &ActionDescriptor,
+) -> Option<AutonomyLevel> {
+    if !ctx.is_agent() || descriptor.autonomy_locked || descriptor.risk == RiskTier::Read {
+        return None;
+    }
+    ctx.autonomy.map(|grant| {
+        if ctx.contains_retrieved_content {
+            grant.level.lowered()
+        } else {
+            grant.level
+        }
+    })
+}
+
+/// Records an action an agent just ran on its own (`act_and_report` or
+/// `automatic`), for the daily summary. Best effort, after the action
+/// committed: a lost row costs one summary line, never the action.
+pub async fn record_autonomous_run(
+    state: &EngineState,
+    ctx: &ActionContext,
+    descriptor: &ActionDescriptor,
+) {
+    let Some(level) = effective_level(ctx, descriptor) else {
+        return;
+    };
+    let Some(session_id) = ctx.agent_session_id else {
+        return;
+    };
+    if level < AutonomyLevel::ActAndReport {
+        return;
+    }
+    if let Err(e) = sqlx::query(
+        "INSERT INTO ai_autonomous_run (agent_session_id, acting_user_id, action_id, level) \
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(session_id)
+    .bind(ctx.security.user_id)
+    .bind(descriptor.id.0)
+    .bind(level.as_i16())
+    .execute(&state.base.db)
+    .await
+    {
+        tracing::warn!(
+            action_id = %descriptor.id,
+            error = %e,
+            "AH8: an autonomous run was not recorded for the daily summary"
+        );
+    }
+}
+
+/// How many rows the summary prunes after they were summarized, in days.
+pub const SUMMARY_RETENTION_DAYS: i32 = 30;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct SummaryStats {
+    pub people: u64,
+    pub actions: u64,
+    pub pruned: u64,
+}
+
+/// One line of a person's summary.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct SummaryLine {
+    pub acting_user_id: Uuid,
+    pub action_id: String,
+    pub runs: i64,
+}
+
+/// The summary text for one person's lines. Pure.
+pub fn summary_text(lines: &[SummaryLine]) -> (String, String) {
+    let total: i64 = lines.iter().map(|l| l.runs).sum();
+    let body = lines
+        .iter()
+        .map(|l| format!("{} × {}", l.runs, l.action_id))
+        .collect::<Vec<_>>()
+        .join(", ");
+    (
+        format!("Your agents ran {total} action(s) on their own"),
+        format!(
+            "Since the last summary: {body}. Each one is in the record history and the audit trail."
+        ),
+    )
+}
+
+/// The daily summary (`EngineJob::AiAutonomySummary`): one in-app note per
+/// person whose agents ran `automatic` actions since their last summary,
+/// counted by action; then marks those rows summarized and prunes old ones.
+/// `act_and_report` runs are not repeated here: each was reported when it ran.
+pub async fn daily_summary(state: &EngineState) -> Result<SummaryStats, AppError> {
+    let mut stats = SummaryStats::default();
+    let cutoff = Utc::now();
+    let lines: Vec<SummaryLine> = sqlx::query_as(
+        "SELECT acting_user_id, action_id, COUNT(*)::bigint AS runs FROM ai_autonomous_run \
+         WHERE summarized_at IS NULL AND level = $1 AND created_at < $2 \
+         GROUP BY acting_user_id, action_id ORDER BY acting_user_id, runs DESC, action_id",
+    )
+    .bind(AutonomyLevel::Automatic.as_i16())
+    .bind(cutoff)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut people: Vec<Uuid> = lines.iter().map(|l| l.acting_user_id).collect();
+    people.dedup();
+    for person in people {
+        let mine: Vec<SummaryLine> = lines
+            .iter()
+            .filter(|l| l.acting_user_id == person)
+            .cloned()
+            .collect();
+        let (subject, body) = summary_text(&mine);
+        crate::deferred::notify(state, person, subject, body).await;
+        let marked = sqlx::query(
+            "UPDATE ai_autonomous_run SET summarized_at = now() \
+             WHERE acting_user_id = $1 AND summarized_at IS NULL AND created_at < $2",
+        )
+        .bind(person)
+        .bind(cutoff)
+        .execute(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        stats.people += 1;
+        stats.actions += marked.rows_affected();
+    }
+    // act_and_report rows were reported when they ran: close them too.
+    sqlx::query(
+        "UPDATE ai_autonomous_run SET summarized_at = now() \
+         WHERE summarized_at IS NULL AND level <> $1 AND created_at < $2",
+    )
+    .bind(AutonomyLevel::Automatic.as_i16())
+    .bind(cutoff)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let pruned = sqlx::query(
+        "DELETE FROM ai_autonomous_run \
+         WHERE summarized_at IS NOT NULL AND summarized_at < now() - make_interval(days => $1)",
+    )
+    .bind(SUMMARY_RETENTION_DAYS)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    stats.pruned = pruned.rows_affected();
+    Ok(stats)
+}
+
 // ── Admin routes ────────────────────────────────────────────────────────────
 
 /// One action an agent may call, with the level it runs at.
@@ -825,6 +976,25 @@ mod tests {
         let mut r = row();
         r.level = 9;
         assert_eq!(r.grant().level, AutonomyLevel::AskFirst);
+    }
+
+    #[test]
+    fn the_summary_counts_each_action() {
+        let person = Uuid::nil();
+        let (subject, body) = summary_text(&[
+            SummaryLine {
+                acting_user_id: person,
+                action_id: "email.send".into(),
+                runs: 12,
+            },
+            SummaryLine {
+                acting_user_id: person,
+                action_id: "record.update".into(),
+                runs: 3,
+            },
+        ]);
+        assert_eq!(subject, "Your agents ran 15 action(s) on their own");
+        assert!(body.contains("12 × email.send, 3 × record.update"));
     }
 
     #[test]

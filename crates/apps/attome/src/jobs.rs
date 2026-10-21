@@ -1759,6 +1759,16 @@ async fn dispatch_platform_job(
             }
         }
         // M25 Phase 1 (Report, D-440) — see this variant's doc comment.
+        // AH8-T8 — the daily summary of what agents ran on their own.
+        EngineJob::AiAutonomySummary => {
+            let stats = attome_ai::autonomy::daily_summary(&attome_state).await?;
+            tracing::info!(
+                people = stats.people,
+                actions = stats.actions,
+                pruned = stats.pruned,
+                "autonomy summary: run complete"
+            );
+        }
         // AH8 — actions whose undo window ended.
         EngineJob::AiDeferredActionSweep => {
             let stats = attome_ai::deferred::sweep(&attome_state).await?;
@@ -2697,6 +2707,7 @@ const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
 const DEDUP_KEY_CONTENT_SCHEDULED_PUBLISH_SWEEP: &str = "content-scheduled-publish-sweep";
 const DEDUP_KEY_REPORT_SCHEDULE_SWEEP: &str = "report-schedule-sweep";
 const DEDUP_KEY_AI_DEFERRED_ACTION_SWEEP: &str = "ai-deferred-action-sweep";
+const DEDUP_KEY_AI_AUTONOMY_SUMMARY: &str = "ai-autonomy-summary";
 const DEDUP_KEY_LICENSE_EXPIRY_CHECK: &str = "license-expiry-check";
 const DEDUP_KEY_FAILED_LOGIN_SWEEP: &str = "failed-login-sweep";
 const DEDUP_KEY_SEARCH_SUGGESTION_REFRESH: &str = "search-suggestion-refresh";
@@ -3548,6 +3559,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::DataQualityScoreSweep => DEDUP_KEY_DATA_QUALITY_SCORE_SWEEP,
         EngineJob::ReportScheduleSweep => DEDUP_KEY_REPORT_SCHEDULE_SWEEP,
         EngineJob::AiDeferredActionSweep => DEDUP_KEY_AI_DEFERRED_ACTION_SWEEP,
+        EngineJob::AiAutonomySummary => DEDUP_KEY_AI_AUTONOMY_SUMMARY,
         EngineJob::FailedLoginSweep => DEDUP_KEY_FAILED_LOGIN_SWEEP,
         EngineJob::LicenseExpiryCheck => DEDUP_KEY_LICENSE_EXPIRY_CHECK,
         EngineJob::ContentPageStatsRollup => DEDUP_KEY_CONTENT_PAGE_STATS_ROLLUP,
@@ -4921,6 +4933,17 @@ pub fn spawn_data_quality_score_sweep_scheduler(db: DbPool, interval: std::time:
         EngineJob::DataQualityScoreSweep,
         DEDUP_KEY_DATA_QUALITY_SCORE_SWEEP,
         "data quality score sweep",
+    );
+}
+
+/// AH8-T8 — once a day: the summary of what agents ran on their own.
+pub fn spawn_ai_autonomy_summary_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::AiAutonomySummary,
+        DEDUP_KEY_AI_AUTONOMY_SUMMARY,
+        "autonomy summary",
     );
 }
 
