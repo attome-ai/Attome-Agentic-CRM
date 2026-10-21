@@ -1321,6 +1321,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   job copies them into readable `opened_*` fields at `deadline_at`, marks later bids `late` and closes
   the RFQ. `POST /api/v1/procurement/rfqs/{id}/award` awards an opened RFQ to one of its on-time bids
   with a reason. Vendors bid through a portal role granted `rfq_bid` create on their own rows.
+- Survey kind (G14-T1): a `survey` metadata object lists questions (text, long text, number, rating,
+  yes/no, date, choice, multiple choice); publishing it applies a changeset (layer `project`, scope
+  `survey_<entity>`) that creates its `response_entity` with one attribute per question plus respondent,
+  regarding record and submitted time. Republishing the same survey applies nothing; a new question
+  only adds its field.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

@@ -691,6 +691,38 @@ pub(crate) struct ModelPublishResponse {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
 )]
+/// G14-T1: applies the changeset that creates (or extends) a survey's
+/// response entity. The same survey content gives the same changeset id and
+/// keeps its sequence number, so publishing it again applies nothing.
+async fn provision_survey(state: &EngineState, id: Uuid, doc: &Value) -> Result<(), AppError> {
+    use attome_model::kinds::survey;
+    let db = &state.base.db;
+    let entity = survey::response_entity_of(doc)
+        .ok_or_else(|| AppError::Validation("response_entity: required".into()))?;
+    let change = survey::changeset_id(id, doc);
+    let earlier: Option<i32> =
+        sqlx::query_scalar("SELECT seq FROM changeset_apply WHERE changeset_id = $1 LIMIT 1")
+            .bind(change)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let seq = match earlier {
+        Some(seq) => seq,
+        None => {
+            let last: Option<i32> = sqlx::query_scalar(
+                "SELECT max(seq) FROM changeset_apply WHERE layer = 'project' AND scope = $1",
+            )
+            .bind(survey::scope_of(entity))
+            .fetch_one(db)
+            .await
+            .map_err(AppError::internal)?;
+            last.unwrap_or(0) + 1
+        }
+    };
+    let document = survey::changeset_for(id, doc, seq);
+    crate::changeset::boot::apply_pack_document(state, &document).await
+}
+
 async fn publish(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
@@ -713,6 +745,12 @@ async fn publish(
         if let Some(entity) = attome_model::kinds::record_type::entity_of(&draft.doc) {
             attome_metadata::provision::record_type::ensure_column(&state.base.db, entity).await?;
         }
+    }
+    // G14-T1: a survey's response entity is provisioned through the
+    // changeset ledger before the survey goes live.
+    if kind.name() == attome_model::kinds::SURVEY {
+        let draft = attome_model::store::read(&state.base.db, id, None).await?;
+        provision_survey(&state, id, &draft.doc).await?;
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let published = attome_model::publish::publish(

@@ -306,6 +306,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "reply_template",
                 "rule",
                 "state_model",
+                "survey",
                 "tour"
             ]
         );
