@@ -1281,6 +1281,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   kind, covered by a warranty's `travel_covered_pct` (parts and labour by theirs); an entitlement's own
   percentages win over its warranty term's. The nightly `warranty_expiry_reminder` job tells a warranty
   entitlement's owner 30 days before it ends, once per end date (`entitlement.expiry_reminded_on`).
+- Maintenance generation (I5-T2, field-service pack `0007`): a maintenance plan on an asset makes its
+  work order (with one task per task template) `lead_days` before `next_due_on` through an M10 timer
+  of kind `service.maintenance` that follows the date, or when the asset's latest meter reading rises
+  `meter_threshold` above the reading at the last generation (daily `maintenance_generation` job).
+  Each due date makes one work order (`maintenance_plan_ref`, `maintenance_due_on`); none is made
+  while another of the plan is open; repeating plans skip missed periods instead of catching up.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

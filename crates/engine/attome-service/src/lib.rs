@@ -15,6 +15,7 @@ pub mod escalation;
 pub mod inbox;
 mod intake;
 pub mod inventory;
+pub mod maintenance;
 pub mod model;
 pub mod offering;
 pub mod oncall;

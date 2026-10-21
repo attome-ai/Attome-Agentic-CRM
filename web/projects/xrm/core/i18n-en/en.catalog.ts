@@ -3452,7 +3452,7 @@ export const xrmEn = {
     recordTitle: 'Waiting to happen',
     allTitle: 'Pending timers',
     empty: 'Nothing is waiting.',
-    kinds: { service: { escalation: 'Escalation' } },
+    kinds: { service: { escalation: 'Escalation', maintenance: 'Maintenance' } },
   },
   myJobs: {
     title: 'My background work',
