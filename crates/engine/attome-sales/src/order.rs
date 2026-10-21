@@ -123,7 +123,9 @@ pub fn line_body(order: Uuid, line: &LineCopy) -> Value {
 
 /// A stored numeric's text as a JSON number. Pure.
 pub fn number(text: &str) -> Option<Value> {
-    serde_json::Number::from_str(text.trim()).ok().map(Value::Number)
+    serde_json::Number::from_str(text.trim())
+        .ok()
+        .map(Value::Number)
 }
 
 /// The sum of the lines' totals. Pure.
@@ -523,7 +525,10 @@ async fn confirm_locked(
     let account = account.ok_or_else(|| AppError::Validation("the order has no account".into()))?;
     let currency =
         currency.ok_or_else(|| AppError::Validation("the order has no currency".into()))?;
-    let copies: Vec<LineCopy> = lines.iter().map(|(_, _, _, row)| line_copy(row.clone())).collect();
+    let copies: Vec<LineCopy> = lines
+        .iter()
+        .map(|(_, _, _, row)| line_copy(row.clone()))
+        .collect();
     let amount = grand
         .as_deref()
         .and_then(|g| Decimal::from_str(g.trim()).ok())
@@ -780,12 +785,15 @@ mod tests {
 
     #[test]
     fn order_from_quote_invoice_lines_use_the_net_price() {
-        let l = request_line("SO-1", 0, &line(Some("90"), Some("3"), Some("40"))).unwrap();
+        let net = line(Some("90"), Some("3"), Some("40"));
+        let l = request_line("SO-1", 0, &net).unwrap();
         assert_eq!(l.unit_price.as_f64(), Some(30.0));
         assert_eq!(l.quantity.as_f64(), Some(3.0));
         assert_eq!(l.description, "SO-1 line 1");
-        let l = request_line("SO-1", 1, &line(None, Some("2"), Some("7.25"))).unwrap();
+        let priced = line(None, Some("2"), Some("7.25"));
+        let l = request_line("SO-1", 1, &priced).unwrap();
         assert_eq!(l.unit_price.as_f64(), Some(7.25));
-        assert!(request_line("SO-1", 2, &line(None, Some("1"), None)).is_err());
+        let unpriced = line(None, Some("1"), None);
+        assert!(request_line("SO-1", 2, &unpriced).is_err());
     }
 }

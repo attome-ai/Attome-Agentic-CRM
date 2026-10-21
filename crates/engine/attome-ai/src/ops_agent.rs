@@ -589,7 +589,10 @@ mod tests {
         assert!(text.iter().any(|t| t.starts_with("Node c has not reported")));
         assert!(text.iter().any(|t| t.contains("(0.1.0, 0.2.0)")));
         assert!(text.iter().any(|t| t.contains("SLO class S1")));
-        let first_normal = p.iter().position(|p| p.severity == "normal").unwrap_or(p.len());
+        let first_normal = p
+            .iter()
+            .position(|p| p.severity == "normal")
+            .unwrap_or(p.len());
         assert!(p[first_normal..].iter().all(|p| p.severity == "normal"), "urgent first");
         let (subject, body) = digest(&report, &p);
         assert!(subject.contains(&format!("{} things to do", p.len())));
@@ -650,7 +653,10 @@ mod tests {
             .find(|p| p["name"] == "Operations")
             .unwrap_or_default();
         assert_eq!(policy["risk_ceiling"], "read");
-        let allowed = policy["allowed_action_ids"].as_array().cloned().unwrap_or_default();
+        let allowed = policy["allowed_action_ids"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
         assert!(allowed.iter().any(|a| a == OPS_REPORT));
         let registry = crate::registry::ActionRegistry::new();
         for id in &allowed {

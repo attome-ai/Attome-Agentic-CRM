@@ -176,7 +176,7 @@ mod tests {
     fn policy(ceiling: RiskTier, allowed: Option<&[&str]>) -> AgentPolicy {
         AgentPolicy {
             risk_ceiling: ceiling,
-            allowed_action_ids: allowed.map(|a| a.iter().map(|s| (*s).to_owned()).collect()),
+            allowed_action_ids: allowed.map(strings),
             knowledge_source_refs: None,
             capability_pack_refs: None,
             max_invocations_per_session: 10,
