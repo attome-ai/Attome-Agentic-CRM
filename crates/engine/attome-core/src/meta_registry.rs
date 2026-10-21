@@ -235,6 +235,38 @@ pub struct EntityMetaRegistry {
     /// `attribute_alias` by [`build_registry`] and [`apply_change_log`].
     #[serde(default)]
     aliases: HashMap<String, HashMap<String, String>>,
+    /// AA7-T2: what `GET /api/v1/schema/{logicalname}` shows of each entity,
+    /// by entity id ([`fetch_schema_facts`]). Empty in a snapshot written
+    /// before it existed; the route then reads the database.
+    #[serde(default)]
+    schema: HashMap<Uuid, SchemaEntity>,
+}
+
+/// AA7-T2: what the schema route shows of an entity beyond the enforcement
+/// metadata in [`EntityMeta`]: its display name and, in form order, each
+/// attribute's id, display name and stored options (an option set
+/// unexpanded, as the route has always served it).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct SchemaEntity {
+    pub display_name: Option<String>,
+    /// By `sort_order`, then creation time, then name.
+    pub fields: Vec<SchemaField>,
+}
+
+/// One attribute as the schema route shows it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SchemaField {
+    pub id: Uuid,
+    pub logicalname: Option<String>,
+    pub display_name: Option<String>,
+    pub field_type_int: Option<i32>,
+    pub required: Option<bool>,
+    pub lookup_entity_ref: Option<Uuid>,
+    /// The lookup target's name and primary name attribute when the
+    /// attribute was read (the route prefers the live registry's).
+    pub lookup_entity_ln: Option<String>,
+    pub lookup_display_field: Option<String>,
+    pub options: Option<serde_json::Value>,
 }
 
 /// Wire shape of the Redis snapshot — `by_logicalname` only. `EntityMetaRegistry`
@@ -245,11 +277,15 @@ struct EntityMetaRegistryWire {
     by_logicalname: HashMap<String, EntityMeta>,
     #[serde(default)]
     aliases: HashMap<String, HashMap<String, String>>,
+    #[serde(default)]
+    schema: HashMap<Uuid, SchemaEntity>,
 }
 
 impl From<EntityMetaRegistryWire> for EntityMetaRegistry {
     fn from(wire: EntityMetaRegistryWire) -> Self {
-        Self::from_map(wire.by_logicalname).with_aliases(wire.aliases)
+        Self::from_map(wire.by_logicalname)
+            .with_aliases(wire.aliases)
+            .with_schema(wire.schema)
     }
 }
 
@@ -285,7 +321,21 @@ impl EntityMetaRegistry {
             by_logicalname,
             by_id,
             aliases: HashMap::new(),
+            schema: HashMap::new(),
         }
+    }
+
+    /// AA7-T2: this registry with the schema route's facts, by entity id.
+    #[must_use]
+    pub fn with_schema(mut self, schema: HashMap<Uuid, SchemaEntity>) -> Self {
+        self.schema = schema;
+        self
+    }
+
+    /// AA7-T2: what the schema route shows of the entity `entity_id`, when
+    /// this snapshot carries it.
+    pub fn schema(&self, entity_id: Uuid) -> Option<&SchemaEntity> {
+        self.schema.get(&entity_id)
     }
 
     /// Y12-T8: this registry with `aliases` (entity, then old name to
@@ -510,7 +560,78 @@ pub async fn build_registry(db: &DbPool) -> Result<EntityMetaRegistry, AppError>
         );
     }
 
-    Ok(EntityMetaRegistry::from_map(by_logicalname).with_aliases(load_aliases(db).await?))
+    Ok(EntityMetaRegistry::from_map(by_logicalname)
+        .with_aliases(load_aliases(db).await?)
+        .with_schema(fetch_schema_facts(db, None).await?))
+}
+
+/// AA7-T2: the schema route's facts for the live entities `entity_ids`
+/// (every live entity for `None`): two queries, as the route ran them.
+pub async fn fetch_schema_facts(
+    db: &DbPool,
+    entity_ids: Option<&[Uuid]>,
+) -> Result<HashMap<Uuid, SchemaEntity>, AppError> {
+    let entities: Vec<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT id, name FROM entity_info \
+         WHERE (is_active IS NULL OR is_active = true) \
+           AND logicalname IS NOT NULL AND logicalname <> '' \
+           AND ($1::uuid[] IS NULL OR id = ANY($1))",
+    )
+    .bind(entity_ids)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    if entities.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let found: Vec<Uuid> = entities.iter().map(|(id, _)| *id).collect();
+    let rows: Vec<(Uuid, SchemaField)> = {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            entity_ref: Uuid,
+            #[sqlx(flatten)]
+            field: SchemaField,
+        }
+        let rows: Vec<Row> = sqlx::query_as(
+            r#"SELECT a.entity_ref,
+                      a.id,
+                      a.logicalname,
+                      a.name                     AS display_name,
+                      a."type"                   AS field_type_int,
+                      a.required,
+                      a.lookup_entity_ref,
+                      lei.logicalname            AS lookup_entity_ln,
+                      lei.primary_name_attribute AS lookup_display_field,
+                      a.options
+               FROM attribute_info a
+               LEFT JOIN entity_info lei ON lei.id = a.lookup_entity_ref
+               WHERE a.entity_ref = ANY($1) AND (a.is_active IS NULL OR a.is_active = true)
+               ORDER BY a.entity_ref, a.sort_order ASC, a.created_at ASC NULLS LAST, a.logicalname"#,
+        )
+        .bind(&found)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        rows.into_iter().map(|r| (r.entity_ref, r.field)).collect()
+    };
+    let mut schema: HashMap<Uuid, SchemaEntity> = entities
+        .into_iter()
+        .map(|(id, display_name)| {
+            (
+                id,
+                SchemaEntity {
+                    display_name,
+                    fields: Vec::new(),
+                },
+            )
+        })
+        .collect();
+    for (entity_ref, field) in rows {
+        if let Some(entity) = schema.get_mut(&entity_ref) {
+            entity.fields.push(field);
+        }
+    }
+    Ok(schema)
 }
 
 /// Y12-T8: every live attribute alias, by entity: an old name to the
@@ -660,6 +781,7 @@ pub async fn apply_change_log(
     rows: &[ChangeLogRow],
 ) -> Result<EntityMetaRegistry, AppError> {
     let mut by_logicalname = base.by_logicalname.clone();
+    let mut schema = base.schema.clone();
 
     let mut deduped: HashMap<Uuid, &ChangeLogRow> = HashMap::with_capacity(rows.len());
     for row in rows {
@@ -671,6 +793,7 @@ pub async fn apply_change_log(
         match row.kind.as_str() {
             "delete" => {
                 by_logicalname.remove(&row.logicalname);
+                schema.remove(&row.entity_ref);
             }
             _ /* "upsert" */ => upserts.push(row),
         }
@@ -701,7 +824,23 @@ pub async fn apply_change_log(
     } else {
         load_aliases(db).await?
     };
-    Ok(EntityMetaRegistry::from_map(by_logicalname).with_aliases(aliases))
+    // AA7-T2: the schema route's facts follow the same entities.
+    if !upsert_ids.is_empty() {
+        let mut fresh = fetch_schema_facts(db, Some(&upsert_ids)).await?;
+        for id in &upsert_ids {
+            match fresh.remove(id) {
+                Some(entity) => {
+                    schema.insert(*id, entity);
+                }
+                None => {
+                    schema.remove(id);
+                }
+            }
+        }
+    }
+    Ok(EntityMetaRegistry::from_map(by_logicalname)
+        .with_aliases(aliases)
+        .with_schema(schema))
 }
 
 const SNAPSHOT_REDIS_KEY: &str = "attome-core:metadata:registry_snapshot";

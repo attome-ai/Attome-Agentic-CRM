@@ -5,7 +5,7 @@ use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use attome_types::ErrorResponse;
 use axum::{
-    Json, Router,
+    Router,
     extract::{Path, Query, State},
     routing::get,
 };
@@ -164,17 +164,59 @@ async fn client_business_rules(
         .collect())
 }
 
-#[derive(sqlx::FromRow)]
-struct AttrRow {
-    id: Uuid,
-    logicalname: Option<String>,
-    display_name: Option<String>,
-    field_type_int: Option<i32>,
-    required: Option<bool>,
-    lookup_entity_ref: Option<Uuid>,
-    lookup_entity_ln: Option<String>,
-    lookup_display_field: Option<String>,
-    options: Option<Value>,
+/// AA7-T2: the schema route's facts for `logicalname`: from the in-process
+/// registry when it carries them, else (a registry snapshot from before
+/// they were cached, or the registry switched off) the same two queries on
+/// the migrator pool. `attome_readonly` cannot read the unregistered
+/// `attribute_info` bootstrap table, and the route is admin-gated.
+async fn schema_facts(
+    state: &EngineState,
+    logicalname: &str,
+) -> Result<(Uuid, attome_core::SchemaEntity), AppError> {
+    if state.base.config.cache.metadata_registry_enabled {
+        let registry = state.entities.load();
+        if let Some(meta) = registry.get(logicalname)
+            && let Some(facts) = registry.schema(meta.entity_id)
+        {
+            return Ok((meta.entity_id, facts.clone()));
+        }
+    }
+    let pool = &state.base.db_migrator;
+    let entity_id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM entity_info \
+         WHERE logicalname = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(logicalname)
+    .fetch_optional(pool)
+    .await
+    .map_err(AppError::internal)?;
+    let entity_id = entity_id.ok_or(AppError::NotFound)?;
+    let facts = attome_core::fetch_schema_facts(pool, Some(&[entity_id]))
+        .await?
+        .remove(&entity_id)
+        .ok_or(AppError::NotFound)?;
+    Ok((entity_id, facts))
+}
+
+/// AA7-T2: a weak validator over the exact body sent, so it changes with
+/// any published metadata, label, relationship or rule the body reflects,
+/// and two callers whose role sets yield different rules never share a
+/// `304`.
+pub(crate) fn schema_etag(body: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(body);
+    let hex: String = digest.iter().take(16).map(|b| format!("{b:02x}")).collect();
+    format!("W/\"{hex}\"")
+}
+
+/// Whether `If-None-Match` names `etag` (or is `*`), compared weakly.
+pub(crate) fn not_modified(if_none_match: Option<&str>, etag: &str) -> bool {
+    let bare = |t: &str| t.trim().trim_start_matches("W/").to_owned();
+    if_none_match.is_some_and(|header| {
+        header
+            .split(',')
+            .any(|tag| tag.trim() == "*" || bare(tag) == bare(etag))
+    })
 }
 
 #[utoipa::path(
@@ -183,9 +225,11 @@ struct AttrRow {
     tag = "schema",
     params(("logicalname" = String, Path), SchemaQuery),
     responses(
-        (status = 200, description = "Success", body = EntitySchemaDef),
+        (status = 200, description = "Success; `ETag` validates it", body = EntitySchemaDef),
+        (status = 304, description = "`If-None-Match` names the current `ETag`; no body"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -195,54 +239,49 @@ async fn get_schema(
     ctx: Authorized<Admin>,
     Path(logicalname): Path<String>,
     Query(query): Query<SchemaQuery>,
-) -> Result<Json<EntitySchemaDef>, AppError> {
+    headers: axum::http::HeaderMap,
+) -> Result<axum::response::Response, AppError> {
+    use axum::http::{StatusCode, header};
+    use axum::response::IntoResponse;
+    let schema = build_schema(&state, &ctx, &logicalname, query.locale.as_deref()).await?;
+    let body = serde_json::to_vec(&schema).map_err(AppError::internal)?;
+    let etag = schema_etag(&body);
+    let if_none_match = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok());
+    let cache = [
+        (header::ETAG, etag.clone()),
+        (header::CACHE_CONTROL, "private, no-cache".to_owned()),
+    ];
+    if not_modified(if_none_match, &etag) {
+        return Ok((StatusCode::NOT_MODIFIED, cache).into_response());
+    }
+    Ok((
+        cache,
+        [(header::CONTENT_TYPE, "application/json".to_owned())],
+        body,
+    )
+        .into_response())
+}
+
+/// The schema `ctx` sees of `logicalname`, built from in-memory metadata.
+async fn build_schema(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    logicalname: &str,
+    requested_locale: Option<&str>,
+) -> Result<EntitySchemaDef, AppError> {
     // M05 Phase 1 (D-426) — resolved once per request, consulted below for
     // the entity's own name, each attribute's name, and (for a `choice`
     // field) its option labels. `labels`/`dep_locale` are cheap: an arc-swap
     // load and one in-memory settings lookup, no extra query.
-    let requested_locale = query.locale.as_deref();
     let dep_locale = state.deployment_locale();
     let labels = state.labels.load();
-    // Schema metadata is control-plane data. `attome_readonly` is deliberately
-    // granted access only to registered entity tables and cannot SELECT from
-    // the unregistered `attribute_info` bootstrap table. This route is
-    // admin-gated, like the entity-admin metadata reads, so use the migrator
-    // pool for both metadata queries.
-    let pool = &state.base.db_migrator;
+    let (entity_id, facts) = schema_facts(state, logicalname).await?;
+    let registry = state.entities.load();
 
-    let entity_row: Option<(Uuid, Option<String>)> = sqlx::query_as(
-        "SELECT id, name
-         FROM entity_info
-         WHERE logicalname = $1 AND (is_active IS NULL OR is_active = true)",
-    )
-    .bind(&logicalname)
-    .fetch_optional(pool)
-    .await
-    .map_err(AppError::internal)?;
-
-    let (entity_id, entity_name) = entity_row.ok_or(AppError::NotFound)?;
-
-    let rows: Vec<AttrRow> = sqlx::query_as(
-        r#"SELECT a.id,
-                  a.logicalname,
-                  a.name                   AS display_name,
-                  a."type"                 AS field_type_int,
-                  a.required,
-                  a.lookup_entity_ref,
-                  lei.logicalname          AS lookup_entity_ln,
-                  lei.primary_name_attribute AS lookup_display_field,
-                  a.options
-           FROM attribute_info a
-           LEFT JOIN entity_info lei ON lei.id = a.lookup_entity_ref
-           WHERE a.entity_ref = $1 AND (a.is_active IS NULL OR a.is_active = true)
-           ORDER BY a.sort_order ASC, a.created_at ASC NULLS LAST, a.logicalname"#,
-    )
-    .bind(entity_id)
-    .fetch_all(pool)
-    .await
-    .map_err(AppError::internal)?;
-
-    let fields: Vec<FieldSchemaDef> = rows
+    let fields: Vec<FieldSchemaDef> = facts
+        .fields
         .into_iter()
         .enumerate()
         .map(|(i, row)| {
@@ -261,30 +300,20 @@ async fn get_schema(
                 )
                 .map(|r| r.display_name.clone())
                 .unwrap_or(base_display_name);
-            // A lookup's options are synthesized from the FK join, not stored
-            // (`lookup_entity_ref` is its own column) — unchanged. Every other
-            // type serves the stored `options` JSONB, which this handler used
-            // to hardcode to null: a `choice` field's `{choices, multi}` never
-            // reached the client, so `field-input.component.ts` rendered its
-            // select with nothing but the placeholder for every choice field
-            // in the platform. `admin/attribute.rs` returned the same column
-            // correctly all along, which is why the metadata editor looked
-            // fine while the record form did not.
-            //
-            // `display_field` was hardcoded to null here for the same reason,
-            // with the same consequence one layer down: `lookupSearch()`
-            // (entity.service.ts) only builds a `contains` filter when it has a
-            // display field, so a null one made the lookup popup's search box
-            // inert — it re-listed the same first 20 target records for every
-            // keystroke. It resolves to the target entity's
-            // `primary_name_attribute`, which is exactly the column
-            // `resolveLabel()` already falls back to when rendering the chosen
-            // record's label.
+            // A lookup's options are synthesized from its target, not stored
+            // (`lookup_entity_ref` is its own column); every other type
+            // serves the stored `options`. The target's name and primary
+            // name attribute come from the live registry, else as read.
             let mut options = if field_type == "lookup" {
+                let target = row.lookup_entity_ref.and_then(|id| registry.get_by_id(id));
                 serde_json::json!({
                     "target_entity_id":   row.lookup_entity_ref,
-                    "target_entity_name": row.lookup_entity_ln,
-                    "display_field":      row.lookup_display_field,
+                    "target_entity_name": target
+                        .map(|t| Some(t.logicalname.clone()))
+                        .unwrap_or(row.lookup_entity_ln),
+                    "display_field":      target
+                        .map(|t| t.primary_name_attribute.clone())
+                        .unwrap_or(row.lookup_display_field),
                 })
             } else {
                 row.options.unwrap_or(Value::Null)
@@ -331,10 +360,11 @@ async fn get_schema(
             }
         })
         .collect();
+    drop(registry);
 
-    let base_display = entity_name.unwrap_or_default();
+    let base_display = facts.display_name.unwrap_or_default();
     let display = labels
-        .resolve("entity", &logicalname, requested_locale, &dep_locale)
+        .resolve("entity", logicalname, requested_locale, &dep_locale)
         .map(|r| r.display_name.clone())
         .unwrap_or(base_display);
 
@@ -342,10 +372,10 @@ async fn get_schema(
     let relationships: Vec<RelationshipSchemaEntry> = state
         .relationships
         .load()
-        .for_entity(&logicalname)
+        .for_entity(logicalname)
         .into_iter()
         .filter_map(|def| {
-            let side = def.other_side(&logicalname)?;
+            let side = def.other_side(logicalname)?;
             Some(RelationshipSchemaEntry {
                 name: def.name.clone(),
                 // This entity is entity_a (this_column == "a_id") -> the
@@ -362,16 +392,16 @@ async fn get_schema(
         })
         .collect();
 
-    let business_rules = client_business_rules(&state, &ctx, &logicalname).await?;
+    let business_rules = client_business_rules(state, ctx, logicalname).await?;
 
-    Ok(Json(EntitySchemaDef {
+    Ok(EntitySchemaDef {
         id: entity_id,
         name: display.clone(),
         plural_name: format!("{display}s"),
         fields,
         relationships,
         business_rules,
-    }))
+    })
 }
 
 pub fn routes() -> Router<EngineState> {
@@ -388,4 +418,29 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn schema_etag_is_weak_stable_and_follows_the_body() {
+        let a = schema_etag(br#"{"fields":[]}"#);
+        assert!(a.starts_with("W/\""));
+        assert_eq!(a, schema_etag(br#"{"fields":[]}"#));
+        // A different rule set for another role is a different body.
+        assert_ne!(a, schema_etag(br#"{"fields":[],"business_rules":[{}]}"#));
+    }
+
+    #[test]
+    fn schema_if_none_match_compares_weakly_and_accepts_lists_and_star() {
+        let tag = schema_etag(b"x");
+        assert!(not_modified(Some(&tag), &tag));
+        assert!(not_modified(Some(tag.trim_start_matches("W/")), &tag));
+        assert!(not_modified(Some(&format!("W/\"other\", {tag}")), &tag));
+        assert!(not_modified(Some("*"), &tag));
+        assert!(!not_modified(Some("W/\"other\""), &tag));
+        assert!(!not_modified(None, &tag));
+    }
 }

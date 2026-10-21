@@ -16,7 +16,8 @@ use uuid::Uuid;
 use crate::state::EngineState;
 
 /// The written setting as the admin API answers it.
-pub type SettingWriteFuture<'a> = Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>>;
+pub type SettingWriteFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>>;
 
 /// Implemented once, by `attome-api`.
 pub trait SettingsWriter: Send + Sync + 'static {

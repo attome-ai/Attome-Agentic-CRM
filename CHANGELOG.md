@@ -157,6 +157,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- `GET /api/v1/schema/{logicalname}` answers from in-memory metadata and sends an `ETag`; a request
+  with a matching `If-None-Match` gets `304 Not Modified` with no body (AA7-T2).
 - Users share their own records without admin rights (Q14-T1): `GET/POST /api/v1/{entity}/{id}/shares`
   and `DELETE .../shares/{share_id}`, with the new per-entity `{entity}.share` privilege. A view share
   needs read access to the record and an action share update access, so nobody gives more than they

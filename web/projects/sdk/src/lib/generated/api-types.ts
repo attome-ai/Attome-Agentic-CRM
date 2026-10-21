@@ -91804,7 +91804,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Success */
+            /** @description Success; `ETag` validates it */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -91812,6 +91812,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EntitySchemaDef"];
                 };
+            };
+            /** @description `If-None-Match` names the current `ETag`; no body */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid credentials */
             401: {
@@ -91824,6 +91831,15 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

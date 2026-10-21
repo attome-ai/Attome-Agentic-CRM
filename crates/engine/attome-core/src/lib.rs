@@ -154,6 +154,9 @@ pub mod services;
 mod setting_catalog;
 pub mod setting_descriptor;
 pub mod setting_store;
+/// C5 (chatbot plan) — the `WorkflowStarter` seam `attome-ai`'s `workflow.start`
+/// reaches `attome-workflow` through without a dependency cycle.
+pub mod settings_write;
 /// C-18 — the shared `SnapshotSource` trait + `spawn_doorbell_reload`
 /// helper for the small-admin-authored-table caches
 /// (`state_registry`/`relationship_registry`/`rule_registry`).
@@ -167,9 +170,6 @@ pub mod theme_store;
 pub mod theme_tokens;
 pub mod timer;
 pub mod transfer_gate;
-/// C5 (chatbot plan) — the `WorkflowStarter` seam `attome-ai`'s `workflow.start`
-/// reaches `attome-workflow` through without a dependency cycle.
-pub mod settings_write;
 pub mod workflow_start;
 /// E8-T1: engine-contributed workflow steps and kind guards.
 pub mod workflow_step;
@@ -204,9 +204,9 @@ pub use label_store::{
 };
 pub use legal_hold::{LegalHoldInfo, record_is_held};
 pub use meta_registry::{
-    AttrInfo, DataClassification, EntityMeta, EntityMetaRegistry, OnTargetDelete, apply_change_log,
-    build_registry, fetch_entity_snapshot, fetch_entity_snapshots, load_snapshot, save_snapshot,
-    verify_ids_exist,
+    AttrInfo, DataClassification, EntityMeta, EntityMetaRegistry, OnTargetDelete, SchemaEntity,
+    SchemaField, apply_change_log, build_registry, fetch_entity_snapshot, fetch_entity_snapshots,
+    fetch_schema_facts, load_snapshot, save_snapshot, verify_ids_exist,
 };
 pub use metadata_reference::{
     BackfillProgress, MetadataReferenceInput, MetadataReferenceRow, advance_backfill_progress,
@@ -229,6 +229,7 @@ pub use setting_store::{
     load_all as load_all_settings, setting_log_watermark, setting_write_lock_key,
     validate_against_schema,
 };
+pub use settings_write::SettingsWriter;
 pub use snapshot_source::{SnapshotSource, spawn_doorbell_reload};
 pub use sql_ident::{
     ALL_SYSTEM_COLS, live_row_predicate, quote_ident, select_columns, select_columns_filtered,
@@ -244,5 +245,4 @@ pub use state_registry::{
     check_initial_state, check_transition, check_transition_with,
 };
 pub use transfer_gate::{TransferDecision, assert_transfer_allowed};
-pub use settings_write::SettingsWriter;
 pub use workflow_start::{WorkflowStartFuture, WorkflowStartRequest, WorkflowStarter};

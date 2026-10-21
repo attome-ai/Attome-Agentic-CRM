@@ -80386,7 +80386,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Success; `ETag` validates it",
             "content": {
               "application/json": {
                 "schema": {
@@ -80394,6 +80394,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "`If-None-Match` names the current `ETag`; no body"
           },
           "401": {
             "description": "Missing or invalid credentials",
@@ -80407,6 +80410,16 @@
           },
           "403": {
             "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -162066,7 +162079,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -162119,5 +162131,6 @@
       }
     }
   },
+  "x-api-version": "2026-10",
   "x-version-adapters": []
 }
