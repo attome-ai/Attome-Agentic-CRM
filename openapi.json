@@ -28107,6 +28107,85 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/metadata/versions": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists the recorded metadata versions, newest first, with the current one\nmarked (Y8-T12).",
+        "description": "Lists the recorded metadata versions, newest first, with the current one and how many nodes serve each (Y8-T12).",
+        "operationId": "list_metadata_versions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MetadataVersionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/metadata/versions/{version}/nodes": {
       "get": {
         "tags": [
@@ -48241,6 +48320,167 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ai/agent-sessions/{id}/undo": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "post_undo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The undo is planned and queued; read its progress at /api/v1/ai/undo-runs/{id}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither the session's owner nor a supervisor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ai/agent-sessions/{id}/undo-preview": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_undo_preview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What an undo would do, newest record first; nothing is written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_UndoStep"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither the session's owner nor a supervisor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/ai/collections/invoices/{id}/promises": {
       "get": {
         "tags": [
@@ -50842,6 +51082,103 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/ai/undo-runs/{id}": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_undo_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The undo run",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run, its status and counts, and a page of its items in order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoRunView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither the person who asked nor a supervisor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/approvals/out-of-office": {
@@ -132286,6 +132623,42 @@
           }
         }
       },
+      "MetadataVersionView": {
+        "type": "object",
+        "description": "One recorded metadata version (Y8-T12).",
+        "required": [
+          "version",
+          "published_at",
+          "current",
+          "nodes"
+        ],
+        "properties": {
+          "current": {
+            "type": "boolean",
+            "description": "Whether the deployment serves this version now."
+          },
+          "nodes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many nodes have switched to it."
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "published_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "MetricConsumer": {
         "type": "object",
         "description": "One thing that uses a metric.",
@@ -144979,6 +145352,76 @@
           }
         }
       },
+      "PaginatedResponse_MetadataVersionView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One recorded metadata version (Y8-T12).",
+              "required": [
+                "version",
+                "published_at",
+                "current",
+                "nodes"
+              ],
+              "properties": {
+                "current": {
+                  "type": "boolean",
+                  "description": "Whether the deployment serves this version now."
+                },
+                "nodes": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "How many nodes have switched to it."
+                },
+                "published_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "published_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "version": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_MetricDefinitionSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -151488,6 +151931,277 @@
                   "format": "uuid"
                 }
               }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_UndoItemView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One item of an undo run.",
+              "required": [
+                "seq",
+                "entity",
+                "record_id",
+                "operation",
+                "outcome",
+                "changed_attributes"
+              ],
+              "properties": {
+                "changed_attributes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "operation": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "description": "`pending`, `restored`, `skipped_changed`, `not_undoable` or `failed`."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "seq": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_UndoStep": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "entity",
+                    "record_id",
+                    "expected_row_version",
+                    "set",
+                    "step"
+                  ],
+                  "properties": {
+                    "entity": {
+                      "type": "string"
+                    },
+                    "expected_row_version": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "record_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "set": {
+                      "type": "object"
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "revert_fields"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "entity",
+                    "record_id",
+                    "expected_row_version",
+                    "step"
+                  ],
+                  "properties": {
+                    "entity": {
+                      "type": "string"
+                    },
+                    "expected_row_version": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "record_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "soft_delete"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "entity",
+                    "record_id",
+                    "step"
+                  ],
+                  "properties": {
+                    "entity": {
+                      "type": "string"
+                    },
+                    "record_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "restore"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "entity",
+                    "record_id",
+                    "reason",
+                    "changed_attributes",
+                    "step"
+                  ],
+                  "properties": {
+                    "changed_attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "entity": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "record_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "skip"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "reason",
+                    "step"
+                  ],
+                  "properties": {
+                    "action_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "entity": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "record_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "not_undoable"
+                      ]
+                    }
+                  }
+                }
+              ],
+              "description": "One planned undo step."
             }
           },
           "page": {
@@ -169368,6 +170082,274 @@
             "description": "The changed attributes' values before the edit."
           }
         }
+      },
+      "UndoItemView": {
+        "type": "object",
+        "description": "One item of an undo run.",
+        "required": [
+          "seq",
+          "entity",
+          "record_id",
+          "operation",
+          "outcome",
+          "changed_attributes"
+        ],
+        "properties": {
+          "changed_attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entity": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`pending`, `restored`, `skipped_changed`, `not_undoable` or `failed`."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seq": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "UndoRunView": {
+        "type": "object",
+        "description": "An undo run and a page of its items.",
+        "required": [
+          "id",
+          "status",
+          "agent_session_ids",
+          "requested_by",
+          "created_at",
+          "summary",
+          "items"
+        ],
+        "properties": {
+          "agent_session_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "$ref": "#/components/schemas/PaginatedResponse_UndoItemView"
+          },
+          "requested_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`planned`, `running`, `done` or `failed`."
+          },
+          "summary": {
+            "type": "object",
+            "description": "Item counts by outcome, once finished."
+          }
+        }
+      },
+      "UndoStarted": {
+        "type": "object",
+        "description": "A started undo.",
+        "required": [
+          "undo_run_id"
+        ],
+        "properties": {
+          "undo_run_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UndoStep": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "entity",
+              "record_id",
+              "expected_row_version",
+              "set",
+              "step"
+            ],
+            "properties": {
+              "entity": {
+                "type": "string"
+              },
+              "expected_row_version": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "record_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "set": {
+                "type": "object"
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "revert_fields"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "entity",
+              "record_id",
+              "expected_row_version",
+              "step"
+            ],
+            "properties": {
+              "entity": {
+                "type": "string"
+              },
+              "expected_row_version": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "record_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "soft_delete"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "entity",
+              "record_id",
+              "step"
+            ],
+            "properties": {
+              "entity": {
+                "type": "string"
+              },
+              "record_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "restore"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "entity",
+              "record_id",
+              "reason",
+              "changed_attributes",
+              "step"
+            ],
+            "properties": {
+              "changed_attributes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "entity": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "record_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "skip"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "reason",
+              "step"
+            ],
+            "properties": {
+              "action_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "entity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "record_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "not_undoable"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "One planned undo step."
       },
       "UnresolvedReason": {
         "type": "string",

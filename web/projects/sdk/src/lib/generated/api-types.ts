@@ -5023,6 +5023,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the recorded metadata versions, newest first, with the current one
+         *     marked (Y8-T12).
+         * @description Lists the recorded metadata versions, newest first, with the current one and how many nodes serve each (Y8-T12).
+         */
+        get: operations["list_metadata_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/versions/{version}/nodes": {
         parameters: {
             query?: never;
@@ -8334,6 +8355,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/agent-sessions/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_undo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/agent-sessions/{id}/undo-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_undo_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/collections/invoices/{id}/promises": {
         parameters: {
             query?: never;
@@ -8851,6 +8904,22 @@ export interface paths {
          *     only per-customer ground truth for generation quality that will ever exist.
          */
         post: operations["record_suggestion_outcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/undo-runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_undo_run"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -30156,6 +30225,22 @@ export interface components {
         MetadataManifest: {
             bundles: components["schemas"]["ManifestEntry"][];
         };
+        /** @description One recorded metadata version (Y8-T12). */
+        MetadataVersionView: {
+            /** @description Whether the deployment serves this version now. */
+            current: boolean;
+            /**
+             * Format: int64
+             * @description How many nodes have switched to it.
+             */
+            nodes: number;
+            /** Format: date-time */
+            published_at: string;
+            /** Format: uuid */
+            published_by?: string | null;
+            /** Format: int64 */
+            version: number;
+        };
         /** @description One thing that uses a metric. */
         MetricConsumer: {
             /** Format: uuid */
@@ -34964,6 +35049,35 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MetadataVersionView: {
+            items: {
+                /** @description Whether the deployment serves this version now. */
+                current: boolean;
+                /**
+                 * Format: int64
+                 * @description How many nodes have switched to it.
+                 */
+                nodes: number;
+                /** Format: date-time */
+                published_at: string;
+                /** Format: uuid */
+                published_by?: string | null;
+                /** Format: int64 */
+                version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_MetricDefinitionSummary: {
             items: {
                 direction: string;
@@ -37395,6 +37509,86 @@ export interface components {
                 /** Format: uuid */
                 record_id: string;
             }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_UndoItemView: {
+            items: {
+                changed_attributes: string[];
+                detail?: string | null;
+                entity: string;
+                operation: string;
+                /** @description `pending`, `restored`, `skipped_changed`, `not_undoable` or `failed`. */
+                outcome: string;
+                /** Format: uuid */
+                record_id: string;
+                /** Format: int32 */
+                seq: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_UndoStep: {
+            items: ({
+                entity: string;
+                /** Format: int64 */
+                expected_row_version: number;
+                /** Format: uuid */
+                record_id: string;
+                set: Record<string, never>;
+                /** @enum {string} */
+                step: "revert_fields";
+            } | {
+                entity: string;
+                /** Format: int64 */
+                expected_row_version: number;
+                /** Format: uuid */
+                record_id: string;
+                /** @enum {string} */
+                step: "soft_delete";
+            } | {
+                entity: string;
+                /** Format: uuid */
+                record_id: string;
+                /** @enum {string} */
+                step: "restore";
+            } | {
+                changed_attributes: string[];
+                entity: string;
+                reason: string;
+                /** Format: uuid */
+                record_id: string;
+                /** @enum {string} */
+                step: "skip";
+            } | {
+                action_id?: string | null;
+                entity?: string | null;
+                reason: string;
+                /** Format: uuid */
+                record_id?: string | null;
+                /** @enum {string} */
+                step: "not_undoable";
+            })[];
             /** Format: int64 */
             page: number;
             /** Format: int64 */
@@ -44419,6 +44613,82 @@ export interface components {
             row_version: number;
             /** @description The changed attributes' values before the edit. */
             values: Record<string, never>;
+        };
+        /** @description One item of an undo run. */
+        UndoItemView: {
+            changed_attributes: string[];
+            detail?: string | null;
+            entity: string;
+            operation: string;
+            /** @description `pending`, `restored`, `skipped_changed`, `not_undoable` or `failed`. */
+            outcome: string;
+            /** Format: uuid */
+            record_id: string;
+            /** Format: int32 */
+            seq: number;
+        };
+        /** @description An undo run and a page of its items. */
+        UndoRunView: {
+            agent_session_ids: string[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            items: components["schemas"]["PaginatedResponse_UndoItemView"];
+            /** Format: uuid */
+            requested_by: string;
+            /** @description `planned`, `running`, `done` or `failed`. */
+            status: string;
+            /** @description Item counts by outcome, once finished. */
+            summary: Record<string, never>;
+        };
+        /** @description A started undo. */
+        UndoStarted: {
+            /** Format: uuid */
+            undo_run_id: string;
+        };
+        /** @description One planned undo step. */
+        UndoStep: {
+            entity: string;
+            /** Format: int64 */
+            expected_row_version: number;
+            /** Format: uuid */
+            record_id: string;
+            set: Record<string, never>;
+            /** @enum {string} */
+            step: "revert_fields";
+        } | {
+            entity: string;
+            /** Format: int64 */
+            expected_row_version: number;
+            /** Format: uuid */
+            record_id: string;
+            /** @enum {string} */
+            step: "soft_delete";
+        } | {
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+            /** @enum {string} */
+            step: "restore";
+        } | {
+            changed_attributes: string[];
+            entity: string;
+            reason: string;
+            /** Format: uuid */
+            record_id: string;
+            /** @enum {string} */
+            step: "skip";
+        } | {
+            action_id?: string | null;
+            entity?: string | null;
+            reason: string;
+            /** Format: uuid */
+            record_id?: string | null;
+            /** @enum {string} */
+            step: "not_undoable";
         };
         /**
          * @description Why a ticket's SLA has no deadline (D-517) — the value stored in
@@ -62557,6 +62827,55 @@ export interface operations {
             };
         };
     };
+    list_metadata_versions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The versions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MetadataVersionView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_metadata_version_nodes: {
         parameters: {
             query?: {
@@ -74952,6 +75271,106 @@ export interface operations {
             };
         };
     };
+    post_undo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent session */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The undo is planned and queued; read its progress at /api/v1/ai/undo-runs/{id} */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither the session's owner nor a supervisor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_undo_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent session */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What an undo would do, newest record first; nothing is written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_UndoStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither the session's owner nor a supervisor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_invoice_promises: {
         parameters: {
             query?: {
@@ -76492,6 +76911,67 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_undo_run: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The undo run */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run, its status and counts, and a page of its items in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoRunView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither the person who asked nor a supervisor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
