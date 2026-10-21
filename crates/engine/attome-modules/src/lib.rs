@@ -178,6 +178,8 @@ pub const MODULE_OFFLINE: ModuleId = ModuleId::new(41);
 pub const MODULE_PROCUREMENT: ModuleId = ModuleId::new(42);
 /// Internal chat: direct, group and record channels with threads and retention (C9).
 pub const MODULE_CHAT: ModuleId = ModuleId::new(43);
+/// The general ledger: accounts, journals, periods and posting (W5).
+pub const MODULE_LEDGER: ModuleId = ModuleId::new(44);
 
 /// Every module by its configuration name.
 pub const MODULE_MAP: &[(&str, ModuleId)] = &[
@@ -219,6 +221,7 @@ pub const MODULE_MAP: &[(&str, ModuleId)] = &[
     ("offline", MODULE_OFFLINE),
     ("procurement", MODULE_PROCUREMENT),
     ("chat", MODULE_CHAT),
+    ("ledger", MODULE_LEDGER),
 ];
 
 /// The module named `name` in [`MODULE_MAP`].

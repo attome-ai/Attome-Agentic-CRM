@@ -56,6 +56,7 @@ attome-offline.workspace = true
 attome-procurement.workspace = true
 attome-hr.workspace = true
 attome-chat.workspace = true
+attome-ledger.workspace = true
 attome-model.workspace          = true
 attome-modules.workspace        = true
 attome-notification.workspace   = true

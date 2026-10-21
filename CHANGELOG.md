@@ -1359,6 +1359,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   day's unassigned work orders (or the ones named): each job goes to a technician the I2-T1 hard rules
   allow, by cheapest insertion into their route within their shift (08:00-17:00 without one), then moves
   that cut total travel, within a 10-second budget. Nothing is written.
+- General ledger (W5-T1, new `attome-ledger` crate on the `ledger` module, `ledger` pack):
+  `POST /api/v1/ledger/entries` posts a balanced journal entry in exact decimals into an open period
+  (append-only; an unbalanced entry, a closed period or a heading account is 422);
+  `POST /api/v1/ledger/source-postings` posts a source document through its `gl_posting_rule`, once per
+  source; `POST /api/v1/ledger/periods/{id}/close` and `/reopen` are audited.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

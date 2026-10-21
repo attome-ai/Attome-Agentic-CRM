@@ -50,6 +50,7 @@ members = [
     "crates/engine/attome-procurement",
     "crates/engine/attome-hr",
     "crates/engine/attome-chat",
+    "crates/engine/attome-ledger",
     "crates/engine/attome-dashboard",
     "crates/engine/attome-webcrawl",
     "crates/engine/attome-content",
@@ -136,6 +137,7 @@ attome-offline   = { path = "crates/engine/attome-offline" }
 attome-procurement = { path = "crates/engine/attome-procurement" }
 attome-hr = { path = "crates/engine/attome-hr" }
 attome-chat = { path = "crates/engine/attome-chat" }
+attome-ledger = { path = "crates/engine/attome-ledger" }
 attome-dashboard = { path = "crates/engine/attome-dashboard" }
 attome-webcrawl  = { path = "crates/engine/attome-webcrawl" }
 attome-content   = { path = "crates/engine/attome-content" }

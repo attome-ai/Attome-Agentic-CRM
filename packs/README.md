@@ -123,6 +123,13 @@ adds product-mix reports and `0013` the team calling metrics); the crm pack's
 adds events, its `0004` nurture programmes, tracks and content with a lifecycle stage on leads
 and contacts, and its `0005` the website tracking sites, visit summaries and watched pages.
 
+## ledger
+
+General ledger (W5): the chart of accounts, accounting periods that open and close, journals,
+append-only journal entries with balanced debit and credit lines, and posting rules that map a
+source document kind to the accounts it debits and credits. The Accountant and Ledger Viewer
+roles ship with it; the `ledger` engine is gated on the `ledger` module.
+
 ## procurement
 
 Procurement (W3): purchase requisitions and their lines, purchase orders to a vendor with lines
