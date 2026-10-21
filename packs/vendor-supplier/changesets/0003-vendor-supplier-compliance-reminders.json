@@ -1,0 +1,62 @@
+{
+  "author": "packs",
+  "checksum": "sha256:4f81fc57b9ebd7836bb3c97442aeb91aeabc649c2cbd8feda1f97a5f41ec1328",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Compliance document expiry reminders (W2-T1): the expiry date a document was last reminded for, so the M10 reminder 30 days before expiry goes once per date.",
+  "format": "attome-changeset/v1",
+  "id": "01a143cb-b97c-71c7-a782-398bd23f28d3",
+  "layer": "product",
+  "name": "vendor-supplier-compliance-reminders",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reminded For Expiry",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reminded_for",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "vendor_compliance_document",
+        "field": "reminded_for"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تم التذكير بانتهاء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_compliance_document.reminded_for",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "vendor-supplier",
+  "seq": 3,
+  "title": "Pack: compliance document expiry reminders"
+}

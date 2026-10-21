@@ -7,6 +7,7 @@
 //! Gated on the `procurement` module.
 
 pub mod budget;
+pub mod compliance;
 pub mod match_;
 pub mod model;
 pub mod scorecard;

@@ -1398,7 +1398,16 @@ async fn dispatch_platform_job(
             let mut conn = db.acquire().await?;
             if let Some(timer) = attome_core::timer::load(&mut conn, timer_id).await? {
                 drop(conn);
-                let outcome = if timer.kind == attome_service::maintenance::TIMER_KIND {
+                let outcome = if timer.kind == attome_procurement::compliance::TIMER_KIND {
+                    // W2-T1: a vendor compliance document about to expire.
+                    attome_procurement::compliance::fire(
+                        &attome_state,
+                        &timer,
+                        chrono::Utc::now().date_naive(),
+                    )
+                    .await
+                    .map_err(|e| e.to_string())
+                } else if timer.kind == attome_service::maintenance::TIMER_KIND {
                     // I5-T2: a maintenance plan's work order, ahead of its due date.
                     attome_service::maintenance::fire(
                         &attome_state,
@@ -2783,6 +2792,8 @@ const DEDUP_KEY_STOCK_LEDGER: &str = "stock-ledger";
 const DEDUP_KEY_WORK_ORDER_INVOICING: &str = "work-order-invoicing";
 /// F10-T10: commission plan acceptance (a registered job type).
 const DEDUP_KEY_COMMISSION_ACCEPTANCE: &str = "commission-acceptance";
+/// W2-T1: vendor compliance document reminder timers (a registered job type).
+const DEDUP_KEY_COMPLIANCE_EXPIRY: &str = "compliance-expiry";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
 const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 /// I10-T2: warranty expiry reminders (a registered job type).
@@ -2887,6 +2898,11 @@ pub const COMMISSION_ACCEPTANCE: attome_jobs::JobType =
 /// person who confirmed (payload `attome_service::warranty::BackfillJob`).
 pub const WARRANTY_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::warranty::JOB, 1);
+
+/// W2-T1: a reminder timer set for every vendor compliance document that
+/// has not been reminded for its expiry date.
+pub const COMPLIANCE_EXPIRY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_procurement::compliance::JOB, 1);
 
 /// I5-T2: one maintenance timer kept per date plan, and work orders made for
 /// meter plans whose reading passed the threshold.
@@ -3241,6 +3257,20 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(written, "asset warranty dates filled");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            COMPLIANCE_EXPIRY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let scheduled = attome_procurement::compliance::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if scheduled > 0 {
+                    tracing::info!(scheduled, "compliance document reminders set");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3679,6 +3709,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == MAINTENANCE_GENERATION.name => {
             DEDUP_KEY_MAINTENANCE
+        }
+        EngineJob::Registered(job) if job.name == COMPLIANCE_EXPIRY.name => {
+            DEDUP_KEY_COMPLIANCE_EXPIRY
         }
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
@@ -4241,6 +4274,21 @@ pub fn spawn_work_order_invoicing_scheduler(db: DbPool, interval: std::time::Dur
             "work order invoicing",
         ),
         Err(error) => tracing::error!(%error, "work order invoicing: not scheduled"),
+    }
+}
+
+/// W2-T1: daily, vendor compliance document reminder timers.
+pub fn spawn_compliance_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(COMPLIANCE_EXPIRY.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_COMPLIANCE_EXPIRY,
+            "compliance document reminders",
+        ),
+        Err(error) => tracing::error!(%error, "compliance document reminders: not scheduled"),
     }
 }
 

@@ -1303,6 +1303,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (layers, members and overrides are now stored) and the commander, opens a bridge on the named video
   provider, and posts a status page incident with a first update to subscribers. `.../children` links
   tickets (`parent_ticket_id`); `.../resolve` sets `restored_at` and resolves the status incident.
+- Vendor compliance reminders (W2-T1, vendor-supplier pack `0003`): each compliance document with an
+  expiry date gets an M10 timer (`procurement.compliance_expiry`) 30 days before it, following the date;
+  when it fires the vendor's owner and the document's owner are told once per expiry date
+  (`reminded_for`), and again after the document is renewed to a new date.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

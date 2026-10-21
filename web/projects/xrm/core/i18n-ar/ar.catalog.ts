@@ -3362,7 +3362,10 @@ export const xrmAr = {
     recordTitle: 'بانتظار التنفيذ',
     allTitle: 'المؤقتات المعلّقة',
     empty: 'لا شيء بالانتظار.',
-    kinds: { service: { escalation: 'تصعيد', maintenance: 'صيانة' } },
+    kinds: {
+      service: { escalation: 'تصعيد', maintenance: 'صيانة' },
+      procurement: { compliance_expiry: 'انتهاء مستند' },
+    },
   },
   myJobs: {
     title: 'أعمالي في الخلفية',

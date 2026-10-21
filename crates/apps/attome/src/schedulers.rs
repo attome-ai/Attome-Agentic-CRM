@@ -132,6 +132,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // W2-T1: vendor compliance document reminder timers, daily.
+    crate::jobs::spawn_compliance_expiry_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // I5-T2: maintenance plan timers and meter checks, daily.
     crate::jobs::spawn_maintenance_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // I10-T2: warranty expiry reminders, nightly.
