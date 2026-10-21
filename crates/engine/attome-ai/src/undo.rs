@@ -694,9 +694,7 @@ pub async fn start_undo(
         changes.extend(collect_session_changes(state, *session).await?);
         externals.extend(collect_external_effects(state, *session).await?);
     }
-    changes.sort_by(|a, b| {
-        (b.changed_on, b.audit_header_id).cmp(&(a.changed_on, a.audit_header_id))
-    });
+    changes.sort_by_key(|c| std::cmp::Reverse((c.changed_on, c.audit_header_id)));
     let reader = RecordsReader { state, ctx };
     let steps = plan_undo(&reader, &changes, &externals).await?;
     let run = Uuid::now_v7();
