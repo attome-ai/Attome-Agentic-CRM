@@ -29,7 +29,6 @@ use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::post};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 

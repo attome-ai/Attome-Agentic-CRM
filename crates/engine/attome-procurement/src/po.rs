@@ -108,12 +108,12 @@ impl DoaRule {
 /// The rule that applies: among the rules that match, the most specific
 /// (category and cost centre named), then the highest priority, then the
 /// narrowest amount band. Pure.
-pub fn pick_rule(
-    rules: &[DoaRule],
+pub fn pick_rule<'a>(
+    rules: &'a [DoaRule],
     amount: Decimal,
     category: Option<&str>,
     cost_center: Option<Uuid>,
-) -> Option<&DoaRule> {
+) -> Option<&'a DoaRule> {
     rules
         .iter()
         .filter(|r| r.matches(amount, category, cost_center))
