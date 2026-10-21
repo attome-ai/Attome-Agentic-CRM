@@ -1450,6 +1450,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- `docs/workforce.md` documents workforce management (G17-T17): the records, the staffing requirement, schedule builds and
+  publishing, what-if and hiring plans, staff self-service, intraday offers, the agent tools, and what is not built yet.
 - AI outcome quality (O11-T1): `record.ai_field`, `record.classify`, `knowledge.answer` and `route.classify`
   declare the `ai_suggestion` outcome kind, so their suggestions now reach the outcome ledger (before, its
   dual-write refused them). `GET /api/v1/admin/outcomes/quality/by-model` and `.../by-agent` (`?days=`, default

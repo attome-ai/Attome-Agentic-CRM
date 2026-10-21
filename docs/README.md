@@ -22,6 +22,7 @@
 - [Opportunity lines](opportunity-lines.md): lines and the product picker, pricing order, the deal's amount, schedules, quote sync, undo and the feature flags.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Invoicing](invoicing.md): drafts, issue and numbering, notes, the invoice document, statements, ageing and write-offs.
+- [Workforce](workforce.md): planning groups, staffing, schedule builds, self-service, swaps and intraday offers.
 - [Rule language functions](rule-language.md): language versions and the functions V2 adds.
 - [Data layer](data-layer.md): pools, statement classes, retry, locks, query tags, read-your-writes and the censuses.
 - [Caching](caching.md): adding a cache with a CacheSpec and TieredCache, partitions, sensitivity, failure, dependencies, warm start, quotas and purging.
