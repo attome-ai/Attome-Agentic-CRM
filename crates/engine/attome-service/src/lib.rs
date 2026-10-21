@@ -12,6 +12,7 @@ pub mod entitlement;
 /// G8-T1: escalation rule sets compiled into M10 timers.
 pub mod escalation;
 /// G5-T3: agent presence and record viewers.
+pub mod handoff;
 pub mod inbox;
 mod intake;
 pub mod inventory;

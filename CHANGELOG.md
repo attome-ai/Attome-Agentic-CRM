@@ -1434,6 +1434,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Ticket hand-offs (AI7-T2, `attome-service::handoff`): an agent or a person hands a ticket to a person
+  (assigned at once), a queue (moved there unassigned) or an agent, with a summary and reasoning, at most one
+  waiting per ticket; only the person it names or a member of the queue accepts it, and only the ticket's
+  assignee returns an agent's hand-off with a note, which queues the `ai_handback` job. Each step is a
+  business event on the ticket's timeline.
 - Agent performance screen (AI8-T6, `/ai/agents/performance`): per-agent tasks, resolution, accuracy,
   hand-off rate, estimated time saved, tokens and cost per task ("no price set" when some tokens had no
   price) over a date range; an agent's daily trend (the dashboard chart) and days, each day's number

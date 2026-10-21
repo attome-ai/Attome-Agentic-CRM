@@ -438,6 +438,30 @@ pub struct AssignResponse {
     pub distribution: String,
 }
 
+/// Assigns `ticket` to `user` and stamps the claim: the one assignment
+/// write, shared by [`assign_ticket`] (`only_if_unassigned`) and the
+/// hand-offs (`crate::handoff`). Rows changed.
+pub(crate) async fn set_assignee(
+    tx: &mut Transaction<'_, Postgres>,
+    ticket: Uuid,
+    user: Uuid,
+    only_if_unassigned: bool,
+) -> Result<u64, AppError> {
+    let sql = if only_if_unassigned {
+        "UPDATE service_ticket SET assignee_id = $2, claimed_at = NOW() \
+         WHERE id = $1 AND assignee_id IS NULL"
+    } else {
+        "UPDATE service_ticket SET assignee_id = $2, claimed_at = NOW() WHERE id = $1"
+    };
+    Ok(sqlx::query(sql)
+        .bind(ticket)
+        .bind(user)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected())
+}
+
 /// Auto/manual assignment of one specific, already-queued ticket, per the
 /// queue's `distribution` strategy.
 pub async fn assign_ticket(
@@ -532,16 +556,8 @@ pub async fn assign_ticket(
         }
     };
 
-    let updated = sqlx::query(
-        "UPDATE service_ticket SET assignee_id = $2, claimed_at = NOW() \
-         WHERE id = $1 AND assignee_id IS NULL",
-    )
-    .bind(ticket_id)
-    .bind(target)
-    .execute(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    if updated.rows_affected() == 0 {
+    let updated = set_assignee(&mut tx, ticket_id, target, true).await?;
+    if updated == 0 {
         return Err(AppError::internal(
             "ticket vanished or was assigned between read and update",
         ));
