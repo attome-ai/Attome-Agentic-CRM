@@ -215,6 +215,44 @@ none by default.
 - **Owners** see their open follow-ups at `/ai/follow-ups` (`GET /api/v1/ai/follow-ups`) and dismiss
   them (`POST /api/v1/ai/follow-ups/{id}/dismiss`, `If-Match`).
 
+## Meeting briefs and notes
+
+A meeting is an `activity` whose `activity_type` is `meeting`. It is about a record through
+`entity_name` and `record_id`, and it starts at its `due_at`.
+
+- **Briefs before a meeting.** Every 15 minutes the `ai_meeting_brief_scan` job finds meetings
+  starting 60 to 75 minutes ahead that are not cancelled and have no brief. For each it runs
+  `meeting.brief` as the meeting's owner, through the gate, so the AI switch, the licence, the
+  owner's grants and their budget apply. The brief covers the meeting; its account (the record it
+  is about, or that record's lookup to `account`); up to 10 open deals and 10 open cases on the
+  account; the 5 latest activities; and up to 10 open tasks. It is written in the meeting's
+  language, else the owner's locale (`core.locale`).
+- **Briefs respect record access.** Every record is read as the meeting's owner and, when someone
+  else asks, as that person too. A record either cannot read is left out, and only the fields both
+  may see are used. Records whose subject restricted processing are left out. The brief is the
+  meeting's one `ai_meeting_brief` row, owned by the meeting owner; it is refreshed when made again,
+  and marked `failed` with no text when generation fails. The owner gets an in-app notice.
+  People turn unasked briefs off with the `ai.meeting_briefs` setting (their own, or the
+  deployment's); it is on by default.
+- **Reading and remaking a brief.** `GET /api/v1/ai/meetings/{id}/brief` returns it to anyone who
+  may read the meeting. `POST /api/v1/ai/meetings/{id}/brief/regenerate` makes it again now, as
+  the caller.
+- **Notes from a recording.** `POST /api/v1/ai/meetings/{id}/notes` with `{ "transcript_ref":
+  "<recording document id>" }` queues `meeting.notes` (202). The transcript is the recording's
+  transcript (`GET /api/v1/documents/{id}/transcript`), read under the document's own access. A long
+  transcript is summarised in parts and the parts merged. The notes hold a summary, decisions,
+  action items with any owner or date the meeting named, and proposed record updates. Each proposed
+  update names the record, the field, the new value and the transcript words behind it. An update
+  is kept only for the meeting's record or its account, a real field, words that are in the
+  transcript, and a record the caller may change. Nothing is applied: the notes are an
+  `ai_meeting_notes` row in `draft`, written in the transcript's language.
+- **Confirming notes.** `POST /api/v1/ai/meetings/{id}/notes/confirm` with `If-Match` (the notes'
+  `row_version`) and the chosen `action_item_indexes` and `record_update_indexes` confirms the
+  notes once. Each chosen action item becomes an open task on the meeting. Each chosen record update
+  is only proposed: it goes through `record.update_field`, so the field allow-list, the write
+  approval policy and the daily cap decide whether it applies, waits for a person's approval or is
+  refused. Confirmed notes are never rewritten.
+
 ## Safety around the model
 
 - Untrusted text (records, documents, tool results) is cleaned of hidden characters and hidden HTML
