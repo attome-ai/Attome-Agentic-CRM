@@ -1168,10 +1168,18 @@ async fn dispatch_platform_job(
                     }
                 }
             }
-            // AI5-T2: the collection rules write to the same ledger.
-            let today = now.date_naive();
-            for rule in attome_ai::followup_collections::active_rules(&attome_state.base.db).await?
-            {
+            // AI5-T2: the collection rules write to the same ledger, from
+            // 08:00 deployment time each day (AI5-T5).
+            let zone = attome_ai::followup_collections::deployment_zone(&attome_state);
+            let collections_day = attome_ai::followup_collections::collections_day(now, zone);
+            let collection_rules = match collections_day {
+                Some(_) => {
+                    attome_ai::followup_collections::active_rules(&attome_state.base.db).await?
+                }
+                None => Vec::new(),
+            };
+            let today = collections_day.unwrap_or_else(|| now.date_naive());
+            for rule in collection_rules {
                 match attome_ai::followup_collections::detect_collections(
                     &attome_state,
                     &rule,

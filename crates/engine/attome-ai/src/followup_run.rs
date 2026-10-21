@@ -17,6 +17,13 @@
 //!   person's approval. When the definition cannot start a session (it ships
 //!   as a draft until an administrator activates it), the owner is
 //!   reminded instead.
+//! - A collections item (AI5-T5: `invoice_due`, `invoice_overdue`,
+//!   `renewal_due`) is sent its reminder directly as the owner
+//!   ([`crate::actions::collections::send_reminder`]) while its rule is
+//!   active and has reminders left: an administrator who activated the rule
+//!   authorised exactly that, so it needs no approval each time. A reminder
+//!   that cannot be sent (no customer email, a channel not sent yet) reminds
+//!   the owner instead.
 
 use std::sync::Arc;
 
@@ -44,6 +51,8 @@ pub enum RunOutcome {
     Reminded,
     /// The agent ran one turn in this conversation.
     AgentRan { conversation_id: Uuid },
+    /// A collections reminder was sent to the customer.
+    Sent,
 }
 
 /// The actions a follow-up session may use.
@@ -148,6 +157,9 @@ pub async fn run_item(state: &EngineState, item_id: Uuid) -> Result<RunOutcome, 
     let mode = mode.unwrap_or_else(|| "remind_owner".to_owned());
     let channel = channel.unwrap_or_else(|| "email".to_owned());
     let security = Arc::new(attome_security::resolve_uncached(db, owner).await?);
+    if crate::actions::collections::is_collections_reason(&reason) {
+        return run_collections(state, &security, item_id, &entity, record).await;
+    }
     if mode == "remind_owner" {
         return remind_owner(state, &security, item_id).await;
     }
@@ -244,6 +256,52 @@ pub async fn run_item(state: &EngineState, item_id: Uuid) -> Result<RunOutcome, 
     match ran? {
         Some((conversation_id, _)) => Ok(RunOutcome::AgentRan { conversation_id }),
         None => Ok(RunOutcome::Skipped("already handled")),
+    }
+}
+
+/// Sends a collections item's reminder as its owner, within its rule.
+async fn run_collections(
+    state: &EngineState,
+    security: &Arc<attome_server::security::SecurityContext>,
+    item_id: Uuid,
+    entity: &str,
+    record: Uuid,
+) -> Result<RunOutcome, AppError> {
+    let ctx = ActionContext::user(security.clone());
+    let item = match crate::actions::collections::load_item(state, &ctx, item_id).await {
+        Ok(item) => item,
+        Err(AppError::NotFound | AppError::Conflict(_)) => {
+            return Ok(RunOutcome::Skipped("already handled"));
+        }
+        Err(e) => return Err(e),
+    };
+    if !item.rule_active {
+        return Ok(RunOutcome::Skipped("the collection rule is off"));
+    }
+    if let Some(max) = item.max_reminders {
+        let sent: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM ai_followup_item \
+              WHERE rule_ref = $1 AND entity_logical_name = $2 AND record_id = $3 \
+                AND status = 'sent'",
+        )
+        .bind(item.rule_id)
+        .bind(entity)
+        .bind(record)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if sent >= max {
+            return Ok(RunOutcome::Skipped("the rule's reminders are used up"));
+        }
+    }
+    match crate::actions::collections::send_reminder(state, &ctx, item_id).await {
+        Ok(_) => Ok(RunOutcome::Sent),
+        Err(AppError::Validation(why)) => {
+            tracing::info!(item = %item_id, %why, "collections reminder not sent; reminding the owner");
+            remind_owner(state, security, item_id).await
+        }
+        Err(AppError::Conflict(_)) => Ok(RunOutcome::Skipped("already handled")),
+        Err(e) => Err(e),
     }
 }
 

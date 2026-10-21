@@ -15,6 +15,11 @@
 //! unique key with today as the window writes at most one row per record a
 //! day. Entity and attribute names come from the metadata registry; a rule
 //! whose entities are not installed finds nothing.
+//!
+//! AI5-T5: the hourly follow-up scan runs the collection rules once the
+//! deployment's day has reached [`RUN_HOUR`] (08:00 in `core.time_zone`),
+//! with that local date as "today" ([`collections_day`]); the ledger key
+//! keeps later scans that day from adding a second row.
 
 use attome_core::EngineState;
 use attome_types::AppError;
@@ -23,6 +28,28 @@ use uuid::Uuid;
 
 /// Records one rule's run looks at, at most.
 pub const SCAN_LIMIT: i64 = 500;
+/// The local hour from which a day's collection reminders are found.
+pub const RUN_HOUR: u32 = 8;
+
+/// The deployment's time zone (`core.time_zone` with no user), else UTC.
+pub fn deployment_zone(state: &EngineState) -> chrono_tz::Tz {
+    attome_core::setting_registry()
+        .get("core.time_zone")
+        .map(|d| state.settings.load().resolve(d, None, None).0)
+        .and_then(|v| v.as_str().and_then(|s| s.parse::<chrono_tz::Tz>().ok()))
+        .unwrap_or(chrono_tz::UTC)
+}
+
+/// The local date whose collections are due at `now` in `zone`, once that
+/// day has reached [`RUN_HOUR`]; `None` before then. Pure.
+pub fn collections_day(
+    now: chrono::DateTime<chrono::Utc>,
+    zone: chrono_tz::Tz,
+) -> Option<NaiveDate> {
+    use chrono::Timelike;
+    let local = now.with_timezone(&zone);
+    (local.hour() >= RUN_HOUR).then(|| local.date_naive())
+}
 
 /// An active collection rule.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -259,6 +286,22 @@ mod tests {
         let out = select(vec![c(1), c(2), c(3)], &[], &counts, Some(3));
         assert_eq!(out, vec![c(2), c(3)]);
         assert_eq!(select(vec![c(1)], &[], &counts, None).len(), 1, "no cap");
+    }
+
+    #[test]
+    fn collections_wait_for_eight_in_the_morning_local_time() {
+        use chrono::TimeZone;
+        let riyadh: chrono_tz::Tz = "Asia/Riyadh".parse().expect("a zone");
+        // 04:30 UTC is 07:30 in Riyadh: not yet.
+        let early = chrono::Utc.with_ymd_and_hms(2027, 3, 10, 4, 30, 0).unwrap();
+        assert_eq!(collections_day(early, riyadh), None);
+        // 05:00 UTC is 08:00 in Riyadh: that day.
+        let eight = chrono::Utc.with_ymd_and_hms(2027, 3, 10, 5, 0, 0).unwrap();
+        assert_eq!(collections_day(eight, riyadh), Some(day(3, 10)));
+        // 22:00 UTC is already the next day in Riyadh.
+        let late = chrono::Utc.with_ymd_and_hms(2027, 3, 10, 22, 0, 0).unwrap();
+        assert_eq!(collections_day(late, riyadh), Some(day(3, 11)));
+        assert_eq!(collections_day(early, chrono_tz::UTC), None);
     }
 
     #[test]
