@@ -316,6 +316,26 @@ a qualified lead to its owner (`record.assign`).
   session. Each completed action records an `agent_task` outcome under rule `ai.lead`.
 - **Not yet:** WhatsApp (the compose writer sends email only) and company enrichment (L9).
 
+## Inbox to record
+
+The `inbox_to_record` agent ships as a draft with its Inbox to Record policy; an administrator
+activates it and gives it a model. Inbound mail is first routed by the mailbox's rule (a case, a lead
+or the sender's contact). The agent then works on one inbound email at a time:
+
+- **Intent.** It classifies the email (`record.classify`): a new enquiry is a lead, a problem is a
+  case, a purchase order is an order; anything else stays where the routing put it.
+- **Fields.** It reads attachments with `document.extract` and fills only values the email or its
+  attachments state. It looks for the existing record first (`search.records`, `duplicates.check`)
+  and updates it rather than make a second one.
+- **Filing.** `inbox.file_message` places the email on every record it created or updated. The
+  email stays where it was too, and shows with its attachments on each record's timeline. Only
+  inbound email is filed, and only on a record the caller may update; filing twice is a no-op.
+- **Acknowledgement.** It answers the sender with `email.send`, in the sender's language, naming
+  the record's reference. `email.send` is Consequential, so it waits for approval, or for its undo
+  window at the `act_with_undo` autonomy level.
+- **Limits.** The policy caps a session at 30 tool calls, 15 minutes and 40,000 tokens, and the
+  agent at 500 writes a day. Each filing records an `agent_task` outcome under rule `ai.inbox`.
+
 ## Meeting briefs and notes
 
 A meeting is an `activity` whose `activity_type` is `meeting`. It is about a record through

@@ -384,6 +384,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0066-attome-ai-lead-agent.json"
         ),
     },
+    PlatformChangeset {
+        file: "0067-attome-ai-inbox-agent.json",
+        name: "attome-ai-inbox-agent",
+        json: include_str!(
+            "../../../../../changesets/platform/0067-attome-ai-inbox-agent.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

@@ -1454,6 +1454,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Inbox-to-record agent (AI3-T1, platform changeset `0067`): the `inbox_to_record` agent (a draft until an administrator
+  activates it) with its Inbox to Record policy: read an inbound email and its attachments, classify it, extract its
+  fields, find, create or update the lead, case or order, file the email on that record with the new Reversible action
+  `inbox.file_message` (a `communication_link` row, so the email and its attachments show on the record too) and
+  acknowledge the sender with `email.send`, which waits for approval or its undo window. `email.send` and
+  `inbox.file_message` join the policy choices. Its Arabic and English evaluation cases are
+  `tests/fixtures/inbox_to_record.json`.
 - Lead qualifier agent (AI1-T1, platform changeset `0066`): the `lead_qualifier` agent (a draft until an administrator
   activates it) with its Lead Qualifier policy: read, research, update and assign the lead, and two new Consequential
   actions that reach the lead, `lead.send_message` (an email on the lead) and `lead.book_meeting` (a meeting on a D20

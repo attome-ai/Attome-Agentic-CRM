@@ -35,6 +35,8 @@ pub mod duplicates;
 pub mod extract_document;
 pub mod followup;
 pub mod graph;
+/// AI3-T1: filing an inbound email on the records made from it.
+pub mod inbox;
 pub mod knowledge;
 pub mod knowledge_answer;
 /// AI1-T1: the lead qualifier's consent-checked contact steps.
@@ -81,6 +83,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(draft_article::descriptor());
     all.push(draft_email::descriptor());
     all.push(send_email::descriptor());
+    all.push(inbox::descriptor());
     all.extend(graph::descriptors());
     all.push(knowledge::descriptor());
     all.push(knowledge_answer::descriptor());
@@ -151,6 +154,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(draft_article::ArticleDraft));
     all.push(Box::new(draft_email::EmailDraft));
     all.push(Box::new(send_email::EmailSend));
+    all.push(Box::new(inbox::FileMessage));
     all.extend(graph::executors());
     all.push(Box::new(knowledge::SearchKnowledge));
     all.push(Box::new(knowledge_answer::KnowledgeAnswer));

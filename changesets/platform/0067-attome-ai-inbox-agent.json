@@ -1,0 +1,90 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:2d22a35f14dc47213cd624f4bf6e9cab0de75219999696cde351da59cd0f072f",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-inbox-agent.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "3e4bbca0-095e-74b3-84b0-d43104e5d66f",
+  "layer": "platform",
+  "name": "attome-ai-inbox-agent",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "allowed_action_ids": [
+            "record.get",
+            "record.create",
+            "record.update",
+            "record.update_field",
+            "record.classify",
+            "route.classify",
+            "document.extract",
+            "search.records",
+            "duplicates.check",
+            "text.translate",
+            "email.draft",
+            "email.send",
+            "inbox.file_message"
+          ],
+          "description": "What the inbox agent may do: read an inbound email and its attachments, classify it, extract its fields, find, create or update the lead, case or order it is about, file the email on that record and acknowledge it. The acknowledgement waits for a person's approval or its undo window.",
+          "max_invocations_per_session": 30,
+          "max_session_duration_minutes": 15,
+          "max_tokens_per_session": 40000,
+          "max_writes_per_day": 500,
+          "name": "Inbox to Record",
+          "risk_ceiling": "consequential"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_agent_policy",
+        "key": {
+          "name": "Inbox to Record"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Turns inbound email into records: classifies the message, extracts its fields and attachments, creates or updates the lead, case or order it is about, files the email on it and acknowledges the sender.",
+          "name": "inbox_to_record",
+          "policy_ref": {
+            "key": {
+              "name": "Inbox to Record"
+            }
+          },
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "system_instructions": "You turn one inbound email into the right records. Read the email (record.get on the communication) and the record it already sits on. Decide its intent with record.classify: a new enquiry is a lead, a problem or complaint is a case, a purchase order is an order, and anything else is left where it is. Read attachments with document.extract. Before creating anything, look for the existing record with search.records and duplicates.check, and update it rather than make a second one. Fill fields only with values the email or its attachments state; leave the rest empty. Then file the email on every record you created or updated with inbox.file_message. Finally acknowledge the sender with email.send, in the sender's language (Arabic or English), saying what was received and what happens next, with the reference of the record. Never promise prices, dates or outcomes, and never reply to automatic or bulk mail."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_agent",
+        "key": {
+          "name": "inbox_to_record"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 67,
+  "title": "Platform definitions: attome-ai-inbox-agent"
+}
