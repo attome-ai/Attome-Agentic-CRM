@@ -1292,6 +1292,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   on the line's `invoice_line_ref`, `restock` a `return` stock movement into the return's
   `restock_location`, `replace` a draft no-charge replacement order; repair, scrap and return to vendor
   are recorded. Each line keeps what it made in `disposition_reference`; a repeat answers `already_done`.
+- Technician candidates (I2-T1, field-service pack `0009`): `GET /api/v1/service/work-orders/{id}/candidates`
+  ranks the technicians (`technician_profile`) who have the job's `required_skills` (`skill` or
+  `skill:level`, else the incident type's), belong to the account's territory, are on shift and not on
+  leave in its window, and carry its parts in their van stock (`include_without_parts=true` relaxes the
+  last); on-time first, then by straight-line travel estimate and slack to `scheduled_end`. It assigns
+  nothing.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
