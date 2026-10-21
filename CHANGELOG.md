@@ -1454,6 +1454,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent behaviour tests (AH5-T6): `tests/agent_behaviour.rs` covers a burst that pauses and suspends an agent and
+  notifies its owner, an agent in its learning week left alone, and no job switching a stopped agent back on.
 - Work done by agents (AK3, migration `0201`): a change-feed consumer counts, each minute, the completions of
   every active work measure (`ai_work_measure`) by agents and by people, from each event's initiator, with the
   day's ticket hand-offs. Counts are kept in `ai_work_share_daily` and rebuildable through
