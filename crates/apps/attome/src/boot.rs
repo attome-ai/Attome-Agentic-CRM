@@ -1171,6 +1171,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-sales-scoring",
         // V5-T1: customer sign-off of change requests.
         "attome-project-signoff",
+        // AI5-T6: review of payment promises an agent recorded.
+        "attome-ai-collections-review",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

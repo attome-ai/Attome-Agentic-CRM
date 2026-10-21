@@ -680,6 +680,8 @@ impl Action for RecordPromise {
                 "promised_date": date.to_string(),
                 "source": "agent",
                 "status": "open",
+                // AI5-T6: a person confirms or rejects what an agent recorded.
+                "review_status": "pending",
                 "note": note,
             });
             let (promise_id, _) = attome_records::entity_crud::create_record_for(

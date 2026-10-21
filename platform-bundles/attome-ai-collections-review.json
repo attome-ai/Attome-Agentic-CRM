@@ -1,0 +1,74 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "entities": [],
+  "attribute_patches": [
+    {
+      "entity": "ai_payment_promise",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Review",
+        "field_type": "choice",
+        "is_customized": false,
+        "is_filterable": true,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "review_status",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": {
+          "choices": [
+            "pending",
+            "confirmed",
+            "rejected"
+          ],
+          "multi": false
+        }
+      }
+    },
+    {
+      "entity": "ai_payment_promise",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Reviewed By",
+        "field_type": "lookup",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "reviewed_by",
+        "lookup_entity": "user_account",
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "ai_payment_promise",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Reviewed At",
+        "field_type": "date",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "reviewed_at",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    }
+  ]
+}

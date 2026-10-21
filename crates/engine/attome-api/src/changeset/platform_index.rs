@@ -365,6 +365,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-project-signoff",
         json: include_str!("../../../../../changesets/platform/0063-attome-project-signoff.json"),
     },
+    PlatformChangeset {
+        file: "0064-attome-ai-collections-review.json",
+        name: "attome-ai-collections-review",
+        json: include_str!(
+            "../../../../../changesets/platform/0064-attome-ai-collections-review.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

@@ -1437,6 +1437,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Daily collections (AI5-T5): the follow-up scan finds collection reminders from 08:00 in the deployment's
   `core.time_zone` each day, and a collections item's run sends its reminder as the owner while the rule
   is active and has reminders left (no customer email or an unsent channel reminds the owner instead).
+- Collections routes (AI5-T6, platform changeset `0064`): `GET /api/v1/ai/collections/invoices/{id}/promises`
+  and `.../reminders` (read access to the invoice), `POST /api/v1/ai/collections/promises/{id}/confirm` and
+  `.../reject` (review of a promise an agent recorded; `ai_payment_promise` gains `review_status`,
+  `reviewed_by`, `reviewed_at`) and `POST /api/v1/ai/collections/promises/{id}/status` (`kept` or
+  `broken`), each under `If-Match` and update access to the invoice. A rejected promise no longer holds
+  reminders back.
 - `docs/agents.md` describes meeting briefs and notes (AI6-T9): when briefs are made, what they read and
   how they respect record access, notes from transcripts, and confirmation with gated record updates.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)

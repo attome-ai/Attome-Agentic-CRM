@@ -10,7 +10,7 @@
 //!   `offset_days`.
 //!
 //! An invoice with an open payment promise (`ai_payment_promise`, `open`,
-//! promised for today or later) is skipped, and so is any record that
+//! promised for today or later, not rejected on review) is skipped, and so is any record that
 //! already has `max_reminders` ledger rows under the rule. The ledger's
 //! unique key with today as the window writes at most one row per record a
 //! day. Entity and attribute names come from the metadata registry; a rule
@@ -194,9 +194,10 @@ pub async fn detect_collections(
     } else {
         let texts: Vec<String> = ids.iter().map(Uuid::to_string).collect();
         let rows: Vec<String> = sqlx::query_scalar(
-            "SELECT DISTINCT invoice_id FROM ai_payment_promise \
-              WHERE invoice_id = ANY($1) AND status::text = 'open' \
-                AND promised_date::date >= $2 AND (is_active IS NULL OR is_active = true)",
+            "SELECT DISTINCT p.invoice_id FROM ai_payment_promise p \
+              WHERE p.invoice_id = ANY($1) AND p.status::text = 'open' \
+                AND COALESCE(to_jsonb(p)->>'review_status', 'confirmed') <> 'rejected' \
+                AND p.promised_date::date >= $2 AND (p.is_active IS NULL OR p.is_active = true)",
         )
         .bind(&texts)
         .bind(today)

@@ -67,6 +67,7 @@ pub mod budget_guard;
 pub mod capability_pack;
 /// G1-T3: case summaries made when a thread goes quiet.
 pub mod case_summary;
+pub mod collections_routes;
 /// C7 — the read projections the copilot panel renders (citations and
 /// grounding, tool calls) and the record-context fold, over the C2 ledger.
 pub mod chat_view;
@@ -232,6 +233,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(mcp_client::openapi_fragment());
     // AI4-T6 — `/ai/follow-ups…` and the rule run route.
     doc.merge(followup_routes::openapi_fragment());
+    doc.merge(collections_routes::openapi_fragment());
     doc.merge(meeting::routes::openapi_fragment());
     doc
 }
