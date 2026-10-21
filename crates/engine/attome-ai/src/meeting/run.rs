@@ -68,9 +68,7 @@ pub fn notes_key(job: &NotesJob) -> String {
 /// Queues a notes job; its key, and whether it was newly queued.
 pub async fn queue_notes(state: &EngineState, job: &NotesJob) -> Result<(String, bool), AppError> {
     let key = notes_key(job);
-    let registered = attome_core::jobs::JOB_TYPES
-        .job(NOTES_JOB, job)
-        .map_err(AppError::internal)?;
+    let registered = registered_job(NOTES_JOB, job)?;
     let queued = attome_jobs::enqueue_dedup(
         &state.base.db,
         attome_core::jobs::EngineJob::Registered(registered),
@@ -128,6 +126,21 @@ pub fn window(now: DateTime<Utc>) -> (DateTime<Utc>, DateTime<Utc>) {
     (from, from + Duration::minutes(WINDOW_MINUTES))
 }
 
+/// A version-1 registered job of `name`, built here rather than through
+/// the registry, which a process that runs no jobs (an API-only node) never
+/// fills; the worker's handler reads it.
+fn registered_job(
+    name: &str,
+    payload: &impl Serialize,
+) -> Result<attome_jobs::RegisteredJob, AppError> {
+    Ok(attome_jobs::RegisteredJob {
+        name: name.to_owned(),
+        version: 1,
+        payload: serde_json::to_value(payload).map_err(AppError::internal)?,
+        next: None,
+    })
+}
+
 /// The queue key that keeps a meeting to one brief job. Pure.
 pub fn dedup_key(meeting: Uuid) -> String {
     format!("ai-meeting-brief:{meeting}")
@@ -175,9 +188,7 @@ pub async fn scan(state: &EngineState, now: DateTime<Utc>) -> Result<u64, AppErr
         if !briefs_on(state, owner) {
             continue;
         }
-        let job = attome_core::jobs::JOB_TYPES
-            .job(BRIEF_JOB, &BriefJob { meeting_id })
-            .map_err(AppError::internal)?;
+        let job = registered_job(BRIEF_JOB, &BriefJob { meeting_id })?;
         if attome_jobs::enqueue_dedup(
             &state.base.db,
             attome_core::jobs::EngineJob::Registered(job),

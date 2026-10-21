@@ -2825,6 +2825,8 @@ const DEDUP_KEY_SURVEY_SEND: &str = "survey-send";
 const DEDUP_KEY_MEETING_BRIEF_SCAN: &str = "ai-meeting-brief-scan";
 /// AI5-T4: the promise reader (a registered job type).
 const DEDUP_KEY_PROMISE_EXTRACT: &str = "ai-promise-extract";
+/// AI8-T3: the nightly agent performance rollup (a registered job type).
+const DEDUP_KEY_AGENT_STATS: &str = "ai-agent-stats-rollup";
 /// V5-T1: change requests decided by their customer sign-off (a registered job type).
 const DEDUP_KEY_CHANGE_SIGNOFF: &str = "change-signoff";
 /// W3-T4: sealed RFQ bids opened at the deadline (a registered job type).
@@ -2943,6 +2945,12 @@ pub const WORKFORCE_INTRADAY: attome_jobs::JobType =
 
 /// G14-T2: published surveys sent, from the change feed, when a record
 /// reaches their trigger value (a closed case).
+/// AI8-T3: yesterday's per-agent rollup, and a backfill of a range.
+pub const AGENT_STATS_ROLLUP: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::agent_stats::NIGHTLY_JOB, 1);
+pub const AGENT_STATS_BACKFILL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::agent_stats::BACKFILL_JOB, 1);
+
 /// AI5-T4: promises to pay read from customers' replies.
 pub const PROMISE_EXTRACT: attome_jobs::JobType =
     attome_jobs::JobType::new("ai_promise_extract", 1);
@@ -3356,6 +3364,37 @@ pub fn register_job_types() {
                 if proposed > 0 {
                     tracing::info!(proposed, "intraday offers proposed");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            AGENT_STATS_ROLLUP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_AI) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                if let Some(written) =
+                    attome_ai::agent_stats::nightly(&state, chrono::Utc::now())
+                        .await
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?
+                {
+                    tracing::info!(written, "agent performance: yesterday rolled up");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            AGENT_STATS_BACKFILL,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let range: attome_ai::agent_stats::AgentStatsBackfill = job.payload()?;
+                let written = attome_ai::agent_stats::run_backfill(&state, &range)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(from = %range.from, to = %range.to, written, "agent performance backfilled");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3953,6 +3992,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_MEETING_BRIEF_SCAN
         }
         EngineJob::Registered(job) if job.name == PROMISE_EXTRACT.name => DEDUP_KEY_PROMISE_EXTRACT,
+        EngineJob::Registered(job) if job.name == AGENT_STATS_ROLLUP.name => DEDUP_KEY_AGENT_STATS,
         EngineJob::Registered(job) if job.name == WORKFORCE_INTRADAY.name => DEDUP_KEY_INTRADAY,
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
@@ -4534,6 +4574,21 @@ pub fn spawn_intraday_scheduler(db: DbPool, interval: std::time::Duration) {
 }
 
 /// G14-T2: every minute, surveys sent on record changes.
+/// AI8-T3: every hour, yesterday's agent rollup once the day reaches 02:00.
+pub fn spawn_agent_stats_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(AGENT_STATS_ROLLUP.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_AGENT_STATS,
+            "agent performance rollup",
+        ),
+        Err(error) => tracing::error!(%error, "agent performance rollup: not scheduled"),
+    }
+}
+
 /// AI5-T4: every five minutes, promises to pay read from replies.
 pub fn spawn_promise_extract_scheduler(db: DbPool, interval: std::time::Duration) {
     register_job_types();

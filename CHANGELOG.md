@@ -1434,6 +1434,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Agent performance rollup (AI8-T2/T3): `ai_agent_daily_stat` is computed per agent and UTC day from the
+  outcome ledger's `agent_task` rows (done, resolved, measured, effectiveness, hand-offs), the agent's
+  message tokens and their price (configured prices, else the approved model catalogue; unpriced tokens add
+  no cost and leave `cost_unit` empty) and an estimated time saved per task source. The
+  `ai_agent_stats_rollup` job rolls up yesterday once the UTC day reaches 02:00;
+  `POST /api/v1/admin/ai/agents/performance/backfill` (`{from, to}`, at most 400 days, administrators,
+  audited) queues a range. A rerun replaces the day.
 - Promises read from replies (AI5-T4): every five minutes the `ai_promise_extract` job reads new inbound
   messages on invoices with an open collections item and, through one budgeted model call answering strict
   JSON (Arabic or English, Arabic digits included), records a promise with a date as an

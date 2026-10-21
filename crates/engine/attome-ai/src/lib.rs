@@ -51,6 +51,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 25;
 pub mod a2a;
 pub mod actions;
 pub mod agent;
+pub mod agent_stats;
 pub mod ai_status;
 /// C10-B — deployment-wide chatbot figures (`/admin/ai/bot-analytics`).
 pub mod analytics;
@@ -235,6 +236,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     // AI4-T6 — `/ai/follow-ups…` and the rule run route.
     doc.merge(followup_routes::openapi_fragment());
     doc.merge(collections_routes::openapi_fragment());
+    doc.merge(agent_stats::openapi_fragment());
     doc.merge(meeting::routes::openapi_fragment());
     doc
 }

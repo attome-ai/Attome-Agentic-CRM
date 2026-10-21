@@ -110,6 +110,8 @@ impl EngineModel for ActionModel {
             .merge(crate::conversation_routes::routes())
             // AI4-T6 — follow-ups.
             .merge(crate::followup_routes::routes())
+            // AI8-T3 — agent performance backfill, admin-gated.
+            .merge(crate::agent_stats::routes())
             // AI5-T6 — collections promises and reminders.
             .merge(crate::collections_routes::routes())
             // AI6-T6 — meeting briefs and notes.

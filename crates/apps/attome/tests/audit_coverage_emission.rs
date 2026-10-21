@@ -1894,6 +1894,14 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
 
+        // ── agent performance (AI8-T3) ──────────────────────────────────────
+        "POST /api/v1/admin/ai/agents/performance/backfill" => request(
+            "POST",
+            "/api/v1/admin/ai/agents/performance/backfill",
+            t,
+            Some(json!({ "from": "2027-01-01", "to": "2027-01-02" })),
+        ),
+
         // ── metrics (D-786) ─────────────────────────────────────────────────
         "POST /api/v1/metrics/{id}/compute" => {
             let id = query_metric(fx).await;
