@@ -466,6 +466,33 @@ fn billing_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        SettingDescriptor::new(
+            "billing.credit.block_overdue",
+            "Refuse new sales on credit to an account with an overdue invoice, even within its \
+             credit limit (F5-T12).",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "billing.credit.auto_hold",
+            "Each night, put on credit hold every account with an invoice overdue by more than \
+             billing.credit.hold_after_days (F5-T12).",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "billing.credit.hold_after_days",
+            "Days past its due date an invoice may be before the nightly sweep puts its account \
+             on credit hold (F5-T12).",
+            || json!({"type": "integer", "minimum": 0, "maximum": 365}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(30),
+        ),
     ]
 }
 

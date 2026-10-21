@@ -2827,6 +2827,8 @@ const DEDUP_KEY_MEETING_BRIEF_SCAN: &str = "ai-meeting-brief-scan";
 const DEDUP_KEY_PROMISE_EXTRACT: &str = "ai-promise-extract";
 /// AI8-T3: the nightly agent performance rollup (a registered job type).
 const DEDUP_KEY_AGENT_STATS: &str = "ai-agent-stats-rollup";
+/// F5-T12: the nightly credit-hold sweep (a registered job type).
+const DEDUP_KEY_CREDIT_HOLD: &str = "billing-credit-hold";
 /// AK2-T1: the weekly operations digest (a registered job type).
 const DEDUP_KEY_OPS_DIGEST: &str = "ai-ops-weekly-digest";
 /// V5-T1: change requests decided by their customer sign-off (a registered job type).
@@ -2956,6 +2958,9 @@ pub const AGENT_STATS_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::NIGHTLY_JOB, 1);
 pub const AGENT_STATS_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::BACKFILL_JOB, 1);
+
+/// F5-T12: accounts with long-overdue invoices put on credit hold.
+pub const CREDIT_HOLD: attome_jobs::JobType = attome_jobs::JobType::new("billing_credit_hold", 1);
 
 /// AK2-T1: the weekly operations digest to administrators.
 pub const OPS_DIGEST: attome_jobs::JobType =
@@ -3408,6 +3413,23 @@ pub fn register_job_types() {
                 {
                     tracing::info!(written, "agent performance: yesterday rolled up");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CREDIT_HOLD,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_BILLING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_billing::payment::credit::hold_overdue(
+                    &state,
+                    chrono::Utc::now().date_naive(),
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -4034,6 +4056,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PROMISE_EXTRACT.name => DEDUP_KEY_PROMISE_EXTRACT,
         EngineJob::Registered(job) if job.name == AGENT_STATS_ROLLUP.name => DEDUP_KEY_AGENT_STATS,
         EngineJob::Registered(job) if job.name == OPS_DIGEST.name => DEDUP_KEY_OPS_DIGEST,
+        EngineJob::Registered(job) if job.name == CREDIT_HOLD.name => DEDUP_KEY_CREDIT_HOLD,
         EngineJob::Registered(job) if job.name == WORKFORCE_INTRADAY.name => DEDUP_KEY_INTRADAY,
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
@@ -4627,6 +4650,21 @@ pub fn spawn_agent_stats_scheduler(db: DbPool, interval: std::time::Duration) {
             "agent performance rollup",
         ),
         Err(error) => tracing::error!(%error, "agent performance rollup: not scheduled"),
+    }
+}
+
+/// F5-T12: once a day, accounts with long-overdue invoices put on credit hold.
+pub fn spawn_credit_hold_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CREDIT_HOLD.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CREDIT_HOLD,
+            "credit hold",
+        ),
+        Err(error) => tracing::error!(%error, "credit hold: not scheduled"),
     }
 }
 

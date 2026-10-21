@@ -95,6 +95,15 @@ copied into a draft (once per period) and moves on.
   follow the caller's record scope on accounts, so a salesperson sees only their accounts.
 - `POST …/{id}/write-off` (`billing.write_off`) writes off up to the open amount with a reason;
   above `billing.write_off_approval_threshold` it waits for a `billing.write_off` approval.
+- **Credit.** An account's `credit_limit` and `credit_hold` decide whether more may be sold to it
+  on credit; order confirmation asks `attome_billing::payment::credit::credit_check`. An account on
+  hold is refused; with a limit, the open balance (the stored open totals of its issued, sent and
+  overdue invoices) plus the new amount must stay within it; with `billing.credit.block_overdue`
+  on, an overdue invoice refuses too. A limit with open invoices in several currencies refuses,
+  since it cannot be compared. `GET /api/v1/billing/accounts/{id}/credit?amount=` (`payment.read`
+  and read access to the account) shows the check. With `billing.credit.auto_hold` on, a nightly
+  sweep puts on hold every account with an invoice more than `billing.credit.hold_after_days`
+  (default 30) past due; a person clears the hold by updating the account.
 
 In the app, Billing in the sidebar opens the invoices, the receivables ageing (each account links to
 its statement) and the schedules. Amounts keep their currency's decimals (three for KWD, BHD, OMR

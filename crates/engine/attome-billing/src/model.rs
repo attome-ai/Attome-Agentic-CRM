@@ -162,5 +162,10 @@ impl EngineModel for BillingModel {
                 "/api/v1/billing/ageing/totals",
                 get(crate::statements::get_ageing_totals),
             )
+            // F5-T12: an account's credit limit, open balance and hold.
+            .route(
+                "/api/v1/billing/accounts/{id}/credit",
+                get(crate::payment::credit::get_credit),
+            )
     }
 }

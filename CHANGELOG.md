@@ -1454,6 +1454,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Credit limits and credit hold (F5-T12, `attome-billing`): `payment::credit::credit_check` refuses a sale on credit to an
+  account on hold, over its credit limit (open balance from its invoices' stored open totals plus the new amount) or,
+  with `billing.credit.block_overdue`, with an overdue invoice; `GET /api/v1/billing/accounts/{id}/credit` shows it. With
+  `billing.credit.auto_hold`, the nightly job `billing_credit_hold` puts accounts with invoices more than
+  `billing.credit.hold_after_days` (30) past due on hold. Three new settings.
 - Operations agent (AK2-T1, platform changeset `0068`): `ops.report` (administrators, reads only) gives the nodes and their
   versions, the services this node depends on, the backups in `backup.dir` with the last restore drill, the database and
   backup sizes, each SLO class's status, and the routine actions they call for (a stale or missing backup, backups off, no
