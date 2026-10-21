@@ -423,7 +423,7 @@ pub async fn find(
             }
         }
         if exists(db, "wfm_shift_assignment").await? {
-            let on_shift: HashSet<Uuid> = sqlx::query_scalar(
+            let on_shift: HashSet<Uuid> = sqlx::query_scalar::<_, Uuid>(
                 "SELECT DISTINCT user_ref FROM wfm_shift_assignment \
                   WHERE user_ref = ANY($1) AND (is_active IS NULL OR is_active = true) \
                     AND start_at::timestamptz <= $2 AND end_at::timestamptz >= $3",

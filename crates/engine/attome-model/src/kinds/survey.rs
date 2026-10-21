@@ -87,7 +87,7 @@ pub fn response_entity_of(doc: &Value) -> Option<&str> {
     doc.get("response_entity").and_then(Value::as_str)
 }
 
-fn issue(path: impl Into<String>, code: &str, message: impl Into<String>) -> Issue {
+fn issue(path: impl Into<String>, code: &'static str, message: impl Into<String>) -> Issue {
     Issue::new(path, code, message)
 }
 

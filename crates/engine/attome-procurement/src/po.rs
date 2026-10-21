@@ -429,6 +429,7 @@ async fn business_event(
         ),
     )
     .await
+    .map(|_| ())
 }
 
 /// A pending approval of this action on this record, if one is open.
