@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:b6ea948132a1ae4b345dc3975d9334570cfb83797bca56f2526af3ca7e5d8af0",
+  "checksum": "sha256:e50611a8a1798e50602bceaa9eae02504a9959508aadb76dc59f15602dbe5f48",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -337,6 +337,8 @@
               "graph.traverse",
               "handoff.to_person",
               "knowledge.answer",
+              "lead.book_meeting",
+              "lead.send_message",
               "mcp.call.consequential",
               "mcp.call.read",
               "mcp.call.reversible",

@@ -1454,6 +1454,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Lead qualifier agent (AI1-T1, platform changeset `0066`): the `lead_qualifier` agent (a draft until an administrator
+  activates it) with its Lead Qualifier policy: read, research, update and assign the lead, and two new Consequential
+  actions that reach the lead, `lead.send_message` (an email on the lead) and `lead.book_meeting` (a meeting on a D20
+  booking page at an offered time, in the lead's name). Both wait for a person's approval and refuse unless the lead holds
+  a grant for the `sales_outreach` consent purpose on email. Its Arabic and English evaluation cases are
+  `tests/fixtures/lead_qualifier.json`.
 - Customer 360 (G15-T1, `@attome/xrm/core/entity`): the account and contact pages show `xrm-customer-360`, the
   customer's open deals, open tasks, unpaid invoices, active entitlements, assets and people (each loading its first
   five and its count when opened, and hiding where its entity is not installed), the recent timeline and an AI summary

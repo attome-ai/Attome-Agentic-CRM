@@ -1,0 +1,53 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": ["core"]
+  },
+  "entities": [],
+  "record_sets": [
+    {
+      "entity": "ai_agent_policy",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "Lead Qualifier",
+          "description": "What the lead qualifier may do: read and research the lead, update it, assign it to an owner, and email the lead or book a meeting only when the lead consented to sales outreach. Emails and meetings wait for a person's approval.",
+          "risk_ceiling": "consequential",
+          "allowed_action_ids": [
+            "record.get",
+            "record.summarize",
+            "record.update",
+            "record.update_field",
+            "record.assign",
+            "search.records",
+            "search.knowledge",
+            "text.translate",
+            "email.draft",
+            "lead.send_message",
+            "lead.book_meeting"
+          ],
+          "max_invocations_per_session": 40,
+          "max_writes_per_day": 100,
+          "max_tokens_per_session": 60000,
+          "max_session_duration_minutes": 30
+        }
+      ]
+    },
+    {
+      "entity": "ai_agent",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "lead_qualifier",
+          "description": "Qualifies new leads: researches the lead, asks the questions that decide fit by email in Arabic or English, records the answers on the lead, books a meeting and hands a qualified lead to its owner.",
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "policy_ref": { "key": { "name": "Lead Qualifier" } },
+          "system_instructions": "You qualify new leads. Read the lead first and look for what Attome already knows about the company with search.records. Decide what is missing to judge fit: need, budget, timing and who decides. Ask for it with lead.send_message in the lead's language (Arabic or English), a few short questions at a time, never more than one message a day to the same lead. Contact the lead only through lead.send_message and lead.book_meeting; when either is refused for consent, stop and record that on the lead. Record every answer on the lead with record.update. When the lead fits, offer a meeting with lead.book_meeting at a time the booking page offers, then hand the lead to its owner with record.assign and a short summary. When it does not fit, set its status and say why. Never promise prices, discounts or dates."
+        }
+      ]
+    }
+  ]
+}

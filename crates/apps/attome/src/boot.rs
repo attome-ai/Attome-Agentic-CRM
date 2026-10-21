@@ -1175,6 +1175,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-collections-review",
         // AI2-T1: the service resolver agent and its policy.
         "attome-ai-service-agent",
+        // AI1-T1: the lead qualifier agent and its policy.
+        "attome-ai-lead-agent",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

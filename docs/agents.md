@@ -295,6 +295,27 @@ Collections reuse the follow-up ledger. Nothing happens until an administrator a
   promises and reminders (`GET /api/v1/ai/collections/invoices/{id}/promises`, `.../reminders`).
 - **Switched off:** while AI chat is switched off, nothing is sent or read.
 
+## Lead qualifier
+
+The `lead_qualifier` agent ships as a draft with its Lead Qualifier policy; an administrator
+activates it and gives it a model. It reads the lead, looks for what Attome already knows about the
+company (`search.records`), asks the questions that decide fit (need, budget, timing, who decides)
+in the lead's language, records the answers on the lead (`record.update`), offers a meeting and hands
+a qualified lead to its owner (`record.assign`).
+
+- **Reaching the lead.** Only two actions contact the lead, and both are Consequential, so each
+  call waits for a person's approval: `lead.send_message` emails the lead (a `communication` on the
+  lead), and `lead.book_meeting` books a meeting on a booking page (`page` is its slug, `start` one
+  of its offered times). The booking goes to a free team member round robin, and the lead gets the
+  confirmation with the reschedule and cancel link.
+- **Consent.** Both refuse unless the lead holds a grant in force for the `sales_outreach` consent
+  purpose on email (or `any`) in the consent ledger. No grant, a withdrawal or an account opt-out
+  refuses; nothing is sent. Record the grant from the lead's form or by hand.
+- **Limits.** The policy caps a session at 40 tool calls, 30 minutes and 60,000 tokens, and the
+  agent at 100 writes a day; each contact action also stops after 10 a minute and 100 a day in one
+  session. Each completed action records an `agent_task` outcome under rule `ai.lead`.
+- **Not yet:** WhatsApp (the compose writer sends email only) and company enrichment (L9).
+
 ## Meeting briefs and notes
 
 A meeting is an `activity` whose `activity_type` is `meeting`. It is about a record through

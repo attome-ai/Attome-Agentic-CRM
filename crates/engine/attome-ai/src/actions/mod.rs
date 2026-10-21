@@ -37,6 +37,8 @@ pub mod followup;
 pub mod graph;
 pub mod knowledge;
 pub mod knowledge_answer;
+/// AI1-T1: the lead qualifier's consent-checked contact steps.
+pub mod lead_qualifier;
 pub mod meeting;
 pub mod memory;
 pub mod model_edit;
@@ -134,6 +136,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(meeting::descriptors());
     all.extend(collections::descriptors());
     all.extend(agent_stats::descriptors());
+    all.extend(lead_qualifier::descriptors());
     all
 }
 
@@ -204,5 +207,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(meeting::executors());
     all.extend(collections::executors());
     all.extend(agent_stats::executors());
+    all.extend(lead_qualifier::executors());
     all
 }
