@@ -2813,6 +2813,8 @@ const DEDUP_KEY_COMMISSION_ACCEPTANCE: &str = "commission-acceptance";
 const DEDUP_KEY_INTRADAY: &str = "workforce-intraday";
 /// G14-T2: surveys sent on record changes (a registered job type).
 const DEDUP_KEY_SURVEY_SEND: &str = "survey-send";
+/// AI6-T3: the meeting brief scan (a registered job type).
+const DEDUP_KEY_MEETING_BRIEF_SCAN: &str = "ai-meeting-brief-scan";
 /// V5-T1: change requests decided by their customer sign-off (a registered job type).
 const DEDUP_KEY_CHANGE_SIGNOFF: &str = "change-signoff";
 /// W3-T4: sealed RFQ bids opened at the deadline (a registered job type).
@@ -2931,6 +2933,14 @@ pub const WORKFORCE_INTRADAY: attome_jobs::JobType =
 
 /// G14-T2: published surveys sent, from the change feed, when a record
 /// reaches their trigger value (a closed case).
+/// AI6-T3: meetings an hour away queued for a brief.
+pub const MEETING_BRIEF_SCAN: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::meeting::run::SCAN_JOB, 1);
+
+/// AI6-T3: one meeting's brief, made as its owner.
+pub const MEETING_BRIEF: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::meeting::run::BRIEF_JOB, 1);
+
 pub const SURVEY_SEND: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::survey_send::JOB, 1);
 
@@ -3328,6 +3338,39 @@ pub fn register_job_types() {
                 if proposed > 0 {
                     tracing::info!(proposed, "intraday offers proposed");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MEETING_BRIEF_SCAN,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_AI) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let queued = attome_ai::meeting::run::scan(&state, chrono::Utc::now())
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if queued > 0 {
+                    tracing::info!(queued, "meeting briefs queued");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MEETING_BRIEF,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_AI) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let brief: attome_ai::meeting::run::BriefJob = job.payload()?;
+                let made = attome_ai::meeting::run::run_brief(&state, brief.meeting_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::debug!(meeting = %brief.meeting_id, made, "meeting brief run");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3855,6 +3898,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
         EngineJob::Registered(job) if job.name == SURVEY_SEND.name => DEDUP_KEY_SURVEY_SEND,
+        EngineJob::Registered(job) if job.name == MEETING_BRIEF_SCAN.name => {
+            DEDUP_KEY_MEETING_BRIEF_SCAN
+        }
         EngineJob::Registered(job) if job.name == WORKFORCE_INTRADAY.name => DEDUP_KEY_INTRADAY,
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
@@ -4436,6 +4482,21 @@ pub fn spawn_intraday_scheduler(db: DbPool, interval: std::time::Duration) {
 }
 
 /// G14-T2: every minute, surveys sent on record changes.
+/// AI6-T3: every fifteen minutes, meetings an hour away queued for a brief.
+pub fn spawn_meeting_brief_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(MEETING_BRIEF_SCAN.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_MEETING_BRIEF_SCAN,
+            "meeting brief scan",
+        ),
+        Err(error) => tracing::error!(%error, "meeting brief scan: not scheduled"),
+    }
+}
+
 pub fn spawn_survey_send_scheduler(db: DbPool, interval: std::time::Duration) {
     register_job_types();
     match attome_core::jobs::JOB_TYPES.job(SURVEY_SEND.name, &()) {

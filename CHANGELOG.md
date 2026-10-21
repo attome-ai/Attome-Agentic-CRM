@@ -1401,6 +1401,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   meeting's language, else the owner's locale, within the AI budget, into the meeting's one
   `ai_meeting_brief` row (refreshed on a rerun; `failed` with no text when generation fails). The prompt
   is `meeting.brief/v1`; agent policies can list the action.
+- Meeting briefs made unasked (AI6-T3): the `ai_meeting_brief_scan` job (every 15 minutes) queues one
+  `ai_meeting_brief` job for each meeting starting 60 to 75 minutes ahead that is not cancelled and has
+  no brief; the job runs `meeting.brief` as the meeting owner through the AI gate and sends them an
+  in-app notice. The new setting `ai.meeting_briefs` (user or deployment, on by default) turns it off.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

@@ -1014,25 +1014,39 @@ fn mcp_entity_admission() -> SettingDescriptor {
 /// exactly like every other runtime-editable setting — no separate config
 /// table, per M02/D-412.
 fn ai_settings() -> Vec<SettingDescriptor> {
-    vec![SettingDescriptor::new(
-        "ai.memory_retention_days",
-        "How many days a memory row (`memory`, M35) is kept after \
+    vec![
+        SettingDescriptor::new(
+            "ai.memory_retention_days",
+            "How many days a memory row (`memory`, M35) is kept after \
          creation before the retention sweep proposes it for deletion. \
          Applies uniformly across every scope_kind in v1. A deployment that \
          wants to keep memory indefinitely should set a very large value \
          rather than relying on an unset default — this key always has an \
          effective value (the code default below).",
-        || {
-            json!({
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 3650,
-            })
-        },
-        &[SettingScope::Deployment],
-        false,
-        || json!(365),
-    )]
+            || {
+                json!({
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3650,
+                })
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!(365),
+        ),
+        // AI6-T3: briefs made an hour before a meeting. A person may turn
+        // their own off; the deployment's value is everyone else's.
+        SettingDescriptor::new(
+            "ai.meeting_briefs",
+            "Whether the AI writes a brief an hour before each meeting, for the \
+         meeting's owner (`meeting.brief`). A user's own choice wins over \
+         the deployment's.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::User, SettingScope::Deployment],
+            false,
+            || json!(true),
+        ),
+    ]
 }
 
 /// M53 Phase 1 (Omnichannel, web chat only, D-474). Deployment-scope only —
