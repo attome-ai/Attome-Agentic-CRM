@@ -1355,6 +1355,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   signed 30-day link when a record reaches the value, one per record. The link opens
   `GET /api/v1/surveys/form` (a public bilingual form; `/api/v1/surveys/respond` is its JSON twin), and
   the answers are checked against each question and stored once on the survey's response row.
+- Day plan proposals (I2-T2): `POST /api/v1/service/day-plans/propose` answers ghost assignments for a
+  day's unassigned work orders (or the ones named): each job goes to a technician the I2-T1 hard rules
+  allow, by cheapest insertion into their route within their shift (08:00-17:00 without one), then moves
+  that cut total travel, within a 10-second budget. Nothing is written.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

@@ -28,6 +28,7 @@ pub mod queue;
 pub mod returns;
 pub mod routing;
 pub mod schedule_candidates;
+pub mod schedule_optimise;
 pub mod seed;
 pub mod sla;
 pub mod status_page;
@@ -65,5 +66,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(schedule_candidates::openapi_fragment());
     doc.merge(major_incident::openapi_fragment());
     doc.merge(survey_send::openapi_fragment());
+    doc.merge(schedule_optimise::openapi_fragment());
     doc
 }
