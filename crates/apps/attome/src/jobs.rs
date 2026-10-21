@@ -2961,6 +2961,9 @@ pub const AGENT_STATS_ROLLUP: attome_jobs::JobType =
 pub const AGENT_STATS_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::BACKFILL_JOB, 1);
 
+/// AH1-T4: an undo of what an agent session wrote, applied item by item.
+pub const AI_UNDO: attome_jobs::JobType = attome_jobs::JobType::new(attome_ai::undo::UNDO_JOB, 1);
+
 /// O10-T1: executed decisions measured once their measure date passes.
 pub const DECISION_MEASURE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_dashboard::decision_outcome::MEASURE_JOB, 1);
@@ -3419,6 +3422,18 @@ pub fn register_job_types() {
                 {
                     tracing::info!(written, "agent performance: yesterday rolled up");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            AI_UNDO,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let run: attome_ai::undo::UndoRunJob = job.payload()?;
+                attome_ai::undo::run_undo(&state, run.undo_run_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent run undo execution (AH1-T4, migration `0196`): `attome_ai::undo::start_undo` stores the plan as an `ai_undo_run`
+  with one `ai_undo_item` per step (the step kept in the new `step` column) and queues the `ai_undo_run` job, which applies
+  each pending item as the person who asked with the planned `row_version` (a record changed meanwhile is skipped, never
+  overwritten), commits each outcome on its own so a restart resumes, and ends the run `done` or `failed` with counts.
 - Agent run undo plan (AH1-T3, `attome_ai::undo::plan_undo`): from a session's changes, per record and newest first, plans
   setting back each attribute still as the agent left it, skips (and names) the attributes a person changed since,
   soft-deletes what the agent created unless someone edited it, restores what it soft-deleted, and lists hard deletes and

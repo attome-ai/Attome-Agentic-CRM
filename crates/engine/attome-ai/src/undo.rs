@@ -24,6 +24,18 @@
 //! - hard-deleted, merged, cloned, imported or exported: not undoable;
 //! - every external effect: not undoable, with what it was.
 //!
+//! **Running** (AH1-T4): [`start_undo`] plans as the person asking and, in
+//! one transaction, writes the `ai_undo_run`, one `ai_undo_item` per step
+//! (newest first, the step kept in `step`) and the job [`UNDO_JOB`]. Skips
+//! and not-undoable steps are final at once; the rest are `pending`.
+//! [`run_undo`] applies each pending item in order as that person, with the
+//! planned `row_version` as If-Match, and commits each outcome on its own:
+//! `restored`, `skipped_changed` when the record moved on meanwhile (a
+//! person's edit always wins), or `failed` with a short reason. An item is
+//! only ever moved out of `pending` once, so a restarted job resumes at the
+//! next pending item and applies nothing twice. The run ends `done`, or
+//! `failed` when any item failed, with its counts in `summary`.
+//!
 //! **Values.** A field's old and new values are restorable only when the
 //! audit kept them readably: with crypto-shredding off they are plain text;
 //! with it on they are opened with the record's key
@@ -39,11 +51,20 @@ use attome_audit::AuditOperation;
 use attome_core::EngineState;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
-use serde_json::{Map, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
 use crate::descriptor::{Effect, is_message_send};
+
+/// The registered job that applies an undo run.
+pub const UNDO_JOB: &str = "ai_undo_run";
+
+/// The undo job's payload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoRunJob {
+    pub undo_run_id: Uuid,
+}
 
 /// Most headers one collection reads.
 pub const MAX_CHANGES: i64 = 5_000;
@@ -276,7 +297,7 @@ pub async fn collect_external_effects(
 }
 
 /// One planned undo step.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "step", rename_all = "snake_case")]
 pub enum UndoStep {
     RevertFields {
@@ -585,8 +606,8 @@ pub async fn plan_undo<R: UndoReader>(
             "it reached a system outside this deployment"
         };
         steps.push(UndoStep::NotUndoable {
-            entity: None,
-            record_id: None,
+            entity: Some("action_invocation".into()),
+            record_id: Some(e.invocation_id),
             action_id: Some(e.action_id.clone()),
             reason: reason.into(),
         });
@@ -594,23 +615,318 @@ pub async fn plan_undo<R: UndoReader>(
     Ok(steps)
 }
 
+/// How a step is stored: entity, record, operation, first outcome, the
+/// attributes it names and its detail. Pure.
+pub fn item_parts(
+    step: &UndoStep,
+) -> (String, Uuid, &'static str, &'static str, Vec<String>, Option<String>) {
+    match step {
+        UndoStep::RevertFields {
+            entity, record_id, set, ..
+        } => (
+            entity.clone(),
+            *record_id,
+            "revert_fields",
+            "pending",
+            set.keys().cloned().collect(),
+            None,
+        ),
+        UndoStep::SoftDelete {
+            entity, record_id, ..
+        } => (
+            entity.clone(),
+            *record_id,
+            "soft_delete",
+            "pending",
+            Vec::new(),
+            None,
+        ),
+        UndoStep::Restore { entity, record_id } => (
+            entity.clone(),
+            *record_id,
+            "restore",
+            "pending",
+            Vec::new(),
+            None,
+        ),
+        UndoStep::Skip {
+            entity,
+            record_id,
+            reason,
+            changed_attributes,
+        } => (
+            entity.clone(),
+            *record_id,
+            "skip",
+            "skipped_changed",
+            changed_attributes.clone(),
+            Some(reason.clone()),
+        ),
+        UndoStep::NotUndoable {
+            entity,
+            record_id,
+            action_id,
+            reason,
+        } => (
+            entity.clone().unwrap_or_else(|| "unknown".into()),
+            record_id.unwrap_or(Uuid::nil()),
+            "not_undoable",
+            "not_undoable",
+            Vec::new(),
+            Some(match action_id {
+                Some(action) => format!("{action}: {reason}"),
+                None => reason.clone(),
+            }),
+        ),
+    }
+}
+
+/// Plans undoing `sessions` as `ctx` and stores the run, its items and the
+/// job in one transaction. Returns the run's id.
+pub async fn start_undo(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    sessions: &[Uuid],
+) -> Result<Uuid, AppError> {
+    let mut changes = Vec::new();
+    let mut externals = Vec::new();
+    for session in sessions {
+        changes.extend(collect_session_changes(state, *session).await?);
+        externals.extend(collect_external_effects(state, *session).await?);
+    }
+    changes.sort_by(|a, b| {
+        (b.changed_on, b.audit_header_id).cmp(&(a.changed_on, a.audit_header_id))
+    });
+    let reader = RecordsReader { state, ctx };
+    let steps = plan_undo(&reader, &changes, &externals).await?;
+    let run = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "INSERT INTO ai_undo_run (id, scope, agent_session_ids, requested_by, status) \
+         VALUES ($1, 'session', $2, $3, 'planned')",
+    )
+    .bind(run)
+    .bind(sessions)
+    .bind(ctx.user_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    for (seq, step) in steps.iter().enumerate() {
+        let (entity, record, operation, outcome, attributes, detail) = item_parts(step);
+        sqlx::query(
+            "INSERT INTO ai_undo_item \
+                 (undo_run_id, entity, record_id, operation, outcome, changed_attributes, \
+                  detail, seq, step) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        )
+        .bind(run)
+        .bind(entity)
+        .bind(record)
+        .bind(operation)
+        .bind(outcome)
+        .bind(attributes)
+        .bind(detail)
+        .bind(i32::try_from(seq).map_err(AppError::internal)?)
+        .bind(serde_json::to_value(step).map_err(AppError::internal)?)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    let job = attome_jobs::RegisteredJob {
+        name: UNDO_JOB.to_owned(),
+        version: 1,
+        payload: serde_json::to_value(UndoRunJob { undo_run_id: run })
+            .map_err(AppError::internal)?,
+        next: None,
+    };
+    attome_jobs::enqueue_in_tx(&mut tx, attome_core::jobs::EngineJob::Registered(job))
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    tracing::info!(%run, steps = steps.len(), "undo run planned");
+    Ok(run)
+}
+
+/// The outcome of applying one step, and its detail. Pure.
+pub fn outcome_of(result: &Result<(), AppError>) -> (&'static str, Option<String>) {
+    match result {
+        Ok(()) => ("restored", None),
+        Err(
+            AppError::VersionConflict | AppError::VersionConflictAt { .. } | AppError::Conflict(_),
+        ) => (
+            "skipped_changed",
+            Some("the record changed after the undo was planned".into()),
+        ),
+        Err(AppError::NotFound) => ("failed", Some("the record is no longer there".into())),
+        Err(AppError::Forbidden) => ("failed", Some("the change is not allowed".into())),
+        Err(AppError::Validation(message)) => ("failed", Some(message.clone())),
+        Err(_) => ("failed", Some("the change was refused".into())),
+    }
+}
+
+/// Applies one stored step as `ctx`.
+async fn apply(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    run: Uuid,
+    step: &UndoStep,
+) -> Result<(), AppError> {
+    let user = ctx.user_id;
+    match step {
+        UndoStep::RevertFields {
+            entity,
+            record_id,
+            expected_row_version,
+            set,
+        } => attome_records::entity_crud::update_record_for(
+            state,
+            ctx,
+            user,
+            entity,
+            *record_id,
+            *expected_row_version,
+            Value::Object(set.clone()),
+        )
+        .await
+        .map(|_| ()),
+        UndoStep::SoftDelete {
+            entity,
+            record_id,
+            expected_row_version,
+        } => {
+            let origin = attome_records::entity_mutation::DeleteOrigin::with_id(
+                attome_records::entity_mutation::DeleteKind::Request,
+                format!("undo:{run}"),
+            );
+            attome_records::entity_crud::delete_record_for(
+                state,
+                ctx,
+                user,
+                entity,
+                *record_id,
+                Some(*expected_row_version),
+                &origin,
+            )
+            .await
+        }
+        UndoStep::Restore { entity, record_id } => {
+            attome_records::entity_crud::restore_record_for(
+                state,
+                ctx,
+                user,
+                entity,
+                *record_id,
+                None,
+            )
+            .await
+            .map(|_| ())
+        }
+        UndoStep::Skip { .. } | UndoStep::NotUndoable { .. } => Ok(()),
+    }
+}
+
+type ItemRow = (Uuid, Option<Value>);
+
+/// Applies an undo run's pending items in order. Safe to run again.
+pub async fn run_undo(state: &EngineState, run: Uuid) -> Result<(), AppError> {
+    let db = &state.base.db;
+    let row: Option<(Uuid, String)> =
+        sqlx::query_as("SELECT requested_by, status FROM ai_undo_run WHERE id = $1")
+            .bind(run)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let Some((requested_by, status)) = row else {
+        return Err(AppError::NotFound);
+    };
+    if status == "done" || status == "failed" {
+        return Ok(());
+    }
+    let ctx = state.base.security.resolve(requested_by).await?;
+    sqlx::query("UPDATE ai_undo_run SET status = 'running' WHERE id = $1 AND status = 'planned'")
+        .bind(run)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    let items: Vec<ItemRow> = sqlx::query_as(
+        "SELECT id, step FROM ai_undo_item \
+          WHERE undo_run_id = $1 AND outcome = 'pending' ORDER BY seq",
+    )
+    .bind(run)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    for (item, step) in items {
+        let result = match step.map(serde_json::from_value::<UndoStep>) {
+            Some(Ok(step)) => apply(state, &ctx, run, &step).await,
+            _ => Err(AppError::Validation("the planned step could not be read".into())),
+        };
+        let (outcome, detail) = outcome_of(&result);
+        sqlx::query(
+            "UPDATE ai_undo_item SET outcome = $2, detail = $3 \
+              WHERE id = $1 AND outcome = 'pending'",
+        )
+        .bind(item)
+        .bind(outcome)
+        .bind(detail)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    let counts: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT outcome, count(*) FROM ai_undo_item WHERE undo_run_id = $1 GROUP BY outcome",
+    )
+    .bind(run)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let summary: Map<String, Value> = counts
+        .iter()
+        .map(|(outcome, n)| (outcome.clone(), json!(n)))
+        .collect();
+    let failed = counts.iter().any(|(o, n)| o == "failed" && *n > 0);
+    sqlx::query(
+        "UPDATE ai_undo_run SET status = $2, finished_at = now(), summary = $3 \
+          WHERE id = $1 AND status IN ('planned', 'running')",
+    )
+    .bind(run)
+    .bind(if failed { "failed" } else { "done" })
+    .bind(Value::Object(summary))
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    tracing::info!(%run, failed, "undo run finished");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     #[test]
     fn undo_reads_only_values_kept_readably() {
         assert!(readable_mode(Some(0), false));
-        assert!(!readable_mode(Some(1), true), "a sensitive field is restricted");
-        assert!(!readable_mode(Some(2), false), "a credential column is not captured");
+        assert!(
+            !readable_mode(Some(1), true),
+            "a sensitive field is restricted"
+        );
+        assert!(
+            !readable_mode(Some(2), false),
+            "a credential column is not captured"
+        );
         assert!(readable_mode(None, false), "before modes, a plain field");
-        assert!(!readable_mode(None, true), "before modes, a sensitive field");
+        assert!(
+            !readable_mode(None, true),
+            "before modes, a sensitive field"
+        );
     }
 
     #[test]
     fn undo_opens_plain_values_and_refuses_ciphertext_without_a_key() {
-        assert_eq!(open_value(None, false, Some("a".into())), Ok(Some("a".into())));
+        assert_eq!(
+            open_value(None, false, Some("a".into())),
+            Ok(Some("a".into()))
+        );
         assert_eq!(open_value(None, false, None), Ok(None));
         assert_eq!(open_value(None, true, Some("c2VjcmV0".into())), Err(()));
         assert_eq!(open_value(None, true, None), Ok(None));
@@ -801,6 +1117,67 @@ mod tests {
         assert_eq!(steps.len(), 1);
         let (_, set) = reverted(&steps).unwrap();
         assert_eq!(set["stage"], json!("open"));
+    }
+
+    #[test]
+    fn undo_run_items_start_pending_or_final() {
+        let id = Uuid::now_v7();
+        let revert = UndoStep::RevertFields {
+            entity: "deal".into(),
+            record_id: id,
+            expected_row_version: 4,
+            set: Map::from_iter([("stage".to_owned(), json!("open"))]),
+        };
+        let (_, _, op, outcome, attrs, _) = item_parts(&revert);
+        assert_eq!((op, outcome), ("revert_fields", "pending"));
+        assert_eq!(attrs, vec!["stage".to_owned()]);
+        let skip = UndoStep::Skip {
+            entity: "deal".into(),
+            record_id: id,
+            reason: "changed".into(),
+            changed_attributes: vec!["amount".into()],
+        };
+        assert_eq!(item_parts(&skip).3, "skipped_changed");
+        let sent = UndoStep::NotUndoable {
+            entity: Some("action_invocation".into()),
+            record_id: Some(id),
+            action_id: Some("email.send".into()),
+            reason: "the message was already sent".into(),
+        };
+        let parts = item_parts(&sent);
+        assert_eq!(parts.3, "not_undoable");
+        assert_eq!(
+            parts.5.as_deref(),
+            Some("email.send: the message was already sent")
+        );
+    }
+
+    #[test]
+    fn undo_run_a_conflict_is_a_skip_not_a_failure() {
+        assert_eq!(outcome_of(&Ok(())).0, "restored");
+        assert_eq!(
+            outcome_of(&Err(AppError::VersionConflict)).0,
+            "skipped_changed"
+        );
+        assert_eq!(outcome_of(&Err(AppError::NotFound)).0, "failed");
+        let refused = outcome_of(&Err(AppError::internal("db down")));
+        assert_eq!(
+            refused.1.as_deref(),
+            Some("the change was refused"),
+            "masked"
+        );
+    }
+
+    #[test]
+    fn undo_run_steps_round_trip_as_stored() {
+        let step = UndoStep::SoftDelete {
+            entity: "deal".into(),
+            record_id: Uuid::now_v7(),
+            expected_row_version: 2,
+        };
+        let stored = serde_json::to_value(&step).unwrap();
+        assert_eq!(stored["step"], json!("soft_delete"));
+        assert_eq!(serde_json::from_value::<UndoStep>(stored).unwrap(), step);
     }
 
     #[test]
