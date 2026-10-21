@@ -259,6 +259,30 @@ fn encrypt_opt(dek: &[u8; 32], value: &Option<String>) -> Result<Option<String>,
     }
 }
 
+/// A record's key for reading its audit values, without creating one (AH1-T2,
+/// collecting what an agent session changed). `None` when the record has no
+/// key or its key was destroyed: its values are then unreadable for good.
+pub async fn read_dek(
+    db: &attome_db::DbPool,
+    master_ring: &KeyRing,
+    record_id: Uuid,
+) -> Result<Option<[u8; 32]>, AppError> {
+    let existing: Option<WrappedKeyRow> = sqlx::query_as(
+        "SELECT wrapped_dek, destroyed_at FROM audit_erasure_key WHERE record_id = $1",
+    )
+    .bind(record_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((Some(wrapped), None)) = existing else {
+        return Ok(None);
+    };
+    let dek = attome_auth::envelope::decrypt_bytes(FIELD_NAME, master_ring, &wrapped)?;
+    dek.try_into().map(Some).map_err(|_| {
+        AppError::internal("audit_erasure_key.wrapped_dek decrypted to the wrong length")
+    })
+}
+
 /// Decrypts a value previously produced by `encrypt_opt`. Exposed (not just
 /// internal) for the future admin audit-history read path (D-107 follow-up)
 /// to call once it exists.

@@ -177,6 +177,8 @@ pub mod turn;
 pub mod turn_cancel;
 /// C13.1 — the chatbot loop's Prometheus metrics (closed label sets only).
 pub mod turn_metrics;
+/// AH1-T2: what one agent session wrote, for undoing a run.
+pub mod undo;
 pub mod webchat;
 pub mod write_guard;
 pub mod write_policy;
