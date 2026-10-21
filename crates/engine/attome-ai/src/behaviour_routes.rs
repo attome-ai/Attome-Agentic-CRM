@@ -1,5 +1,6 @@
 //! AH5-T5: `GET /api/v1/admin/ai/agents/{id}/behaviour` (administrators):
-//! an agent's status and `row_version`, its baseline, its last 24 hours of
+//! an agent's status and `row_version` (for an `ai_agent` definition; a
+//! published agent object has neither), its baseline, its last 24 hours of
 //! activity and the last time it was stopped automatically, with the
 //! reason. Switching it back on is the ordinary update of the agent
 //! (`PATCH /api/v1/ai_agent/{id}` with `status: active` and `If-Match`), so
@@ -55,7 +56,8 @@ pub struct AgentBehaviour {
     pub agent_id: Uuid,
     pub name: Option<String>,
     pub status: Option<String>,
-    pub row_version: i64,
+    /// `None` for a published agent object.
+    pub row_version: Option<i64>,
     pub baseline: Option<BaselineView>,
     /// The last 24 hours with activity, oldest first.
     pub hours: Vec<HourView>,
@@ -71,7 +73,6 @@ pub struct AgentBehaviour {
         (status = 200, description = "Status, baseline, the last 24 hours and the last automatic stop", body = AgentBehaviour),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
-        (status = 404, description = "No such agent", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -89,7 +90,10 @@ pub(crate) async fn get_behaviour(
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let (name, status, row_version) = head.ok_or(AppError::NotFound)?;
+    let (name, status, row_version) = match head {
+        Some((name, status, version)) => (name, status, Some(version)),
+        None => (None, None, None),
+    };
     let baseline: Option<BaselineView> = sqlx::query_as(
         "SELECT computed_at, first_activity_at, mean_writes_per_hour, stddev_writes_per_hour, \
                 mean_deletes_per_hour, stddev_deletes_per_hour, usual_entities, usual_hours \

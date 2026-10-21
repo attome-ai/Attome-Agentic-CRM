@@ -65,7 +65,8 @@ export interface AgentBehaviour {
   agent_id: string;
   name: string | null;
   status: string | null;
-  row_version: number;
+  /** `null` for a published agent object, which has no status to set. */
+  row_version: number | null;
   baseline: {
     computed_at: string;
     first_activity_at: string | null;
@@ -103,8 +104,10 @@ export class AiAgentPerformanceService {
   }
 
   /** AH5-T5: a person switches a stopped agent back on: the ordinary update, with If-Match. */
-  switchOn(agentId: string, rowVersion: number): Observable<unknown> {
-    return this.api.patch<unknown>(`/api/v1/ai_agent/${encodeURIComponent(agentId)}`, { status: 'active' }, rowVersion);
+  switchOn(agentId: string, rowVersion: number | null): Observable<unknown> {
+    return this.api.patch<unknown>(
+      `/api/v1/ai_agent/${encodeURIComponent(agentId)}`, { status: 'active' }, rowVersion ?? undefined,
+    );
   }
 
   runs(agentId: string, day: string, metric: RunsMetric, cursor?: string | null): Observable<RunsPage> {

@@ -2,7 +2,8 @@
 //! are measured against (AH5-T2).
 //!
 //! - [`roll_up_hour`] fills `ai_agent_activity_hourly` for one hour: per
-//!   agent (the session's `agent_definition_ref`), its completed calls
+//!   agent (the session's published agent object, `agent_object_ref`, else
+//!   its `ai_agent` definition, `agent_definition_ref`), its completed calls
 //!   counted by the action's limit class (AH4: record writes, deletes, and
 //!   outside calls or messages sent) and the entities its agent-initiated
 //!   audit headers name. Re-running an hour replaces its rows.
@@ -27,11 +28,14 @@
 //! **The trip** (AH5-T3, [`trip`]): on a departure the agent is stopped.
 //! Every live session of it is paused (not revoked, so a person can inspect
 //! and resume one) with the reason `automatic: <kind>` by the policy actor;
-//! the agent definition is set `suspended`, which `start_session` already
+//! an `ai_agent` definition is set `suspended`, which `start_session` already
 //! refuses, in one transaction with a `Configuration` security event; and its
-//! owner and the administrators are alerted with what departed. Nothing here
-//! sets an agent back to `active`: only a person does, by updating the
-//! agent. An agent already suspended is not tripped again.
+//! owner and the administrators are alerted with what departed. A published
+//! agent object has no status to set, so for one the trip is the paused
+//! sessions. Nothing here sets an agent back to `active`: only a person
+//! does, by updating the agent. A trip that finds nothing left to stop (the
+//! agent already suspended and no live session) does nothing, so a lasting
+//! departure does not alert again every five minutes.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -155,10 +159,10 @@ async fn activity(
     end: DateTime<Utc>,
 ) -> Result<BTreeMap<Uuid, HourActivity>, AppError> {
     let calls: Vec<(Uuid, String, i64)> = sqlx::query_as(
-        "SELECT s.agent_definition_ref, i.action_id, count(*) \
+        "SELECT COALESCE(s.agent_object_ref, s.agent_definition_ref), i.action_id, count(*) \
            FROM action_invocation i JOIN agent_session s ON s.id = i.agent_session_id \
           WHERE i.created_at >= $1 AND i.created_at < $2 AND i.outcome = 'completed' \
-            AND s.agent_definition_ref IS NOT NULL \
+            AND COALESCE(s.agent_object_ref, s.agent_definition_ref) IS NOT NULL \
           GROUP BY 1, 2",
     )
     .bind(start)
@@ -167,10 +171,12 @@ async fn activity(
     .await
     .map_err(AppError::internal)?;
     let entities: Vec<(Uuid, Vec<String>)> = sqlx::query_as(
-        "SELECT s.agent_definition_ref, array_agg(DISTINCT h.entity_name::text) \
+        "SELECT COALESCE(s.agent_object_ref, s.agent_definition_ref), \
+                array_agg(DISTINCT h.entity_name::text) \
            FROM audit_header h JOIN agent_session s ON s.id = h.agent_session_id \
           WHERE h.initiator = 1 AND h.created_at >= $1 AND h.created_at < $2 \
-            AND h.entity_name IS NOT NULL AND s.agent_definition_ref IS NOT NULL \
+            AND h.entity_name IS NOT NULL \
+            AND COALESCE(s.agent_object_ref, s.agent_definition_ref) IS NOT NULL \
           GROUP BY 1",
     )
     .bind(start)
@@ -484,9 +490,10 @@ pub fn alert_text(agent_name: &str, d: &Departure) -> (String, String) {
     (subject, body)
 }
 
-/// Stops an agent for a departure: pauses its live sessions, suspends it
-/// with a security event, and alerts its owner and the administrators.
-/// Returns false when it was already suspended.
+/// Stops an agent for a departure: pauses its live sessions, suspends its
+/// `ai_agent` definition when it has one, writes a security event, and
+/// alerts its owner and the administrators. Returns false when there was
+/// nothing left to stop.
 pub async fn trip(state: &EngineState, d: &Departure) -> Result<bool, AppError> {
     let db = &state.base.db;
     let actor = attome_approval::POLICY_ACTOR_ID;
@@ -506,9 +513,19 @@ pub async fn trip(state: &EngineState, d: &Departure) -> Result<bool, AppError> 
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let Some((name, owner)) = suspended else {
+    let sessions: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM agent_session \
+          WHERE (agent_object_ref = $1 OR agent_definition_ref = $1) \
+            AND paused_at IS NULL AND revoked_at IS NULL AND ended_at IS NULL",
+    )
+    .bind(d.agent_ref)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if suspended.is_none() && sessions.is_empty() {
         return Ok(false);
-    };
+    }
+    let (name, owner) = suspended.unwrap_or((None, None));
     attome_audit::security::write_security_event(
         &mut tx,
         &attome_audit::audit_service(state),
@@ -524,14 +541,6 @@ pub async fn trip(state: &EngineState, d: &Departure) -> Result<bool, AppError> 
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    let sessions: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM agent_session WHERE agent_definition_ref = $1 \
-            AND paused_at IS NULL AND revoked_at IS NULL AND ended_at IS NULL",
-    )
-    .bind(d.agent_ref)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
     for session in &sessions {
         crate::session::pause(db, *session, actor, &reason).await?;
     }
