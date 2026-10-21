@@ -128,7 +128,16 @@ impl<'a> AuditService<'a> {
         // produced before those columns were threaded into this insert —
         // see `write_header`'s doc. Existing rows and existing tests are
         // therefore unaffected.
-        let attribution = Attribution::user(event.user_context.user_id);
+        // AK3-T1: inside an agent action (`attome_core::agent_scope`), the
+        // write is the agent's, acting for the person.
+        let attribution = match attome_core::agent_scope::current() {
+            Some(agent) => Attribution::agent(
+                event.user_context.user_id,
+                agent.session_id,
+                agent.action_id,
+            ),
+            None => Attribution::user(event.user_context.user_id),
+        };
         self.write_in_tx_attributed(tx, event, attribution).await
     }
 

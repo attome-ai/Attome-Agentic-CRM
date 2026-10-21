@@ -136,11 +136,12 @@ pub async fn emit_with(
     event_name: Option<&str>,
     payload: &ChangePayload,
 ) -> Result<(), AppError> {
+    let (initiator, agent_session) = crate::agent_scope::columns();
     sqlx::query(
         "INSERT INTO entity_change_event \
              (entity_logicalname, record_id, operation, event_name, changed_attributes, before, after, \
-              row_version) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+              row_version, initiator, agent_session_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -150,6 +151,8 @@ pub async fn emit_with(
     .bind(&payload.before)
     .bind(&payload.after)
     .bind(payload.row_version)
+    .bind(initiator)
+    .bind(agent_session)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -171,7 +174,9 @@ pub struct CursorPosition {
     pub last_id: Option<Uuid>,
 }
 
-/// Writes one feed row in the CALLER'S transaction. This is the whole point of
+/// Writes one feed row in the CALLER'S transaction (AK3-T1: every writer here
+/// also records who drove the change, a person or an agent with its session,
+/// from [`crate::agent_scope`]). This is the whole point of
 /// an outbox: an event can never exist for a write that rolled back, or be
 /// lost for one that committed. Passing a pooled connection instead of the
 /// mutating transaction's own would reintroduce exactly the dual-write bug
@@ -182,13 +187,17 @@ pub async fn emit(
     record_id: Uuid,
     operation: ChangeOperation,
 ) -> Result<(), AppError> {
+    let (initiator, agent_session) = crate::agent_scope::columns();
     sqlx::query(
-        "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
-         VALUES ($1, $2, $3)",
+        "INSERT INTO entity_change_event \
+             (entity_logicalname, record_id, operation, initiator, agent_session_id) \
+         VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
     .bind(operation.as_str())
+    .bind(initiator)
+    .bind(agent_session)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -219,15 +228,18 @@ pub async fn emit_named(
     operation: ChangeOperation,
     event_name: &str,
 ) -> Result<(), AppError> {
+    let (initiator, agent_session) = crate::agent_scope::columns();
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, event_name) \
-         VALUES ($1, $2, $3, $4)",
+             (entity_logicalname, record_id, operation, event_name, initiator, agent_session_id) \
+         VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
     .bind(operation.as_str())
     .bind(event_name)
+    .bind(initiator)
+    .bind(agent_session)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -251,13 +263,17 @@ pub async fn emit_many(
     if record_ids.is_empty() {
         return Ok(());
     }
+    let (initiator, agent_session) = crate::agent_scope::columns();
     sqlx::query(
-        "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
-         SELECT $1, r, $3 FROM UNNEST($2::uuid[]) AS r",
+        "INSERT INTO entity_change_event \
+             (entity_logicalname, record_id, operation, initiator, agent_session_id) \
+         SELECT $1, r, $3, $4, $5 FROM UNNEST($2::uuid[]) AS r",
     )
     .bind(entity_logicalname)
     .bind(record_ids)
     .bind(operation.as_str())
+    .bind(initiator)
+    .bind(agent_session)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;

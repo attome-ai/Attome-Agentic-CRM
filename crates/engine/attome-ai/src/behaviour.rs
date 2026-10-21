@@ -175,7 +175,7 @@ async fn activity(
                 array_agg(DISTINCT h.entity_name::text) \
            FROM audit_header h JOIN agent_session s ON s.id = h.agent_session_id \
           WHERE h.initiator = 1 AND h.created_at >= $1 AND h.created_at < $2 \
-            AND h.entity_name IS NOT NULL \
+            AND h.entity_name IS NOT NULL AND h.operation BETWEEN 0 AND 8 \
             AND COALESCE(s.agent_object_ref, s.agent_definition_ref) IS NOT NULL \
           GROUP BY 1",
     )

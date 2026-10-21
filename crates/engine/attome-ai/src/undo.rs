@@ -178,7 +178,7 @@ pub async fn collect_session_changes(
         "SELECT id, entity_name, record_id, operation, changed_on, created_at, version_after \
            FROM audit_header \
           WHERE agent_session_id = $1 AND initiator = 1 AND record_id IS NOT NULL \
-            AND entity_name IS NOT NULL \
+            AND entity_name IS NOT NULL AND operation BETWEEN 0 AND 8 \
           ORDER BY COALESCE(changed_on, created_at) DESC, id DESC LIMIT $2",
     )
     .bind(session)

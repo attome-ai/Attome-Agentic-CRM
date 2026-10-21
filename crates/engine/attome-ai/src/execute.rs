@@ -706,7 +706,20 @@ async fn run_executor(
             AppError::internal("action has no executor")
         })?;
 
-    let mut result = match executor.execute(state, ctx, args).await {
+    // AK3-T1: the engine writes an agent's action makes (record audit
+    // headers, change events) name the agent and its session.
+    let run = executor.execute(state, ctx, args);
+    let outcome = match ctx.agent_session_id.filter(|_| ctx.is_agent()) {
+        Some(session_id) => {
+            let agent = attome_core::agent_scope::AgentScope {
+                session_id,
+                action_id: descriptor.id.to_string(),
+            };
+            attome_core::agent_scope::scope(agent, run).await
+        }
+        None => run.await,
+    };
+    let mut result = match outcome {
         Ok(result) => result,
         Err(e) => {
             // Retryability (D-502): a failed attempt must not occupy the key.

@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent attribution on engine writes (AK3-T1, migration `0198`): every agent action now runs inside
+  `attome_core::agent_scope`, so the record audit headers and change events its engine writes name the agent's session
+  (`initiator` 1) instead of reading as the person's own; `entity_change_event` gains `initiator` and `agent_session_id`.
+  Agent run undo and agent baselines read exactly these.
 - Agent behaviour on the performance page (AH5-T5): `GET /api/v1/admin/ai/agents/{id}/behaviour` (administrators) gives an
   agent's status, baseline, last 24 hours and last automatic stop; the agent performance page shows them for the chosen
   agent with an hourly writes chart, and a stopped agent's reason with a Switch back on button (the agent's ordinary
