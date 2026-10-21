@@ -402,6 +402,49 @@ pub async fn check_departures(db: &DbPool, now: DateTime<Utc>) -> Result<Vec<Dep
     Ok(out)
 }
 
+/// AH5-T4: the rules an agent is checked against. Owner-added rules on
+/// agent activity belong in generic watchers over `ai_agent_activity_hourly`
+/// (P11's metric alerts are not a watcher framework yet); until those exist,
+/// these four built-in rules are the list, and [`stop_agent`] is the action a
+/// watcher would call, on the same [`trip`] path.
+pub const RULES: [DepartureKind; 4] = [
+    DepartureKind::Volume,
+    DepartureKind::Deletes,
+    DepartureKind::NewEntity,
+    DepartureKind::OutsideHours,
+];
+
+/// The departure a `stop_agent` event names: `agent_ref` (required),
+/// `kind` (a rule's wire name, `volume` by default), `observed`, `expected`
+/// and `entity`. Pure.
+pub fn departure_from_event(event: &serde_json::Value) -> Result<Departure, AppError> {
+    let agent_ref = event["agent_ref"]
+        .as_str()
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| AppError::Validation("agent_ref must be a UUID".into()))?;
+    let kind = match event["kind"].as_str() {
+        None => DepartureKind::Volume,
+        Some(name) => RULES
+            .into_iter()
+            .find(|k| kind_name(*k) == name)
+            .ok_or_else(|| AppError::Validation(format!("kind: unknown rule {name}")))?,
+    };
+    Ok(Departure {
+        agent_ref,
+        kind,
+        observed: event["observed"].as_f64().unwrap_or(0.0),
+        expected: event["expected"].as_f64().unwrap_or(0.0),
+        entity: event["entity"].as_str().map(str::to_owned),
+    })
+}
+
+/// The `stop_agent` action: stops the agent an activity event names, through
+/// the same [`trip`] as the built-in check. Returns false when it was
+/// already stopped.
+pub async fn stop_agent(state: &EngineState, event: &serde_json::Value) -> Result<bool, AppError> {
+    trip(state, &departure_from_event(event)?).await
+}
+
 /// The wire name of a departure kind. Pure.
 pub fn kind_name(kind: DepartureKind) -> &'static str {
     match kind {
@@ -666,6 +709,25 @@ mod tests {
         assert!(subject.contains("collector"));
         assert!(body.contains("invoice") && body.contains("suspended"));
         assert_eq!(kind_name(DepartureKind::OutsideHours), "outside_hours");
+    }
+
+    #[test]
+    fn behaviour_stop_agent_takes_the_agent_from_the_event() {
+        let agent = Uuid::now_v7();
+        let event = serde_json::json!({
+            "agent_ref": agent.to_string(),
+            "kind": "deletes",
+            "observed": 40,
+            "expected": 2.5,
+        });
+        let d = departure_from_event(&event).unwrap();
+        assert_eq!(d.agent_ref, agent);
+        assert_eq!(d.kind, DepartureKind::Deletes);
+        assert!((d.observed - 40.0).abs() < 1e-9);
+        let unknown = serde_json::json!({ "agent_ref": agent.to_string(), "kind": "mood" });
+        assert!(departure_from_event(&unknown).is_err());
+        assert!(departure_from_event(&serde_json::json!({})).is_err());
+        assert_eq!(RULES.map(kind_name).len(), 4);
     }
 
     #[test]

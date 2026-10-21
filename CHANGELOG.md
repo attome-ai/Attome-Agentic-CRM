@@ -1454,6 +1454,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent activity rules (AH5-T4): the four built-in departure rules are `behaviour::RULES`, and `behaviour::stop_agent`
+  stops the agent an activity event names through the same trip as the check, ready for owner-added watcher rules.
 - Agent stop on a departure (AH5-T3): when the five-minute check finds a departure, the agent's live sessions are paused
   (`automatic: <kind>`), the agent is set `suspended` (which new sessions already refuse) with a Configuration audit
   event, and its owner and the administrators are alerted with what departed; only a person sets it back to active.
