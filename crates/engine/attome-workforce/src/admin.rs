@@ -37,7 +37,7 @@ use axum::{
 };
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc, Weekday};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -710,13 +710,6 @@ async fn publish(
 
 // ── Routes ───────────────────────────────────────────────────────────────
 
-fn x_audit() -> Value {
-    json!(attome_audit::security::x_audit(&[(
-        attome_audit::AuditCategory::BusinessEvent,
-        attome_audit::AuditOperation::Update
-    )]))
-}
-
 #[utoipa::path(
     post,
     path = "/api/v1/workforce/groups/{id}/schedules/build",
@@ -724,7 +717,7 @@ fn x_audit() -> Value {
     tag = "workforce",
     params(("id" = Uuid, Path, description = "The planning group")),
     request_body = BuildBody,
-    extensions(("x-audit" = x_audit())),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 202, description = "The build is queued", body = BuildQueued),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -811,7 +804,7 @@ async fn get_detail(
         ("If-Match" = String, Header, description = "The assignment's row_version"),
     ),
     request_body = AssignmentPatch,
-    extensions(("x-audit" = x_audit())),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Changed", body = AssignmentView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -848,7 +841,7 @@ async fn patch_assignment(
         ("id" = Uuid, Path, description = "The draft schedule"),
         ("If-Match" = String, Header, description = "The schedule's row_version"),
     ),
-    extensions(("x-audit" = x_audit())),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Published", body = Published),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
