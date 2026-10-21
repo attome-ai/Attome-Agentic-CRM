@@ -1831,6 +1831,7 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-modules",
+ "attome-notification",
  "attome-records",
  "attome-security",
  "attome-server",

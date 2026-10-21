@@ -15,8 +15,9 @@
 //! A rule that no longer parses, or has no further occurrence (an `UNTIL`
 //! already past), deactivates its schedule.
 //!
-//! **Recipient delivery (`delivery`/`recipients`/`skip_if_empty`) is
-//! persisted as schedule metadata but not yet dispatched**, as before.
+//! P3-T1: a schedule with `recipients` runs once per recipient, as that
+//! recipient, and each completed run is delivered to its recipient
+//! (`crate::delivery`).
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -40,6 +41,7 @@ struct ScheduleRow {
     rrule: String,
     created_at: Option<DateTime<Utc>>,
     row_version: i64,
+    recipients: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -57,8 +59,7 @@ pub fn schedule_of(rrule: &str, created_at: DateTime<Utc>) -> Result<Schedule, S
     Schedule::rrule(rrule, created_at).map_err(|e| e.0)
 }
 
-const SELECT_SCHEDULE: &str =
-    "SELECT id, report_ref, run_as, rrule, created_at, row_version FROM report_schedule";
+const SELECT_SCHEDULE: &str = "SELECT id, report_ref, run_as, rrule, created_at, row_version, recipients FROM report_schedule";
 
 /// Ticks every active schedule's ledger entry; each occurrence that came due
 /// is claimed once and enqueued as a `ReportScheduleFire`.
@@ -152,16 +153,25 @@ pub async fn fire(state: &EngineState, schedule_id: Uuid) -> Result<(), AppError
     // report's own `parameters` default (resolved fresh at process time)
     // when a run's `params` is empty, same as a manual run with no `params`
     // in its request body.
-    crate::run::create_run(
-        state,
-        row.report_ref,
-        &report.format,
-        &[],
-        row.run_as,
-        "scheduled",
-        Some(row.id),
-    )
-    .await?;
+    // P3-T1: one run per recipient, each under that recipient's own
+    // access; with none, one run as `run_as`.
+    let mut people =
+        crate::delivery::resolve_recipients(&state.base.db, row.recipients.as_deref()).await?;
+    if people.is_empty() {
+        people.push(row.run_as);
+    }
+    for person in people {
+        crate::run::create_run(
+            state,
+            row.report_ref,
+            &report.format,
+            &[],
+            person,
+            "scheduled",
+            Some(row.id),
+        )
+        .await?;
+    }
     Ok(())
 }
 

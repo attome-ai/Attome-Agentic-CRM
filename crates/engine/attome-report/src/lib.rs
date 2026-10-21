@@ -18,6 +18,7 @@
 //! (`record_share`) all apply with zero code here.
 
 pub mod auth;
+pub mod delivery;
 pub mod model;
 pub mod render;
 pub mod report_admin;

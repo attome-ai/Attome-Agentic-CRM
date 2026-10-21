@@ -1391,6 +1391,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   renewal to the follow-up ledger (new reasons `invoice_due`, `invoice_overdue`, `renewal_due`), at most
   once a day per record, skipping invoices with an open payment promise and records at the rule's
   `max_reminders`.
+- Scheduled report delivery (P3-T1): a report schedule's `recipients` (user ids or addresses) each get
+  their own run under their own access instead of one run as `run_as`; each completed run is sent to its
+  recipient in the app, or also by email with `delivery = email_link`, unless it is empty and the
+  schedule says `skip_if_empty`; a failed scheduled run alerts the schedule's owner.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

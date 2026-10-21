@@ -345,6 +345,8 @@ async fn mark_failed(state: &EngineState, run_id: Uuid, message: &str) -> Result
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    // P3-T1: a failed scheduled run alerts the schedule's owner.
+    crate::delivery::alert_owner(state, run_id, message).await;
     Ok(())
 }
 
@@ -544,6 +546,8 @@ pub async fn process(state: &EngineState, run_id: Uuid) -> Result<(), AppError> 
         .await?;
         return Err(e);
     }
+    // P3-T1: a scheduled run goes to its recipient.
+    crate::delivery::deliver(state, run_id).await;
 
     Ok(())
 }
