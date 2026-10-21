@@ -10,6 +10,7 @@ pub mod model;
 pub mod rules;
 pub mod solver;
 pub mod staffing;
+pub mod what_if;
 
 pub use model::WorkforceModel;
 
@@ -20,5 +21,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 39;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    admin::openapi_fragment()
+    let mut doc = admin::openapi_fragment();
+    doc.merge(what_if::openapi_fragment());
+    doc
 }

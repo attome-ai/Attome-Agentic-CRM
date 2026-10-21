@@ -1364,6 +1364,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (append-only; an unbalanced entry, a closed period or a heading account is 422);
   `POST /api/v1/ledger/source-postings` posts a source document through its `gl_posting_rule`, once per
   source; `POST /api/v1/ledger/periods/{id}/close` and `/reopen` are audited.
+- Schedule what-if and hiring view (G17-T11): `POST /api/v1/workforce/schedules/{id}/what-if` recomputes a
+  schedule's requirement, coverage and service level with a forecast multiplier, target or handling-time
+  overrides and a headcount change, writing nothing; `GET /api/v1/workforce/groups/{id}/hiring-plan?months=6`
+  answers required full-time people per month from the stored forecast against current members.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

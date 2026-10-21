@@ -21,6 +21,6 @@ impl EngineModel for WorkforceModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::admin::routes()
+        crate::admin::routes().merge(crate::what_if::routes())
     }
 }

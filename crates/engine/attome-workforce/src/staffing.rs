@@ -26,7 +26,7 @@ fn erlang_c(agents: u32, traffic: f64) -> f64 {
 }
 
 /// The share of contacts answered within `target_secs` with `agents`.
-fn service_level(agents: u32, traffic: f64, aht_secs: f64, target_secs: f64) -> f64 {
+pub fn service_level(agents: u32, traffic: f64, aht_secs: f64, target_secs: f64) -> f64 {
     let n = f64::from(agents);
     if n <= traffic {
         return 0.0;
