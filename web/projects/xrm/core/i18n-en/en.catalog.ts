@@ -2786,6 +2786,19 @@ export const xrmEn = {
   },
   // Solution 7 Phase 2 (design §10) — the release report pages
   // (`@attome/xrm/core/admin/release-reports`).
+  // Y8-T12 — published metadata versions and rollback.
+  metadataVersions: {
+    title: 'Metadata versions',
+    subtitle: 'Each published version of the configuration, the one every node serves now, and when each node switched to it.',
+    version: 'Version', publishedAt: 'Published', nodes: 'Nodes', current: 'Current', details: 'Details',
+    showNodes: 'Nodes', noNodes: 'No node has switched to this version yet.',
+    loading: 'Loading…', none: 'No version has been published yet.',
+    rollback: 'Roll back', cancel: 'Cancel',
+    rollbackTitle: 'Roll back the configuration?',
+    rollbackConfirm: 'Every node will go back from version {version} to the version before it. Drafts and published objects are not changed; the next publish cooks them again.',
+    rolledBack: 'Rolled back from version {from} to version {to}. The nodes follow within seconds.',
+    previous: 'Previous', next: 'Next', page: 'Page {page} of {pages}',
+  },
   releaseReport: {
     title: 'Release reports',
     subtitle: 'What each release changed on this system that you should know about. Nothing here blocks the system. Items stay until you decide.',

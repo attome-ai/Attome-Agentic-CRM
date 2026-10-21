@@ -1,0 +1,58 @@
+.mv-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.mv-table th,
+.mv-table td {
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  text-align: start;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.mv-current {
+  background: var(--color-bg-alt);
+}
+
+.mv-badge {
+  margin-inline-start: 0.5rem;
+  padding-block: 0.1rem;
+  padding-inline: 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.mv-nodes ul {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.mv-muted {
+  color: var(--color-text-secondary);
+}
+
+.mv-notice {
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  border-inline-start: 3px solid var(--color-primary);
+  background: var(--color-bg-alt);
+}
+
+.mv-pager {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-block-start: 1rem;
+}
+
+.mv-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

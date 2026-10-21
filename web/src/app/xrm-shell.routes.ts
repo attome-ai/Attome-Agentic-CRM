@@ -203,6 +203,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/release-reports').then(m => m.ReleaseReportListComponent),
           },
           {
+            // Y8-T12 — the published metadata versions and the rollback.
+            path: 'metadata-versions',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/metadata-versions').then(m => m.MetadataVersionsComponent),
+          },
+          {
             path: 'release-reports/:id',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/admin/release-reports').then(m => m.ReleaseReportDetailComponent),

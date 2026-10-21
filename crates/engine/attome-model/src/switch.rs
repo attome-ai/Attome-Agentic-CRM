@@ -255,6 +255,50 @@ pub async fn record_node_switch(
     Ok(seconds)
 }
 
+/// One recorded metadata version (Y8-T12).
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, serde::Serialize)]
+pub struct PublishedVersion {
+    pub version: i64,
+    pub published_at: chrono::DateTime<chrono::Utc>,
+    pub published_by: Option<Uuid>,
+    /// Whether the deployment serves this version now.
+    pub current: bool,
+    /// How many nodes have switched to it.
+    pub nodes: i64,
+}
+
+/// Every recorded version, newest first (Y8-T12), with whether it is
+/// current and how many nodes switched to it.
+pub async fn versions(
+    pool: &DbPool,
+    page: &OnePageQuery,
+) -> Result<PaginatedResponse<PublishedVersion>, AppError> {
+    let window = page.window();
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM metadata_published_version")
+        .fetch_one(pool)
+        .await
+        .map_err(AppError::internal)?;
+    let items: Vec<PublishedVersion> = sqlx::query_as(
+        "SELECT p.version, p.published_at, p.published_by, \
+                COALESCE(c.version = p.version, false) AS current, \
+                (SELECT count(*) FROM metadata_node_switch s WHERE s.version = p.version) AS nodes \
+         FROM metadata_published_version p LEFT JOIN metadata_current c ON true \
+         ORDER BY p.version DESC LIMIT $1 OFFSET $2",
+    )
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(pool)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(PaginatedResponse {
+        items,
+        total,
+        page: window.page,
+        page_size: window.page_size,
+        warnings: Vec::new(),
+    })
+}
+
 /// One node's switch to a version.
 #[derive(Debug, Clone, PartialEq, sqlx::FromRow, serde::Serialize)]
 pub struct NodeSwitch {

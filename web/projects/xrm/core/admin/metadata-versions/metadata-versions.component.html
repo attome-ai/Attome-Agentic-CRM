@@ -1,0 +1,84 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'metadataVersions.title' | translate }}</h2>
+    <p class="subtitle">{{ 'metadataVersions.subtitle' | translate }}</p>
+  </div>
+  <button type="button" class="btn-danger-outline" data-testid="rollback" (click)="rollback()" [disabled]="!canRollBack()">
+    <i class="las la-undo" aria-hidden="true"></i> {{ 'metadataVersions.rollback' | translate }}
+  </button>
+</div>
+
+@if (rolledBack(); as moved) {
+  <p class="mv-notice" role="status" data-testid="rolled-back">
+    {{ 'metadataVersions.rolledBack' | translate: { from: moved.from ?? '', to: moved.to } }}
+  </p>
+}
+@if (error(); as message) {
+  <p class="error-msg" role="alert">{{ message }}</p>
+}
+
+@if (loading()) {
+  <p class="mv-muted">{{ 'metadataVersions.loading' | translate }}</p>
+} @else if (versions().length === 0) {
+  <p class="mv-muted" data-testid="empty">{{ 'metadataVersions.none' | translate }}</p>
+} @else {
+  <table class="mv-table">
+    <caption class="mv-visually-hidden">{{ 'metadataVersions.title' | translate }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ 'metadataVersions.version' | translate }}</th>
+        <th scope="col">{{ 'metadataVersions.publishedAt' | translate }}</th>
+        <th scope="col">{{ 'metadataVersions.nodes' | translate }}</th>
+        <th scope="col"><span class="mv-visually-hidden">{{ 'metadataVersions.details' | translate }}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (v of versions(); track v.version) {
+        <tr [class.mv-current]="v.current">
+          <td>
+            {{ v.version | localNumber }}
+            @if (v.current) {
+              <span class="mv-badge" data-testid="current">{{ 'metadataVersions.current' | translate }}</span>
+            }
+          </td>
+          <td>{{ v.published_at | localDate: dateFmt }}</td>
+          <td>{{ v.nodes | localNumber }}</td>
+          <td>
+            <button type="button" class="btn-text" (click)="toggle(v.version)"
+                    [attr.aria-expanded]="opened() === v.version">
+              <i class="las la-chevron-down" aria-hidden="true"></i> {{ 'metadataVersions.showNodes' | translate }}
+            </button>
+          </td>
+        </tr>
+        @if (opened() === v.version) {
+          <tr class="mv-nodes">
+            <td colspan="4">
+              @if (nodesLoading()) {
+                <p class="mv-muted">{{ 'metadataVersions.loading' | translate }}</p>
+              } @else if (nodes().length === 0) {
+                <p class="mv-muted">{{ 'metadataVersions.noNodes' | translate }}</p>
+              } @else {
+                <ul>
+                  @for (n of nodes(); track n.node_id) {
+                    <li><strong>{{ n.node_id }}</strong> · {{ n.switched_at | localDate: dateFmt }}</li>
+                  }
+                </ul>
+              }
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+  @if (pages() > 1) {
+    <div class="mv-pager">
+      <button type="button" class="btn-ghost" (click)="previous()" [disabled]="page() <= 1 || loading()">
+        {{ 'metadataVersions.previous' | translate }}
+      </button>
+      <span>{{ 'metadataVersions.page' | translate: { page: page(), pages: pages() } }}</span>
+      <button type="button" class="btn-ghost" (click)="next()" [disabled]="page() >= pages() || loading()">
+        {{ 'metadataVersions.next' | translate }}
+      </button>
+    </div>
+  }
+}

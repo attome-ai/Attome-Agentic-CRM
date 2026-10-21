@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Metadata versions page (Y8-T12, `@attome/xrm/core/admin/metadata-versions`, `/xrm/admin/metadata-versions`): the
+  published configuration versions newest first with the current one marked, each version's node switch times, and a
+  Roll back button that asks first and then points every node at the version before the current one. New route
+  `GET /api/v1/admin/metadata/versions` (administrators) lists the versions with how many nodes serve each.
 - Sales orders from quotes and won deals (D10-T2, `attome-sales`, sales pack `0026`):
   `POST /api/v1/sales/quotes/{id}/order` and `POST /api/v1/sales/opportunities/{id}/order` make a draft order, once per
   source, with the quote's or deal's lines; `POST /api/v1/sales/orders/{id}/confirm` runs the account's credit check for

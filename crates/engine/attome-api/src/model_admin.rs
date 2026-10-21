@@ -2159,6 +2159,59 @@ async fn rollback_version(
     .await
 }
 
+/// One recorded metadata version (Y8-T12).
+#[derive(Serialize, ToSchema)]
+pub(crate) struct MetadataVersionView {
+    version: i64,
+    published_at: DateTime<Utc>,
+    published_by: Option<Uuid>,
+    /// Whether the deployment serves this version now.
+    current: bool,
+    /// How many nodes have switched to it.
+    nodes: i64,
+}
+
+/// Lists the recorded metadata versions, newest first, with the current one
+/// marked (Y8-T12).
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/versions",
+    description = "Lists the recorded metadata versions, newest first, with the current one and how many nodes serve each (Y8-T12).",
+    operation_id = "list_metadata_versions",
+    tag = "admin",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "The versions", body = PaginatedResponse<MetadataVersionView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_versions(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<MetadataVersionView>>, AppError> {
+    let page = attome_model::switch::versions(&state.base.db, &page).await?;
+    Ok(Json(PaginatedResponse {
+        items: page
+            .items
+            .into_iter()
+            .map(|v| MetadataVersionView {
+                version: v.version,
+                published_at: v.published_at,
+                published_by: v.published_by,
+                current: v.current,
+                nodes: v.nodes,
+            })
+            .collect(),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+        warnings: page.warnings,
+    }))
+}
+
 /// One node's switch to a metadata version (Y8-T10).
 #[derive(Serialize, ToSchema)]
 pub(crate) struct NodeSwitchView {
@@ -2210,6 +2263,7 @@ async fn version_nodes(
 
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route("/api/v1/admin/metadata/versions", get(list_versions))
         .route(
             "/api/v1/admin/metadata/versions/{version}/switch",
             post(switch_version),
@@ -2281,6 +2335,7 @@ pub fn routes() -> Router<EngineState> {
         apply_commands,
         publish,
         switch_version,
+        list_versions,
         version_nodes,
         rollback_version,
         option_merge::merge_values,
@@ -2310,6 +2365,7 @@ pub fn routes() -> Router<EngineState> {
         ModelPublishResponse,
         VersionSwitchResponse,
         NodeSwitchView,
+        MetadataVersionView,
         option_merge::MergeValuesRequest,
         option_merge::MergeValuesQueued,
         ModelFile,
