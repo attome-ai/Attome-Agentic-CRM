@@ -33,6 +33,7 @@ attome-types.workspace        = true
 axum.workspace                = true
 chrono.workspace              = true
 chrono-tz.workspace           = true
+rust_decimal.workspace        = true
 serde.workspace               = true
 object_store.workspace        = true
 serde_json.workspace          = true

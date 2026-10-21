@@ -1287,6 +1287,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `meter_threshold` above the reading at the last generation (daily `maintenance_generation` job).
   Each due date makes one work order (`maintenance_plan_ref`, `maintenance_due_on`); none is made
   while another of the plan is open; repeating plans skip missed periods instead of catching up.
+- Return dispositions (I11-T2, field-service pack `0008`): `POST /api/v1/service/returns/{id}/dispositions`
+  acts once on each inspected line of a received or inspected return: `refund` makes a draft credit note
+  on the line's `invoice_line_ref`, `restock` a `return` stock movement into the return's
+  `restock_location`, `replace` a draft no-charge replacement order; repair, scrap and return to vendor
+  are recorded. Each line keeps what it made in `disposition_reference`; a repeat answers `already_done`.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

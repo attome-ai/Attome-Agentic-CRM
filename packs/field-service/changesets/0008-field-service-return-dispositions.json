@@ -1,0 +1,179 @@
+{
+  "author": "packs",
+  "checksum": "sha256:989dede1025aee2b76343622f802e9d98a54be9b06c0ed3f5fdbebc6d4096184",
+  "closed_at": "2026-10-21T00:00:00Z",
+  "description": "Return dispositions (I11-T2): where restocked returns go, the invoice line a refund credits, and on each line what its disposition made and when, so each line acts once.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d10-7f11-9a11-11c011c011e3",
+  "layer": "product",
+  "name": "field-service-return-dispositions",
+  "opened_at": "2026-10-21T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Restock Location",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "restock_location",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "return_request",
+        "field": "restock_location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_line_ref",
+          "lookup_entity": "invoice_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "return_line",
+        "field": "invoice_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Disposition Result",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "disposition_reference",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "return_line",
+        "field": "disposition_reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Disposed On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "disposed_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "return_line",
+        "field": "disposed_on"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موقع إعادة التخزين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "return_request.restock_location",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الفاتورة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "return_line.invoice_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نتيجة التصرف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "locale": "ar",
+        "object_key": "return_line.disposition_reference",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التصرف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "return_line.disposed_on",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "field-service",
+  "seq": 8,
+  "title": "Pack: return disposition actions"
+}

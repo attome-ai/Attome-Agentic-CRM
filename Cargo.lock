@@ -2045,6 +2045,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "object_store",
+ "rust_decimal",
  "serde",
  "serde_json",
  "sqlx",
