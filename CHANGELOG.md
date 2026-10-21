@@ -13,6 +13,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   row id (what the entity list, AI evidence and others sent before) is `400 invalid_cursor`; start
   again from the first page. The key derives from `auth.jwt_secret`, so all nodes agree and a key
   rotation keeps lists paging.
+- Trial mode and earned autonomy (AH6, AH8-T8, AH8-T9): an agent definition in `testing` runs on
+  real triggers but records its writes instead of making them; an hourly job compares each with what
+  a person did, `GET /api/v1/admin/ai/agents/{agent}/trial-report` shows the agreement and
+  `POST .../go-live` sets the agent active above a threshold (Trial tab on the agent form). Strong
+  trial agreement proposes raising an action's autonomy level one step
+  (`/api/v1/admin/ai/autonomy/proposals/{id}/accept|reject`), and each person gets a daily summary of
+  what their agents ran automatically. Migrations 0193 and 0194.
 - Act on review (AH8-T13, V2-D702): a new autonomy level, `act_on_review`, stages an agent's action
   instead of running it; the person applies or discards an agent session's staged actions together
   (`POST /api/v1/ai/deferred-actions/apply|discard`), and they run in order, each re-checked. New

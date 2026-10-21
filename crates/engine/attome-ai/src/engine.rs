@@ -132,6 +132,8 @@ impl EngineModel for ActionModel {
             // AH8 — autonomy levels (admin-only) and the undo window.
             .merge(crate::autonomy::routes())
             .merge(crate::deferred::routes())
+            // AH6 — trial report and go-live, admin-only.
+            .merge(crate::trial::routes())
             // N29-T2 — AI evidence export, admin-only.
             .merge(crate::evidence::routes())
             // N13-T1 — outside MCP servers, admin-only.

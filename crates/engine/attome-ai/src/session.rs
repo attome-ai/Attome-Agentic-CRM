@@ -71,6 +71,11 @@ pub struct AgentSession {
     /// it), and `turn::run` never offers the channel-owned actions
     /// ([`crate::webchat::CHANNEL_OWNED_ACTIONS`]) to the model.
     pub anonymous_channel: bool,
+    /// AH6: the session runs a definition in `testing` status. Reads run;
+    /// every write or outside call is recorded in `ai_trial_decision` instead
+    /// of running (`execute::dispatch`). Read off the row, set only by
+    /// [`mark_trial`] right after start.
+    pub trial: bool,
     /// The surface that opened the session (`agent_session.surface`
     /// — `"mcp"`, `"webchat"`, …), read off the row, never from a request.
     ///
@@ -242,7 +247,7 @@ macro_rules! session_columns {
          policy_row_version, knowledge_source_refs, capability_pack_refs, \
          max_invocations_per_session, max_writes_per_day, max_tokens_per_session, \
          max_session_duration_minutes, retrieval_mode, persona_snapshot, \
-         (integration_system_id IS NOT NULL) AS anonymous_channel, surface"
+         (integration_system_id IS NOT NULL) AS anonymous_channel, surface, trial"
     };
 }
 
@@ -290,6 +295,7 @@ struct SessionRow {
     persona_snapshot: Option<String>,
     anonymous_channel: bool,
     surface: String,
+    trial: bool,
 }
 
 impl From<SessionRow> for AgentSession {
@@ -302,6 +308,7 @@ impl From<SessionRow> for AgentSession {
             tainted: row.tainted,
             anonymous_channel: row.anonymous_channel,
             surface: row.surface,
+            trial: row.trial,
             policy: PolicySnapshot {
                 policy_ref: row.policy_ref,
                 policy_row_version: row.policy_row_version,
@@ -694,7 +701,37 @@ pub async fn start(
         policy: start.policy,
         anonymous_channel: start.integration_system_id.is_some(),
         surface: start.surface.to_owned(),
+        trial: false,
     })
+}
+
+/// AH6-T2: marks a just-started session as a trial run of a `testing`
+/// definition, with its audit event. Called by the start paths that resolve a
+/// definition, before the session is handed to anything that could invoke.
+pub async fn mark_trial(
+    db: &PgPool,
+    audit: &attome_audit::AuditService<'_>,
+    session: &mut AgentSession,
+) -> Result<(), AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    sqlx::query("UPDATE agent_session SET trial = true WHERE id = $1")
+        .bind(session.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let event = attome_audit::security::SecurityEvent::new(
+        attome_audit::security::MandatoryCategory::Ai,
+        attome_audit::AuditOperation::Update,
+        session.owner_user_id,
+        "agent_session",
+        Some(session.id),
+    )
+    .named("agent_session.trial")
+    .comment("a testing definition: writes are recorded, not run");
+    attome_audit::security::write_security_event(&mut tx, audit, event).await?;
+    attome_db::tx::commit(tx).await?;
+    session.trial = true;
+    Ok(())
 }
 
 /// What raising a session's invocation counter decided (D-512 §4).
@@ -1403,6 +1440,7 @@ mod tests {
             policy: PolicySnapshot::NONE,
             anonymous_channel: false,
             surface: "test".to_owned(),
+            trial: false,
         }
     }
 

@@ -4,6 +4,31 @@
   @if (error(); as message) {
     <p class="au-error" role="alert">{{ message }}</p>
   }
+  @if (proposals().length > 0) {
+    <div class="au-review" data-proposals>
+      <h3>{{ 'aiAutonomy.proposals.title' | translate }}</h3>
+      <p class="au-muted">{{ 'aiAutonomy.proposals.intro' | translate }}</p>
+      <ul class="au-list">
+        @for (p of proposals(); track p.id) {
+          <li class="au-item" [attr.data-proposal]="p.id">
+            <span class="au-action"><code dir="ltr">{{ p.action_id }}</code></span>
+            <span>
+              {{ (p.from_level === null ? 'aiAutonomy.builtIn' : ('aiAutonomy.levels.' + levelByCode[p.from_level])) | translate }}
+              →
+              {{ ('aiAutonomy.levels.' + levelByCode[p.to_level]) | translate }}
+            </span>
+            <span class="au-muted">{{ (p.agreement * 100).toFixed(1) }}% · {{ p.cases }}</span>
+            <button type="button" [disabled]="busy() === p.id" (click)="decideProposal(p, true)">
+              {{ 'aiAutonomy.proposals.accept' | translate }}
+            </button>
+            <button type="button" [disabled]="busy() === p.id" (click)="decideProposal(p, false)">
+              {{ 'aiAutonomy.proposals.reject' | translate }}
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
   @if (entries().length === 0) {
     <p class="au-muted">{{ 'aiAutonomy.none' | translate }}</p>
   } @else {

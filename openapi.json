@@ -818,6 +818,73 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/ai/agents/{id}/autonomy/proposals": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/agents/{id}/autonomy/proposals` — open proposals.",
+        "operationId": "list_autonomy_proposals",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent, as its sessions name it",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open proposals to raise a level",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AutonomyProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}": {
       "put": {
         "tags": [
@@ -1027,6 +1094,370 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/ai/agents/{id}/go-live": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/agents/{id}/go-live` — moves a `testing`\ndefinition to `active`, refused below the agreement threshold.",
+        "operationId": "agent_go_live",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoLive"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The definition is active; the report it passed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The definition changed since row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not in testing, or below the threshold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/agents/{id}/trial-report": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "operationId": "agent_trial_report",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "How often the agent agreed with people in trial",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/ai/autonomy/proposals/{id}/accept": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/autonomy/proposals/{id}/accept`.",
+        "operationId": "accept_autonomy_proposal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The proposal",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accepted; the level is raised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutonomyProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No open proposal with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The level changed since the proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/autonomy/proposals/{id}/reject": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/autonomy/proposals/{id}/reject`.",
+        "operationId": "reject_autonomy_proposal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The proposal",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutonomyProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No open proposal with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/ai/bot-analytics": {
@@ -100660,6 +101091,38 @@
           }
         }
       },
+      "ActionAgreement": {
+        "type": "object",
+        "description": "The counts for one action.",
+        "required": [
+          "action_id",
+          "same",
+          "different",
+          "none",
+          "pending"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "different": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "none": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "same": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ActionListResponse": {
         "type": "object",
         "required": [
@@ -103403,6 +103866,66 @@
           "act_and_report",
           "automatic"
         ]
+      },
+      "AutonomyProposal": {
+        "type": "object",
+        "description": "An open proposal, as the admin screen shows it.",
+        "required": [
+          "id",
+          "agent_definition_id",
+          "action_id",
+          "to_level",
+          "agreement",
+          "cases",
+          "status",
+          "expires_at",
+          "created_at"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "agent_definition_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agreement": {
+            "type": "number",
+            "format": "double",
+            "description": "Trial agreement with people, 0 to 1."
+          },
+          "cases": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from_level": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Stored level code it starts from; `null` is the built-in rule."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "to_level": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       },
       "AutonomyRow": {
         "type": "object",
@@ -115185,6 +115708,45 @@
         ],
         "description": "One line of a line-based diff between two prompt versions."
       },
+      "DifferentDecision": {
+        "type": "object",
+        "description": "One decision a person did differently, for the report.",
+        "required": [
+          "id",
+          "action_id",
+          "args",
+          "created_at"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "args": {
+            "description": "What the agent would have sent. Model-made: show it as a quotation."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target_entity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Direction": {
         "type": "string",
         "enum": [
@@ -119910,6 +120472,28 @@
             "type": "string"
           }
         }
+      },
+      "GoLive": {
+        "type": "object",
+        "required": [
+          "row_version"
+        ],
+        "properties": {
+          "min_agreement": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The agreement needed, 0 to 1 (default 0.9)."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The definition's current `row_version`."
+          }
+        },
+        "additionalProperties": false
       },
       "GoogleAuthRequest": {
         "type": "object",
@@ -129287,6 +129871,100 @@
                       "$ref": "#/components/schemas/AutonomyRow"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_AutonomyProposal": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An open proposal, as the admin screen shows it.",
+              "required": [
+                "id",
+                "agent_definition_id",
+                "action_id",
+                "to_level",
+                "agreement",
+                "cases",
+                "status",
+                "expires_at",
+                "created_at"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string"
+                },
+                "agent_definition_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "agreement": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "Trial agreement with people, 0 to 1."
+                },
+                "cases": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "from_level": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "Stored level code it starts from; `null` is the built-in rule."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "to_level": {
+                  "type": "integer",
+                  "format": "int32"
                 }
               }
             }
@@ -158916,6 +159594,63 @@
           "status": {
             "type": "string",
             "description": "`open | addressed | dismissed`."
+          }
+        }
+      },
+      "TrialReport": {
+        "type": "object",
+        "description": "`GET /api/v1/admin/ai/agents/{id}/trial-report`.",
+        "required": [
+          "same",
+          "different",
+          "none",
+          "pending",
+          "per_action",
+          "different_sample",
+          "min_compared"
+        ],
+        "properties": {
+          "agreement": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "same / (same + different); `null` before anything was compared."
+          },
+          "different": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "different_sample": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DifferentDecision"
+            },
+            "description": "The latest decisions a person did differently (at most 50)."
+          },
+          "min_compared": {
+            "type": "integer",
+            "format": "int64",
+            "description": "What going live needs."
+          },
+          "none": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "per_action": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionAgreement"
+            }
+          },
+          "same": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

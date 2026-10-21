@@ -740,7 +740,8 @@ async fn is_paused(db: &DbPool, session_id: Uuid) -> bool {
 }
 
 /// D-503 §5: only an `active` definition with a live primary model starts a
-/// session, and a refused start leaves no session behind.
+/// session, and a refused start leaves no session behind. AH6: a `testing`
+/// one starts a trial session, which records instead of acting.
 #[tokio::test]
 async fn only_an_active_definition_with_a_live_model_can_start_a_session() {
     let state = skip_if_no_db!(test_state().await);
@@ -748,7 +749,20 @@ async fn only_an_active_definition_with_a_live_model_can_start_a_session() {
     let (_, security) = admin(db).await;
     let model = live_model(db).await;
 
-    for status in ["draft", "testing", "suspended", "archived", ""] {
+    let testing = definition(db, "testing", Some(model)).await;
+    let trial = start_session(
+        &state,
+        &security,
+        testing,
+        "admin",
+        constraints(RiskTier::Read, None),
+        false,
+    )
+    .await
+    .expect("a testing definition starts a trial session");
+    assert!(trial.trial, "the session is a trial");
+
+    for status in ["draft", "suspended", "archived", ""] {
         let def = definition(db, status, Some(model)).await;
         let started = start_session(
             &state,

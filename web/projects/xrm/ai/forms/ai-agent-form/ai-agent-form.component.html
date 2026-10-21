@@ -73,6 +73,13 @@
       </section>
     }
   </ng-template>
+  <ng-template xrmTab="trial">
+    @if (id(); as agentId) {
+      <xrm-ai-agent-trial [agentId]="agentId" />
+    } @else {
+      <p class="xf-helper">{{ 'aiAutonomy.saveFirst' | translate }}</p>
+    }
+  </ng-template>
   <ng-template xrmTab="autonomy">
     @if (id(); as agentId) {
       <xrm-ai-agent-autonomy [agentId]="agentId" />

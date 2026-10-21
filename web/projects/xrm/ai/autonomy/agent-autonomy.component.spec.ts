@@ -20,7 +20,11 @@ const remember: AutonomyEntry = {
 
 function setup() {
   const api = {
-    get: vi.fn().mockReturnValue(of({ items: [send, remember], total: 2, page: 1, page_size: 500 })),
+    get: vi.fn((url: string) => of(url.endsWith('/proposals')
+      ? { items: [{ id: 'p1', action_id: 'record.update', from_level: null, to_level: 5, agreement: 0.99,
+          cases: 240, expires_at: '2026-11-04T00:00:00Z' }], total: 1, page: 1, page_size: 500 }
+      : { items: [send, remember], total: 2, page: 1, page_size: 500 })),
+    post: vi.fn().mockReturnValue(of({})),
     put: vi.fn().mockReturnValue(of({})),
     delete: vi.fn().mockReturnValue(of(undefined)),
   };
@@ -61,6 +65,13 @@ describe('AiAgentAutonomyComponent (AH8)', () => {
     }));
     cmp.clear(send);
     expect(api.delete).toHaveBeenCalledWith('/api/v1/admin/ai/agents/a1/autonomy/email.send');
+  });
+
+  it('lists a proposal and accepts it', () => {
+    const { api, fixture } = setup();
+    expect(fixture.nativeElement.querySelector('[data-proposal="p1"]')).not.toBeNull();
+    fixture.componentInstance.decideProposal(fixture.componentInstance.proposals()[0], true);
+    expect(api.post).toHaveBeenCalledWith('/api/v1/admin/ai/autonomy/proposals/p1/accept', {});
   });
 
   it('only a level above ask first on a consequential action raises it', () => {

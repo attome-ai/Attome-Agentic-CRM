@@ -14,3 +14,5 @@
 .au-review { display: flex; flex-direction: column; gap: 0.5rem; padding-block: 0.75rem; padding-inline: 0.75rem; border: 1px solid var(--warning-color, #8a4b00); border-radius: 0.5rem; }
 .au-review h3 { margin-block: 0; font-size: 1rem; }
 .au-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.au-figures { margin-block: 0; }
+.au-quote { margin-block: 0; margin-inline: 0; padding-inline-start: 0.75rem; border-inline-start: 3px solid var(--border-color, #d0d4da); overflow-wrap: anywhere; }

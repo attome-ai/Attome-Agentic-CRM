@@ -174,8 +174,21 @@ export const xrmEn = {
     suggest: 'Suggest', suggesting: 'Suggesting…',
   },
   // N31-T2 — scoped AI switches.
+  aiTrial: {
+    tab: 'Trial',
+    title: 'Trial',
+    intro: 'While this agent is in testing it works on real events but records what it would change instead of changing it. Each recorded step is compared with what a person did to the same record within a day.',
+    agreement: 'Agreement with people', same: 'Same', different: 'Different', none: 'Left alone', pending: 'Not compared yet',
+    differentTitle: 'Where a person did something else',
+    minAgreement: 'Agreement needed (%)', goLive: 'Go live', needMore: 'Needs more compared steps',
+    live: 'The agent is live.',
+  },
   aiAutonomy: {
     tab: 'Autonomy',
+    proposals: {
+      title: 'Suggested raises', intro: 'In trial this agent agreed with people often enough on these actions. Accepting raises the level one step.',
+      accept: 'Accept', reject: 'Reject',
+    },
     saveFirst: 'Save the agent first, then set what it may do on its own.',
     title: 'Autonomy',
     intro: 'How much this agent may do on its own, per action. With no level set the built-in rule applies. Untrusted text the agent read always lowers the level by one.',

@@ -55,6 +55,23 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `{ "ids": [...] }`, optionally `"undo_window_seconds"`) or drops them with `.../discard` (screen:
   the review section of `/ai/pending-actions`). Applied actions run in the order they were staged,
   each re-checked like an approved one; each ends with its own result.
+- **Trial before going live (AH6).** A definition in status `testing` starts sessions on its real
+  triggers, but every write or outside call it is allowed to make is recorded in
+  `ai_trial_decision` instead of run (the agent is told it was recorded); reads run for real, and
+  the public web chat refuses a testing agent. Hourly, each decision older than a day is compared
+  with what a person did to the same record in that day (`same`, `different` or `none`, from the
+  audit trail). `GET /api/v1/admin/ai/agents/{agent}/trial-report` shows the agreement, per action
+  and with the steps a person did differently; `POST .../go-live` (`{ "row_version": 3,
+  "min_agreement": 0.9 }`) sets the definition `active`, refused below the threshold or with fewer
+  than 30 compared steps (screen: the agent form's Trial tab).
+- **Earned autonomy (AH8-T9).** When an action's trial agreement over the last 28 days reaches 98%
+  over at least 200 compared steps, the hourly job proposes raising its level by one step; a
+  consequential action is never proposed past `act_on_review`. An administrator accepts or rejects
+  it (`GET .../autonomy/proposals`, `POST /api/v1/admin/ai/autonomy/proposals/{id}/accept|reject`;
+  screen: the Autonomy tab). A proposal expires after 14 days, and one whose level changed since is
+  refused.
+- **Daily summary (AH8-T8).** Once a day each person gets one in-app note counting what their
+  agents ran on their own at `automatic`; `act_and_report` steps were reported as they ran.
 - **The undo window.** Any write can be held before it runs, including one that cannot be undone
   afterwards (an email, a payment, a call to another system): an agent at `act_with_undo`, an agent
   that passes `_undo_window_seconds` in a tool call, or a person through

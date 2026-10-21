@@ -233,6 +233,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/agents/{id}/autonomy/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/agents/{id}/autonomy/proposals` — open proposals. */
+        get: operations["list_autonomy_proposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}": {
         parameters: {
             query?: never;
@@ -249,6 +266,76 @@ export interface paths {
          *     built-in rule.
          */
         delete: operations["clear_agent_autonomy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/go-live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/admin/ai/agents/{id}/go-live` — moves a `testing`
+         *     definition to `active`, refused below the agreement threshold.
+         */
+        post: operations["agent_go_live"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/trial-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agent_trial_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/autonomy/proposals/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/admin/ai/autonomy/proposals/{id}/accept`. */
+        post: operations["accept_autonomy_proposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/autonomy/proposals/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/admin/ai/autonomy/proposals/{id}/reject`. */
+        post: operations["reject_autonomy_proposal"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -18892,6 +18979,18 @@ export interface components {
         Ack: {
             ok: boolean;
         };
+        /** @description The counts for one action. */
+        ActionAgreement: {
+            action_id: string;
+            /** Format: int64 */
+            different: number;
+            /** Format: int64 */
+            none: number;
+            /** Format: int64 */
+            pending: number;
+            /** Format: int64 */
+            same: number;
+        };
         ActionListResponse: {
             items: components["schemas"]["ActionSummary"][];
         };
@@ -20035,6 +20134,33 @@ export interface components {
          * @enum {string}
          */
         AutonomyLevel: "suggest" | "ask_first" | "act_on_review" | "act_with_undo" | "act_and_report" | "automatic";
+        /** @description An open proposal, as the admin screen shows it. */
+        AutonomyProposal: {
+            action_id: string;
+            /** Format: uuid */
+            agent_definition_id: string;
+            /**
+             * Format: double
+             * @description Trial agreement with people, 0 to 1.
+             */
+            agreement: number;
+            /** Format: int32 */
+            cases: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            /**
+             * Format: int32
+             * @description Stored level code it starts from; `null` is the built-in rule.
+             */
+            from_level?: number | null;
+            /** Format: uuid */
+            id: string;
+            status: string;
+            /** Format: int32 */
+            to_level: number;
+        };
         /** @description One stored row. */
         AutonomyRow: {
             action_id: string;
@@ -24643,6 +24769,19 @@ export interface components {
             op: "removed";
             text: string;
         };
+        /** @description One decision a person did differently, for the report. */
+        DifferentDecision: {
+            action_id: string;
+            /** @description What the agent would have sent. Model-made: show it as a quotation. */
+            args: unknown;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            target_entity?: string | null;
+            /** Format: uuid */
+            target_record_id?: string | null;
+        };
         /** @enum {string} */
         Direction: "outbound" | "inbound" | "both";
         /**
@@ -26632,6 +26771,18 @@ export interface components {
             /** Format: date-time */
             expires_at?: string | null;
             slot: string;
+        };
+        GoLive: {
+            /**
+             * Format: double
+             * @description The agreement needed, 0 to 1 (default 0.9).
+             */
+            min_agreement?: number | null;
+            /**
+             * Format: int64
+             * @description The definition's current `row_version`.
+             */
+            row_version: number;
         };
         GoogleAuthRequest: {
             credential: string;
@@ -30155,6 +30306,46 @@ export interface components {
                 locked: boolean;
                 risk: components["schemas"]["RiskTier"];
                 row?: null | components["schemas"]["AutonomyRow"];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AutonomyProposal: {
+            items: {
+                action_id: string;
+                /** Format: uuid */
+                agent_definition_id: string;
+                /**
+                 * Format: double
+                 * @description Trial agreement with people, 0 to 1.
+                 */
+                agreement: number;
+                /** Format: int32 */
+                cases: number;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                expires_at: string;
+                /**
+                 * Format: int32
+                 * @description Stored level code it starts from; `null` is the built-in rule.
+                 */
+                from_level?: number | null;
+                /** Format: uuid */
+                id: string;
+                status: string;
+                /** Format: int32 */
+                to_level: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -41642,6 +41833,30 @@ export interface components {
             /** @description `open | addressed | dismissed`. */
             status: string;
         };
+        /** @description `GET /api/v1/admin/ai/agents/{id}/trial-report`. */
+        TrialReport: {
+            /**
+             * Format: double
+             * @description same / (same + different); `null` before anything was compared.
+             */
+            agreement?: number | null;
+            /** Format: int64 */
+            different: number;
+            /** @description The latest decisions a person did differently (at most 50). */
+            different_sample: components["schemas"]["DifferentDecision"][];
+            /**
+             * Format: int64
+             * @description What going live needs.
+             */
+            min_compared: number;
+            /** Format: int64 */
+            none: number;
+            /** Format: int64 */
+            pending: number;
+            per_action: components["schemas"]["ActionAgreement"][];
+            /** Format: int64 */
+            same: number;
+        };
         /** @description One dead-lettered entity-trigger event. */
         TriggerDeadLetter: {
             /**
@@ -43489,6 +43704,47 @@ export interface operations {
             };
         };
     };
+    list_autonomy_proposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent, as its sessions name it */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open proposals to raise a level */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AutonomyProposal"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     set_agent_autonomy: {
         parameters: {
             query?: never;
@@ -43603,6 +43859,228 @@ export interface operations {
                 };
             };
             /** @description No level is set for this action */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    agent_go_live: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent definition */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoLive"];
+            };
+        };
+        responses: {
+            /** @description The definition is active; the report it passed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such agent definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The definition changed since row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in testing, or below the threshold */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    agent_trial_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent definition */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How often the agent agreed with people in trial */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_autonomy_proposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The proposal */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted; the level is raised */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomyProposal"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No open proposal with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The level changed since the proposal */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reject_autonomy_proposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The proposal */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomyProposal"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No open proposal with this id */
             404: {
                 headers: {
                     [name: string]: unknown;

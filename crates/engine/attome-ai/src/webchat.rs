@@ -88,7 +88,12 @@ pub fn clamp(
     resolved: ResolvedStart,
     session_token_cap: Option<u64>,
 ) -> Result<WidgetGovernance, AppError> {
-    let ResolvedStart { effective, policy } = resolved;
+    // A trial definition never reaches here: `start_session` refuses it.
+    let ResolvedStart {
+        effective,
+        policy,
+        trial: _,
+    } = resolved;
     let Some(scope) = policy.knowledge_source_refs.as_deref() else {
         return Err(AppError::Validation(
             "the web-chat agent's policy names no knowledge scope; public web chat requires an \
@@ -172,6 +177,12 @@ pub async fn start_session_with(
         },
     )
     .await?;
+    // AH6: a definition still in testing never answers the public.
+    if resolved.trial {
+        return Err(AppError::Validation(
+            "the web chat agent is in testing; set it active to serve the public widget".into(),
+        ));
+    }
     let governance = clamp(resolved, config.session_token_cap)?;
     let session = crate::session::start(
         &state.base.db,
@@ -418,6 +429,7 @@ mod tests {
         ceiling: RiskTier,
     ) -> ResolvedStart {
         ResolvedStart {
+            trial: false,
             effective: SessionConstraints {
                 risk_ceiling: ceiling,
                 allowed_action_ids: allowed.map(|v| v.into_iter().map(str::to_owned).collect()),

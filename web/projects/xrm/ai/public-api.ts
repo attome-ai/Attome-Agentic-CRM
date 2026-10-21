@@ -25,6 +25,8 @@ export { AiScopeSwitchesComponent, SCOPE_KINDS } from './admin/scope-switches/ai
 export { AiAgentAutonomyComponent, AUTONOMY_LEVELS, raisesConsequential } from './autonomy/agent-autonomy.component';
 export type { AutonomyEntry, AutonomyLevel, AutonomyRow } from './autonomy/agent-autonomy.component';
 export { AiPendingActionsComponent } from './autonomy/pending-actions.component';
+export { AiAgentTrialComponent, percent } from './autonomy/agent-trial.component';
+export type { ActionAgreement, DifferentDecision, TrialReport } from './autonomy/agent-trial.component';
 export type { DeferredAction } from './autonomy/pending-actions.component';
 export { AiGovernanceComponent, approvedShare } from './governance/governance.component';
 export { AiMcpServersComponent, MCP_TIERS } from './mcp-servers/mcp-servers.component';

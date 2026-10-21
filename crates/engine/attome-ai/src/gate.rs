@@ -578,6 +578,7 @@ mod tests {
             policy: crate::session::PolicySnapshot::NONE,
             anonymous_channel: false,
             surface: "test".to_owned(),
+            trial: false,
         }
     }
 

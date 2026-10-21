@@ -258,9 +258,26 @@ pub async fn dispatch(
     let mut report_to_owner = false;
 
     // C13.1: every dispatch-time refusal is counted before it is masked.
-    match gate::evaluate(descriptor, ctx, inputs)
-        .inspect_err(|r| crate::turn_metrics::gate_refused(*r))?
-    {
+    let decision = gate::evaluate(descriptor, ctx, inputs)
+        .inspect_err(|r| crate::turn_metrics::gate_refused(*r))?;
+
+    // AH6-T2: a trial session (a `testing` definition) records every write or
+    // outside call it is allowed to make instead of running it, and never
+    // raises a confirmation or an approval for one. Reads run for real.
+    if ctx.is_agent() && ctx.session_trial && descriptor.effect != Effect::Read {
+        let id = crate::trial::record(state, ctx, descriptor, args).await?;
+        return Ok(ActionOutcome::Completed {
+            result: serde_json::json!({
+                "status": "recorded_in_trial",
+                "trial_decision_id": id,
+                "detail": "Trial mode: this was recorded, not done. Carry on as if it had \
+                           been done; a person compares it with what they did.",
+            }),
+            provenance: None,
+        });
+    }
+
+    match decision {
         GateDecision::ConfirmFirst { reason } => {
             return Ok(ActionOutcome::ConfirmationRequired {
                 reason: match reason {

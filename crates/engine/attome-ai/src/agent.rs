@@ -82,6 +82,9 @@ pub fn parse_risk_ceiling(raw: &str) -> Option<RiskTier> {
 /// The only definition `status` that may start a runtime session (D-503 §5).
 /// `draft`, `testing`, `suspended` and `archived` may not.
 pub const STARTABLE_STATUS: &str = "active";
+/// AH6: a definition in this status starts **trial** sessions: they run on
+/// real triggers, but every write is recorded instead of run.
+pub const TRIAL_STATUS: &str = "testing";
 
 /// A session's constraints from its starting surface and request, resolved
 /// from a source a human already reviewed (D-503 §3), before the agent policy
@@ -115,10 +118,10 @@ fn lookup_id(data: &Value, field: &str) -> Option<Uuid> {
 /// [`start_session`].
 fn startable_primary_model(data: &Value) -> Result<Uuid, AppError> {
     let status = data.get("status").and_then(Value::as_str).unwrap_or("");
-    if status != STARTABLE_STATUS {
+    if status != STARTABLE_STATUS && status != TRIAL_STATUS {
         return Err(AppError::Validation(format!(
-            "agent definition status is {status:?}; only an {STARTABLE_STATUS:?} definition \
-             can start a session"
+            "agent definition status is {status:?}; only an {STARTABLE_STATUS:?} definition, \
+             or a {TRIAL_STATUS:?} one in trial mode, can start a session"
         )));
     }
     lookup_id(data, "primary_model_ref")
@@ -399,7 +402,8 @@ pub async fn start_session(
     tainted: bool,
 ) -> Result<AgentSession, AppError> {
     let resolved = resolve_start(state, ctx, definition_id, constraints).await?;
-    session::start(
+    let trial = resolved.trial;
+    let mut session = session::start(
         &state.base.db,
         &attome_audit::audit_service(state),
         SessionStart {
@@ -413,7 +417,16 @@ pub async fn start_session(
             policy: resolved.policy,
         },
     )
-    .await
+    .await?;
+    if trial {
+        session::mark_trial(
+            &state.base.db,
+            &attome_audit::audit_service(state),
+            &mut session,
+        )
+        .await?;
+    }
+    Ok(session)
 }
 
 /// What a definition resolves to at session start: the effective ceiling and
@@ -421,6 +434,9 @@ pub async fn start_session(
 pub struct ResolvedStart {
     pub effective: SessionConstraints,
     pub policy: PolicySnapshot,
+    /// AH6: the definition is in [`TRIAL_STATUS`]; the session must be marked
+    /// with [`session::mark_trial`] before anything invokes through it.
+    pub trial: bool,
 }
 
 impl std::fmt::Debug for ResolvedStart {
@@ -494,8 +510,10 @@ pub(crate) async fn resolve_start(
         crate::capability_pack::resolve(state, ctx, policy.capability_pack_refs.as_deref()).await?;
     let effective = combine_with_policy(constraints, &policy, packs.action_ids);
 
+    let trial = record.data().get("status").and_then(Value::as_str) == Some(TRIAL_STATUS);
     Ok(ResolvedStart {
         effective,
+        trial,
         policy: PolicySnapshot {
             policy_ref: Some(policy_ref),
             policy_row_version: Some(policy_record.row_version()),
@@ -1168,7 +1186,7 @@ mod tests {
     #[test]
     fn only_an_active_definition_is_startable() {
         let model = Uuid::now_v7();
-        for status in ["draft", "testing", "suspended", "archived", "", "ACTIVE"] {
+        for status in ["draft", "suspended", "archived", "", "ACTIVE"] {
             let data = serde_json::json!({ "status": status, "primary_model_ref": model });
             assert!(
                 startable_primary_model(&data).is_err(),

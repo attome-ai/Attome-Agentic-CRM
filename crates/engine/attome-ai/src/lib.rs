@@ -154,6 +154,8 @@ pub mod telemetry;
 /// payload a confirmation dispatches, and a claim/lease that is deliberately
 /// NOT the concurrency control (that stays `session::claim_invocation`).
 pub mod tool_call;
+/// AH6 — trial mode: testing definitions record instead of acting.
+pub mod trial;
 /// C3 (D-565) — the turn orchestrator: the loop that carries a model's tool
 /// naming back and forth, as a state machine with twelve named terminal
 /// states. Builds no tool list, checks no permission, counts no invocations,
@@ -223,6 +225,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(write_policy::openapi_fragment());
     doc.merge(autonomy::openapi_fragment());
     doc.merge(deferred::openapi_fragment());
+    doc.merge(trial::openapi_fragment());
     doc.merge(evidence::openapi_fragment());
     doc.merge(mcp_client::openapi_fragment());
     // AI4-T6 — `/ai/follow-ups…` and the rule run route.

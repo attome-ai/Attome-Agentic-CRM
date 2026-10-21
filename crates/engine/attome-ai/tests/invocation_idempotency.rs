@@ -213,6 +213,7 @@ async fn open_session(db: &attome_db::DbPool, owner: Uuid) -> AgentSession {
         policy: attome_ai::session::PolicySnapshot::NONE,
         anonymous_channel: false,
         surface: "test".to_owned(),
+        trial: false,
     }
 }
 

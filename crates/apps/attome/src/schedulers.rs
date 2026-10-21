@@ -388,6 +388,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         std::time::Duration::from_secs(15),
     );
 
+    // AH6-T3 / AH8-T9: compare trial decisions with people, propose raises.
+    crate::jobs::spawn_ai_trial_compare_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60 * 60),
+    );
+
     // AH8-T8: the daily summary of what agents ran on their own.
     crate::jobs::spawn_ai_autonomy_summary_scheduler(
         db.clone(),

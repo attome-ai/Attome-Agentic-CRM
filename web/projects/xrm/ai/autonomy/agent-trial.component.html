@@ -1,0 +1,58 @@
+<section class="au">
+  <h2>{{ 'aiTrial.title' | translate }}</h2>
+  <p class="au-muted">{{ 'aiTrial.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="au-error" role="alert">{{ message }}</p>
+  }
+  @if (wentLive()) {
+    <p role="status">{{ 'aiTrial.live' | translate }}</p>
+  }
+  @if (report(); as r) {
+    <p class="au-figures" data-figures>
+      <strong>{{ 'aiTrial.agreement' | translate }}:</strong>
+      @if (r.agreement !== null) { {{ percent(r.agreement) }}% } @else { — }
+      · {{ 'aiTrial.same' | translate }} {{ r.same }}
+      · {{ 'aiTrial.different' | translate }} {{ r.different }}
+      · {{ 'aiTrial.none' | translate }} {{ r.none }}
+      · {{ 'aiTrial.pending' | translate }} {{ r.pending }}
+    </p>
+
+    @if (r.per_action.length > 0) {
+      <ul class="au-list">
+        @for (a of r.per_action; track a.action_id) {
+          <li class="au-item" [attr.data-action]="a.action_id">
+            <span class="au-action"><code dir="ltr">{{ a.action_id }}</code></span>
+            <span>{{ 'aiTrial.same' | translate }} {{ a.same }}</span>
+            <span>{{ 'aiTrial.different' | translate }} {{ a.different }}</span>
+            <span class="au-muted">{{ 'aiTrial.none' | translate }} {{ a.none }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (r.different_sample.length > 0) {
+      <h3>{{ 'aiTrial.differentTitle' | translate }}</h3>
+      <ul class="au-list">
+        @for (d of r.different_sample; track d.id) {
+          <li class="au-item">
+            <span class="au-action"><code dir="ltr">{{ d.action_id }}</code></span>
+            <span class="au-muted">{{ d.created_at | localDate }}</span>
+            <blockquote class="au-quote"><code dir="ltr">{{ quoted(d.args) }}</code></blockquote>
+          </li>
+        }
+      </ul>
+    }
+
+    <form class="au-actions" (submit)="$event.preventDefault(); goLive()">
+      <label for="au-min">{{ 'aiTrial.minAgreement' | translate }}</label>
+      <input #min id="au-min" type="number" min="0" max="100" [value]="minAgreement()"
+             (input)="minAgreement.set(+min.value)" />
+      <button type="submit" [disabled]="busy() || !enoughCompared() || wentLive()">
+        {{ 'aiTrial.goLive' | translate }}
+      </button>
+      @if (!enoughCompared()) {
+        <span class="au-muted">{{ 'aiTrial.needMore' | translate }} ({{ r.min_compared }})</span>
+      }
+    </form>
+  }
+</section>

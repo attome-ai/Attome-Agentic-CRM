@@ -540,6 +540,318 @@ pub async fn daily_summary(state: &EngineState) -> Result<SummaryStats, AppError
     Ok(stats)
 }
 
+// ── Earned autonomy (AH8-T9) ────────────────────────────────────────────────
+
+/// Agreement a raise needs, over at least [`RAISE_MIN_CASES`] decisions with
+/// an outcome, within [`RAISE_WINDOW_DAYS`].
+pub const RAISE_MIN_AGREEMENT: f64 = 0.98;
+pub const RAISE_MIN_CASES: i64 = 200;
+pub const RAISE_WINDOW_DAYS: i64 = 28;
+/// An open proposal expires after this many days.
+pub const PROPOSAL_DAYS: i32 = 14;
+
+/// The level one rank above `current` that may be proposed for an action of
+/// `risk`, if any. A consequential action is never proposed above
+/// `act_on_review`: past that a person no longer sees each action, and only
+/// an administrator's own choice goes there. Pure.
+pub fn next_proposable(risk: RiskTier, current: AutonomyLevel) -> Option<AutonomyLevel> {
+    let next = AutonomyLevel::ALL.into_iter().find(|l| *l > current)?;
+    if risk == RiskTier::Consequential && next > AutonomyLevel::ActOnReview {
+        return None;
+    }
+    Some(next)
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ProposalStats {
+    pub proposed: u64,
+    pub expired: u64,
+}
+
+/// Proposes raises from the trial figures of the last [`RAISE_WINDOW_DAYS`],
+/// and expires stale proposals. Run by the hourly trial job after it
+/// compares; at most one open proposal per agent and action.
+pub async fn propose_raises(state: &EngineState) -> Result<ProposalStats, AppError> {
+    let mut stats = ProposalStats::default();
+    let expired = sqlx::query(
+        "UPDATE ai_autonomy_proposal SET status = 'expired', decided_at = now() \
+         WHERE status = 'open' AND expires_at < now()",
+    )
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    stats.expired = expired.rows_affected();
+
+    let since = Utc::now() - chrono::Duration::days(RAISE_WINDOW_DAYS);
+    let agents: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT agent_ref FROM ai_trial_decision \
+         WHERE agent_ref IS NOT NULL AND created_at >= $1",
+    )
+    .bind(since)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for agent in agents {
+        for figures in crate::trial::counts(&state.base.db, agent, Some(since)).await? {
+            let cases = figures.same + figures.different;
+            let Some(agreement) = figures.agreement() else {
+                continue;
+            };
+            if cases < RAISE_MIN_CASES || agreement < RAISE_MIN_AGREEMENT {
+                continue;
+            }
+            let Some(descriptor) = crate::engine::REGISTRY.resolve(&figures.action_id) else {
+                continue;
+            };
+            if descriptor.risk == RiskTier::Read || descriptor.autonomy_locked {
+                continue;
+            }
+            let stored: Option<i16> = sqlx::query_scalar(
+                "SELECT level FROM ai_autonomy_level WHERE agent_definition_id = $1 AND action_id = $2",
+            )
+            .bind(agent)
+            .bind(&figures.action_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            let current = stored
+                .and_then(AutonomyLevel::from_i16)
+                .unwrap_or_else(|| builtin_level(descriptor));
+            let Some(to) = next_proposable(descriptor.risk, current) else {
+                continue;
+            };
+            let made = sqlx::query(
+                "INSERT INTO ai_autonomy_proposal \
+                   (agent_definition_id, action_id, from_level, to_level, agreement, cases, expires_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, now() + make_interval(days => $7)) \
+                 ON CONFLICT (agent_definition_id, action_id) WHERE status = 'open' DO NOTHING",
+            )
+            .bind(agent)
+            .bind(&figures.action_id)
+            .bind(stored)
+            .bind(to.as_i16())
+            .bind(agreement)
+            .bind(i32::try_from(cases).unwrap_or(i32::MAX))
+            .bind(PROPOSAL_DAYS)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            stats.proposed += made.rows_affected();
+        }
+    }
+    Ok(stats)
+}
+
+/// The level an action with no row behaves at for an agent, as a proposal's
+/// starting point: `agent_must_confirm` writes and every consequential
+/// action ask first; other writes already run (taint aside).
+fn builtin_level(descriptor: &ActionDescriptor) -> AutonomyLevel {
+    if descriptor.agent_must_confirm || descriptor.risk == RiskTier::Consequential {
+        AutonomyLevel::AskFirst
+    } else {
+        AutonomyLevel::Automatic
+    }
+}
+
+/// An open proposal, as the admin screen shows it.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct AutonomyProposal {
+    pub id: Uuid,
+    pub agent_definition_id: Uuid,
+    pub action_id: String,
+    /// Stored level code it starts from; `null` is the built-in rule.
+    pub from_level: Option<i16>,
+    pub to_level: i16,
+    /// Trial agreement with people, 0 to 1.
+    pub agreement: f64,
+    pub cases: i32,
+    pub status: String,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+const PROPOSAL_COLUMNS: &str = "id, agent_definition_id, action_id, from_level, to_level, \
+     agreement, cases, status, expires_at, created_at";
+
+/// `GET /api/v1/admin/ai/agents/{id}/autonomy/proposals` — open proposals.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ai/agents/{id}/autonomy/proposals",
+    operation_id = "list_autonomy_proposals",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The agent, as its sessions name it")),
+    responses(
+        (status = 200, description = "Open proposals to raise a level", body = PaginatedResponse<AutonomyProposal>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_proposals(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<PaginatedResponse<AutonomyProposal>>, AppError> {
+    let items: Vec<AutonomyProposal> = sqlx::query_as(&format!(
+        "SELECT {PROPOSAL_COLUMNS} FROM ai_autonomy_proposal \
+         WHERE agent_definition_id = $1 AND status = 'open' ORDER BY created_at DESC LIMIT $2"
+    ))
+    .bind(agent_id)
+    .bind(MAX_ENTRIES)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse {
+        items,
+        total,
+        page: 1,
+        page_size: MAX_ENTRIES,
+        warnings: Vec::new(),
+    }))
+}
+
+/// Accepts or rejects an open proposal. Accepting sets the level, keeping
+/// the row's limits, and is refused with 409 when the level changed since the
+/// proposal was made.
+pub async fn decide_proposal(
+    state: &EngineState,
+    user_id: Uuid,
+    proposal_id: Uuid,
+    accept: bool,
+) -> Result<AutonomyProposal, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let proposal: Option<AutonomyProposal> = sqlx::query_as(&format!(
+        "SELECT {PROPOSAL_COLUMNS} FROM ai_autonomy_proposal WHERE id = $1 AND status = 'open' \
+         FOR UPDATE"
+    ))
+    .bind(proposal_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(proposal) = proposal else {
+        return Err(AppError::NotFound);
+    };
+    if accept {
+        let current: Option<i16> = sqlx::query_scalar(
+            "SELECT level FROM ai_autonomy_level \
+             WHERE agent_definition_id = $1 AND action_id = $2 FOR UPDATE",
+        )
+        .bind(proposal.agent_definition_id)
+        .bind(&proposal.action_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        if current != proposal.from_level {
+            return Err(AppError::Conflict(
+                "the level changed since this was proposed; it no longer applies",
+            ));
+        }
+        sqlx::query(
+            "INSERT INTO ai_autonomy_level \
+               (agent_definition_id, action_id, level, created_by, updated_by) \
+             VALUES ($1, $2, $3, $4, $4) \
+             ON CONFLICT (agent_definition_id, action_id) DO UPDATE SET \
+               level = EXCLUDED.level, updated_by = EXCLUDED.updated_by, updated_at = now(), \
+               row_version = ai_autonomy_level.row_version + 1",
+        )
+        .bind(proposal.agent_definition_id)
+        .bind(&proposal.action_id)
+        .bind(proposal.to_level)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    let decided: AutonomyProposal = sqlx::query_as(&format!(
+        "UPDATE ai_autonomy_proposal SET status = $2, decided_by = $3, decided_at = now() \
+         WHERE id = $1 RETURNING {PROPOSAL_COLUMNS}"
+    ))
+    .bind(proposal_id)
+    .bind(if accept { "accepted" } else { "rejected" })
+    .bind(user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            user_id,
+            "ai_autonomy_proposal",
+            Some(proposal_id),
+        )
+        .named(if accept {
+            "ai.autonomy.proposal.accept"
+        } else {
+            "ai.autonomy.proposal.reject"
+        })
+        .comment(format!(
+            "agent {}: raise {} to level code {} at {:.1}% trial agreement over {} cases {}",
+            proposal.agent_definition_id,
+            proposal.action_id,
+            proposal.to_level,
+            proposal.agreement * 100.0,
+            proposal.cases,
+            if accept { "accepted" } else { "rejected" }
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(decided)
+}
+
+/// `POST /api/v1/admin/ai/autonomy/proposals/{id}/accept`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/ai/autonomy/proposals/{id}/accept",
+    operation_id = "accept_autonomy_proposal",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The proposal")),
+    responses(
+        (status = 200, description = "Accepted; the level is raised", body = AutonomyProposal),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No open proposal with this id", body = ErrorResponse),
+        (status = 409, description = "The level changed since the proposal", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn accept_proposal(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<AutonomyProposal>, AppError> {
+    Ok(Json(decide_proposal(&state, ctx.user_id, id, true).await?))
+}
+
+/// `POST /api/v1/admin/ai/autonomy/proposals/{id}/reject`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/ai/autonomy/proposals/{id}/reject",
+    operation_id = "reject_autonomy_proposal",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The proposal")),
+    responses(
+        (status = 200, description = "Rejected", body = AutonomyProposal),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No open proposal with this id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn reject_proposal(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<AutonomyProposal>, AppError> {
+    Ok(Json(decide_proposal(&state, ctx.user_id, id, false).await?))
+}
+
 // ── Admin routes ────────────────────────────────────────────────────────────
 
 /// One action an agent may call, with the level it runs at.
@@ -872,6 +1184,18 @@ async fn clear_level(
 
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/admin/ai/agents/{id}/autonomy/proposals",
+            get(list_proposals),
+        )
+        .route(
+            "/api/v1/admin/ai/autonomy/proposals/{id}/accept",
+            axum::routing::post(accept_proposal),
+        )
+        .route(
+            "/api/v1/admin/ai/autonomy/proposals/{id}/reject",
+            axum::routing::post(reject_proposal),
+        )
         .route("/api/v1/admin/ai/agents/{id}/autonomy", get(list_levels))
         .route(
             "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}",
@@ -881,8 +1205,21 @@ pub fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(list_levels, set_level, clear_level),
-    components(schemas(AutonomyEntry, AutonomyRow, SetAutonomy, AutonomyLevel))
+    paths(
+        list_levels,
+        set_level,
+        clear_level,
+        list_proposals,
+        accept_proposal,
+        reject_proposal
+    ),
+    components(schemas(
+        AutonomyEntry,
+        AutonomyRow,
+        SetAutonomy,
+        AutonomyLevel,
+        AutonomyProposal
+    ))
 )]
 struct ApiDocFragment;
 
@@ -995,6 +1332,29 @@ mod tests {
         ]);
         assert_eq!(subject, "Your agents ran 15 action(s) on their own");
         assert!(body.contains("12 × email.send, 3 × record.update"));
+    }
+
+    #[test]
+    fn proposals_step_up_one_and_stop_consequential_at_review() {
+        use AutonomyLevel as L;
+        assert_eq!(
+            next_proposable(RiskTier::Reversible, L::AskFirst),
+            Some(L::ActOnReview)
+        );
+        assert_eq!(
+            next_proposable(RiskTier::Reversible, L::ActAndReport),
+            Some(L::Automatic)
+        );
+        assert_eq!(next_proposable(RiskTier::Reversible, L::Automatic), None);
+        assert_eq!(
+            next_proposable(RiskTier::Consequential, L::AskFirst),
+            Some(L::ActOnReview)
+        );
+        assert_eq!(
+            next_proposable(RiskTier::Consequential, L::ActOnReview),
+            None,
+            "past act_on_review only an administrator chooses"
+        );
     }
 
     #[test]

@@ -4140,6 +4140,131 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"message_id": message, "expect": {"text_matches": "balance"}})),
             )
         }
+        // ── AH8 autonomy levels, undo window and review; AH6 trial ─────────
+        "PUT /api/v1/admin/ai/agents/{id}/autonomy/{action_id}" => request(
+            "PUT",
+            &format!(
+                "/api/v1/admin/ai/agents/{}/autonomy/record.update",
+                Uuid::now_v7()
+            ),
+            t,
+            Some(json!({"level": "act_on_review"})),
+        ),
+        "DELETE /api/v1/admin/ai/agents/{id}/autonomy/{action_id}" => {
+            let agent = Uuid::now_v7();
+            call(
+                fx,
+                request(
+                    "PUT",
+                    &format!("/api/v1/admin/ai/agents/{agent}/autonomy/record.update"),
+                    t,
+                    Some(json!({"level": "ask_first"})),
+                ),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/ai/agents/{agent}/autonomy/record.update"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/ai/deferred-actions/{id}/cancel" => {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO ai_deferred_action (action_id, args, initiator, acting_user_id, run_at) \
+                 VALUES ('record.delete', '{}', 'user', $1, now() + interval '1 hour') RETURNING id",
+            )
+            .bind(fx.admin_id)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("hold an action");
+            request(
+                "POST",
+                &format!("/api/v1/ai/deferred-actions/{id}/cancel"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/ai/deferred-actions/apply" | "POST /api/v1/ai/deferred-actions/discard" => {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO ai_deferred_action \
+                   (action_id, args, initiator, agent_session_id, acting_user_id, run_at, status) \
+                 VALUES ('record.delete', '{}', 'agent', $1, $2, NULL, 'staged') RETURNING id",
+            )
+            .bind(Uuid::now_v7())
+            .bind(fx.admin_id)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("stage an action");
+            let path = key.trim_start_matches("POST ");
+            request("POST", path, t, Some(json!({"ids": [id]})))
+        }
+        "POST /api/v1/admin/ai/autonomy/proposals/{id}/accept"
+        | "POST /api/v1/admin/ai/autonomy/proposals/{id}/reject" => {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO ai_autonomy_proposal \
+                   (agent_definition_id, action_id, to_level, agreement, cases, expires_at) \
+                 VALUES ($1, 'record.update', 5, 0.99, 250, now() + interval '14 days') RETURNING id",
+            )
+            .bind(Uuid::now_v7())
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("propose a raise");
+            let verb = if key.ends_with("/accept") {
+                "accept"
+            } else {
+                "reject"
+            };
+            request(
+                "POST",
+                &format!("/api/v1/admin/ai/autonomy/proposals/{id}/{verb}"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/ai/agents/{id}/go-live" => {
+            // A testing agent whose trial agreed with people 30 times out of 30.
+            let definition = agent_definition(fx).await;
+            let version: i64 = sqlx::query_scalar(
+                "UPDATE ai_agent SET status = 'testing' WHERE id = $1 RETURNING row_version",
+            )
+            .bind(definition)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("put the agent in testing");
+            let session = attome_ai::session::start(
+                &fx.base.db,
+                &attome_audit::audit_service(&fx.xrm),
+                attome_ai::session::SessionStart {
+                    owner_user_id: fx.admin_id,
+                    risk_ceiling: attome_ai::descriptor::RiskTier::Reversible,
+                    allowed_action_ids: None,
+                    surface: "internal",
+                    agent_definition_ref: Some(definition),
+                    integration_system_id: None,
+                    tainted: false,
+                    policy: attome_ai::session::PolicySnapshot::NONE,
+                },
+            )
+            .await
+            .expect("start a trial session");
+            sqlx::query(
+                "INSERT INTO ai_trial_decision \
+                   (agent_session_id, agent_ref, action_id, args, human_outcome, compared_at) \
+                 SELECT $1, $2, 'record.update', '{}', 'same', now() FROM generate_series(1, 30)",
+            )
+            .bind(session.id)
+            .bind(definition)
+            .execute(&fx.base.db)
+            .await
+            .expect("record trial decisions");
+            request(
+                "POST",
+                &format!("/api/v1/admin/ai/agents/{definition}/go-live"),
+                t,
+                Some(json!({"row_version": version})),
+            )
+        }
         "POST /api/v1/admin/ai/write-policies" => request(
             "POST",
             "/api/v1/admin/ai/write-policies",

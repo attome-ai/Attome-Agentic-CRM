@@ -213,7 +213,8 @@ impl Action for AgentDelegate {
                 },
             )
             .await?;
-            let child = crate::session::start(
+            let trial = resolved.trial;
+            let mut child = crate::session::start(
                 db,
                 &attome_audit::audit_service(state),
                 crate::session::SessionStart {
@@ -228,6 +229,11 @@ impl Action for AgentDelegate {
                 },
             )
             .await?;
+            // AH6: a testing definition's delegated run is a trial too.
+            if trial {
+                crate::session::mark_trial(db, &attome_audit::audit_service(state), &mut child)
+                    .await?;
+            }
             let finish = |reason: &'static str| async move {
                 if let Err(error) =
                     crate::session::revoke(db, child.id, ctx.security.user_id, reason).await

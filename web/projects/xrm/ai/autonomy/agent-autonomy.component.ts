@@ -31,6 +31,22 @@ export interface AutonomyEntry {
   row:           AutonomyRow | null;
 }
 
+/** `autonomy::AutonomyProposal` (AH8-T9). */
+export interface AutonomyProposal {
+  id:         string;
+  action_id:  string;
+  from_level: number | null;
+  to_level:   number;
+  agreement:  number;
+  cases:      number;
+  expires_at: string;
+}
+
+/** Stored level codes (`AutonomyLevel::as_i16`) to level names. */
+export const LEVEL_BY_CODE: Record<number, AutonomyLevel> = {
+  0: 'suggest', 1: 'ask_first', 2: 'act_with_undo', 3: 'act_and_report', 4: 'automatic', 5: 'act_on_review',
+};
+
 /** Whether saving `level` lets a consequential action run without approval. */
 export function raisesConsequential(entry: AutonomyEntry, level: AutonomyLevel): boolean {
   return entry.risk === 'Consequential' && AUTONOMY_LEVELS.indexOf(level) > AUTONOMY_LEVELS.indexOf('ask_first');
@@ -58,16 +74,35 @@ export class AiAgentAutonomyComponent {
   readonly entries = signal<AutonomyEntry[]>([]);
   readonly error   = signal<string | null>(null);
   readonly busy    = signal<string | null>(null);
+  readonly proposals = signal<AutonomyProposal[]>([]);
   readonly raisesConsequential = raisesConsequential;
+  readonly levelByCode = LEVEL_BY_CODE;
 
   constructor() {
     effect(() => this.load(this.agentId()));
   }
 
   load(agentId: string): void {
-    this.api.get<Page<AutonomyEntry>>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/autonomy`).subscribe({
+    const base = `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/autonomy`;
+    this.api.get<Page<AutonomyEntry>>(base).subscribe({
       next: page => this.entries.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
+    });
+    this.api.get<Page<AutonomyProposal>>(`${base}/proposals`).subscribe({
+      next: page => this.proposals.set(page.items ?? []),
+      error: (e: ApiError) => this.error.set(e.message),
+    });
+  }
+
+  /** Accepts or rejects a proposal to raise a level (AH8-T9). */
+  decideProposal(p: AutonomyProposal, accept: boolean): void {
+    this.busy.set(p.id);
+    this.error.set(null);
+    this.api.post<unknown>(
+      `/api/v1/admin/ai/autonomy/proposals/${encodeURIComponent(p.id)}/${accept ? 'accept' : 'reject'}`, {},
+    ).subscribe({
+      next: () => { this.busy.set(null); this.load(this.agentId()); },
+      error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); this.load(this.agentId()); },
     });
   }
 

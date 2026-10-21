@@ -122,6 +122,9 @@ pub struct ActionContext {
     /// seconds, cancellable, before it runs. Never skips a confirmation or an
     /// approval the gate requires; it only delays an action that would run.
     pub undo_window_seconds: Option<u32>,
+    /// AH6: the session is a trial run (`AgentSession::trial`), copied by
+    /// [`Self::for_session`]; `false` on every other constructor.
+    pub session_trial: bool,
 }
 
 impl std::fmt::Debug for ActionContext {
@@ -148,6 +151,7 @@ impl ActionContext {
             session_surface: None,
             autonomy: None,
             undo_window_seconds: None,
+            session_trial: false,
         }
     }
 
@@ -173,6 +177,7 @@ impl ActionContext {
             session_surface: None,
             autonomy: None,
             undo_window_seconds: None,
+            session_trial: false,
         }
     }
 
@@ -252,6 +257,7 @@ impl ActionContext {
         ctx.session_max_tokens = session.policy.max_tokens_per_session;
         ctx.anonymous_channel = session.anonymous_channel;
         ctx.session_surface = Some(session.surface.clone());
+        ctx.session_trial = session.trial;
         if session.tainted {
             ctx = ctx.tainted();
         }
@@ -331,6 +337,7 @@ pub(crate) mod tests {
             policy: crate::session::PolicySnapshot::NONE,
             anonymous_channel: false,
             surface: "test".to_owned(),
+            trial: false,
         }
     }
 

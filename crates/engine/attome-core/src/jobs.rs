@@ -655,6 +655,9 @@ pub enum EngineJob {
     /// AH8-T8: daily; one in-app summary per person of the actions their
     /// agents ran on their own at `automatic`, then prunes summarized rows.
     AiAutonomySummary,
+    /// AH6-T3 / AH8-T9: hourly; compares trial decisions older than 24 hours
+    /// with what people did, then proposes autonomy raises the figures earn.
+    AiTrialCompare,
     /// M23 Records Management (D-456) — runs one `audit_legal_matter`'s
     /// "collect": scans its `scope_entity` under `scope_filter` in bounded
     /// batches, places a hold (`legal_hold`, tagged
@@ -1100,6 +1103,7 @@ impl EngineJob {
             | Self::ReportScheduleSweep
             | Self::AiDeferredActionSweep
             | Self::AiAutonomySummary
+            | Self::AiTrialCompare
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -1250,6 +1254,7 @@ impl EngineJob {
             EngineJob::ReportScheduleSweep => "ReportScheduleSweep",
             EngineJob::AiDeferredActionSweep => "AiDeferredActionSweep",
             EngineJob::AiAutonomySummary => "AiAutonomySummary",
+            EngineJob::AiTrialCompare => "AiTrialCompare",
             EngineJob::LegalMatterCollect { .. } => "LegalMatterCollect",
             EngineJob::LegalMatterRelease { .. } => "LegalMatterRelease",
             EngineJob::LicenseExpiryCheck => "LicenseExpiryCheck",
@@ -1398,6 +1403,7 @@ impl EngineJob {
             | Self::ReportScheduleSweep
             | Self::AiDeferredActionSweep
             | Self::AiAutonomySummary
+            | Self::AiTrialCompare
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -1561,6 +1567,7 @@ impl EngineJob {
             | Self::ReportScheduleSweep
             | Self::AiDeferredActionSweep
             | Self::AiAutonomySummary
+            | Self::AiTrialCompare
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -2544,6 +2551,7 @@ mod tests {
         assert_round_trips(EngineJob::ReportScheduleSweep);
         assert_round_trips(EngineJob::AiDeferredActionSweep);
         assert_round_trips(EngineJob::AiAutonomySummary);
+        assert_round_trips(EngineJob::AiTrialCompare);
         assert!(!EngineJob::AiDeferredActionSweep.is_batch());
         assert!(!EngineJob::ReportScheduleSweep.is_batch());
     }
