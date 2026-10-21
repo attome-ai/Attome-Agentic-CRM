@@ -121,6 +121,8 @@ pub mod mcp_client;
 pub mod meeting;
 pub mod model_drift;
 pub mod model_registry;
+/// AK2-T1: the operations report, its proposed actions and the weekly digest.
+pub mod ops_agent;
 pub mod orchestrate;
 pub mod outcome;
 /// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side

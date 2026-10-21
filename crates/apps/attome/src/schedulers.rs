@@ -136,6 +136,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_intraday_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // AI8-T3: yesterday's agent performance, checked hourly, rolled up once.
     crate::jobs::spawn_agent_stats_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // AK2-T1: the weekly operations digest, checked hourly, sent on Mondays.
+    crate::jobs::spawn_ops_digest_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // AI5-T4: promises to pay read from customers' replies, every 5 minutes.
     crate::jobs::spawn_promise_extract_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // AI6-T3: meetings an hour away queued for a brief, every 15 minutes.

@@ -1454,6 +1454,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Operations agent (AK2-T1, platform changeset `0068`): `ops.report` (administrators, reads only) gives the nodes and their
+  versions, the services this node depends on, the backups in `backup.dir` with the last restore drill, the database and
+  backup sizes, each SLO class's status, and the routine actions they call for (a stale or missing backup, backups off, no
+  passing drill in 35 days, a service down, writes paused, a silent node, mixed versions, an SLO over budget), each naming
+  its fix. Every Monday from 06:00 UTC the same report and proposals go to every administrator as a weekly digest (job
+  `ai_ops_weekly_digest`). The `ops_agent` (a draft) reads only, through its Operations policy.
 - HR case access (W8-T1, human-resources pack `0004`): the HR Specialist role reads and works every HR case, confidential
   ones included, and manages the HR offerings; a new Employee role raises cases and sees only its own; a new case is not
   confidential unless set. Other ticket roles are kept off confidential cases by a grant condition the deployment adds

@@ -66,8 +66,9 @@ impl Action for SystemStatus {
     }
 }
 
-/// The tool's answer from the node's own readings.
-fn status_body(
+/// The tool's answer from the node's own readings; the operations report
+/// (`crate::ops_agent`) carries the same reading.
+pub(crate) fn status_body(
     registry: &CapabilityRegistry,
     writes_paused: bool,
     metadata_lagging: bool,

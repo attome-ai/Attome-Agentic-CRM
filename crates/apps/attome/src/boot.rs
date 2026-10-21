@@ -1179,6 +1179,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-lead-agent",
         // AI3-T1: the inbox-to-record agent and its policy.
         "attome-ai-inbox-agent",
+        // AK2-T1: the operations agent and its read-only policy.
+        "attome-ai-ops-agent",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

@@ -1,0 +1,46 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": ["core"]
+  },
+  "entities": [],
+  "record_sets": [
+    {
+      "entity": "ai_agent_policy",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "Operations",
+          "description": "What the operations agent may do: read the operations report (nodes, versions, services, backups and drills, sizes, SLOs), the service levels, the system status and table health. It reads only; a person runs what it proposes.",
+          "risk_ceiling": "read",
+          "allowed_action_ids": [
+            "ops.report",
+            "ops.slo_health",
+            "system.status",
+            "table.health"
+          ],
+          "max_invocations_per_session": 20,
+          "max_writes_per_day": 1,
+          "max_tokens_per_session": 30000,
+          "max_session_duration_minutes": 15
+        }
+      ]
+    },
+    {
+      "entity": "ai_agent",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "ops_agent",
+          "description": "Looks after the deployment: reads the operations report and the service levels, explains what is wrong and proposes the routine action that fixes it.",
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "policy_ref": { "key": { "name": "Operations" } },
+          "system_instructions": "You look after this Attome deployment for its administrators. Start with ops.report. Explain each proposed action in plain words: what is wrong, why it matters and the exact command or setting that fixes it. Use ops.slo_health and table.health to look deeper when asked about speed or errors, and system.status when a tool fails. You only read: never claim you ran a command, and say that a person must run it."
+        }
+      ]
+    }
+  ]
+}

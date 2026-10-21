@@ -140,6 +140,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(collections::descriptors());
     all.extend(agent_stats::descriptors());
     all.extend(lead_qualifier::descriptors());
+    all.extend(crate::ops_agent::descriptors());
     all
 }
 
@@ -212,5 +213,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(collections::executors());
     all.extend(agent_stats::executors());
     all.extend(lead_qualifier::executors());
+    all.extend(crate::ops_agent::executors());
     all
 }

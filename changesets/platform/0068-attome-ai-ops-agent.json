@@ -1,0 +1,81 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:26567841ab2bec2a8ace6034d0b7a24085536f7198c33364b07adc7fb6f15e28",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-ops-agent.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "81071e9b-a110-736c-a382-a7a44639e7cb",
+  "layer": "platform",
+  "name": "attome-ai-ops-agent",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "allowed_action_ids": [
+            "ops.report",
+            "ops.slo_health",
+            "system.status",
+            "table.health"
+          ],
+          "description": "What the operations agent may do: read the operations report (nodes, versions, services, backups and drills, sizes, SLOs), the service levels, the system status and table health. It reads only; a person runs what it proposes.",
+          "max_invocations_per_session": 20,
+          "max_session_duration_minutes": 15,
+          "max_tokens_per_session": 30000,
+          "max_writes_per_day": 1,
+          "name": "Operations",
+          "risk_ceiling": "read"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_agent_policy",
+        "key": {
+          "name": "Operations"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Looks after the deployment: reads the operations report and the service levels, explains what is wrong and proposes the routine action that fixes it.",
+          "name": "ops_agent",
+          "policy_ref": {
+            "key": {
+              "name": "Operations"
+            }
+          },
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "system_instructions": "You look after this Attome deployment for its administrators. Start with ops.report. Explain each proposed action in plain words: what is wrong, why it matters and the exact command or setting that fixes it. Use ops.slo_health and table.health to look deeper when asked about speed or errors, and system.status when a tool fails. You only read: never claim you ran a command, and say that a person must run it."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_agent",
+        "key": {
+          "name": "ops_agent"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 68,
+  "title": "Platform definitions: attome-ai-ops-agent"
+}

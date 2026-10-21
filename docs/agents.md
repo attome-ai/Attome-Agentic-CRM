@@ -336,6 +336,29 @@ or the sender's contact). The agent then works on one inbound email at a time:
 - **Limits.** The policy caps a session at 30 tool calls, 15 minutes and 40,000 tokens, and the
   agent at 500 writes a day. Each filing records an `agent_task` outcome under rule `ai.inbox`.
 
+## Operations agent
+
+`ops.report` (administrators only; reads, changes nothing) answers "how is this deployment doing":
+
+- the nodes seen in the last day, the version each runs, and whether each reported in the last
+  three minutes;
+- the services this node depends on, as `system.status` reads them, and whether writes are paused;
+- the backups in `backup.dir`: how many, their size, the newest archive's time, and the last restore
+  drill and whether it passed;
+- the database's size and each SLO class's status.
+
+It also lists the routine actions these call for, urgent ones first, each naming its fix: no backup
+in 26 hours or none at all (`attome backup now`), backups switched off (`backup.enabled`), no
+passing restore drill in 35 days (`attome backup drill`), a service down, writes paused, a node
+that stopped reporting, nodes on different versions, and an SLO class over its error budget.
+
+Every Monday from 06:00 UTC the report and its proposals go to every administrator as the weekly
+operations digest, in the app and by email (job `ai_ops_weekly_digest`, checked hourly, sent once a
+week). The `ops_agent` ships as a draft with its Operations policy: it may call `ops.report`,
+`ops.slo_health`, `system.status` and `table.health`, all reads, so a person runs whatever it
+proposes. Certificates and free disk space are not reported: the server holds no certificate
+while TLS ends at the proxy, and free space needs a platform call it does not make.
+
 ## Meeting briefs and notes
 
 A meeting is an `activity` whose `activity_type` is `meeting`. It is about a record through
