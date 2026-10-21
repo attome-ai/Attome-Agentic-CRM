@@ -1450,6 +1450,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- AI outcome quality (O11-T1): `record.ai_field`, `record.classify`, `knowledge.answer` and `route.classify`
+  declare the `ai_suggestion` outcome kind, so their suggestions now reach the outcome ledger (before, its
+  dual-write refused them). `GET /api/v1/admin/outcomes/quality/by-model` and `.../by-agent` (`?days=`, default
+  30) report proposals, measured, accepted, edited and rejected counts, acceptance rate and mean effectiveness.
 - Export formats (P4-T1): CSV, XLSX and the new PowerPoint (`pptx`) report format write a text cell that starts with
   `=`, `+`, `-`, `@`, a tab or a carriage return as text (prefixed with `'`), for report runs and data exports
   alike; the deployment setting `records.export_formula_guard` (on by default) turns it off. A `pptx` report run

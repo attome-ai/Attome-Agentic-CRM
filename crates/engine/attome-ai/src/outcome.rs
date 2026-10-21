@@ -417,14 +417,207 @@ async fn get_outcome_summary(
     }))
 }
 
+// ── O11-T1: quality per model and per agent ───────────────────────────────
+
+/// The most groups one quality report lists.
+pub const MAX_QUALITY_GROUPS: i64 = 500;
+
+/// How far back a quality report looks.
+#[derive(Debug, Clone, Copy, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct QualityWindow {
+    /// Days back from now, 1 to 365; 30 when omitted.
+    #[serde(default)]
+    pub days: Option<i64>,
+}
+
+impl QualityWindow {
+    /// The window in days, clamped. Pure.
+    pub fn days(&self) -> i64 {
+        self.days.unwrap_or(30).clamp(1, 365)
+    }
+}
+
+/// One group's proposals and their fates: how many were proposed, measured,
+/// accepted as they were, edited, and rejected, and the mean effectiveness.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct OutcomeQualityRow {
+    /// The model id (per-model report) or the agent (per-agent report).
+    pub group: Option<String>,
+    /// The prompt version (per-model report only).
+    pub prompt_version: Option<String>,
+    pub kind: String,
+    pub total: i64,
+    pub measured: i64,
+    pub accepted: i64,
+    pub edited: i64,
+    pub rejected: i64,
+    pub avg_effectiveness: Option<f64>,
+    /// accepted ÷ measured; null before anything is measured.
+    pub acceptance_rate: Option<f64>,
+}
+
+/// accepted ÷ measured, `None` before anything is measured. Pure.
+pub fn acceptance_rate(accepted: i64, measured: i64) -> Option<f64> {
+    (measured > 0).then(|| accepted as f64 / measured as f64)
+}
+
+type QualityDbRow = (
+    Option<String>,
+    Option<String>,
+    String,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    Option<f64>,
+);
+
+fn quality_rows(rows: Vec<QualityDbRow>) -> Vec<OutcomeQualityRow> {
+    rows.into_iter()
+        .map(
+            |(group, prompt_version, kind, total, measured, accepted, edited, rejected, avg)| {
+                OutcomeQualityRow {
+                    group,
+                    prompt_version,
+                    kind,
+                    total,
+                    measured,
+                    accepted,
+                    edited,
+                    rejected,
+                    avg_effectiveness: avg,
+                    acceptance_rate: acceptance_rate(accepted, measured),
+                }
+            },
+        )
+        .collect()
+}
+
+/// The fate counts every quality report shares.
+const FATE_COLUMNS: &str = "COUNT(*)::bigint, \
+     COUNT(*) FILTER (WHERE o.measured_at IS NOT NULL)::bigint, \
+     COUNT(*) FILTER (WHERE o.actual_value->>'outcome' = 'accepted')::bigint, \
+     COUNT(*) FILTER (WHERE o.actual_value->>'outcome' = 'edited')::bigint, \
+     COUNT(*) FILTER (WHERE o.actual_value->>'outcome' = 'rejected')::bigint, \
+     AVG(o.effectiveness) FILTER (WHERE o.effectiveness IS NOT NULL)";
+
+/// Quality per model and prompt version over the window.
+pub async fn quality_by_model(db: &PgPool, days: i64) -> Result<Vec<OutcomeQualityRow>, AppError> {
+    let rows: Vec<QualityDbRow> = sqlx::query_as(&format!(
+        "SELECT o.model_id, o.prompt_version, o.kind, {FATE_COLUMNS} \
+           FROM outcome o \
+          WHERE o.proposed_at >= now() - make_interval(days => $1::int) \
+            AND o.model_id IS NOT NULL \
+          GROUP BY o.model_id, o.prompt_version, o.kind \
+          ORDER BY COUNT(*) DESC, o.model_id, o.prompt_version LIMIT $2"
+    ))
+    .bind(days)
+    .bind(MAX_QUALITY_GROUPS)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(quality_rows(rows))
+}
+
+/// Quality per agent (the session's agent definition or object) over the
+/// window.
+pub async fn quality_by_agent(db: &PgPool, days: i64) -> Result<Vec<OutcomeQualityRow>, AppError> {
+    let rows: Vec<QualityDbRow> = sqlx::query_as(&format!(
+        "SELECT COALESCE(s.agent_definition_ref, s.agent_object_ref)::text, NULL::text, o.kind, \
+                {FATE_COLUMNS} \
+           FROM outcome o JOIN agent_session s ON s.id = o.agent_session_ref \
+          WHERE o.proposed_at >= now() - make_interval(days => $1::int) \
+          GROUP BY COALESCE(s.agent_definition_ref, s.agent_object_ref), o.kind \
+          ORDER BY COUNT(*) DESC LIMIT $2"
+    ))
+    .bind(days)
+    .bind(MAX_QUALITY_GROUPS)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(quality_rows(rows))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/outcomes/quality/by-model",
+    tag = "action",
+    params(QualityWindow),
+    responses(
+        (status = 200, description = "Proposals and their fates per model and prompt version", body = PaginatedResponse<OutcomeQualityRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks system.admin", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_quality_by_model(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(window): Query<QualityWindow>,
+) -> Result<Json<PaginatedResponse<OutcomeQualityRow>>, AppError> {
+    let items = quality_by_model(&state.base.db, window.days()).await?;
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        1,
+        MAX_QUALITY_GROUPS,
+    )))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/outcomes/quality/by-agent",
+    tag = "action",
+    params(QualityWindow),
+    responses(
+        (status = 200, description = "Proposals and their fates per agent", body = PaginatedResponse<OutcomeQualityRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks system.admin", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_quality_by_agent(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(window): Query<QualityWindow>,
+) -> Result<Json<PaginatedResponse<OutcomeQualityRow>>, AppError> {
+    let items = quality_by_agent(&state.base.db, window.days()).await?;
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        1,
+        MAX_QUALITY_GROUPS,
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/outcomes", get(list_outcomes))
         .route("/api/v1/admin/outcomes/summary", get(get_outcome_summary))
+        .route(
+            "/api/v1/admin/outcomes/quality/by-model",
+            get(get_quality_by_model),
+        )
+        .route(
+            "/api/v1/admin/outcomes/quality/by-agent",
+            get(get_quality_by_agent),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_outcomes, get_outcome_summary))]
+#[openapi(
+    paths(
+        list_outcomes,
+        get_outcome_summary,
+        get_quality_by_model,
+        get_quality_by_agent
+    ),
+    components(schemas(OutcomeQualityRow))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -457,6 +650,35 @@ impl EngineModel for OutcomeModel {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn quality_windows_and_rates_are_bounded() {
+        assert_eq!(QualityWindow { days: None }.days(), 30);
+        assert_eq!(QualityWindow { days: Some(0) }.days(), 1);
+        assert_eq!(QualityWindow { days: Some(9_999) }.days(), 365);
+        assert_eq!(acceptance_rate(3, 4), Some(0.75));
+        assert_eq!(acceptance_rate(0, 0), None);
+    }
+
+    #[test]
+    fn every_suggestion_logging_action_declares_its_kind() {
+        // telemetry::record_suggestion dual-writes kind `ai_suggestion`;
+        // require_declared_kind refuses an action that does not declare it.
+        for id in [
+            crate::actions::read::RECORD_SUMMARIZE,
+            crate::actions::ai_field::RECORD_AI_FIELD,
+            crate::actions::classify::RECORD_CLASSIFY,
+            crate::actions::knowledge_answer::KNOWLEDGE_ANSWER,
+            crate::actions::route_classify::ROUTE_CLASSIFY,
+            crate::meeting::brief::MEETING_BRIEF,
+            crate::meeting::notes::MEETING_NOTES,
+        ] {
+            assert!(
+                require_declared_kind(id, "ai_suggestion").is_ok(),
+                "{id} logs suggestions but does not declare outcome_kind(\"ai_suggestion\")"
+            );
+        }
+    }
+
     use super::*;
     use crate::actions::read::RECORD_SUMMARIZE;
     use crate::descriptor::{Effect, RetryClass, RiskTier};

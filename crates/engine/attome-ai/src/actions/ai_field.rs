@@ -66,6 +66,9 @@ pub fn descriptor() -> ActionDescriptor {
         &[],
     )
     .input_schema(INPUT)
+    // O11-T1: its suggestions are logged (`telemetry::record_suggestion`),
+    // whose outcome-ledger row needs the declared kind.
+    .outcome_kind("ai_suggestion")
 }
 
 #[derive(Debug, Deserialize)]
