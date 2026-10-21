@@ -22,8 +22,16 @@
 //! or deletes above the mean plus [`SPREADS`] standard deviations (and at
 //! least [`MIN_WRITES`] or [`MIN_DELETES`], so a quiet agent's small bump
 //! is not one), an entity it has never written, and writes in an hour of the
-//! day it does not work. A departure is logged for now; AH5-T3 stops the
-//! agent on one.
+//! day it does not work.
+//!
+//! **The trip** (AH5-T3, [`trip`]): on a departure the agent is stopped.
+//! Every live session of it is paused (not revoked, so a person can inspect
+//! and resume one) with the reason `automatic: <kind>` by the policy actor;
+//! the agent definition is set `suspended`, which `start_session` already
+//! refuses, in one transaction with a `Configuration` security event; and its
+//! owner and the administrators are alerted with what departed. Nothing here
+//! sets an agent back to `active`: only a person does, by updating the
+//! agent. An agent already suspended is not tripped again.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -394,20 +402,156 @@ pub async fn check_departures(db: &DbPool, now: DateTime<Utc>) -> Result<Vec<Dep
     Ok(out)
 }
 
-/// The five-minute run (job [`CHECK_JOB`]): finds and reports departures.
+/// The wire name of a departure kind. Pure.
+pub fn kind_name(kind: DepartureKind) -> &'static str {
+    match kind {
+        DepartureKind::Volume => "volume",
+        DepartureKind::Deletes => "deletes",
+        DepartureKind::NewEntity => "new_entity",
+        DepartureKind::OutsideHours => "outside_hours",
+    }
+}
+
+/// The alert's subject and text for a departure. Pure.
+pub fn alert_text(agent_name: &str, d: &Departure) -> (String, String) {
+    let subject = format!("Agent {agent_name} was stopped automatically");
+    let what = match d.kind {
+        DepartureKind::Volume => format!(
+            "it wrote {} records this hour against about {:.1} usually",
+            d.observed, d.expected
+        ),
+        DepartureKind::Deletes => format!(
+            "it deleted {} records this hour against about {:.1} usually",
+            d.observed, d.expected
+        ),
+        DepartureKind::NewEntity => format!(
+            "it wrote to {}, which it has never written before",
+            d.entity.as_deref().unwrap_or("an entity")
+        ),
+        DepartureKind::OutsideHours => format!(
+            "it wrote {} records in an hour it does not usually work",
+            d.observed
+        ),
+    };
+    let body = format!(
+        "Agent {agent_name} departed from what it normally does: {what}. Its live sessions \
+         are paused and the agent is suspended. Look at its sessions, then set it back to \
+         active to let it run again."
+    );
+    (subject, body)
+}
+
+/// Stops an agent for a departure: pauses its live sessions, suspends it
+/// with a security event, and alerts its owner and the administrators.
+/// Returns false when it was already suspended.
+pub async fn trip(state: &EngineState, d: &Departure) -> Result<bool, AppError> {
+    let db = &state.base.db;
+    let actor = attome_approval::POLICY_ACTOR_ID;
+    let reason = format!("automatic: {}", kind_name(d.kind));
+    let note = format!(
+        "{reason}: observed {}, expected {}",
+        d.observed, d.expected
+    );
+    let mut tx = attome_db::tx::begin(db).await?;
+    let suspended: Option<(Option<String>, Option<Uuid>)> = sqlx::query_as(
+        "UPDATE ai_agent SET status = 'suspended', modified_at = NOW(), \
+                row_version = row_version + 1 \
+          WHERE id = $1 AND status IN ('active', 'testing') \
+          RETURNING name, owner_ref",
+    )
+    .bind(d.agent_ref)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((name, owner)) = suspended else {
+        return Ok(false);
+    };
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            attome_audit::AuditOperation::Update,
+            actor,
+            "ai_agent",
+            Some(d.agent_ref),
+        )
+        .named("ai.agent.auto_stopped")
+        .comment(note),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    let sessions: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM agent_session WHERE agent_definition_ref = $1 \
+            AND paused_at IS NULL AND revoked_at IS NULL AND ended_at IS NULL",
+    )
+    .bind(d.agent_ref)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    for session in &sessions {
+        crate::session::pause(db, *session, actor, &reason).await?;
+    }
+    let agent_name = name.unwrap_or_else(|| d.agent_ref.to_string());
+    let (subject, body) = alert_text(&agent_name, d);
+    attome_notification::dispatch::alert_admins(
+        db,
+        &state.base.config.notification,
+        subject.clone(),
+        body.clone(),
+        "/xrm/ai/agents",
+    )
+    .await;
+    if let Some(owner) = owner {
+        let request = attome_notification::dispatch::DispatchRequest {
+            template_key: None,
+            locale: "en".to_owned(),
+            recipient_user_ref: Some(owner),
+            is_global: false,
+            organization_ref: None,
+            channels: None,
+            subject: Some(subject),
+            body_html: None,
+            body_text: Some(body),
+            route: Some("/xrm/ai/agents".to_owned()),
+            variables: std::collections::HashMap::new(),
+            priority: "high".to_owned(),
+            escalate_after_minutes: None,
+            escalate_channels: None,
+        };
+        if let Err(error) = attome_notification::dispatch::create_dispatch(
+            db,
+            &state.base.config.notification,
+            request,
+        )
+        .await
+        {
+            tracing::warn!(agent = %d.agent_ref, %error, "agent stop: owner not notified");
+        }
+    }
+    tracing::warn!(
+        agent = %d.agent_ref,
+        kind = kind_name(d.kind),
+        sessions = sessions.len(),
+        "agent stopped automatically"
+    );
+    Ok(true)
+}
+
+/// The five-minute run (job [`CHECK_JOB`]): finds departures and stops each
+/// departing agent once. Returns how many agents it stopped.
 pub async fn run_check(state: &EngineState, now: DateTime<Utc>) -> Result<usize, AppError> {
     let found = check_departures(&state.base.db, now).await?;
+    let mut stopped = BTreeSet::new();
     for d in &found {
-        tracing::warn!(
-            agent = %d.agent_ref,
-            kind = ?d.kind,
-            observed = d.observed,
-            expected = d.expected,
-            entity = d.entity.as_deref().unwrap_or(""),
-            "agent departed from its baseline"
-        );
+        if stopped.contains(&d.agent_ref) {
+            continue;
+        }
+        if trip(state, d).await? {
+            stopped.insert(d.agent_ref);
+        }
     }
-    Ok(found.len())
+    Ok(stopped.len())
 }
 
 /// The hourly run (job [`ROLLUP_JOB`]): the hour just ended, and the
@@ -507,6 +651,21 @@ mod tests {
         let found = departures(agent, &hour(2, &["deal"]), &baseline(5.0, 2.0), 3);
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].kind, DepartureKind::OutsideHours);
+    }
+
+    #[test]
+    fn behaviour_the_alert_says_what_departed() {
+        let d = Departure {
+            agent_ref: Uuid::now_v7(),
+            kind: DepartureKind::NewEntity,
+            observed: 1.0,
+            expected: 0.0,
+            entity: Some("invoice".into()),
+        };
+        let (subject, body) = alert_text("collector", &d);
+        assert!(subject.contains("collector"));
+        assert!(body.contains("invoice") && body.contains("suspended"));
+        assert_eq!(kind_name(DepartureKind::OutsideHours), "outside_hours");
     }
 
     #[test]

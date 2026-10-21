@@ -347,8 +347,7 @@ pub fn digest(report: &OpsReport, proposed: &[Proposal]) -> (String, String) {
     } else {
         format!(
             "Weekly operations digest: {} thing{} to do",
-            proposed.len(),
-            if proposed.len() == 1 { "" } else { "s" }
+            proposed.len(), if proposed.len() == 1 { "" } else { "s" }
         )
     };
     let mut body = String::new();
@@ -363,16 +362,13 @@ pub fn digest(report: &OpsReport, proposed: &[Proposal]) -> (String, String) {
     }
     body.push_str(&format!(
         "\nVersion {}; {} node(s) seen in the last day.\n",
-        report.version,
-        report.nodes.len()
+        report.version, report.nodes.len()
     ));
     let b = &report.backups;
     match b.newest_at {
         Some(at) => body.push_str(&format!(
             "Backups: {} archive(s), {}, newest {}.\n",
-            b.archives,
-            megabytes(b.bytes),
-            at.format("%Y-%m-%d %H:%M UTC")
+            b.archives, megabytes(b.bytes), at.format("%Y-%m-%d %H:%M UTC")
         )),
         None => body.push_str("Backups: none found.\n"),
     }
@@ -384,7 +380,7 @@ pub fn digest(report: &OpsReport, proposed: &[Proposal]) -> (String, String) {
                 "passed"
             } else {
                 "failed"
-            }
+            },
         ));
     }
     if let Some(bytes) = report.database_bytes {
