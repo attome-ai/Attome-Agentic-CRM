@@ -629,9 +629,270 @@ impl Action for BotHandoff {
     }
 }
 
+// ── handoff.to_person (AI7-T3) ─────────────────────────────────────────────
+
+/// `handoff.to_person` — an agent hands a ticket to a person, a queue or
+/// another agent, with a summary and its reasoning, through the service
+/// engine's hand-off ledger (`attome_service::handoff`). `bot.handoff` stays
+/// as it is for web chat.
+pub const HANDOFF_TO_PERSON: &str = "handoff.to_person";
+/// The outcome kind the hand-off records, under rule `ai.handoff`, which
+/// AI8's hand-off rate counts.
+const HANDOFF_OUTCOME_KIND: &str = "agent_task";
+
+const HANDOFF_TO_PERSON_SCHEMA: &str = r#"{
+  "type": "object",
+  "properties": {
+    "ticket_id": { "type": "string", "format": "uuid", "description": "The ticket to hand off." },
+    "to_kind": { "type": "string", "enum": ["user", "queue", "agent"], "description": "Who receives it." },
+    "to_ref": { "type": "string", "format": "uuid", "description": "The person, queue or agent." },
+    "summary": { "type": "string", "maxLength": 4000, "description": "What the ticket needs, in a few lines." },
+    "reasoning": { "type": "string", "maxLength": 4000, "description": "Why it goes to them now." },
+    "tool_calls": { "type": "array", "items": { "type": "string" }, "maxItems": 50, "description": "Tools consulted before handing off." }
+  },
+  "required": ["ticket_id", "to_kind", "to_ref", "summary", "reasoning"],
+  "additionalProperties": false
+}"#;
+
+pub fn to_person_descriptor() -> ActionDescriptor {
+    ActionDescriptor::new(
+        HANDOFF_TO_PERSON,
+        "Hand a ticket to a person, a queue or another agent with a short summary and your \
+         reasoning. Use it when the ticket needs a person's judgement or authority; the \
+         person can hand it back to you with a note.",
+        RiskTier::Reversible,
+        Effect::Write,
+        // A retry must not hand off twice; the ticket's one-waiting rule
+        // would refuse it anyway, but the gate asks an agent for a key.
+        RetryClass::RequiresKey,
+        attome_modules::MODULE_AI,
+        &[],
+    )
+    .input_schema(HANDOFF_TO_PERSON_SCHEMA)
+    .outcome_kind(HANDOFF_OUTCOME_KIND)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ToPersonArgs {
+    #[serde(default)]
+    ticket_id: Option<Uuid>,
+    to_kind: String,
+    to_ref: Uuid,
+    summary: String,
+    reasoning: String,
+    #[serde(default)]
+    tool_calls: Vec<String>,
+}
+
+/// The hand-off's summary and reasoning, structured like a work request's
+/// description: what the ticket needs, then the tools consulted; the
+/// reasoning alone. Empty reasoning is refused. Pure.
+pub fn render_handoff(
+    summary: &str,
+    reasoning: &str,
+    tool_calls: &[String],
+) -> Result<(String, String), AppError> {
+    let reasoning = reasoning.trim();
+    if reasoning.is_empty() {
+        return Err(AppError::Validation(
+            "reasoning is required: say why the ticket goes to them".into(),
+        ));
+    }
+    let summary = summary.trim();
+    if summary.is_empty() {
+        return Err(AppError::Validation("summary is required".into()));
+    }
+    let mut out = format!("What the ticket needs: {summary}\n");
+    if tool_calls.is_empty() {
+        out.push_str("Tools consulted: none\n");
+    } else {
+        out.push_str(&format!("Tools consulted: {}\n", tool_calls.join(", ")));
+    }
+    Ok((out, reasoning.to_owned()))
+}
+
+/// Refuses a target the caller cannot see: a person or queue the agent's
+/// owner may not read.
+async fn require_visible_target(
+    state: &EngineState,
+    ctx: &ActionContext,
+    to_kind: attome_service::handoff::ToKind,
+    to_ref: Uuid,
+) -> Result<(), AppError> {
+    use attome_service::handoff::ToKind;
+    let entity = match to_kind {
+        ToKind::User => "user_account",
+        ToKind::Queue => "service_work_queue",
+        ToKind::Agent => "ai_agent",
+    };
+    match attome_records::entity_crud::read_record_bulk(state, &ctx.security, entity, to_ref).await
+    {
+        Ok(_) => Ok(()),
+        Err(AppError::NotFound | AppError::Forbidden) => Err(AppError::Validation(format!(
+            "no {} you can see has that id",
+            to_kind.as_str()
+        ))),
+        Err(error) => Err(error),
+    }
+}
+
+#[derive(Debug)]
+pub struct HandoffToPerson;
+
+impl Action for HandoffToPerson {
+    fn id(&self) -> ActionId {
+        ActionId(HANDOFF_TO_PERSON)
+    }
+
+    fn execute<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a ActionContext,
+        args: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            let args: ToPersonArgs = serde_json::from_value(args.clone()).map_err(|e| {
+                AppError::Validation(format!("invalid handoff.to_person arguments: {e}"))
+            })?;
+            let (summary, reasoning) =
+                render_handoff(&args.summary, &args.reasoning, &args.tool_calls)?;
+            // A conversation with no ticket is bot.handoff's: it opens a work
+            // request. A hand-off moves an existing ticket.
+            let ticket_id = args.ticket_id.ok_or_else(|| {
+                AppError::Validation(
+                    "ticket_id is required; to escalate a conversation use bot.handoff".into(),
+                )
+            })?;
+            let to_kind = attome_service::handoff::ToKind::parse(&args.to_kind)
+                .ok_or_else(|| AppError::Validation("to_kind is user, queue or agent".into()))?;
+            // The ticket and the target must both be the caller's to see.
+            attome_records::entity_crud::read_record_bulk(
+                state,
+                &ctx.security,
+                "service_ticket",
+                ticket_id,
+            )
+            .await?;
+            require_visible_target(state, ctx, to_kind, args.to_ref).await?;
+            if let Some(session_id) = ctx.agent_session_id {
+                crate::write_guard::enforce_write_caps(
+                    state,
+                    session_id,
+                    HANDOFF_TO_PERSON,
+                    DAILY_HANDOFF_CAP,
+                    PER_MINUTE_HANDOFF_RATE_CAP,
+                )
+                .await?;
+            }
+            // From the agent of the session (its definition or object), else
+            // the person invoking it.
+            let agent: Option<Uuid> = match ctx.agent_session_id {
+                Some(session_id) => sqlx::query_scalar(
+                    "SELECT COALESCE(agent_definition_ref, agent_object_ref) FROM agent_session \
+                      WHERE id = $1",
+                )
+                .bind(session_id)
+                .fetch_optional(&state.base.db)
+                .await
+                .map_err(AppError::internal)?
+                .flatten(),
+                None => None,
+            };
+            let (from_kind, from_ref) = match (ctx.is_agent(), agent) {
+                (true, Some(agent)) => (attome_service::handoff::FromKind::Agent, agent),
+                _ => (
+                    attome_service::handoff::FromKind::User,
+                    ctx.security.user_id,
+                ),
+            };
+            let mut tx = attome_db::tx::begin(&state.base.db).await?;
+            let handoff_id = attome_service::handoff::create_handoff(
+                &mut tx,
+                state,
+                attome_service::handoff::NewHandoff {
+                    ticket_id,
+                    from_kind,
+                    from_ref,
+                    to_kind,
+                    to_ref: args.to_ref,
+                    summary,
+                    reasoning,
+                    agent_session_ref: ctx.agent_session_id,
+                },
+                ctx.security.user_id,
+            )
+            .await?;
+            attome_db::tx::commit(tx).await?;
+
+            let proposal = crate::outcome::OutcomeProposal {
+                kind: HANDOFF_OUTCOME_KIND,
+                entity_logicalname: Some("service_ticket"),
+                regarding_entity: Some("service_handoff"),
+                regarding_id: Some(handoff_id),
+                model_id: None,
+                prompt_version: None,
+                rule_ref: Some("ai.handoff"),
+                proposed_by: Some(ctx.security.user_id),
+                organization_ref: None,
+                expected_value: Some(serde_json::json!({ "to_kind": to_kind.as_str() })),
+            };
+            if let Err(error) = crate::outcome::record_proposed(
+                &state.base.db,
+                Uuid::now_v7(),
+                HANDOFF_TO_PERSON,
+                &proposal,
+                ctx.agent_session_id,
+            )
+            .await
+            {
+                tracing::warn!(%handoff_id, %error, "hand-off outcome not recorded");
+            }
+            Ok(ActionResult::plain(serde_json::json!({
+                "handoff_id": handoff_id,
+                "ticket_id": ticket_id,
+                "to_kind": to_kind.as_str(),
+                "to_ref": args.to_ref,
+                "status": "pending",
+            })))
+        })
+    }
+
+    fn confirmation_proposal(&self, args: &Value) -> Option<Value> {
+        Some(serde_json::json!({
+            "action": HANDOFF_TO_PERSON,
+            "ticket_id": args["ticket_id"],
+            "to_kind": args["to_kind"],
+            "to_ref": args["to_ref"],
+            "summary": args["summary"],
+            "reasoning": args["reasoning"],
+        }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn handoff_to_person_requires_reasoning() {
+        assert!(render_handoff("Customer wants a refund", "  ", &[]).is_err());
+        assert!(render_handoff("  ", "Needs approval", &[]).is_err());
+        let (summary, reasoning) = render_handoff(
+            "Customer wants a refund over the limit",
+            " Refunds above 1,000 need a supervisor ",
+            &["record.get".to_owned(), "search.knowledge".to_owned()],
+        )
+        .expect("rendered");
+        assert_eq!(
+            summary,
+            "What the ticket needs: Customer wants a refund over the limit\nTools consulted: record.get, search.knowledge\n"
+        );
+        assert_eq!(reasoning, "Refunds above 1,000 need a supervisor");
+        let d = to_person_descriptor();
+        assert_eq!(d.risk, RiskTier::Reversible);
+        assert_eq!(d.outcome_kind, Some("agent_task"));
+    }
 
     // ── Trigger wiring (M54 §5) ─────────────────────────────────────────────
 

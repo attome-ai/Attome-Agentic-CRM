@@ -31,7 +31,7 @@
               "billing.subscription.read", "billing.usage.read", "bot.handoff",
               "code.generate", "collections.record_promise", "collections.send_reminder", "commission.draft_plan_from_policy", "commission.explain_line", "deliverability.explain", "deliverability.propose_segment", "document.extract", "duplicates.check",
               "duplicates.list", "duplicates.merge", "duplicates.propose_rules", "email.draft",
-              "followup.remind_owner", "followup.send_message", "graph.traverse", "knowledge.answer",
+              "followup.remind_owner", "followup.send_message", "graph.traverse", "handoff.to_person", "knowledge.answer",
               "mcp.call.consequential", "mcp.call.read", "mcp.call.reversible", "mcp.tools", "meeting.brief", "meeting.confirm_notes", "meeting.notes", "memory.forget",
               "memory.remember", "model.agent.describe", "model.agent.edit", "model.agent.list",
               "model.attribute.describe", "model.entity.describe", "model.environment_variable.describe",

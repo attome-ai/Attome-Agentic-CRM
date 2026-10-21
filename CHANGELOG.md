@@ -1434,6 +1434,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Agent hand-off to a person (AI7-T3): the `handoff.to_person` AI action (Reversible) hands a ticket the
+  caller can see to a person, queue or agent the caller can see, with a structured summary and required
+  reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
+  `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
 - Ticket hand-offs (AI7-T2, `attome-service::handoff`): an agent or a person hands a ticket to a person
   (assigned at once), a queue (moved there unassigned) or an agent, with a summary and reasoning, at most one
   waiting per ticket; only the person it names or a member of the queue accepts it, and only the ticket's

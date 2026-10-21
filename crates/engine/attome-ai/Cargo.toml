@@ -36,6 +36,7 @@ attome-billing.workspace      = true
 attome-marketing.workspace    = true
 attome-security.workspace     = true
 attome-server.workspace       = true
+attome-service.workspace      = true
 attome-types.workspace        = true
 axum.workspace                = true
 chrono.workspace              = true
@@ -56,7 +57,6 @@ uuid.workspace                = true
 
 [dev-dependencies]
 attome-project.workspace  = true
-attome-service.workspace  = true
 attome-storage.workspace  = true
 attome-testkit  = { workspace = true, features = ["app-config"] }
 

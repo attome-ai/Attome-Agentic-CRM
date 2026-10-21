@@ -84,6 +84,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(knowledge_answer::descriptor());
     all.push(classify::descriptor());
     all.push(bot_handoff::descriptor());
+    all.push(bot_handoff::to_person_descriptor());
     all.push(record_schema::descriptor());
     all.push(record_schema::validate_descriptor());
     all.push(record_update_field::descriptor());
@@ -152,6 +153,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(knowledge_answer::KnowledgeAnswer));
     all.push(Box::new(classify::RecordClassify));
     all.push(Box::new(bot_handoff::BotHandoff));
+    all.push(Box::new(bot_handoff::HandoffToPerson));
     all.push(Box::new(record_schema::RecordSchema));
     all.push(Box::new(record_schema::RecordValidate));
     all.push(Box::new(record_update_field::RecordUpdateField));
