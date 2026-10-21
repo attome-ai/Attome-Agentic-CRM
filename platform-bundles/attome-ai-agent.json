@@ -52,7 +52,7 @@
               "sales.orgchart.propose", "sales.orgchart.read",
               "sales.products.suggest", "sales.splits.propose", "sales.team.add", "sales.team.remove",
               "sales.team.suggest", "sales.winloss.draft_review", "scan.lookup", "search.knowledge", "search.records",
-              "secrets.list",
+              "secrets.list", "settings.list", "settings.set",
               "system.status", "table.change_plan", "table.health", "table.index_proposals",
               "text.sentiment", "text.translate", "workflow.start", "workforce.coverage", "workforce.explain_gap", "workforce.my_next_day_off", "workforce.propose_fix"
             ],
