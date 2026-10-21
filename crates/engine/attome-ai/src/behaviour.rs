@@ -15,6 +15,15 @@
 //! The registered job [`ROLLUP_JOB`] runs hourly: it rolls up the hour just
 //! ended and, in the 03:00 UTC hour, recomputes the baselines. Both steps are
 //! idempotent, so a repeated or late run only rewrites the same rows.
+//!
+//! **Departures** (AH5-T2, [`check_departures`], job [`CHECK_JOB`] every five
+//! minutes): each agent with at least [`LEARNING_DAYS`] of history has the
+//! current hour so far compared with its baseline ([`departures`]): writes
+//! or deletes above the mean plus [`SPREADS`] standard deviations (and at
+//! least [`MIN_WRITES`] or [`MIN_DELETES`], so a quiet agent's small bump
+//! is not one), an entity it has never written, and writes in an hour of the
+//! day it does not work. A departure is logged for now; AH5-T3 stops the
+//! agent on one.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -22,6 +31,7 @@ use attome_core::EngineState;
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::{DateTime, Duration, DurationRound, Timelike, Utc};
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::descriptor::LimitClass;
@@ -32,6 +42,49 @@ pub const ROLLUP_JOB: &str = "ai_agent_behaviour_rollup";
 pub const BASELINE_DAYS: i64 = 28;
 /// The UTC hour in which baselines are recomputed.
 pub const BASELINE_HOUR: u32 = 3;
+/// The registered job that checks for departures.
+pub const CHECK_JOB: &str = "ai_agent_behaviour_check";
+/// How many standard deviations above its mean an hour must be to depart.
+pub const SPREADS: f64 = 4.0;
+/// The fewest writes in an hour that can be a volume departure.
+pub const MIN_WRITES: i32 = 20;
+/// The fewest deletes in an hour that can be a delete departure.
+pub const MIN_DELETES: i32 = 5;
+/// The days of history an agent needs before it is checked.
+pub const LEARNING_DAYS: i64 = 7;
+
+/// What an agent did differently.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DepartureKind {
+    Volume,
+    Deletes,
+    NewEntity,
+    OutsideHours,
+}
+
+/// One departure from an agent's baseline.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Departure {
+    pub agent_ref: Uuid,
+    pub kind: DepartureKind,
+    pub observed: f64,
+    pub expected: f64,
+    /// The entity, for a new-entity departure.
+    pub entity: Option<String>,
+}
+
+/// An agent's baseline as the check reads it.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Baseline {
+    pub first_activity_at: Option<DateTime<Utc>>,
+    pub mean_writes: f64,
+    pub stddev_writes: f64,
+    pub mean_deletes: f64,
+    pub stddev_deletes: f64,
+    pub usual_entities: BTreeSet<String>,
+    pub usual_hours: BTreeSet<i16>,
+}
 
 /// One agent's activity in one hour.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -87,13 +140,12 @@ pub fn usual_hours(active: &[DateTime<Utc>]) -> Vec<i16> {
         .collect()
 }
 
-/// Fills `ai_agent_activity_hourly` for the hour starting at `hour`
-/// (truncated to the hour). Returns how many agents had activity.
-pub async fn roll_up_hour(db: &DbPool, hour: DateTime<Utc>) -> Result<usize, AppError> {
-    let start = hour
-        .duration_trunc(Duration::hours(1))
-        .map_err(AppError::internal)?;
-    let end = start + Duration::hours(1);
+/// Each agent's activity between `start` and `end`.
+async fn activity(
+    db: &DbPool,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+) -> Result<BTreeMap<Uuid, HourActivity>, AppError> {
     let calls: Vec<(Uuid, String, i64)> = sqlx::query_as(
         "SELECT s.agent_definition_ref, i.action_id, count(*) \
            FROM action_invocation i JOIN agent_session s ON s.id = i.agent_session_id \
@@ -129,6 +181,17 @@ pub async fn roll_up_hour(db: &DbPool, hour: DateTime<Utc>) -> Result<usize, App
     for (agent, names) in entities {
         per_agent.entry(agent).or_default().entities.extend(names);
     }
+    Ok(per_agent)
+}
+
+/// Fills `ai_agent_activity_hourly` for the hour starting at `hour`
+/// (truncated to the hour). Returns how many agents had activity.
+pub async fn roll_up_hour(db: &DbPool, hour: DateTime<Utc>) -> Result<usize, AppError> {
+    let start = hour
+        .duration_trunc(Duration::hours(1))
+        .map_err(AppError::internal)?;
+    let end = start + Duration::hours(1);
+    let per_agent = activity(db, start, end).await?;
     let mut tx = attome_db::tx::begin(db).await?;
     sqlx::query("DELETE FROM ai_agent_activity_hourly WHERE hour = $1")
         .bind(start)
@@ -227,6 +290,126 @@ pub async fn recompute_baselines(db: &DbPool, now: DateTime<Utc>) -> Result<usiz
     Ok(by_agent.len())
 }
 
+/// The departures of one agent's hour so far from its baseline, at
+/// `hour_of_day` (UTC). Pure.
+pub fn departures(
+    agent: Uuid,
+    now: &HourActivity,
+    base: &Baseline,
+    hour_of_day: i16,
+) -> Vec<Departure> {
+    let mut out = Vec::new();
+    let departure = |kind, observed: f64, expected: f64, entity: Option<String>| Departure {
+        agent_ref: agent,
+        kind,
+        observed,
+        expected,
+        entity,
+    };
+    let writes_limit = base.mean_writes + SPREADS * base.stddev_writes;
+    if now.writes >= MIN_WRITES && f64::from(now.writes) > writes_limit {
+        out.push(departure(
+            DepartureKind::Volume,
+            f64::from(now.writes),
+            base.mean_writes,
+            None,
+        ));
+    }
+    let deletes_limit = base.mean_deletes + SPREADS * base.stddev_deletes;
+    if now.deletes >= MIN_DELETES && f64::from(now.deletes) > deletes_limit {
+        out.push(departure(
+            DepartureKind::Deletes,
+            f64::from(now.deletes),
+            base.mean_deletes,
+            None,
+        ));
+    }
+    for entity in now.entities.difference(&base.usual_entities) {
+        let d = departure(DepartureKind::NewEntity, 1.0, 0.0, Some(entity.clone()));
+        out.push(d);
+    }
+    if now.writes > 0 && !base.usual_hours.is_empty() && !base.usual_hours.contains(&hour_of_day) {
+        out.push(departure(
+            DepartureKind::OutsideHours,
+            f64::from(now.writes),
+            0.0,
+            None,
+        ));
+    }
+    out
+}
+
+type BaselineRow = (
+    Uuid,
+    Option<DateTime<Utc>>,
+    Option<f32>,
+    Option<f32>,
+    Option<f32>,
+    Option<f32>,
+    Vec<String>,
+    Vec<i16>,
+);
+
+/// Every agent's departures in the current hour so far, as at `now`.
+/// Agents still learning (under [`LEARNING_DAYS`] of history) are skipped.
+pub async fn check_departures(db: &DbPool, now: DateTime<Utc>) -> Result<Vec<Departure>, AppError> {
+    let start = now
+        .duration_trunc(Duration::hours(1))
+        .map_err(AppError::internal)?;
+    let current = activity(db, start, now).await?;
+    if current.is_empty() {
+        return Ok(Vec::new());
+    }
+    let ids: Vec<Uuid> = current.keys().copied().collect();
+    let rows: Vec<BaselineRow> = sqlx::query_as(
+        "SELECT agent_ref, first_activity_at, mean_writes_per_hour, stddev_writes_per_hour, \
+                mean_deletes_per_hour, stddev_deletes_per_hour, usual_entities, usual_hours \
+           FROM ai_agent_baseline WHERE agent_ref = ANY($1)",
+    )
+    .bind(&ids)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let hour_of_day = i16::try_from(now.hour()).unwrap_or(0);
+    let learned_before = now - Duration::days(LEARNING_DAYS);
+    let mut out = Vec::new();
+    for (agent, first, mw, sw, md, sd, entities, hours) in rows {
+        if first.is_none_or(|f| f > learned_before) {
+            continue;
+        }
+        let Some(now_activity) = current.get(&agent) else {
+            continue;
+        };
+        let base = Baseline {
+            first_activity_at: first,
+            mean_writes: f64::from(mw.unwrap_or(0.0)),
+            stddev_writes: f64::from(sw.unwrap_or(0.0)),
+            mean_deletes: f64::from(md.unwrap_or(0.0)),
+            stddev_deletes: f64::from(sd.unwrap_or(0.0)),
+            usual_entities: entities.into_iter().collect(),
+            usual_hours: hours.into_iter().collect(),
+        };
+        out.extend(departures(agent, now_activity, &base, hour_of_day));
+    }
+    Ok(out)
+}
+
+/// The five-minute run (job [`CHECK_JOB`]): finds and reports departures.
+pub async fn run_check(state: &EngineState, now: DateTime<Utc>) -> Result<usize, AppError> {
+    let found = check_departures(&state.base.db, now).await?;
+    for d in &found {
+        tracing::warn!(
+            agent = %d.agent_ref,
+            kind = ?d.kind,
+            observed = d.observed,
+            expected = d.expected,
+            entity = d.entity.as_deref().unwrap_or(""),
+            "agent departed from its baseline"
+        );
+    }
+    Ok(found.len())
+}
+
 /// The hourly run (job [`ROLLUP_JOB`]): the hour just ended, and the
 /// baselines in the [`BASELINE_HOUR`] UTC hour.
 pub async fn run(state: &EngineState, now: DateTime<Utc>) -> Result<(), AppError> {
@@ -271,6 +454,59 @@ mod tests {
         a.count(LimitClass::ExternalCall, 1);
         a.count(LimitClass::None, 9);
         assert_eq!((a.writes, a.deletes, a.external_calls), (3, 1, 3));
+    }
+
+    fn baseline(mean: f64, sd: f64) -> Baseline {
+        Baseline {
+            first_activity_at: Some(at(1, 0)),
+            mean_writes: mean,
+            stddev_writes: sd,
+            usual_entities: BTreeSet::from(["deal".to_owned()]),
+            usual_hours: BTreeSet::from([9, 10]),
+            ..Baseline::default()
+        }
+    }
+
+    fn hour(writes: i32, entities: &[&str]) -> HourActivity {
+        HourActivity {
+            writes,
+            entities: entities.iter().map(|e| (*e).to_owned()).collect(),
+            ..HourActivity::default()
+        }
+    }
+
+    #[test]
+    fn behaviour_a_burst_departs() {
+        let agent = Uuid::now_v7();
+        let found = departures(agent, &hour(200, &["deal"]), &baseline(5.0, 2.0), 9);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].kind, DepartureKind::Volume);
+        assert!((found[0].observed - 200.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn behaviour_normal_variation_does_not_depart() {
+        let agent = Uuid::now_v7();
+        let found = departures(agent, &hour(8, &["deal"]), &baseline(5.0, 2.0), 10);
+        assert!(found.is_empty(), "{found:?}");
+    }
+
+    #[test]
+    fn behaviour_a_new_entity_departs() {
+        let agent = Uuid::now_v7();
+        let now = hour(3, &["deal", "invoice"]);
+        let found = departures(agent, &now, &baseline(5.0, 2.0), 9);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].kind, DepartureKind::NewEntity);
+        assert_eq!(found[0].entity.as_deref(), Some("invoice"));
+    }
+
+    #[test]
+    fn behaviour_writes_outside_usual_hours_depart() {
+        let agent = Uuid::now_v7();
+        let found = departures(agent, &hour(2, &["deal"]), &baseline(5.0, 2.0), 3);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].kind, DepartureKind::OutsideHours);
     }
 
     #[test]

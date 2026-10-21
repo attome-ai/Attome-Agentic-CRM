@@ -1454,6 +1454,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent departure check (AH5-T2): every five minutes (job `ai_agent_behaviour_check`) each agent with seven days of
+  history has its current hour compared with its baseline: writes or deletes above the mean plus four standard deviations
+  (and at least 20 writes or 5 deletes), an entity it never wrote, or writes in an hour it does not usually work.
+  Departures are logged; stopping the agent follows in AH5-T3.
 - Agent activity baselines (AH5-T1, migration `0197`): the hourly job `ai_agent_behaviour_rollup` writes each agent's
   completed record writes, deletes and outside calls or messages per hour, with the entities it wrote
   (`ai_agent_activity_hourly`), and at 03:00 UTC its 28-day baseline (`ai_agent_baseline`: mean and spread per hour with
