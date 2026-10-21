@@ -128,6 +128,8 @@ pub mod outcome;
 /// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
 /// is `attome_core::ai_runtime_switch`.
 pub mod output_filter;
+/// AH7-T1: the permission cases an agent must pass, from its governance.
+pub mod permission_test;
 pub mod pii_mask;
 pub mod prompt;
 pub mod prompt_layer;
