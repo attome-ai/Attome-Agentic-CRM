@@ -22,6 +22,6 @@ impl EngineModel for ProcurementModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::po::routes()
+        crate::po::routes().merge(crate::rfq::routes())
     }
 }

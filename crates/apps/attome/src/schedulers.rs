@@ -132,6 +132,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // W3-T4: sealed RFQ bids opened at their deadline, every five minutes.
+    crate::jobs::spawn_rfq_open_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // W2-T1: vendor compliance document reminder timers, daily.
     crate::jobs::spawn_compliance_expiry_scheduler(
         db.clone(),

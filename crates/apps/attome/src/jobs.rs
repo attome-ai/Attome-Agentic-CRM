@@ -2792,6 +2792,8 @@ const DEDUP_KEY_STOCK_LEDGER: &str = "stock-ledger";
 const DEDUP_KEY_WORK_ORDER_INVOICING: &str = "work-order-invoicing";
 /// F10-T10: commission plan acceptance (a registered job type).
 const DEDUP_KEY_COMMISSION_ACCEPTANCE: &str = "commission-acceptance";
+/// W3-T4: sealed RFQ bids opened at the deadline (a registered job type).
+const DEDUP_KEY_RFQ_OPEN: &str = "rfq-open";
 /// W2-T1: vendor compliance document reminder timers (a registered job type).
 const DEDUP_KEY_COMPLIANCE_EXPIRY: &str = "compliance-expiry";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
@@ -2898,6 +2900,11 @@ pub const COMMISSION_ACCEPTANCE: attome_jobs::JobType =
 /// person who confirmed (payload `attome_service::warranty::BackfillJob`).
 pub const WARRANTY_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::warranty::JOB, 1);
+
+/// W3-T4: requests for quotation past their deadline have their sealed bids
+/// opened and are closed.
+pub const RFQ_OPEN: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_procurement::rfq::JOB, 1);
 
 /// W2-T1: a reminder timer set for every vendor compliance document that
 /// has not been reminded for its expiry date.
@@ -3257,6 +3264,23 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(written, "asset warranty dates filled");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            RFQ_OPEN,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PROCUREMENT) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let opened = attome_procurement::rfq::tick(&state, chrono::Utc::now())
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if opened > 0 {
+                    tracing::info!(opened, "rfq bids opened");
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
@@ -3713,6 +3737,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == COMPLIANCE_EXPIRY.name => {
             DEDUP_KEY_COMPLIANCE_EXPIRY
         }
+        EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == COMMISSION_ACCEPTANCE.name => {
             DEDUP_KEY_COMMISSION_ACCEPTANCE
         }
@@ -4274,6 +4299,21 @@ pub fn spawn_work_order_invoicing_scheduler(db: DbPool, interval: std::time::Dur
             "work order invoicing",
         ),
         Err(error) => tracing::error!(%error, "work order invoicing: not scheduled"),
+    }
+}
+
+/// W3-T4: every five minutes, sealed RFQ bids opened at their deadline.
+pub fn spawn_rfq_open_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(RFQ_OPEN.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_RFQ_OPEN,
+            "rfq opening",
+        ),
+        Err(error) => tracing::error!(%error, "rfq opening: not scheduled"),
     }
 }
 

@@ -1316,6 +1316,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `POST /api/v1/procurement/purchase-orders/{id}/cancel` release it; `.../change` applies a new total
   within the rule's tolerance (10% by default) or opens a `procurement.po_change` re-approval.
   Approving a requisition by hand now needs `purchase_requisition.approve`.
+- Sealed RFQs (W3-T4, procurement pack `0003`): an `rfq_bid`'s price, lead time and notes are sensitive
+  fields no field profile grants, so staff other than administrators cannot read them; the `rfq_open`
+  job copies them into readable `opened_*` fields at `deadline_at`, marks later bids `late` and closes
+  the RFQ. `POST /api/v1/procurement/rfqs/{id}/award` awards an opened RFQ to one of its on-time bids
+  with a reason. Vendors bid through a portal role granted `rfq_bid` create on their own rows.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

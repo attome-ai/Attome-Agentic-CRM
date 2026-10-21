@@ -11,6 +11,7 @@ pub mod compliance;
 pub mod match_;
 pub mod model;
 pub mod po;
+pub mod rfq;
 pub mod scorecard;
 
 pub use model::ProcurementModel;
@@ -22,5 +23,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 42;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    po::openapi_fragment()
+    let mut doc = po::openapi_fragment();
+    doc.merge(rfq::openapi_fragment());
+    doc
 }
