@@ -86,6 +86,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // they'd replace.
     let mut jobs = jobs;
     attome::jobs::register_job_types();
+    attome::jobs::install_job_concurrency_caps(&db).await;
     attome::jobs::start_job_wakeup_listener(&config, &mut jobs).await;
     // AB7-T2: names unique to this process, so its held jobs can be
     // released on stop without touching another worker's.

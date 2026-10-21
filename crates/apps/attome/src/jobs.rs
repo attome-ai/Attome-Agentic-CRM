@@ -5129,6 +5129,19 @@ pub fn spawn_validation_score_sweep_scheduler(db: DbPool, interval: std::time::D
     );
 }
 
+/// Z7-T3: writes the job kinds' concurrency caps before this process's
+/// workers start claiming. A failure is logged and the workers start anyway:
+/// the caps already in the table (from an earlier start) still apply.
+pub async fn install_job_concurrency_caps(db: &DbPool) {
+    use attome_jobs::Job as _;
+    let caps = EngineJob::concurrency_caps();
+    if let Err(e) = attome_jobs::install_concurrency_caps(db, caps).await {
+        tracing::error!(error = %e, "job concurrency caps could not be written; the previous caps stay");
+    } else {
+        tracing::info!(caps = caps.len(), "job concurrency caps installed");
+    }
+}
+
 async fn ensure_audit_partitions(
     db: &DbPool,
     config: &AppConfig,

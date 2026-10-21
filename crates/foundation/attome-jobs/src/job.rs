@@ -41,6 +41,17 @@ pub trait Job:
     fn max_attempts(&self) -> i32 {
         5
     }
+
+    /// Z7-T3: the kinds of this job type that may run only so many at once,
+    /// as `(kind, max_running)`, across every worker of the deployment.
+    /// Written at worker start by [`crate::install_concurrency_caps`]; a kind
+    /// not listed is not capped.
+    fn concurrency_caps() -> &'static [(&'static str, i32)]
+    where
+        Self: Sized,
+    {
+        &[]
+    }
 }
 
 /// The priority lane a job enqueues into. `apalis.get_jobs` polls

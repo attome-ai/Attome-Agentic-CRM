@@ -548,6 +548,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             // (`bin/worker.rs`) registers the same two builders.
             let mut jobs = jobs;
             attome::jobs::register_job_types();
+            attome::jobs::install_job_concurrency_caps(&db).await;
             attome::jobs::start_job_wakeup_listener(&config, &mut jobs).await;
             // AB7-T2: names unique to this process (see the worker binary).
             let fast_worker = attome_jobs::worker_name("platform-job-worker");

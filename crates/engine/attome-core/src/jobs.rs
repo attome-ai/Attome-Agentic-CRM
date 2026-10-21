@@ -1732,6 +1732,12 @@ impl attome_jobs::Job for EngineJob {
             |job_type| job_type.max_attempts,
         )
     }
+
+    /// Z7-T3: a clean-up scan reads a rule's whole entity table (A3-T5); a
+    /// burst of publishes runs at most two at a time.
+    fn concurrency_caps() -> &'static [(&'static str, i32)] {
+        &[("ValidationCleanupScan", 2)]
+    }
 }
 
 #[cfg(test)]

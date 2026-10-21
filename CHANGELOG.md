@@ -157,6 +157,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Job kinds can cap how many of their jobs run at once across all workers (Z7-T3, migration 0191);
+  validation clean-up scans run at most two at a time.
 - A flow run replayed after a crash no longer repeats an action step (S9-T5): each module step claims
   its run-and-step key in the idempotency ledger and a replay returns the step's stored result. Jobs and
   flow steps carry that key to outbound calls, and the REST connector sends it as `Idempotency-Key` to

@@ -870,6 +870,36 @@ pub const LOCK_DEFERRAL_SECS: f64 = 300.0;
 /// been deferred [`MAX_LOCK_DEFERRALS`] times or is gone: the caller then
 /// fails the run. The caller returns success for the run that deferred, so
 /// apalis marks the original row done and the copy is the only live one.
+/// Z7-T3: makes `apalis.job_concurrency_cap` exactly `caps` (`(kind,
+/// max_running)`, at least 1), in one statement. `apalis.get_jobs` then
+/// claims a capped kind's job only while fewer than `max_running` of it are
+/// running. Called at worker start with [`Job::concurrency_caps`]; every
+/// worker of a deployment writes the same list.
+pub async fn install_concurrency_caps(
+    pool: &attome_db::DbPool,
+    caps: &[(&str, i32)],
+) -> Result<(), sqlx::Error> {
+    let kinds: Vec<&str> = caps.iter().map(|(kind, _)| *kind).collect();
+    let limits: Vec<i32> = caps.iter().map(|(_, n)| (*n).max(1)).collect();
+    sqlx::query(attome_db::tagged_sql!(
+        "jobs.queue",
+        "WITH wanted AS ( \
+             SELECT kind, max_running FROM UNNEST($1::text[], $2::int[]) AS w(kind, max_running) \
+         ), dropped AS ( \
+             DELETE FROM apalis.job_concurrency_cap c \
+             WHERE NOT EXISTS (SELECT 1 FROM wanted w WHERE w.kind = c.kind) \
+         ) \
+         INSERT INTO apalis.job_concurrency_cap (kind, max_running) \
+         SELECT kind, max_running FROM wanted \
+         ON CONFLICT (kind) DO UPDATE SET max_running = EXCLUDED.max_running"
+    ))
+    .bind(&kinds)
+    .bind(&limits)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn defer_for_lock(pool: &attome_db::DbPool, task_id: &str) -> Result<bool, sqlx::Error> {
     let pushed: Option<String> = sqlx::query_scalar(attome_db::tagged_sql!(
         "jobs.queue",
