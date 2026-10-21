@@ -24,6 +24,7 @@ pub mod bulk;
 pub mod business;
 pub mod claim_check;
 pub mod classify;
+pub mod collections;
 pub mod commission;
 /// E6-T12: deliverability explanation and a cleaner segment draft.
 pub mod deliverability;
@@ -129,6 +130,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(crate::meeting::brief::descriptors());
     all.extend(crate::meeting::notes::descriptors());
     all.extend(meeting::descriptors());
+    all.extend(collections::descriptors());
     all
 }
 
@@ -196,5 +198,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(crate::meeting::brief::executors());
     all.extend(crate::meeting::notes::executors());
     all.extend(meeting::executors());
+    all.extend(collections::executors());
     all
 }

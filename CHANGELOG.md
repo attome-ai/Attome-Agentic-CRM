@@ -1429,6 +1429,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   shows the summary and decisions, and lists action items and proposed record updates (each with its
   transcript quote) as checkboxes; confirm sends only the checked ones under `If-Match`. English and
   Arabic labels (`aiMeeting.*`).
+- Collections actions (AI5-T3): `collections.send_reminder` (Consequential: an agent's call waits for
+  approval) emails a collections item's reminder from its rule's template in the customer's language, every
+  amount, number and date filled from the invoice or subscription; `collections.record_promise`
+  (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
+  are refused until those channels are sent. Both record `agent_task` outcomes.
 - `docs/agents.md` describes meeting briefs and notes (AI6-T9): when briefs are made, what they read and
   how they respect record access, notes from transcripts, and confirmation with gated record updates.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
