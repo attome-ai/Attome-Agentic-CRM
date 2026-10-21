@@ -125,6 +125,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(sales_team::descriptors());
     all.extend(scan::descriptors());
     all.extend(workforce::descriptors());
+    all.extend(crate::meeting::brief::descriptors());
     all
 }
 
@@ -189,5 +190,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(sales_team::executors());
     all.extend(scan::executors());
     all.extend(workforce::executors());
+    all.extend(crate::meeting::brief::executors());
     all
 }

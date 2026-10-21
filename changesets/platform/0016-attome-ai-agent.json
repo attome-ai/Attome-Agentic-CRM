@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:fa622c6fde200a60301691fb0b85fb546eb152d7d49560938991cd71887f28fb",
+  "checksum": "sha256:2dcb519f2a2ac10cbfc8745067f75dede5ee3c4b8adc2e06e7bcf810079cf9e3",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -337,6 +337,7 @@
               "mcp.call.read",
               "mcp.call.reversible",
               "mcp.tools",
+              "meeting.brief",
               "memory.forget",
               "memory.remember",
               "model.agent.describe",

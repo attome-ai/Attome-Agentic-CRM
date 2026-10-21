@@ -128,6 +128,12 @@ pub fn all_versions() -> Vec<PromptEntry> {
             ),
         },
         PromptEntry {
+            action_id: crate::meeting::brief::MEETING_BRIEF,
+            version: crate::meeting::brief::BRIEF_PROMPT_VERSION,
+            // English shown; an Arabic meeting gets the same frame in Arabic.
+            text: crate::meeting::brief::brief_system_prompt("en"),
+        },
+        PromptEntry {
             // Not a registered action: the conversational turn itself
             // (`turn::run`). Its version keys C10-C's live-evaluation
             // baselines, so an admin comparing a quality change needs to see

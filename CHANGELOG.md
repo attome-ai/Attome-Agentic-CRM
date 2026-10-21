@@ -1395,6 +1395,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   their own run under their own access instead of one run as `run_as`; each completed run is sent to its
   recipient in the app, or also by email with `delivery = email_link`, unless it is empty and the
   schedule says `skip_if_empty`; a failed scheduled run alerts the schedule's owner.
+- Meeting briefs (AI6-T2): the `meeting.brief` AI action writes a one-page brief for a meeting activity
+  from its account, up to 10 open deals and 10 open cases, the 5 latest activities and 10 open tasks,
+  read as the meeting owner (and the asker) so it holds nothing either cannot read. It is written in the
+  meeting's language, else the owner's locale, within the AI budget, into the meeting's one
+  `ai_meeting_brief` row (refreshed on a rerun; `failed` with no text when generation fails). The prompt
+  is `meeting.brief/v1`; agent policies can list the action.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
