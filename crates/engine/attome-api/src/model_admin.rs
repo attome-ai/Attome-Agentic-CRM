@@ -672,25 +672,6 @@ pub(crate) struct ModelPublishResponse {
     warnings: Vec<String>,
 }
 
-/// Publishes an object's open draft once it passes the publish checks, and
-/// refreshes the cooked metadata.
-#[utoipa::path(
-    post,
-    path = "/api/v1/admin/model/{kind}/{id}/publish",
-    operation_id = "publish_model_object",
-    tag = "admin",
-    params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
-    responses(
-        (status = 200, description = "Published", body = ModelPublishResponse),
-        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-        (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
-        (status = 409, description = "Another save is in progress", body = ErrorResponse),
-        (status = 422, description = "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
-    ),
-    security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
-)]
 /// G14-T1: applies the changeset that creates (or extends) a survey's
 /// response entity. The same survey content gives the same changeset id and
 /// keeps its sequence number, so publishing it again applies nothing.
@@ -723,6 +704,25 @@ async fn provision_survey(state: &EngineState, id: Uuid, doc: &Value) -> Result<
     crate::changeset::boot::apply_pack_document(state, &document).await
 }
 
+/// Publishes an object's open draft once it passes the publish checks, and
+/// refreshes the cooked metadata.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/{kind}/{id}/publish",
+    operation_id = "publish_model_object",
+    tag = "admin",
+    params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
+    responses(
+        (status = 200, description = "Published", body = ModelPublishResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
+        (status = 409, description = "Another save is in progress", body = ErrorResponse),
+        (status = 422, description = "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
 async fn publish(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,

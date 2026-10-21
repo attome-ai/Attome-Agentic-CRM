@@ -30,6 +30,7 @@ pub(crate) struct Ask<'a> {
 }
 
 /// What the model wrote.
+#[derive(Debug)]
 pub struct Generated {
     pub text: String,
     pub truncated: bool,

@@ -339,6 +339,7 @@ async fn updatable(
 }
 
 /// Draft notes and what they were made with.
+#[derive(Debug)]
 pub struct DraftNotes {
     pub notes_id: Uuid,
     pub language: &'static str,
