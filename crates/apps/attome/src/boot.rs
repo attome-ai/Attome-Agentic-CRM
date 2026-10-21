@@ -1173,6 +1173,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-project-signoff",
         // AI5-T6: review of payment promises an agent recorded.
         "attome-ai-collections-review",
+        // AI2-T1: the service resolver agent and its policy.
+        "attome-ai-service-agent",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

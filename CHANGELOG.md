@@ -1450,6 +1450,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- Service resolver agent (AI2-T1, platform changeset `0065`): the `service_resolver` agent (a draft until an administrator
+  activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
+  translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
+  credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
 - Customer 360 (G15-T1, `@attome/xrm/core/entity`): the account and contact pages show `xrm-customer-360`, the
   customer's open deals, open tasks, unpaid invoices, active entitlements, assets and people (each loading its first
   five and its count when opened, and hiding where its entity is not installed), the recent timeline and an AI summary

@@ -1,0 +1,52 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": ["core"]
+  },
+  "entities": [],
+  "record_sets": [
+    {
+      "entity": "ai_agent_policy",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "Service Resolver",
+          "description": "What the service resolver may do: read the case and the knowledge base, answer from it, update the case, translate, draft a reply and hand the case to a person. Consequential steps such as refunds wait for a person's approval.",
+          "risk_ceiling": "reversible",
+          "allowed_action_ids": [
+            "record.get",
+            "record.summarize",
+            "record.update",
+            "record.update_field",
+            "knowledge.answer",
+            "search.knowledge",
+            "search.records",
+            "text.translate",
+            "email.draft",
+            "handoff.to_person"
+          ],
+          "max_invocations_per_session": 40,
+          "max_writes_per_day": 200,
+          "max_tokens_per_session": 60000,
+          "max_session_duration_minutes": 30
+        }
+      ]
+    },
+    {
+      "entity": "ai_agent",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "service_resolver",
+          "description": "Resolves service cases: answers from the knowledge base, updates the case, asks for missing information and hands the case to a person with a summary when it cannot resolve it.",
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "policy_ref": { "key": { "name": "Service Resolver" } },
+          "system_instructions": "You resolve customer service cases. Read the case first. Answer only from the knowledge base and the case itself, in the customer's language (Arabic or English), and say which article your answer comes from. When information is missing, ask for exactly what you need. Update the case's status, category and notes as you work. Never promise refunds, credits, discounts or dates: when the customer needs one, or when you cannot resolve the case, hand it to a person with handoff.to_person, a short summary and your reasoning."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:a1c4529b9db658ad84c9ad4ad74d0ff8291ba1ae08ca99d0fb221eb115cbd7e1",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-service-agent.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "9c6b5fb7-1515-7f4a-ae71-76442df0e828",
+  "layer": "platform",
+  "name": "attome-ai-service-agent",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "allowed_action_ids": [
+            "record.get",
+            "record.summarize",
+            "record.update",
+            "record.update_field",
+            "knowledge.answer",
+            "search.knowledge",
+            "search.records",
+            "text.translate",
+            "email.draft",
+            "handoff.to_person"
+          ],
+          "description": "What the service resolver may do: read the case and the knowledge base, answer from it, update the case, translate, draft a reply and hand the case to a person. Consequential steps such as refunds wait for a person's approval.",
+          "max_invocations_per_session": 40,
+          "max_session_duration_minutes": 30,
+          "max_tokens_per_session": 60000,
+          "max_writes_per_day": 200,
+          "name": "Service Resolver",
+          "risk_ceiling": "reversible"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_agent_policy",
+        "key": {
+          "name": "Service Resolver"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Resolves service cases: answers from the knowledge base, updates the case, asks for missing information and hands the case to a person with a summary when it cannot resolve it.",
+          "name": "service_resolver",
+          "policy_ref": {
+            "key": {
+              "name": "Service Resolver"
+            }
+          },
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "system_instructions": "You resolve customer service cases. Read the case first. Answer only from the knowledge base and the case itself, in the customer's language (Arabic or English), and say which article your answer comes from. When information is missing, ask for exactly what you need. Update the case's status, category and notes as you work. Never promise refunds, credits, discounts or dates: when the customer needs one, or when you cannot resolve the case, hand it to a person with handoff.to_person, a short summary and your reasoning."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_agent",
+        "key": {
+          "name": "service_resolver"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 65,
+  "title": "Platform definitions: attome-ai-service-agent"
+}
