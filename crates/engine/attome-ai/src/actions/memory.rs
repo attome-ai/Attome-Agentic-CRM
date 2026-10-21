@@ -170,7 +170,11 @@ pub fn descriptors() -> Vec<ActionDescriptor> {
         // M35 v1 C1: an agent may propose a memory, never save one. Every
         // agent invocation stops at ConfirmFirst regardless of taint; the
         // save happens when the human invokes this action themselves.
-        .agent_must_confirm(),
+        .agent_must_confirm()
+        // AH8: and no autonomy level changes that. A saved memory is trusted
+        // by every later turn, so an injected one would outlive the session
+        // that read the injection.
+        .autonomy_locked(),
         ActionDescriptor::new(
             MEMORY_FORGET,
             "Delete one of the caller's own memories by id.",

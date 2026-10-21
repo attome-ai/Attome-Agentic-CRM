@@ -54,8 +54,10 @@ pub mod sales_team;
 pub mod scan;
 pub mod search_records;
 pub mod secrets_list;
-pub mod settings;
+/// AH8 — `email.send`: sends now, or after an undo window.
+pub mod send_email;
 pub mod sentiment;
+pub mod settings;
 pub mod summary_context;
 pub mod system_status;
 /// Y2-T14, Y12-T12: read tools over an entity's table.
@@ -72,6 +74,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     let mut all = read::descriptors();
     all.push(draft_article::descriptor());
     all.push(draft_email::descriptor());
+    all.push(send_email::descriptor());
     all.extend(graph::descriptors());
     all.push(knowledge::descriptor());
     all.push(knowledge_answer::descriptor());
@@ -133,6 +136,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     let mut all = read::executors();
     all.push(Box::new(draft_article::ArticleDraft));
     all.push(Box::new(draft_email::EmailDraft));
+    all.push(Box::new(send_email::EmailSend));
     all.extend(graph::executors());
     all.push(Box::new(knowledge::SearchKnowledge));
     all.push(Box::new(knowledge_answer::KnowledgeAnswer));

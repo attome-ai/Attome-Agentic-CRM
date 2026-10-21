@@ -8,6 +8,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Agent autonomy levels (AH8, V2-D693): an administrator can now let an agent run an action on its
+  own, per agent and per action (`/api/v1/admin/ai/agents/{agent}/autonomy`), including a
+  consequential one, which until now always waited for a second person's approval. With no level set
+  nothing changes. Limits (daily count, money cap, owned records only, hours) ask first when
+  exceeded, untrusted text in the agent's context lowers the level by one, and every change is a
+  security event. New: the undo window, which holds any action (`act_with_undo`, the invoke API's
+  `undo_window_seconds`, or an agent's `_undo_window_seconds`) so it can be cancelled before it runs
+  (`/api/v1/ai/deferred-actions`), and the `email.send` agent action. `ActionOutcome` gains
+  `scheduled`. Migration 0190.
 - Integration secrets stay sealed (Z1-T10): a decrypted credential is now an
   `attome_integration::credential::Credential` that only sets itself on a request (header, bearer,
   basic, HMAC signature) or is lent to one closure; it never prints and is zeroed on drop. The

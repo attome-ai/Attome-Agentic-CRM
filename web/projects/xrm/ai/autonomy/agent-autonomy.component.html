@@ -1,0 +1,47 @@
+<section class="au">
+  <h2>{{ 'aiAutonomy.title' | translate }}</h2>
+  <p class="au-muted">{{ 'aiAutonomy.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="au-error" role="alert">{{ message }}</p>
+  }
+  @if (entries().length === 0) {
+    <p class="au-muted">{{ 'aiAutonomy.none' | translate }}</p>
+  } @else {
+    <ul class="au-list">
+      @for (entry of entries(); track entry.action_id) {
+        <li class="au-item" [attr.data-action]="entry.action_id">
+          <span class="au-action"><code dir="ltr">{{ entry.action_id }}</code></span>
+          <span class="au-muted">{{ ('aiAutonomy.risk.' + entry.risk) | translate }}</span>
+          @if (entry.locked) {
+            <span class="au-muted">{{ 'aiAutonomy.locked' | translate }}</span>
+          } @else {
+            <label class="au-sr" [for]="'au-level-' + entry.action_id">{{ 'aiAutonomy.level' | translate }}</label>
+            <select #level [id]="'au-level-' + entry.action_id" [disabled]="busy() === entry.action_id"
+                    (change)="save(entry, $any(level.value))">
+              @if (!entry.level) {
+                <option value="" selected>{{ 'aiAutonomy.builtIn' | translate }} ({{ ('aiAutonomy.levels.' + entry.default_level) | translate }})</option>
+              }
+              @for (l of levels; track l) {
+                <option [value]="l" [selected]="entry.level === l">{{ ('aiAutonomy.levels.' + l) | translate }}</option>
+              }
+            </select>
+            @if (entry.level && raisesConsequential(entry, entry.level)) {
+              <span class="au-warning" role="note">{{ 'aiAutonomy.consequentialWarning' | translate }}</span>
+            }
+            @if (entry.row; as row) {
+              <label [for]="'au-undo-' + entry.action_id">{{ 'aiAutonomy.undoSeconds' | translate }}</label>
+              <input #undo [id]="'au-undo-' + entry.action_id" type="number" min="30" max="86400"
+                     [value]="row.undo_seconds" (change)="save(entry, entry.level!, numberOrNull(undo.value))" />
+              <label [for]="'au-daily-' + entry.action_id">{{ 'aiAutonomy.dailyLimit' | translate }}</label>
+              <input #daily [id]="'au-daily-' + entry.action_id" type="number" min="1"
+                     [value]="row.daily_limit ?? ''" (change)="save(entry, entry.level!, null, numberOrNull(daily.value))" />
+              <button type="button" [disabled]="busy() === entry.action_id" (click)="clear(entry)">
+                {{ 'aiAutonomy.clear' | translate }}
+              </button>
+            }
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

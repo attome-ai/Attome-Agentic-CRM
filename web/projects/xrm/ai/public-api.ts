@@ -22,6 +22,10 @@ export { AiPlaygroundComponent } from './playground/ai-playground.component';
 // loads `registerAiEntityForms` and never needs a named import.
 export { AiAgentSessionsComponent } from './admin/agent-sessions/ai-agent-sessions.component';
 export { AiScopeSwitchesComponent, SCOPE_KINDS } from './admin/scope-switches/ai-scope-switches.component';
+export { AiAgentAutonomyComponent, AUTONOMY_LEVELS, raisesConsequential } from './autonomy/agent-autonomy.component';
+export type { AutonomyEntry, AutonomyLevel, AutonomyRow } from './autonomy/agent-autonomy.component';
+export { AiPendingActionsComponent } from './autonomy/pending-actions.component';
+export type { DeferredAction } from './autonomy/pending-actions.component';
 export { AiGovernanceComponent, approvedShare } from './governance/governance.component';
 export { AiMcpServersComponent, MCP_TIERS } from './mcp-servers/mcp-servers.component';
 export { AiStatusComponent, overall, type AiStatus } from './status/status.component';

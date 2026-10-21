@@ -1,0 +1,27 @@
+<section class="au">
+  <h2>{{ 'aiPending.title' | translate }}</h2>
+  <p class="au-muted">{{ 'aiPending.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="au-error" role="alert">{{ message }}</p>
+  }
+  @if (actions().length === 0) {
+    <p class="au-muted">{{ 'aiPending.none' | translate }}</p>
+  } @else {
+    <ul class="au-list">
+      @for (a of actions(); track a.id) {
+        <li class="au-item" [class.au-pending]="a.status === 'pending'" [attr.data-id]="a.id">
+          <span class="au-action"><code dir="ltr">{{ a.action_id }}</code></span>
+          <span>{{ ('aiPending.by.' + a.initiator) | translate }}</span>
+          <span>{{ ('aiPending.status.' + a.status) | translate }}</span>
+          <span class="au-muted">{{ 'aiPending.runsAt' | translate }} {{ a.run_at | localDate }}</span>
+          @if (a.reason) {
+            <span class="au-muted">{{ a.reason }}</span>
+          }
+          @if (a.status === 'pending') {
+            <button type="button" [disabled]="busy() === a.id" (click)="cancel(a)">{{ 'aiPending.cancel' | translate }}</button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

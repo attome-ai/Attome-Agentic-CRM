@@ -1216,6 +1216,7 @@ pub async fn run(
                 &args,
             )
             .await
+            .map(ActionOutcome::scheduled_as_completed)
             {
                 Ok(ActionOutcome::Completed { result, .. }) => {
                     count_call(call.name.as_str(), CallMetric::Completed);
@@ -1245,6 +1246,14 @@ pub async fn run(
                     // agent-initiated Reversible write degrades to
                     // confirm-first from here. One-way, never cleared.
                     tainted = true;
+                }
+                // AH8: `scheduled_as_completed` above already turned a held
+                // action into the `Completed` arm's tool result.
+                Ok(ActionOutcome::Scheduled { .. }) => {
+                    tracing::error!(
+                        action_id = %call.name,
+                        "a held action reached the turn loop unconverted"
+                    );
                 }
                 Ok(ActionOutcome::ConfirmationRequired { reason, .. }) => {
                     count_call(call.name.as_str(), CallMetric::ConfirmationRequired);

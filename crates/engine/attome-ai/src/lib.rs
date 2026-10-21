@@ -55,6 +55,8 @@ pub mod ai_status;
 /// C10-B — deployment-wide chatbot figures (`/admin/ai/bot-analytics`).
 pub mod analytics;
 pub mod approval;
+/// AH8 (V2-D693) — agent autonomy levels, per agent and per action.
+pub mod autonomy;
 /// M101 slice 2 — the token budget, actually applied. `attome_inference::budget`
 /// shipped with zero call sites; this is the one that gives it some.
 pub mod budget_guard;
@@ -85,6 +87,8 @@ pub mod conversation_event;
 /// C4 — the chat HTTP API over `conversation`, `turn` and `confirm`.
 pub mod conversation_routes;
 pub mod decision;
+/// AH8 — the undo window: actions held before they run, cancellable.
+pub mod deferred;
 /// C11 B3 (P-3) — token deltas: transport-only `message.delta` over Redis
 /// pub/sub, never persisted, never replayed, never on the public widget.
 pub mod delta_stream;
@@ -217,6 +221,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(ai_status::openapi_fragment());
     doc.merge(a2a::openapi_fragment());
     doc.merge(write_policy::openapi_fragment());
+    doc.merge(autonomy::openapi_fragment());
+    doc.merge(deferred::openapi_fragment());
     doc.merge(evidence::openapi_fragment());
     doc.merge(mcp_client::openapi_fragment());
     // AI4-T6 — `/ai/follow-ups…` and the rule run route.

@@ -34,8 +34,27 @@ privileges, the session's ceiling and allow-list, the organisation's agent polic
 own tools. A session started with `agent` (`POST /api/v1/agents/{id}/sessions`) takes the published
 agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 
-- **Writes need a person.** Every write action stops at confirmation for an agent; consequential
-  ones need a second person's approval.
+- **Writes need a person, unless an administrator says otherwise.** With no autonomy level set,
+  every write action stops at confirmation for an agent and consequential ones need a second
+  person's approval.
+- **Autonomy levels (AH8, V2-D693).** Per agent and per action, an administrator sets how much the
+  agent may do alone: `suggest` (a person does it), `ask_first`, `act_with_undo` (it waits in an
+  undo window, then runs), `act_and_report` (it runs and tells the person) or `automatic`.
+  `GET /api/v1/admin/ai/agents/{agent}/autonomy` lists every action with its level;
+  `PUT .../autonomy/{action_id}` (`{ "level": "act_with_undo", "undo_seconds": 300,
+  "daily_limit": 50 }`, with optional `money_cap_minor` and `currency`, `owned_records_only`,
+  `hours_start`/`hours_end`/`time_zone`) sets one and `DELETE` returns it to the built-in rule
+  (screen: the agent form's Autonomy tab). Going over a limit asks first. Untrusted text the agent
+  read (an inbound email, a document) always lowers the level by one, and `memory.remember` takes no
+  level at all.
+- **The undo window.** Any write can be held before it runs, including one that cannot be undone
+  afterwards (an email, a payment, a call to another system): an agent at `act_with_undo`, an agent
+  that passes `_undo_window_seconds` in a tool call, or a person through
+  `POST /api/v1/actions/{id}/invoke` with `undo_window_seconds`. The call answers `scheduled` with
+  `run_at`; the person cancels it until then with `POST /api/v1/ai/deferred-actions/{id}/cancel`
+  (screen: `/ai/pending-actions`). Just before it runs it is checked again like an approved action,
+  and an agent's is put through the gate with today's level, so a level lowered during the window
+  asks for approval instead.
 - **Per-write approval (off by default).** `POST /api/v1/admin/ai/write-policies`
   (`{ "action_id": "record.update", "entity": "invoice" }`) makes that agent write wait for a second
   person after it is confirmed; `DELETE .../{id}` turns it off.
@@ -60,7 +79,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   run it. The model never writes SQL.
 - AI attributes: an attribute whose options carry `"ai": { "prompt": "Summarise {{description}}..." }`
   is filled by `record.ai_field` as a suggestion a person accepts or rejects.
-- Communication: `email.draft` files a draft; sending stays a person's step. `text.translate`
+- Communication: `email.draft` files a draft for a person to send; `email.send` sends now, or after
+  an undo window. It is consequential: an agent's send needs approval unless its level allows more. `text.translate`
   translates text keeping names, numbers and the deployment's terms (`inference.translation.glossary`).
 - Building: `model.<kind>.describe|list|edit` for every metadata kind, found over MCP with
   `tools.search`; edits are drafts a person confirms.

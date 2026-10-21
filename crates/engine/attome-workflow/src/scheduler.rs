@@ -2583,8 +2583,9 @@ async fn execute_route(
         // disabled, unlicensed) fails the instance loudly instead of being
         // indistinguishable from "the model declined".
         attome_ai::ActionOutcome::ConfirmationRequired { .. }
-        | attome_ai::ActionOutcome::ApprovalRequired { .. } => Err(AppError::internal(
-            "route.classify is Read-tier and must never require confirmation or approval",
+        | attome_ai::ActionOutcome::ApprovalRequired { .. }
+        | attome_ai::ActionOutcome::Scheduled { .. } => Err(AppError::internal(
+            "route.classify is Read-tier and must never require confirmation, approval or an undo window",
         )),
     }
 }

@@ -385,7 +385,9 @@ async fn execute_decision(
         // for a user-initiated call. Handled anyway because `ActionOutcome`
         // is exhaustively matched, and because "unreachable" is a claim about
         // today's gate matrix, not a guarantee.
-        ActionOutcome::ConfirmationRequired { .. } | ActionOutcome::ApprovalRequired { .. } => {
+        ActionOutcome::ConfirmationRequired { .. }
+        | ActionOutcome::ApprovalRequired { .. }
+        | ActionOutcome::Scheduled { .. } => {
             tracing::error!(
                 decision_id = %id,
                 "dispatch returned a confirmation/approval outcome for a \

@@ -49,7 +49,9 @@ pub enum RiskTier {
     Reversible,
     /// Execution that no follow-up action reverses: sending an email to a
     /// customer, deleting a record, moving money, calling an external system
-    /// that has its own side effects. **Never auto-executes for an agent.**
+    /// that has its own side effects. For an agent it needs approval unless
+    /// an administrator set its autonomy level above `ask_first` (AH8,
+    /// V2-D693); untrusted text in the context still lowers that level.
     Consequential,
 }
 
@@ -166,11 +168,26 @@ pub struct ActionDescriptor {
     /// at `ConfirmFirst`, whether or not its context carries retrieved
     /// content, and the write happens only when the human invokes the action
     /// themselves. `false` for every action that keeps the ordinary
-    /// risk/initiator/taint matrix. Consulted in the `Reversible` arm only; a
-    /// `Consequential` agent invocation already never runs without approval.
-    /// Not part of any wire shape.
+    /// risk/initiator/taint matrix. This is the action's built-in rule: an
+    /// administrator's explicit autonomy level (AH8, V2-D693) replaces it,
+    /// unless the action is also [`Self::autonomy_locked`]. Not part of any
+    /// wire shape.
     #[serde(skip)]
     pub agent_must_confirm: bool,
+
+    /// AH8: the argument that carries the amount of money the action moves,
+    /// in minor units, when it moves any. An autonomy level's money cap reads
+    /// it; an action with a cap and no declared argument is over the cap. No
+    /// registered action takes an amount yet, so a cap asks first everywhere.
+    #[serde(skip)]
+    pub money_arg: Option<&'static str>,
+
+    /// AH8: no autonomy level applies to this action; it keeps its built-in
+    /// rule for every agent, whatever an administrator stores. For the few
+    /// actions where an agent completing them alone would break a safety
+    /// invariant, such as saving a memory that later turns are trusted with.
+    #[serde(skip)]
+    pub autonomy_locked: bool,
 
     /// Prevents construction outside this crate. See the type comment.
     #[serde(skip)]
@@ -273,6 +290,8 @@ impl ActionDescriptor {
             // Off unless an action declares it: every other action keeps the
             // ordinary risk/initiator/taint matrix.
             agent_must_confirm: false,
+            money_arg: None,
+            autonomy_locked: false,
             _sealed: Sealed,
         }
     }
@@ -281,6 +300,12 @@ impl ActionDescriptor {
     /// complete it (M35 v1 C1). See the field's own doc comment.
     pub(crate) const fn agent_must_confirm(mut self) -> Self {
         self.agent_must_confirm = true;
+        self
+    }
+
+    /// Declares that no autonomy level applies (AH8). See the field.
+    pub(crate) const fn autonomy_locked(mut self) -> Self {
+        self.autonomy_locked = true;
         self
     }
 

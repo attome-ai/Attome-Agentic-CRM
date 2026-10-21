@@ -55,6 +55,13 @@ pub enum ActionOutcome {
     /// where nothing actually did it). `approval_id` is the handle a caller
     /// polls or an approver UI lists.
     ApprovalRequired { approval_id: Uuid },
+    /// AH8: held for its undo window. Nothing has executed yet; it runs at
+    /// `run_at` unless cancelled (`POST /api/v1/ai/deferred-actions/{id}/cancel`)
+    /// and is re-checked first.
+    Scheduled {
+        deferred_action_id: Uuid,
+        run_at: chrono::DateTime<chrono::Utc>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -64,6 +71,31 @@ pub struct Provenance {
     /// The row in `ai_suggestion_outcome` this suggestion was logged as.
     /// The caller reports the human's decision against it.
     pub suggestion_id: Option<Uuid>,
+}
+
+impl ActionOutcome {
+    /// A held action reported as a completed tool call, for a tool loop
+    /// that has no "held" state of its own: the model reads that it is held,
+    /// when it runs and that nothing ran yet (AH8).
+    #[must_use]
+    pub fn scheduled_as_completed(self) -> Self {
+        match self {
+            Self::Scheduled {
+                deferred_action_id,
+                run_at,
+            } => Self::Completed {
+                result: serde_json::json!({
+                    "status": "scheduled",
+                    "deferred_action_id": deferred_action_id,
+                    "run_at": run_at,
+                    "detail": "Held for its undo window: it runs at run_at unless the \
+                               person cancels it. Nothing has run yet.",
+                }),
+                provenance: None,
+            },
+            other => other,
+        }
+    }
 }
 
 /// One executable capability.
@@ -146,6 +178,19 @@ pub async fn dispatch(
     // actions exist tells a caller nothing.
     let descriptor: &ActionDescriptor = registry.resolve(action_id).ok_or(AppError::NotFound)?;
 
+    // AH8: an agent asks for an undo window with a reserved argument, taken
+    // out before anything reads the arguments; the autonomy level comes from
+    // the stored row only — whatever a caller put on the context is replaced.
+    let (cleaned_args, asked_window) = crate::deferred::take_undo_window(args);
+    let args = &cleaned_args;
+    let mut gated_ctx = ctx.clone();
+    if let Some(seconds) = asked_window {
+        gated_ctx = gated_ctx.with_undo_window(seconds);
+    }
+    let autonomy = crate::autonomy::resolve(state, &gated_ctx, descriptor, args).await;
+    gated_ctx.autonomy = autonomy.grant;
+    let ctx = &gated_ctx;
+
     // D-512 §4: a call that reaches a live session and names a registered
     // action consumes one unit of that session's invocation budget here,
     // BEFORE the gate decides anything — so reads, refusals, confirmations,
@@ -195,6 +240,9 @@ pub async fn dispatch(
     // every non-MCP caller. The caller's own privileges still apply after.
     crate::mcp::admission::check(state, ctx, descriptor.id, args)?;
 
+    // AH8 level 3: run now, then tell the person the agent acts for.
+    let mut report_to_owner = false;
+
     // C13.1: every dispatch-time refusal is counted before it is masked.
     match gate::evaluate(descriptor, ctx, inputs)
         .inspect_err(|r| crate::turn_metrics::gate_refused(*r))?
@@ -208,6 +256,9 @@ pub async fn dispatch(
                     ConfirmReason::AgentProposalNeedsConfirmation => {
                         "an agent proposed this action; it runs only when the human invokes it"
                     }
+                    ConfirmReason::AutonomyAskFirst => autonomy
+                        .limit_exceeded
+                        .unwrap_or("this agent's autonomy level for this action asks first"),
                 },
                 // Display data only (C3). Nothing ran, nothing was stored, and
                 // no handle is issued — see `ActionOutcome::ConfirmationRequired`.
@@ -263,6 +314,15 @@ pub async fn dispatch(
                 approval_id: pending.approval_id,
             });
         }
+        GateDecision::ExecuteAfterDelay { seconds, report } => {
+            let held =
+                crate::deferred::enqueue(state, descriptor, ctx, args, seconds, report).await?;
+            return Ok(ActionOutcome::Scheduled {
+                deferred_action_id: held.id,
+                run_at: held.run_at,
+            });
+        }
+        GateDecision::ExecuteAndReport => report_to_owner = true,
         GateDecision::Execute => {}
     }
 
@@ -278,7 +338,147 @@ pub async fn dispatch(
         None
     };
 
-    run_executor(state, executors, descriptor, ctx, args, claim).await
+    let outcome = run_executor(state, executors, descriptor, ctx, args, claim).await?;
+    if report_to_owner {
+        crate::deferred::notify(
+            state,
+            ctx.security.user_id,
+            format!("An agent ran {}", descriptor.id),
+            "It ran on its own under the autonomy level set for it.".to_owned(),
+        )
+        .await;
+    }
+    Ok(outcome)
+}
+
+/// Runs one held action whose undo window ended (AH8), re-checking it first.
+///
+/// An agent's action goes back through the gate with today's autonomy level
+/// (an administrator may have lowered it during the window): one that would
+/// still run is executed through [`dispatch_approved_agent_action_under`],
+/// which re-checks the session, the account, admissibility, MCP admission and
+/// the record; one that now needs approval raises the request instead; one
+/// that now needs a person's confirmation ends without running.
+///
+/// A person's own action is re-checked the same way against their freshly
+/// resolved security context.
+pub async fn run_deferred(
+    state: &EngineState,
+    row: &crate::deferred::DueAction,
+) -> Result<crate::deferred::DeferredRun, AppError> {
+    use crate::deferred::DeferredRun;
+
+    let Some(descriptor) = crate::engine::REGISTRY.resolve(&row.action_id) else {
+        return Ok(DeferredRun::Invalidated("the action no longer exists"));
+    };
+    let target: Option<crate::approval::ApprovalTarget> = row
+        .target
+        .clone()
+        .and_then(|t| serde_json::from_value(t).ok());
+
+    if row.initiator == "agent" {
+        let Some(agent_session_id) = row.agent_session_id else {
+            return Ok(DeferredRun::Invalidated("the agent session is gone"));
+        };
+        let session = match session::load_for_execution(&state.base.db, agent_session_id).await? {
+            session::SessionForExecution::Live(session) => session,
+            session::SessionForExecution::Paused => {
+                return Ok(DeferredRun::NotNow("the agent session is paused"));
+            }
+            session::SessionForExecution::Gone => {
+                return Ok(DeferredRun::Invalidated(
+                    "the agent session has been revoked or has ended",
+                ));
+            }
+        };
+        let security =
+            attome_security::resolve_uncached(&state.base.db, row.acting_user_id).await?;
+        let mut ctx = ActionContext::for_session(std::sync::Arc::new(security), &session);
+        ctx.idempotency_key = row.tool_call_id.clone();
+        ctx.autonomy = crate::autonomy::resolve(state, &ctx, descriptor, &row.args)
+            .await
+            .grant;
+        attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+        let inputs = crate::engine::gate_inputs(state, descriptor.module);
+        let request = crate::approval::AgentActionRequest {
+            action_id: row.action_id.clone(),
+            args: row.args.clone(),
+            agent_session_id,
+            acting_user_id: row.acting_user_id,
+            agent_rationale: None,
+            target,
+        };
+        return match gate::evaluate(descriptor, &ctx, &inputs) {
+            Err(refusal) => {
+                crate::turn_metrics::gate_refused(refusal);
+                Ok(DeferredRun::Invalidated(
+                    "the action is no longer permitted for the requesting user",
+                ))
+            }
+            Ok(GateDecision::RequiresApproval) => {
+                let pending =
+                    crate::approval::request_approval(&state.base.db, descriptor.id, &request)
+                        .await?;
+                Ok(DeferredRun::ApprovalRequired(pending.approval_id))
+            }
+            Ok(GateDecision::ConfirmFirst { .. }) => Ok(DeferredRun::Invalidated(
+                "it now needs the person's confirmation; the agent can propose it again",
+            )),
+            Ok(
+                GateDecision::Execute
+                | GateDecision::ExecuteAndReport
+                | GateDecision::ExecuteAfterDelay { .. },
+            ) => match dispatch_approved_agent_action_under(state, &request, None).await? {
+                ApprovedExecution::Executed(result) => Ok(DeferredRun::Executed(result)),
+                ApprovedExecution::Invalidated { reason } => Ok(DeferredRun::Invalidated(reason)),
+                ApprovedExecution::Deferred { reason } => Ok(DeferredRun::NotNow(reason)),
+            },
+        };
+    }
+
+    let is_active: Option<bool> =
+        sqlx::query_scalar("SELECT is_active FROM user_account WHERE id = $1")
+            .bind(row.acting_user_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if is_active != Some(true) {
+        return Ok(DeferredRun::Invalidated(
+            "the requesting account is no longer active",
+        ));
+    }
+    let security = attome_security::resolve_uncached(&state.base.db, row.acting_user_id).await?;
+    let ctx = ActionContext::user(std::sync::Arc::new(security));
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+    let inputs = crate::engine::gate_inputs(state, descriptor.module);
+    if let Err(refusal) = gate::admissible(descriptor, &ctx, &inputs) {
+        crate::turn_metrics::gate_refused(refusal);
+        return Ok(DeferredRun::Invalidated(
+            "the action is no longer permitted for the requesting user",
+        ));
+    }
+    if let Some(target) = &target
+        && !target_unchanged(state, target).await?
+    {
+        return Ok(DeferredRun::Invalidated(
+            "the record changed during the undo window",
+        ));
+    }
+    match run_executor(
+        state,
+        &crate::engine::EXECUTORS,
+        descriptor,
+        &ctx,
+        &row.args,
+        None,
+    )
+    .await?
+    {
+        ActionOutcome::Completed { result, .. } => Ok(DeferredRun::Executed(result)),
+        _ => Err(AppError::internal(
+            "run_executor returned a gate-only outcome unreachable from this path",
+        )),
+    }
 }
 
 /// The claim for an agent write that is about to run.
@@ -791,11 +991,11 @@ pub async fn dispatch_approved_agent_action_under(
         ActionOutcome::Completed { result, .. } => Ok(ApprovedExecution::Executed(result)),
         // `run_executor` cannot itself produce these — they belong to the
         // gate path this function deliberately does not call.
-        ActionOutcome::ConfirmationRequired { .. } | ActionOutcome::ApprovalRequired { .. } => {
-            Err(AppError::internal(
-                "run_executor returned a gate-only outcome unreachable from this path",
-            ))
-        }
+        ActionOutcome::ConfirmationRequired { .. }
+        | ActionOutcome::ApprovalRequired { .. }
+        | ActionOutcome::Scheduled { .. } => Err(AppError::internal(
+            "run_executor returned a gate-only outcome unreachable from this path",
+        )),
     }
 }
 
@@ -898,11 +1098,13 @@ pub async fn dispatch_confirmed_agent_action(
 
     match run_executor(state, executors, descriptor, ctx, args, claim).await {
         Ok(ActionOutcome::Completed { result, .. }) => Ok(ConfirmedExecution::Executed(result)),
-        Ok(ActionOutcome::ConfirmationRequired { .. } | ActionOutcome::ApprovalRequired { .. }) => {
-            Err(AppError::internal(
-                "run_executor returned a gate-only outcome unreachable from this path",
-            ))
-        }
+        Ok(
+            ActionOutcome::ConfirmationRequired { .. }
+            | ActionOutcome::ApprovalRequired { .. }
+            | ActionOutcome::Scheduled { .. },
+        ) => Err(AppError::internal(
+            "run_executor returned a gate-only outcome unreachable from this path",
+        )),
         Err(e) => {
             // `run_executor` releases the claim when the executor itself
             // failed, and deliberately keeps it when the side effect may have
@@ -999,7 +1201,7 @@ pub enum ApprovedExecution {
 /// The record an approval request is about, read as the requesting caller
 /// reads it (N30-T1). `None` when the arguments name no single record or the
 /// caller cannot read it: the request still goes ahead, without a diff.
-async fn capture_target(
+pub(crate) async fn capture_target(
     state: &EngineState,
     ctx: &ActionContext,
     args: &serde_json::Value,

@@ -1007,6 +1007,22 @@ async fn tools_call(
             false,
         ),
 
+        // AH8: held for its undo window. Nothing has run; the person can
+        // cancel it in Attome until `run_at`.
+        Ok(crate::execute::ActionOutcome::Scheduled {
+            deferred_action_id,
+            run_at,
+        }) => tool_result(
+            &json!({
+                "status": "scheduled",
+                "deferred_action_id": deferred_action_id,
+                "run_at": run_at,
+                "detail": "Held for its undo window: it runs at run_at unless the person \
+                           cancels it in Attome. Nothing has executed yet.",
+            }),
+            false,
+        ),
+
         // A refusal is a tool result with `isError`, not a JSON-RPC error, so
         // the model sees it and can adapt. The message goes through
         // `sanitized`, which keeps an unlicensed, disabled, and non-existent

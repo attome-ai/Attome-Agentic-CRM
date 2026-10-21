@@ -174,6 +174,33 @@ export const xrmEn = {
     suggest: 'Suggest', suggesting: 'Suggesting…',
   },
   // N31-T2 — scoped AI switches.
+  aiAutonomy: {
+    tab: 'Autonomy',
+    saveFirst: 'Save the agent first, then set what it may do on its own.',
+    title: 'Autonomy',
+    intro: 'How much this agent may do on its own, per action. With no level set the built-in rule applies. Untrusted text the agent read always lowers the level by one.',
+    none: 'This agent calls no actions that change anything.',
+    level: 'Level', builtIn: 'Built-in rule', clear: 'Back to built-in',
+    locked: 'Always asks: no level applies to this action.',
+    undoSeconds: 'Undo window (seconds)', dailyLimit: 'Daily limit',
+    consequentialWarning: 'This action cannot be called back once done; at this level it runs without per-action approval.',
+    levels: {
+      suggest: 'Suggest — a person does it', ask_first: 'Ask first', act_with_undo: 'Act with undo window',
+      act_and_report: 'Act and report', automatic: 'Fully automatic',
+    },
+    risk: { Read: 'Reads only', Reversible: 'Can be undone', Consequential: 'Cannot be undone' },
+  },
+  aiPending: {
+    title: 'Pending actions',
+    intro: 'Actions held for their undo window. Cancel one before it runs; it is checked again just before it does.',
+    none: 'No held actions.',
+    runsAt: 'Runs at', cancel: 'Cancel',
+    by: { user: 'By you', agent: 'By an agent' },
+    status: {
+      pending: 'Waiting', running: 'Running', executed: 'Done', cancelled: 'Cancelled',
+      invalidated: 'Did not run', approval_required: 'Needs approval', failed: 'Failed',
+    },
+  },
   aiSwitches: {
     title: 'AI switches', intro: 'Turn one agent, model, provider, tool or channel off. Turning it back on takes a different administrator.',
     kind: 'Scope', key: 'Id or name', reason: 'Reason', turnOff: 'Turn off', turnOn: 'Turn on', on: 'On', off: 'Off',

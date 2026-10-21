@@ -213,6 +213,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/agents/{id}/autonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/ai/agents/{id}/autonomy` — every non-read action with
+         *     the level it runs at for this agent.
+         */
+        get: operations["list_agent_autonomy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** `PUT /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — sets the level. */
+        put: operations["set_agent_autonomy"];
+        post?: never;
+        /**
+         * `DELETE /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — back to the
+         *     built-in rule.
+         */
+        delete: operations["clear_agent_autonomy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/bot-analytics": {
         parameters: {
             query?: never;
@@ -8349,6 +8390,46 @@ export interface paths {
          *     Repeating the request is harmless.
          */
         post: operations["cancel_turn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/deferred-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/ai/deferred-actions` — the caller's held actions, newest
+         *     first; an administrator sees everyone's.
+         */
+        get: operations["list_deferred_actions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/deferred-actions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/ai/deferred-actions/{id}/cancel` — cancels a held action
+         *     before it runs. The person it acts for, or an administrator.
+         */
+        post: operations["cancel_deferred_action"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18761,6 +18842,13 @@ export interface components {
             approval_id: string;
             /** @enum {string} */
             status: "approval_required";
+        } | {
+            /** Format: uuid */
+            deferred_action_id: string;
+            /** Format: date-time */
+            run_at: string;
+            /** @enum {string} */
+            status: "scheduled";
         };
         ActionSummary: {
             cacheable: boolean;
@@ -19845,6 +19933,55 @@ export interface components {
              *     "admin", "support", staff names.
              */
             username_reserved?: string[];
+        };
+        /** @description One action an agent may call, with the level it runs at. */
+        AutonomyEntry: {
+            action_id: string;
+            /** @description The level the action behaves at with no row (clean context). */
+            default_level: components["schemas"]["AutonomyLevel"];
+            effect: components["schemas"]["Effect"];
+            level?: null | components["schemas"]["AutonomyLevel"];
+            /**
+             * @description `true` when no level applies to this action: it keeps its built-in
+             *     rule for every agent (`autonomy_locked`).
+             */
+            locked: boolean;
+            risk: components["schemas"]["RiskTier"];
+            row?: null | components["schemas"]["AutonomyRow"];
+        };
+        /**
+         * @description How much an agent may do on its own. Ordered: a higher level does more.
+         * @enum {string}
+         */
+        AutonomyLevel: "suggest" | "ask_first" | "act_with_undo" | "act_and_report" | "automatic";
+        /** @description One stored row. */
+        AutonomyRow: {
+            action_id: string;
+            /** Format: uuid */
+            agent_definition_id: string;
+            currency?: string | null;
+            /** Format: int32 */
+            daily_limit?: number | null;
+            /** Format: int32 */
+            hours_end?: number | null;
+            /** Format: int32 */
+            hours_start?: number | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            level: number;
+            /** Format: int64 */
+            money_cap_minor?: number | null;
+            owned_records_only: boolean;
+            /** Format: int64 */
+            row_version: number;
+            time_zone?: string | null;
+            /** Format: int32 */
+            undo_seconds: number;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            updated_by: string;
         };
         AutonumberCounter: {
             /**
@@ -23942,6 +24079,30 @@ export interface components {
             proposal_id: string;
             status: string;
         };
+        /** @description A held action. */
+        DeferredAction: {
+            /** Format: uuid */
+            acting_user_id: string;
+            action_id: string;
+            /** Format: uuid */
+            agent_session_id?: string | null;
+            /** Format: uuid */
+            approval_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `user` or `agent`. */
+            initiator: string;
+            reason?: string | null;
+            /** Format: date-time */
+            run_at: string;
+            /**
+             * @description `pending`, `running`, `executed`, `cancelled`, `invalidated`,
+             *     `approval_required` or `failed`.
+             */
+            status: string;
+        };
         DefinitionDetail: {
             /** Format: date-time */
             created_at: string;
@@ -24777,6 +24938,14 @@ export interface components {
             op: string;
             value?: unknown;
         };
+        /**
+         * @description What the action touches, independent of how risky it is. Kept separate from
+         *     [`RiskTier`] because they answer different questions: `Effect` decides
+         *     whether an air-gapped deployment can run it at all (I-7), `RiskTier`
+         *     decides who has to approve it.
+         * @enum {string}
+         */
+        Effect: "Read" | "Write" | "External";
         /**
          * @description The "effective" half: `SecurityContext` fields as actually resolved right
          *     now, uncached. `privileges` is sorted (the resolver's `HashSet` has no
@@ -26950,6 +27119,13 @@ export interface components {
              *     shape would be the business logic guidelines §12 keeps out of transport.
              */
             args?: unknown;
+            /**
+             * Format: int32
+             * @description AH8: hold the action this many seconds (30 to 86400) before it runs,
+             *     so it can be cancelled — the undo for an action that cannot be undone
+             *     once it ran. Omit to run it now.
+             */
+            undo_window_seconds?: number | null;
         };
         /** @description What issuing did. */
         IssueOutcome: {
@@ -29830,6 +30006,34 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AutonomyEntry: {
+            items: {
+                action_id: string;
+                /** @description The level the action behaves at with no row (clean context). */
+                default_level: components["schemas"]["AutonomyLevel"];
+                effect: components["schemas"]["Effect"];
+                level?: null | components["schemas"]["AutonomyLevel"];
+                /**
+                 * @description `true` when no level applies to this action: it keeps its built-in
+                 *     rule for every agent (`autonomy_locked`).
+                 */
+                locked: boolean;
+                risk: components["schemas"]["RiskTier"];
+                row?: null | components["schemas"]["AutonomyRow"];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_AvailableTransition: {
             items: {
                 /** Format: int32 */
@@ -30852,6 +31056,43 @@ export interface components {
                  *     `"BulkEntityOperation"`) — never the payload itself.
                  */
                 variant: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DeferredAction: {
+            items: {
+                /** Format: uuid */
+                acting_user_id: string;
+                action_id: string;
+                /** Format: uuid */
+                agent_session_id?: string | null;
+                /** Format: uuid */
+                approval_id?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /** @description `user` or `agent`. */
+                initiator: string;
+                reason?: string | null;
+                /** Format: date-time */
+                run_at: string;
+                /**
+                 * @description `pending`, `running`, `executed`, `cancelled`, `invalidated`,
+                 *     `approval_required` or `failed`.
+                 */
+                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -37557,6 +37798,17 @@ export interface components {
             domain: string;
             enqueued: boolean;
         };
+        /**
+         * @description How much damage an action can do, which decides what has to happen before
+         *     it runs. This is the single most important field on a descriptor.
+         *
+         *     The tiers are ordered, and the ordering is load-bearing: an agent session
+         *     carries a ceiling and the gate compares against it. Adding a tier means
+         *     deciding where it sits relative to `Consequential`, which is a decision
+         *     somebody has to make deliberately.
+         * @enum {string}
+         */
+        RiskTier: "Read" | "Reversible" | "Consequential";
         RoleAssignment: {
             /** Format: uuid */
             role_id: string;
@@ -39042,6 +39294,42 @@ export interface components {
             status: components["schemas"]["SessionStatus"];
             surface: string;
             tainted: boolean;
+        };
+        SetAutonomy: {
+            currency?: string | null;
+            /** Format: int32 */
+            daily_limit?: number | null;
+            /**
+             * Format: int32
+             * @description End hour, exclusive (1 to 24).
+             */
+            hours_end?: number | null;
+            /**
+             * Format: int32
+             * @description Start hour, inclusive (0 to 23).
+             */
+            hours_start?: number | null;
+            level: components["schemas"]["AutonomyLevel"];
+            /**
+             * Format: int64
+             * @description Minor units of `currency`; requires the action to declare a money
+             *     argument, or every invocation asks first.
+             */
+            money_cap_minor?: number | null;
+            owned_records_only?: boolean;
+            /**
+             * Format: int64
+             * @description The row's current `row_version` when replacing a row; a stale one is
+             *     refused with 409.
+             */
+            row_version?: number | null;
+            /** @description IANA zone for the hours, such as `Asia/Riyadh`; UTC when unset. */
+            time_zone?: string | null;
+            /**
+             * Format: int32
+             * @description Seconds an `act_with_undo` action waits before it runs (30 to 86400).
+             */
+            undo_seconds?: number | null;
         };
         SetCredentialBody: {
             /**
@@ -42942,6 +43230,171 @@ export interface operations {
                 };
             };
             /** @description No published agent object with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_agent_autonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent: an `ai_agent` record or a published agent object, as its sessions name it */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each action with its level */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AutonomyEntry"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_agent_autonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent, as its sessions name it */
+                id: string;
+                /** @description The action, e.g. email.send */
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAutonomy"];
+            };
+        };
+        responses: {
+            /** @description The stored level */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomyRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such action */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The row changed since row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid level or limits */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clear_agent_autonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent, as its sessions name it */
+                id: string;
+                /** @description The action */
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No level is set for this action */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -71826,6 +72279,96 @@ export interface operations {
             };
             /** @description No such conversation for this caller, or no such turn in it */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_deferred_actions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Held actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeferredAction"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_deferred_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The held action */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled; it will not run */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeferredAction"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such held action */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description It already ran, or is running */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

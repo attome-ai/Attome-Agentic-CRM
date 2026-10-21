@@ -129,6 +129,9 @@ impl EngineModel for ActionModel {
             .merge(crate::a2a::routes())
             // N30-T5 — per-write approval policies, admin-only.
             .merge(crate::write_policy::routes())
+            // AH8 — autonomy levels (admin-only) and the undo window.
+            .merge(crate::autonomy::routes())
+            .merge(crate::deferred::routes())
             // N29-T2 — AI evidence export, admin-only.
             .merge(crate::evidence::routes())
             // N13-T1 — outside MCP servers, admin-only.
@@ -353,6 +356,11 @@ pub struct InvokeRequest {
     /// shape would be the business logic guidelines §12 keeps out of transport.
     #[serde(default)]
     pub args: Value,
+    /// AH8: hold the action this many seconds (30 to 86400) before it runs,
+    /// so it can be cancelled — the undo for an action that cannot be undone
+    /// once it ran. Omit to run it now.
+    #[serde(default)]
+    pub undo_window_seconds: Option<u32>,
 }
 
 impl std::fmt::Debug for InvokeRequest {
@@ -405,7 +413,10 @@ async fn invoke_action(
     let module = REGISTRY.resolve(&id).map(|d| d.module).unwrap_or(MODULE_AI);
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = gate_inputs(&state, module);
-    let action_ctx = ActionContext::user(ctx.into_inner());
+    let mut action_ctx = ActionContext::user(ctx.into_inner());
+    if let Some(seconds) = body.undo_window_seconds {
+        action_ctx = action_ctx.with_undo_window(seconds);
+    }
 
     let outcome = dispatch(
         &state,

@@ -381,6 +381,13 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         std::time::Duration::from_secs(60),
     );
 
+    // AH8 (V2-D693): runs actions whose undo window ended. Every 15 seconds,
+    // so an action runs close to the time the person was told.
+    crate::jobs::spawn_ai_deferred_action_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(15),
+    );
+
     // Audit plan 3.5 (D-541 rule 6): summary events for closed
     // failed-login windows. Once a minute, inside the counters' 10-minute
     // TTL.
@@ -507,7 +514,6 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),
     );
-
     // A3-T8: nightly validity score per entity.
     crate::jobs::spawn_validation_score_sweep_scheduler(
         db.clone(),

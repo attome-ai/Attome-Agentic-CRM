@@ -731,6 +731,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiScopeSwitchesComponent),
           },
           {
+            // AH8: actions held for their undo window, with Cancel.
+            path: 'ai/pending-actions',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiPendingActionsComponent),
+          },
+          {
             // N30-T5/T9: per-write approval policies and approval figures.
             path: 'ai/governance',
             canActivate: [authGuard],

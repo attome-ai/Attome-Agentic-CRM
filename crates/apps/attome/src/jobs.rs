@@ -1753,6 +1753,19 @@ async fn dispatch_platform_job(
             }
         }
         // M25 Phase 1 (Report, D-440) — see this variant's doc comment.
+        // AH8 — actions whose undo window ended.
+        EngineJob::AiDeferredActionSweep => {
+            let stats = attome_ai::deferred::sweep(&attome_state).await?;
+            if stats.executed + stats.ended + stats.retried + stats.interrupted > 0 {
+                tracing::info!(
+                    executed = stats.executed,
+                    ended = stats.ended,
+                    retried = stats.retried,
+                    interrupted = stats.interrupted,
+                    "deferred action sweep: run complete"
+                );
+            }
+        }
         EngineJob::ReportScheduleSweep => {
             let stats = attome_report::scheduler::sweep(&attome_state).await?;
             if stats.dispatched > 0 || stats.deactivated > 0 {
@@ -2677,6 +2690,7 @@ const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
 const DEDUP_KEY_CONTENT_SCHEDULED_PUBLISH_SWEEP: &str = "content-scheduled-publish-sweep";
 const DEDUP_KEY_REPORT_SCHEDULE_SWEEP: &str = "report-schedule-sweep";
+const DEDUP_KEY_AI_DEFERRED_ACTION_SWEEP: &str = "ai-deferred-action-sweep";
 const DEDUP_KEY_LICENSE_EXPIRY_CHECK: &str = "license-expiry-check";
 const DEDUP_KEY_FAILED_LOGIN_SWEEP: &str = "failed-login-sweep";
 const DEDUP_KEY_SEARCH_SUGGESTION_REFRESH: &str = "search-suggestion-refresh";
@@ -3527,6 +3541,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContentScheduledPublishSweep => DEDUP_KEY_CONTENT_SCHEDULED_PUBLISH_SWEEP,
         EngineJob::DataQualityScoreSweep => DEDUP_KEY_DATA_QUALITY_SCORE_SWEEP,
         EngineJob::ReportScheduleSweep => DEDUP_KEY_REPORT_SCHEDULE_SWEEP,
+        EngineJob::AiDeferredActionSweep => DEDUP_KEY_AI_DEFERRED_ACTION_SWEEP,
         EngineJob::FailedLoginSweep => DEDUP_KEY_FAILED_LOGIN_SWEEP,
         EngineJob::LicenseExpiryCheck => DEDUP_KEY_LICENSE_EXPIRY_CHECK,
         EngineJob::ContentPageStatsRollup => DEDUP_KEY_CONTENT_PAGE_STATS_ROLLUP,
@@ -4900,6 +4915,19 @@ pub fn spawn_data_quality_score_sweep_scheduler(db: DbPool, interval: std::time:
         EngineJob::DataQualityScoreSweep,
         DEDUP_KEY_DATA_QUALITY_SCORE_SWEEP,
         "data quality score sweep",
+    );
+}
+
+/// AH8 (V2-D693) — sibling of the schedulers above. A seconds-scale
+/// interval: an undo window is a wall-clock promise to the person who can
+/// cancel it, so the action should run close to its `run_at`.
+pub fn spawn_ai_deferred_action_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::AiDeferredActionSweep,
+        DEDUP_KEY_AI_DEFERRED_ACTION_SWEEP,
+        "deferred action sweep",
     );
 }
 

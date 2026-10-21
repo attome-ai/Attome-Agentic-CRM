@@ -73,4 +73,11 @@
       </section>
     }
   </ng-template>
+  <ng-template xrmTab="autonomy">
+    @if (id(); as agentId) {
+      <xrm-ai-agent-autonomy [agentId]="agentId" />
+    } @else {
+      <p class="xf-helper">{{ 'aiAutonomy.saveFirst' | translate }}</p>
+    }
+  </ng-template>
 </xrm-base-form>

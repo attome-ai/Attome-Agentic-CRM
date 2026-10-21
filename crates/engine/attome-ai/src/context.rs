@@ -113,6 +113,15 @@ pub struct ActionContext {
     /// [`Self::is_mcp_agent`], which decides whether MCP entity admission
     /// (`crate::mcp::admission`, plan item M3.4) applies.
     pub session_surface: Option<String>,
+    /// AH8: the autonomy level an administrator granted this agent for this
+    /// action, after its limits. **Set only by `execute::dispatch`** from the
+    /// stored row, overwriting whatever a caller put here; `None` keeps the
+    /// gate's built-in matrix.
+    pub autonomy: Option<crate::autonomy::AutonomyGrant>,
+    /// AH8: the caller asked for an undo window — hold the action this many
+    /// seconds, cancellable, before it runs. Never skips a confirmation or an
+    /// approval the gate requires; it only delays an action that would run.
+    pub undo_window_seconds: Option<u32>,
 }
 
 impl std::fmt::Debug for ActionContext {
@@ -137,6 +146,8 @@ impl ActionContext {
             approval_request_id: None,
             anonymous_channel: false,
             session_surface: None,
+            autonomy: None,
+            undo_window_seconds: None,
         }
     }
 
@@ -160,6 +171,8 @@ impl ActionContext {
             approval_request_id: None,
             anonymous_channel: false,
             session_surface: None,
+            autonomy: None,
+            undo_window_seconds: None,
         }
     }
 
@@ -184,6 +197,16 @@ impl ActionContext {
     #[must_use]
     pub fn with_agent_session(mut self, session_id: Uuid) -> Self {
         self.agent_session_id = Some(session_id);
+        self
+    }
+
+    /// Holds the action for an undo window before it runs (AH8).
+    #[must_use]
+    pub fn with_undo_window(mut self, seconds: u32) -> Self {
+        self.undo_window_seconds = Some(seconds.clamp(
+            crate::autonomy::MIN_UNDO_SECONDS,
+            crate::autonomy::MAX_UNDO_SECONDS,
+        ));
         self
     }
 

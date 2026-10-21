@@ -751,6 +751,284 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/ai/agents/{id}/autonomy": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/agents/{id}/autonomy` — every non-read action with\nthe level it runs at for this agent.",
+        "operationId": "list_agent_autonomy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent: an `ai_agent` record or a published agent object, as its sessions name it",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each action with its level",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AutonomyEntry"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}": {
+      "put": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`PUT /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — sets the level.",
+        "operationId": "set_agent_autonomy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent, as its sessions name it",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "description": "The action, e.g. email.send",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAutonomy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The stored level",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutonomyRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The row changed since row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid level or limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`DELETE /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — back to the\nbuilt-in rule.",
+        "operationId": "clear_agent_autonomy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent, as its sessions name it",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "description": "The action",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cleared"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No level is set for this action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/ai/bot-analytics": {
       "get": {
         "tags": [
@@ -48213,6 +48491,160 @@
           },
           "404": {
             "description": "No such conversation for this caller, or no such turn in it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ai/deferred-actions": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/ai/deferred-actions` — the caller's held actions, newest\nfirst; an administrator sees everyone's.",
+        "operationId": "list_deferred_actions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Held actions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeferredAction"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ai/deferred-actions/{id}/cancel": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/ai/deferred-actions/{id}/cancel` — cancels a held action\nbefore it runs. The person it acts for, or an administrator.",
+        "operationId": "cancel_deferred_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The held action",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled; it will not run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeferredAction"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such held action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "It already ran, or is running",
             "content": {
               "application/json": {
                 "schema": {
@@ -99864,6 +100296,31 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "AH8: held for its undo window. Nothing has executed yet; it runs at\n`run_at` unless cancelled (`POST /api/v1/ai/deferred-actions/{id}/cancel`)\nand is re-checked first.",
+            "required": [
+              "deferred_action_id",
+              "run_at",
+              "status"
+            ],
+            "properties": {
+              "deferred_action_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "run_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "scheduled"
+                ]
+              }
+            }
           }
         ],
         "description": "What an invocation produced."
@@ -102412,6 +102869,159 @@
               "type": "string"
             },
             "description": "D-777: whole usernames nobody may take (case-insensitive), e.g.\n\"admin\", \"support\", staff names."
+          }
+        }
+      },
+      "AutonomyEntry": {
+        "type": "object",
+        "description": "One action an agent may call, with the level it runs at.",
+        "required": [
+          "action_id",
+          "risk",
+          "effect",
+          "default_level",
+          "locked"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "default_level": {
+            "$ref": "#/components/schemas/AutonomyLevel",
+            "description": "The level the action behaves at with no row (clean context)."
+          },
+          "effect": {
+            "$ref": "#/components/schemas/Effect"
+          },
+          "level": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AutonomyLevel",
+                "description": "The level a row sets, when there is one."
+              }
+            ]
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "`true` when no level applies to this action: it keeps its built-in\nrule for every agent (`autonomy_locked`)."
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskTier"
+          },
+          "row": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AutonomyRow"
+              }
+            ]
+          }
+        }
+      },
+      "AutonomyLevel": {
+        "type": "string",
+        "description": "How much an agent may do on its own. Ordered: a higher level does more.",
+        "enum": [
+          "suggest",
+          "ask_first",
+          "act_with_undo",
+          "act_and_report",
+          "automatic"
+        ]
+      },
+      "AutonomyRow": {
+        "type": "object",
+        "description": "One stored row.",
+        "required": [
+          "id",
+          "agent_definition_id",
+          "action_id",
+          "level",
+          "undo_seconds",
+          "owned_records_only",
+          "updated_by",
+          "updated_at",
+          "row_version"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "agent_definition_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "daily_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "hours_end": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "hours_start": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "level": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "money_cap_minor": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "owned_records_only": {
+            "type": "boolean"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "time_zone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "undo_seconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -112968,6 +113578,68 @@
           }
         }
       },
+      "DeferredAction": {
+        "type": "object",
+        "description": "A held action.",
+        "required": [
+          "id",
+          "action_id",
+          "initiator",
+          "acting_user_id",
+          "run_at",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "acting_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action_id": {
+            "type": "string"
+          },
+          "agent_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "approval_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "initiator": {
+            "type": "string",
+            "description": "`user` or `agent`."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `running`, `executed`, `cancelled`, `invalidated`,\n`approval_required` or `failed`."
+          }
+        }
+      },
       "DefinitionDetail": {
         "type": "object",
         "required": [
@@ -115141,6 +115813,15 @@
           },
           "value": {}
         }
+      },
+      "Effect": {
+        "type": "string",
+        "description": "What the action touches, independent of how risky it is. Kept separate from\n[`RiskTier`] because they answer different questions: `Effect` decides\nwhether an air-gapped deployment can run it at all (I-7), `RiskTier`\ndecides who has to approve it.",
+        "enum": [
+          "Read",
+          "Write",
+          "External"
+        ]
       },
       "EffectiveAccess": {
         "type": "object",
@@ -120272,6 +120953,15 @@
         "properties": {
           "args": {
             "description": "The action's own arguments. Shape is per-action and validated by the\nexecutor, not here — a handler that understood every action's argument\nshape would be the business logic guidelines §12 keeps out of transport."
+          },
+          "undo_window_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "AH8: hold the action this many seconds (30 to 86400) before it runs,\nso it can be cancelled — the undo for an action that cannot be undone\nonce it ran. Omit to run it now.",
+            "minimum": 0
           }
         }
       },
@@ -128053,6 +128743,91 @@
           }
         }
       },
+      "PaginatedResponse_AutonomyEntry": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One action an agent may call, with the level it runs at.",
+              "required": [
+                "action_id",
+                "risk",
+                "effect",
+                "default_level",
+                "locked"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string"
+                },
+                "default_level": {
+                  "$ref": "#/components/schemas/AutonomyLevel",
+                  "description": "The level the action behaves at with no row (clean context)."
+                },
+                "effect": {
+                  "$ref": "#/components/schemas/Effect"
+                },
+                "level": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AutonomyLevel",
+                      "description": "The level a row sets, when there is one."
+                    }
+                  ]
+                },
+                "locked": {
+                  "type": "boolean",
+                  "description": "`true` when no level applies to this action: it keeps its built-in\nrule for every agent (`autonomy_locked`)."
+                },
+                "risk": {
+                  "$ref": "#/components/schemas/RiskTier"
+                },
+                "row": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AutonomyRow"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_AvailableTransition": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -130670,6 +131445,102 @@
                 "variant": {
                   "type": "string",
                   "description": "The externally-tagged `EngineJob` variant name (e.g.\n`\"BulkEntityOperation\"`) — never the payload itself."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_DeferredAction": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A held action.",
+              "required": [
+                "id",
+                "action_id",
+                "initiator",
+                "acting_user_id",
+                "run_at",
+                "status",
+                "created_at"
+              ],
+              "properties": {
+                "acting_user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "action_id": {
+                  "type": "string"
+                },
+                "agent_session_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "approval_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "initiator": {
+                  "type": "string",
+                  "description": "`user` or `agent`."
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "run_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`pending`, `running`, `executed`, `cancelled`, `invalidated`,\n`approval_required` or `failed`."
                 }
               }
             }
@@ -147854,6 +148725,15 @@
           }
         }
       },
+      "RiskTier": {
+        "type": "string",
+        "description": "How much damage an action can do, which decides what has to happen before\nit runs. This is the single most important field on a descriptor.\n\nThe tiers are ordered, and the ordering is load-bearing: an agent session\ncarries a ceiling and the gate compares against it. Adding a tier means\ndeciding where it sits relative to `Consequential`, which is a decision\nsomebody has to make deliberately.",
+        "enum": [
+          "Read",
+          "Reversible",
+          "Consequential"
+        ]
+      },
       "RoleAssignment": {
         "type": "object",
         "required": [
@@ -151800,6 +152680,81 @@
             "type": "boolean"
           }
         }
+      },
+      "SetAutonomy": {
+        "type": "object",
+        "required": [
+          "level"
+        ],
+        "properties": {
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "daily_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "hours_end": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "End hour, exclusive (1 to 24)."
+          },
+          "hours_start": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Start hour, inclusive (0 to 23)."
+          },
+          "level": {
+            "$ref": "#/components/schemas/AutonomyLevel"
+          },
+          "money_cap_minor": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Minor units of `currency`; requires the action to declare a money\nargument, or every invocation asks first."
+          },
+          "owned_records_only": {
+            "type": "boolean"
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The row's current `row_version` when replacing a row; a stale one is\nrefused with 409."
+          },
+          "time_zone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "IANA zone for the hours, such as `Asia/Riyadh`; UTC when unset."
+          },
+          "undo_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Seconds an `act_with_undo` action waits before it runs (30 to 86400)."
+          }
+        },
+        "additionalProperties": false
       },
       "SetCredentialBody": {
         "type": "object",

@@ -6,6 +6,7 @@ import {
 } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
 import type { FieldSchema } from '@attome/xrm';
+import { AiAgentAutonomyComponent } from '../../autonomy/agent-autonomy.component';
 
 /**
  * Hand-coded form for `ai_agent`, scaffolded from platform-bundles/attome-ai-agent.json's
@@ -23,7 +24,7 @@ import type { FieldSchema } from '@attome/xrm';
   selector:   'attome-ai-agent-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe],
+  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe, AiAgentAutonomyComponent],
   styleUrls:  ['../../../styles/xrm-form.css', './ai-agent-form.component.css'],
   templateUrl: './ai-agent-form.component.html',
 })
@@ -33,6 +34,8 @@ export class AiAgentFormComponent extends EngineFormBase {
   protected override defineTabs(): XrmFormTabDef[] {
     return [
       { id: 'general', label: 'General', icon: 'las la-list-alt' },
+      // AH8: per-action autonomy levels.
+      { id: 'autonomy', label: this.lang.translate('aiAutonomy.tab'), icon: 'las la-user-shield' },
       // D-773: the platform record tabs, rendered by <xrm-base-form>.
       ...recordTabDefs(this.name(), key => this.lang.translate(key)),
     ];

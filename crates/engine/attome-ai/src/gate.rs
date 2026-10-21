@@ -13,6 +13,7 @@
 use attome_config::{AiEnablement, AiSurface};
 use attome_types::AppError;
 
+use crate::autonomy::AutonomyLevel;
 use crate::context::{ActionContext, Initiator};
 use crate::descriptor::{ActionDescriptor, Effect, RetryClass, RiskTier};
 
@@ -31,6 +32,13 @@ pub enum GateDecision {
     /// pending handle. **Never build a second approval mechanism**
     /// (guidelines §13) — the four-eyes primitive already exists.
     RequiresApproval,
+    /// AH8: dispatch after an undo window. The action is held for `seconds`
+    /// in `ai_deferred_action`, where the person it acts for (or an
+    /// administrator) can cancel it; then it is re-checked and run.
+    /// `report` tells the person it acts for once it ran.
+    ExecuteAfterDelay { seconds: u32, report: bool },
+    /// AH8 level 3: dispatch now and tell the person the agent acts for.
+    ExecuteAndReport,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +50,9 @@ pub enum ConfirmReason {
     /// M35 v1 C1: the action is declared `agent_must_confirm` — an agent may
     /// propose it, only the human completes it, regardless of taint.
     AgentProposalNeedsConfirmation,
+    /// AH8: the agent's autonomy level for this action is `ask_first` (set
+    /// by an administrator, or lowered by a limit).
+    AutonomyAskFirst,
 }
 
 /// Why the gate refused outright. Separate from [`GateDecision`] because a
@@ -148,42 +159,103 @@ pub fn evaluate(
     }
 
     // 6. The matrix.
-    Ok(match (descriptor.risk, ctx.initiator) {
-        (RiskTier::Read, _) => GateDecision::Execute,
-
-        (RiskTier::Reversible, Initiator::User) => GateDecision::Execute,
-
-        // I-10's operative half. A Reversible write normally auto-executes for
-        // an agent and offers undo. When the context carries tool-obtained
-        // text, the write may have been suggested by that text rather than by
-        // the human, so a human confirms this specific invocation first.
-        (RiskTier::Reversible, Initiator::Agent) => {
-            // M35 v1 C1: an action declared `agent_must_confirm` never
-            // completes for an agent. Checked first so a clean context is
-            // not a way around it — taint is irrelevant for these.
-            if descriptor.agent_must_confirm {
-                GateDecision::ConfirmFirst {
-                    reason: ConfirmReason::AgentProposalNeedsConfirmation,
-                }
-            } else if ctx.contains_retrieved_content {
-                GateDecision::ConfirmFirst {
-                    reason: ConfirmReason::RetrievedContentInContext,
-                }
-            } else {
-                GateDecision::Execute
-            }
-        }
+    let decision = match (descriptor.risk, ctx.initiator) {
+        (RiskTier::Read, _) => return Ok(GateDecision::Execute),
 
         // A human invoking a Consequential action through the UI is the
         // existing four-eyes question, answered by the deployment's
         // `approval.required_actions` policy rather than by this gate.
-        (RiskTier::Consequential, Initiator::User) => GateDecision::Execute,
+        (_, Initiator::User) => GateDecision::Execute,
 
-        // NEVER auto-executes. Not when the context is clean, not when the
-        // ceiling permits it, not when the model is confident. This arm is the
-        // reason the whole file exists.
-        (RiskTier::Consequential, Initiator::Agent) => GateDecision::RequiresApproval,
+        // An `autonomy_locked` action keeps its built-in rule whatever level
+        // is stored: checked first, so no row is a way around it.
+        (risk, Initiator::Agent) if descriptor.autonomy_locked => {
+            builtin(risk, ctx, descriptor.agent_must_confirm)
+        }
+
+        // AH8 (V2-D693): an administrator's autonomy level for this agent and
+        // action. The fixed rail: untrusted text in the context lowers it by
+        // one, whatever the row says.
+        // M35 v1 C1 is the built-in rule of an `agent_must_confirm` action:
+        // the agent proposes, the human completes, whatever the taint.
+        (risk, Initiator::Agent) => match ctx.autonomy {
+            None => builtin(risk, ctx, descriptor.agent_must_confirm),
+            Some(grant) => {
+                let level = if ctx.contains_retrieved_content {
+                    grant.level.lowered()
+                } else {
+                    grant.level
+                };
+                by_level(level, risk, ctx, grant.undo_seconds)
+            }
+        },
+    };
+
+    // AH8: a caller-requested undo window delays an action that would run
+    // now. It never turns a confirmation or an approval into a run.
+    Ok(match (decision, ctx.undo_window_seconds) {
+        (GateDecision::Execute, Some(seconds)) => GateDecision::ExecuteAfterDelay {
+            seconds,
+            report: false,
+        },
+        (GateDecision::ExecuteAndReport, Some(seconds)) => GateDecision::ExecuteAfterDelay {
+            seconds,
+            report: true,
+        },
+        (decision, _) => decision,
     })
+}
+
+/// The built-in matrix for an agent, used when no autonomy level applies.
+///
+/// I-10's operative half. A Reversible write normally auto-executes for an
+/// agent and offers undo. When the context carries tool-obtained text, the
+/// write may have been suggested by that text rather than by the human, so a
+/// human confirms this specific invocation first. A Consequential action
+/// always needs four-eyes approval here: only an administrator's stored
+/// autonomy level takes it above that.
+fn builtin(risk: RiskTier, ctx: &ActionContext, must_confirm: bool) -> GateDecision {
+    match risk {
+        RiskTier::Read => GateDecision::Execute,
+        RiskTier::Consequential => GateDecision::RequiresApproval,
+        RiskTier::Reversible if must_confirm => GateDecision::ConfirmFirst {
+            reason: ConfirmReason::AgentProposalNeedsConfirmation,
+        },
+        RiskTier::Reversible if ctx.contains_retrieved_content => GateDecision::ConfirmFirst {
+            reason: ConfirmReason::RetrievedContentInContext,
+        },
+        RiskTier::Reversible => GateDecision::Execute,
+    }
+}
+
+/// What an agent's autonomy level means for one invocation (AH8).
+fn by_level(
+    level: AutonomyLevel,
+    risk: RiskTier,
+    ctx: &ActionContext,
+    undo_seconds: u32,
+) -> GateDecision {
+    match level {
+        AutonomyLevel::Suggest => GateDecision::ConfirmFirst {
+            reason: ConfirmReason::AgentProposalNeedsConfirmation,
+        },
+        AutonomyLevel::AskFirst => match risk {
+            RiskTier::Consequential => GateDecision::RequiresApproval,
+            _ => GateDecision::ConfirmFirst {
+                reason: if ctx.contains_retrieved_content {
+                    ConfirmReason::RetrievedContentInContext
+                } else {
+                    ConfirmReason::AutonomyAskFirst
+                },
+            },
+        },
+        AutonomyLevel::ActWithUndo => GateDecision::ExecuteAfterDelay {
+            seconds: ctx.undo_window_seconds.unwrap_or(undo_seconds),
+            report: true,
+        },
+        AutonomyLevel::ActAndReport => GateDecision::ExecuteAndReport,
+        AutonomyLevel::Automatic => GateDecision::Execute,
+    }
 }
 
 /// Steps 1–4 of [`evaluate`]: may this caller invoke this action at all,
@@ -643,71 +715,98 @@ mod tests {
         );
     }
 
-    /// **The universal claim TODO-041 makes, swept rather than sampled.**
-    ///
-    /// *An agent cannot reach a Consequential action without an approval,
-    /// through any façade or any argument.* That is a statement about every
-    /// input combination, so it is tested as one: every ceiling, tainted and
-    /// clean, with and without an idempotency key, every effect, every retry
-    /// class, and every AI surface. 288 combinations, one answer.
-    ///
-    /// The levers in the sweep are the ones an over-eager tool loop — or
-    /// someone trying to make a failing integration pass — actually reaches
-    /// for. Raising the session ceiling to `Consequential` is the most
-    /// plausible of them, and it is precisely the one that must not work: the
-    /// ceiling bounds what an agent may *attempt*, and the risk matrix decides
-    /// what happens when it does.
+    /// THE property of this file, AH8 edition: across every input, a
+    /// Consequential action runs for an agent only when an administrator
+    /// stored a level of two or more for it and, after the taint rail, it is
+    /// still two or more.
     #[test]
-    fn no_input_combination_lets_an_agent_auto_execute_a_consequential_action() {
+    fn no_consequential_action_runs_for_an_agent_without_a_stored_level_of_two_or_more() {
         let ai = all_on();
         let mut checked = 0;
+        let grants: Vec<Option<AutonomyLevel>> = std::iter::once(None)
+            .chain(AutonomyLevel::ALL.into_iter().map(Some))
+            .collect();
 
         for effect in [Effect::Read, Effect::Write, Effect::External] {
             for retry in [RetryClass::Idempotent, RetryClass::RequiresKey] {
-                let d = descriptor(RiskTier::Consequential, effect, retry);
-                for ceiling in [
-                    RiskTier::Read,
-                    RiskTier::Reversible,
-                    RiskTier::Consequential,
-                ] {
-                    for tainted in [false, true] {
-                        for keyed in [false, true] {
-                            for surface in [
-                                None,
-                                Some(AiSurface::Fields),
-                                Some(AiSurface::SemanticSearch),
-                                Some(AiSurface::Chat),
-                            ] {
-                                let mut ctx = ActionContext::agent(security_context(), ceiling);
-                                if tainted {
-                                    ctx = ctx.tainted();
-                                }
-                                if keyed {
-                                    ctx = ctx.with_idempotency_key("k");
-                                }
-                                let gate_inputs = GateInputs {
-                                    licensed: true,
-                                    ai: &ai,
-                                    surface,
-                                    external_effects_enabled: true,
-                                };
+                for (must_confirm, locked) in [(false, false), (true, false), (true, true)] {
+                    let mut d = descriptor(RiskTier::Consequential, effect, retry);
+                    if must_confirm {
+                        d = d.agent_must_confirm();
+                    }
+                    if locked {
+                        d = d.autonomy_locked();
+                    }
+                    for ceiling in [
+                        RiskTier::Read,
+                        RiskTier::Reversible,
+                        RiskTier::Consequential,
+                    ] {
+                        for tainted in [false, true] {
+                            for keyed in [false, true] {
+                                for surface in [None, Some(AiSurface::Chat)] {
+                                    for grant in &grants {
+                                        for undo in [None, Some(60)] {
+                                            let mut ctx =
+                                                ActionContext::agent(security_context(), ceiling);
+                                            if tainted {
+                                                ctx = ctx.tainted();
+                                            }
+                                            if keyed {
+                                                ctx = ctx.with_idempotency_key("k");
+                                            }
+                                            ctx.autonomy =
+                                                grant.map(|level| crate::autonomy::AutonomyGrant {
+                                                    level,
+                                                    undo_seconds: 300,
+                                                });
+                                            ctx.undo_window_seconds = undo;
+                                            let gate_inputs = GateInputs {
+                                                licensed: true,
+                                                ai: &ai,
+                                                surface,
+                                                external_effects_enabled: true,
+                                            };
+                                            let decision = evaluate(&d, &ctx, &gate_inputs);
+                                            checked += 1;
 
-                                let decision = evaluate(&d, &ctx, &gate_inputs);
-                                checked += 1;
-
-                                // Either the gate refused outright (below the
-                                // ceiling, air-gapped, unlicensed) or it
-                                // required approval. What must never appear is
-                                // `Execute` — or `ConfirmFirst`, which is a
-                                // human-in-the-loop weaker than approval and
-                                // would be a silent downgrade.
-                                match decision {
-                                    Ok(GateDecision::RequiresApproval) | Err(_) => {}
-                                    other => panic!(
-                                        "a Consequential agent action returned {other:?} for \
-                                         ceiling={ceiling:?} tainted={tainted} keyed={keyed} \
-                                         effect={effect:?} retry={retry:?} surface={surface:?}"
-                                    ),
+                                            let effective = grant
+                                                .map(|l| if tainted { l.lowered() } else { l });
+                                            let may_run = !locked
+                                                && effective.is_some_and(|l| {
+                                                    l >= AutonomyLevel::ActWithUndo
+                                                });
+                                            let runs = matches!(
+                                                decision,
+                                                Ok(GateDecision::Execute
+                                                    | GateDecision::ExecuteAndReport
+                                                    | GateDecision::ExecuteAfterDelay { .. })
+                                            );
+                                            assert!(
+                                                may_run || !runs,
+                                                "a Consequential agent action returned {decision:?} \
+                                                 for grant={grant:?} tainted={tainted} \
+                                                 must_confirm={must_confirm} locked={locked} \
+                                                 ceiling={ceiling:?} \
+                                                 keyed={keyed} effect={effect:?} retry={retry:?} \
+                                                 surface={surface:?} undo={undo:?}"
+                                            );
+                                            // Below level two the only outcomes are a
+                                            // refusal, approval, or a confirmation the
+                                            // confirm path turns into approval.
+                                            if !may_run {
+                                                assert!(
+                                                    matches!(
+                                                        decision,
+                                                        Ok(GateDecision::RequiresApproval
+                                                            | GateDecision::ConfirmFirst { .. })
+                                                            | Err(_)
+                                                    ),
+                                                    "unexpected {decision:?}"
+                                                );
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -716,6 +815,157 @@ mod tests {
             }
         }
 
-        assert_eq!(checked, 3 * 2 * 3 * 2 * 2 * 4, "the sweep must be complete");
+        assert_eq!(
+            checked,
+            3 * 2 * 3 * 3 * 2 * 2 * 2 * 6 * 2,
+            "the sweep must be complete"
+        );
+    }
+
+    fn agent_with(level: Option<AutonomyLevel>, tainted: bool) -> ActionContext {
+        let mut ctx = ActionContext::agent(security_context(), RiskTier::Consequential);
+        if tainted {
+            ctx = ctx.tainted();
+        }
+        ctx.autonomy = level.map(|level| crate::autonomy::AutonomyGrant {
+            level,
+            undo_seconds: 120,
+        });
+        ctx
+    }
+
+    #[test]
+    fn a_tainted_context_always_lowers_the_level_by_one() {
+        let ai = all_on();
+        for risk in [RiskTier::Reversible, RiskTier::Consequential] {
+            let d = descriptor(risk, Effect::Write, RetryClass::Idempotent);
+            for level in AutonomyLevel::ALL {
+                let tainted = evaluate(&d, &agent_with(Some(level), true), &inputs(&ai));
+                let clean_lower =
+                    evaluate(&d, &agent_with(Some(level.lowered()), false), &inputs(&ai));
+                // The confirm reason differs on purpose (it names the taint);
+                // the kind of decision must not.
+                assert_eq!(
+                    tainted.as_ref().map(std::mem::discriminant),
+                    clean_lower.as_ref().map(std::mem::discriminant),
+                    "{risk:?} at {level:?}: tainted gave {tainted:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn an_unset_consequential_action_still_requires_approval() {
+        let ai = all_on();
+        let d = descriptor(
+            RiskTier::Consequential,
+            Effect::Write,
+            RetryClass::Idempotent,
+        );
+        assert_eq!(
+            evaluate(&d, &agent_with(None, false), &inputs(&ai)),
+            Ok(GateDecision::RequiresApproval)
+        );
+    }
+
+    #[test]
+    fn each_level_maps_to_its_decision() {
+        let ai = all_on();
+        let d = descriptor(
+            RiskTier::Consequential,
+            Effect::Write,
+            RetryClass::Idempotent,
+        );
+        let at = |l| evaluate(&d, &agent_with(Some(l), false), &inputs(&ai));
+        assert!(matches!(
+            at(AutonomyLevel::Suggest),
+            Ok(GateDecision::ConfirmFirst { .. })
+        ));
+        assert_eq!(
+            at(AutonomyLevel::AskFirst),
+            Ok(GateDecision::RequiresApproval)
+        );
+        assert_eq!(
+            at(AutonomyLevel::ActWithUndo),
+            Ok(GateDecision::ExecuteAfterDelay {
+                seconds: 120,
+                report: true
+            })
+        );
+        assert_eq!(
+            at(AutonomyLevel::ActAndReport),
+            Ok(GateDecision::ExecuteAndReport)
+        );
+        assert_eq!(at(AutonomyLevel::Automatic), Ok(GateDecision::Execute));
+    }
+
+    #[test]
+    fn agent_must_confirm_is_the_built_in_rule_an_explicit_level_replaces() {
+        let ai = all_on();
+        let d = descriptor(RiskTier::Reversible, Effect::Write, RetryClass::Idempotent)
+            .agent_must_confirm();
+        assert_eq!(
+            evaluate(&d, &agent_with(None, false), &inputs(&ai)),
+            Ok(GateDecision::ConfirmFirst {
+                reason: ConfirmReason::AgentProposalNeedsConfirmation
+            }),
+            "no row: the agent proposes and the human completes"
+        );
+        assert_eq!(
+            evaluate(
+                &d,
+                &agent_with(Some(AutonomyLevel::Automatic), false),
+                &inputs(&ai)
+            ),
+            Ok(GateDecision::Execute)
+        );
+    }
+
+    #[test]
+    fn an_autonomy_locked_action_ignores_the_level() {
+        let ai = all_on();
+        let d = descriptor(RiskTier::Reversible, Effect::Write, RetryClass::Idempotent)
+            .agent_must_confirm()
+            .autonomy_locked();
+        assert_eq!(
+            evaluate(
+                &d,
+                &agent_with(Some(AutonomyLevel::Automatic), false),
+                &inputs(&ai)
+            ),
+            Ok(GateDecision::ConfirmFirst {
+                reason: ConfirmReason::AgentProposalNeedsConfirmation
+            })
+        );
+    }
+
+    #[test]
+    fn an_undo_window_delays_a_run_but_never_skips_approval() {
+        let ai = all_on();
+        let write = descriptor(RiskTier::Reversible, Effect::Write, RetryClass::Idempotent);
+        let user = ActionContext::user(security_context()).with_undo_window(60);
+        assert_eq!(
+            evaluate(&write, &user, &inputs(&ai)),
+            Ok(GateDecision::ExecuteAfterDelay {
+                seconds: 60,
+                report: false
+            })
+        );
+        let consequential = descriptor(
+            RiskTier::Consequential,
+            Effect::Write,
+            RetryClass::Idempotent,
+        );
+        let agent = agent_with(None, false).with_undo_window(60);
+        assert_eq!(
+            evaluate(&consequential, &agent, &inputs(&ai)),
+            Ok(GateDecision::RequiresApproval)
+        );
+        let read = descriptor(RiskTier::Read, Effect::Read, RetryClass::Idempotent);
+        assert_eq!(
+            evaluate(&read, &user, &inputs(&ai)),
+            Ok(GateDecision::Execute),
+            "a read is never delayed"
+        );
     }
 }

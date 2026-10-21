@@ -647,6 +647,11 @@ pub enum EngineJob {
     /// variant, same re-derive-current-state shape as
     /// `WorkflowSlaSweep`/`ContentScheduledPublishSweep`.
     ReportScheduleSweep,
+    /// AH8 (V2-D693): runs `ai_deferred_action` rows whose undo window ended,
+    /// re-checking each first; ends rows interrupted mid-run as failed so
+    /// none runs twice. Bare unit variant, same re-derive-current-state
+    /// shape as `ReportScheduleSweep`: the rows are the queue.
+    AiDeferredActionSweep,
     /// M23 Records Management (D-456) — runs one `audit_legal_matter`'s
     /// "collect": scans its `scope_entity` under `scope_filter` in bounded
     /// batches, places a hold (`legal_hold`, tagged
@@ -1090,6 +1095,7 @@ impl EngineJob {
             | Self::ContentScheduledPublishSweep
             | Self::DataQualityScoreSweep
             | Self::ReportScheduleSweep
+            | Self::AiDeferredActionSweep
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -1238,6 +1244,7 @@ impl EngineJob {
             EngineJob::DataQualityScoreSweep => "DataQualityScoreSweep",
             EngineJob::ReportRun { .. } => "ReportRun",
             EngineJob::ReportScheduleSweep => "ReportScheduleSweep",
+            EngineJob::AiDeferredActionSweep => "AiDeferredActionSweep",
             EngineJob::LegalMatterCollect { .. } => "LegalMatterCollect",
             EngineJob::LegalMatterRelease { .. } => "LegalMatterRelease",
             EngineJob::LicenseExpiryCheck => "LicenseExpiryCheck",
@@ -1384,6 +1391,7 @@ impl EngineJob {
             | Self::ContentScheduledPublishSweep
             | Self::DataQualityScoreSweep
             | Self::ReportScheduleSweep
+            | Self::AiDeferredActionSweep
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -1545,6 +1553,7 @@ impl EngineJob {
             | Self::ContentScheduledPublishSweep
             | Self::DataQualityScoreSweep
             | Self::ReportScheduleSweep
+            | Self::AiDeferredActionSweep
             | Self::LicenseExpiryCheck
             | Self::FailedLoginSweep
             | Self::SearchSuggestionRefresh
@@ -2520,6 +2529,8 @@ mod tests {
     #[test]
     fn report_schedule_sweep_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::ReportScheduleSweep);
+        assert_round_trips(EngineJob::AiDeferredActionSweep);
+        assert!(!EngineJob::AiDeferredActionSweep.is_batch());
         assert!(!EngineJob::ReportScheduleSweep.is_batch());
     }
 
