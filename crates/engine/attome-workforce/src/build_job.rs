@@ -220,6 +220,9 @@ fn channel(raw: Option<&str>) -> ChannelKind {
     }
 }
 
+/// `(id, window from, window to, length)`.
+type TemplateRow = (Uuid, Option<String>, Option<String>, Option<f64>);
+
 /// `(channel, sl pct, sl secs, interval, shrinkage, concurrency, backlog, aht)`.
 type GroupRow = (
     Option<String>,
@@ -308,7 +311,7 @@ pub async fn run(state: &EngineState, job: &BuildJob) -> Result<BuildResult, App
         .map(|r| (r.start, r.scheduled))
         .collect();
 
-    let template_rows: Vec<(Uuid, Option<String>, Option<String>, Option<f64>)> = sqlx::query_as(
+    let template_rows: Vec<TemplateRow> = sqlx::query_as(
         "SELECT id, start_window_from, start_window_to, length_minutes::float8 FROM wfm_shift_template \
           WHERE planning_group_ref = $1 AND (is_active IS NULL OR is_active = true) ORDER BY id",
     )

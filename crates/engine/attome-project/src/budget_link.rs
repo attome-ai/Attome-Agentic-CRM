@@ -274,6 +274,14 @@ async fn submit(
     Ok(accepted.request_id)
 }
 
+/// `(status, invoice amount, invoice request, name)`.
+type DeliverableRow = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
 async fn propose_milestone(
     state: &EngineState,
     ctx: &SecurityContext,
@@ -282,12 +290,7 @@ async fn propose_milestone(
 ) -> Result<Proposal, AppError> {
     let db = &state.base.db;
     let (_, _, name) = project_head(state, project).await?;
-    let row: Option<(
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-    )> = sqlx::query_as(
+    let row: Option<DeliverableRow> = sqlx::query_as(
         "SELECT status::text, invoice_amount::text, invoice_request_ref, name \
                FROM project_deliverable \
               WHERE id = $1 AND project_id = $2 AND (is_active IS NULL OR is_active = true)",

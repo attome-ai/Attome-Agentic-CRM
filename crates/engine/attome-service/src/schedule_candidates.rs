@@ -245,6 +245,9 @@ type JobRow = (
     Option<f64>,
 );
 
+/// `(user, van location, base latitude, base longitude)`.
+type ProfileRow = (Uuid, Option<String>, Option<f64>, Option<f64>);
+
 async fn exists(db: &attome_db::DbPool, table: &str) -> Result<bool, AppError> {
     sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
         .bind(table)
@@ -342,7 +345,7 @@ pub async fn find(
         }
     }
 
-    let profiles: Vec<(Uuid, Option<String>, Option<f64>, Option<f64>)> = sqlx::query_as(
+    let profiles: Vec<ProfileRow> = sqlx::query_as(
         "SELECT user_ref, stock_location_code, base_latitude::float8, base_longitude::float8 \
            FROM technician_profile \
           WHERE user_ref IS NOT NULL AND (is_active IS NULL OR is_active = true) \

@@ -1058,6 +1058,9 @@ pub async fn change_order(
     })
 }
 
+/// `(status, pending total, budget line, committed)`.
+type PendingChange = (Option<String>, Option<String>, Option<Uuid>, Option<String>);
+
 /// The approved change order: applied once, if the order still waits for
 /// exactly this change.
 pub async fn do_po_change_approved(
@@ -1070,15 +1073,14 @@ pub async fn do_po_change_approved(
         .map_err(|_| AppError::internal("approval total is not a number"))?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, &lock_key("order", id)).await?;
-    let pending: Option<(Option<String>, Option<String>, Option<Uuid>, Option<String>)> =
-        sqlx::query_as(
-            "SELECT status::text, pending_total::text, budget_line_ref, committed_amount::text \
+    let pending: Option<PendingChange> = sqlx::query_as(
+        "SELECT status::text, pending_total::text, budget_line_ref, committed_amount::text \
                FROM purchase_order WHERE id = $1 FOR NO KEY UPDATE",
-        )
-        .bind(id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    )
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     let Some((status, pending_total, budget_line, committed)) = pending else {
         return Err(AppError::NotFound);
     };

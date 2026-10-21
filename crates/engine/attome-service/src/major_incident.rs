@@ -252,6 +252,17 @@ fn uuid_of(data: &Value, key: &str) -> Option<Uuid> {
     text(data, key).and_then(|s| Uuid::parse_str(s).ok())
 }
 
+/// `(id, order, handover, shift hours, window start, window end, until)`.
+type StoredLayer = (
+    Uuid,
+    Option<f64>,
+    Option<DateTime<Utc>>,
+    Option<f64>,
+    Option<String>,
+    Option<String>,
+    Option<DateTime<Utc>>,
+);
+
 /// Who is on call on a schedule now.
 async fn on_call_now(
     state: &EngineState,
@@ -259,15 +270,7 @@ async fn on_call_now(
     now: DateTime<Utc>,
 ) -> Result<Option<Uuid>, AppError> {
     let db = &state.base.db;
-    let layers: Vec<(
-        Uuid,
-        Option<f64>,
-        Option<DateTime<Utc>>,
-        Option<f64>,
-        Option<String>,
-        Option<String>,
-        Option<DateTime<Utc>>,
-    )> = sqlx::query_as(
+    let layers: Vec<StoredLayer> = sqlx::query_as(
         "SELECT id, layer_order::float8, handover_at::timestamptz, shift_hours::float8, \
                 window_start, window_end, until_at::timestamptz \
            FROM oncall_layer WHERE schedule_ref = $1 AND (is_active IS NULL OR is_active = true)",
