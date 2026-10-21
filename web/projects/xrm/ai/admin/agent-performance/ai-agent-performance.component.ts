@@ -5,6 +5,7 @@ import { ApiError, LangService, LocalDatePipe, TranslatePipe } from '@attome/bas
 import type { ChartCategory, ChartSeries } from '@attome/xrm/dashboard/chart';
 
 import {
+  AgentBehaviour,
   AgentPerformance,
   AgentPerformanceDay,
   AgentRun,
@@ -117,6 +118,36 @@ export function trend(days: AgentPerformanceDay[], names: { done: string; resolv
 
       @if (selected(); as agent) {
         <h3>{{ agent.name || agent.agent_id }}</h3>
+        @if (behaviour(); as b) {
+          <section class="aap-behaviour" data-testid="behaviour" [attr.aria-label]="'aiPerformance.behaviour.title' | translate">
+            <h4>{{ 'aiPerformance.behaviour.title' | translate }}</h4>
+            @if (b.status === 'suspended') {
+              <p class="aap-stopped" role="status" data-testid="trip">
+                <strong>{{ 'aiPerformance.behaviour.stopped' | translate }}</strong>
+                @if (b.last_trip; as trip) {
+                  · {{ trip.at | localDate: { dateStyle: 'short', timeStyle: 'short' } }}
+                  · <span dir="ltr" data-testid="trip-reason">{{ trip.reason }}</span>
+                }
+              </p>
+              <button type="button" data-testid="switch-on" [disabled]="switching()" (click)="switchOn(b)">
+                {{ 'aiPerformance.behaviour.switchOn' | translate }}
+              </button>
+            }
+            @if (b.baseline; as base) {
+              <p class="aap-muted">
+                {{ 'aiPerformance.behaviour.usual' | translate: {
+                  mean: num(round1(base.mean_writes_per_hour)), spread: num(round1(base.stddev_writes_per_hour)) } }}
+              </p>
+            } @else {
+              <p class="aap-muted">{{ 'aiPerformance.behaviour.learning' | translate }}</p>
+            }
+            @if (chartModule(); as m) {
+              @if (hourInputs(); as inputs) {
+                <ng-container *ngComponentOutlet="m.DashboardChartComponent; inputs: inputs" />
+              }
+            }
+          </section>
+        }
         @if (chartModule(); as m) {
           @if (chartInputs(); as inputs) {
             <ng-container *ngComponentOutlet="m.DashboardChartComponent; inputs: inputs" />
@@ -195,6 +226,10 @@ export function trend(days: AgentPerformanceDay[], names: { done: string; resolv
     .aap-runs li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
     .aap-muted { color: var(--color-text-secondary); font-size: 0.8125rem; }
     .aap-error { color: var(--color-danger); }
+    .aap-behaviour { border: 1px solid var(--color-border); border-radius: 0.5rem; padding-block: 0.75rem;
+      padding-inline: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .aap-behaviour h4 { margin-block: 0; font-size: 0.9375rem; }
+    .aap-stopped { margin-block: 0; }
   `],
 })
 export class AiAgentPerformanceComponent implements OnInit {
@@ -212,6 +247,28 @@ export class AiAgentPerformanceComponent implements OnInit {
   readonly nextCursor = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly chartModule = signal<ChartModule | null>(null);
+  /** AH5-T5: the chosen agent's behaviour, and a switch-on in flight. */
+  readonly behaviour = signal<AgentBehaviour | null>(null);
+  readonly switching = signal(false);
+
+  /** The last 24 hours' writes as bars. */
+  readonly hourInputs = computed(() => {
+    const m = this.chartModule();
+    const hours = this.behaviour()?.hours ?? [];
+    if (!m || hours.length === 0) return null;
+    const label = (h: string) => h.slice(11, 16);
+    return {
+      kind: 'bar',
+      title: this.lang.translate('aiPerformance.behaviour.hours'),
+      categories: hours.map(h => ({ trackKey: h.hour, label: label(h.hour) })),
+      series: [{
+        trackKey: 'writes',
+        name: this.lang.translate('aiPerformance.behaviour.writes'),
+        color: m.SLICE_COLORS[0],
+        points: hours.map(h => ({ trackKey: `writes:${h.hour}`, label: label(h.hour), value: h.writes, key: null })),
+      }],
+    };
+  });
 
   readonly chartInputs = computed(() => {
     const m = this.chartModule();
@@ -282,6 +339,29 @@ export class AiAgentPerformanceComponent implements OnInit {
     this.selected.set(agent);
     this.closeRuns();
     this.loadDays(agent.agent_id);
+    this.loadBehaviour(agent.agent_id);
+  }
+
+  round1(value: number | null): number {
+    return Math.round((value ?? 0) * 10) / 10;
+  }
+
+  private loadBehaviour(agentId: string): void {
+    this.behaviour.set(null);
+    this.performance.behaviour(agentId).subscribe({
+      next: b => this.behaviour.set(b),
+      error: () => this.behaviour.set(null),
+    });
+  }
+
+  /** A person switches a stopped agent back on. */
+  switchOn(b: AgentBehaviour): void {
+    if (this.switching()) return;
+    this.switching.set(true);
+    this.performance.switchOn(b.agent_id, b.row_version).subscribe({
+      next: () => { this.switching.set(false); this.loadBehaviour(b.agent_id); },
+      error: (e: ApiError) => { this.switching.set(false); this.fail(e); },
+    });
   }
 
   private loadDays(agentId: string): void {

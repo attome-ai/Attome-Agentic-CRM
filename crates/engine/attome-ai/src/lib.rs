@@ -61,6 +61,8 @@ pub mod approval;
 pub mod autonomy;
 /// AH5-T1: each agent's hourly activity and its 28-day baseline.
 pub mod behaviour;
+/// AH5-T5: an agent's baseline, recent hours and last automatic stop.
+pub mod behaviour_routes;
 /// M101 slice 2 — the token budget, actually applied. `attome_inference::budget`
 /// shipped with zero call sites; this is the one that gives it some.
 pub mod budget_guard;
@@ -251,6 +253,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(agent_stats::openapi_fragment());
     doc.merge(agent_stats_routes::openapi_fragment());
     doc.merge(undo_routes::openapi_fragment());
+    doc.merge(behaviour_routes::openapi_fragment());
     doc.merge(meeting::routes::openapi_fragment());
     doc
 }

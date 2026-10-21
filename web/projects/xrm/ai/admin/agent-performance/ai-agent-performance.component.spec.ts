@@ -22,9 +22,21 @@ const DAYS: AgentPerformanceDay[] = [
     time_saved_seconds: 480 },
 ];
 
+const BEHAVIOUR = {
+  agent_id: 'a1', name: 'followup_agent', status: 'suspended', row_version: 7,
+  baseline: {
+    computed_at: '2027-03-01T03:00:00Z', first_activity_at: '2027-02-01T09:00:00Z',
+    mean_writes_per_hour: 5, stddev_writes_per_hour: 2, mean_deletes_per_hour: 0,
+    stddev_deletes_per_hour: 0, usual_entities: ['deal'], usual_hours: [9, 10],
+  },
+  hours: [{ hour: '2027-03-01T09:00:00Z', writes: 200, deletes: 0, external_calls: 0, entities: ['deal'] }],
+  last_trip: { at: '2027-03-01T09:20:00Z', reason: 'automatic: volume: observed 200, expected 5' },
+};
+
 describe('AiAgentPerformanceComponent (AI8-T6)', () => {
   function create() {
     const get = vi.fn((path: string) => {
+      if (path.includes('/behaviour')) return of(BEHAVIOUR);
       if (path.includes('/runs')) return of({ items: [], next_cursor: null });
       if (path.includes('/daily')) return of({ items: DAYS, total: 1, page: 1, page_size: 400 });
       return of({ items: [PRICED, UNPRICED], total: 2, page: 1, page_size: 500 });
@@ -64,6 +76,16 @@ describe('AiAgentPerformanceComponent (AI8-T6)', () => {
     c.openRuns('2027-03-01', 'handoffs');
     expect(get).toHaveBeenCalledWith('/api/v1/admin/ai/agents/a1/runs?day=2027-03-01&metric=handoffs');
     expect(c.runsFor()).toEqual({ day: '2027-03-01', metric: 'handoffs' });
+  });
+
+  it('shows the trip reason', () => {
+    const { fixture } = create();
+    fixture.componentInstance.select(PRICED);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="trip"]')?.textContent).toContain('aiPerformance.behaviour.stopped');
+    expect(el.querySelector('[data-testid="trip-reason"]')?.textContent).toContain('automatic: volume');
+    expect(el.querySelector('[data-testid="switch-on"]')).not.toBeNull();
   });
 
   it('builds the trend and the default range', () => {

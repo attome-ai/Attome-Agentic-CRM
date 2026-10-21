@@ -568,6 +568,13 @@ export const xrmEn = {
     noPrice: 'No price set', none: 'No agent work in this range.', day: 'Day', trend: 'Tasks per day',
     estimate: 'Time saved is an estimate: each task counts a fixed time for its kind of work.',
     runs: 'Runs', close: 'Close', more: 'More', noRuns: 'No runs.',
+    // AH5-T5 — what the agent normally does, and an automatic stop.
+    behaviour: {
+      title: 'Behaviour', hours: 'Writes in the last hours', writes: 'Writes',
+      usual: 'Usually {mean} writes an hour (spread {spread}).',
+      learning: 'Still learning what this agent normally does.',
+      stopped: 'Stopped automatically', switchOn: 'Switch back on',
+    },
     source: { followup: 'Follow-up', collections: 'Collections', meeting: 'Meeting', handoff: 'Hand-off', other: 'Other' },
   },
   // AI5-T7 — an invoice's collections panel.
