@@ -21,6 +21,6 @@ impl EngineModel for WorkforceModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new()
+        crate::admin::routes()
     }
 }

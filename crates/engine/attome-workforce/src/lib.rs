@@ -4,6 +4,7 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `workforce` module.
 
+pub mod admin;
 pub mod build_job;
 pub mod model;
 pub mod rules;
@@ -17,7 +18,7 @@ pub use model::WorkforceModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 39;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    admin::openapi_fragment()
 }

@@ -1343,6 +1343,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   under a deadline (300 s by default; at most 2,000 people and 31 days), and writes one draft
   `wfm_schedule` per run id with its assignments and `coverage_json` (requirement, coverage before and
   after) under the group's build lock. A retry of the same run replaces its own draft.
+- Schedule routes (G17-T7): `POST /api/v1/workforce/groups/{id}/schedules/build` queues a build (202 with
+  its run id); `GET /api/v1/workforce/schedules` and `GET /api/v1/workforce/schedules/{id}` read
+  schedules with assignments and coverage; `PATCH /api/v1/workforce/assignments/{id}` (`If-Match`)
+  checks the person's week against their rule set (422 `rule_breach: <codes>`) and needs a `reason` on a
+  published shift, which the person is told; `POST /api/v1/workforce/schedules/{id}/publish`
+  (`If-Match`) books every shift on the person's time (`resource_allocation`), supersedes the group's
+  overlapping published schedule and tells everyone scheduled.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;

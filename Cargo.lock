@@ -2265,11 +2265,15 @@ dependencies = [
 name = "attome-workforce"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-calendar",
  "attome-core",
  "attome-db",
  "attome-jobs",
  "attome-modules",
+ "attome-notification",
+ "attome-records",
+ "attome-server",
  "attome-types",
  "axum",
  "chrono",
