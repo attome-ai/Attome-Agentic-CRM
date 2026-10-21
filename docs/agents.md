@@ -215,6 +215,36 @@ none by default.
 - **Owners** see their open follow-ups at `/ai/follow-ups` (`GET /api/v1/ai/follow-ups`) and dismiss
   them (`POST /api/v1/ai/follow-ups/{id}/dismiss`, `If-Match`).
 
+## Collections and renewals
+
+Collections reuse the follow-up ledger. Nothing happens until an administrator adds an
+`ai_collection_rule` (under AI in the admin area); there is none by default.
+
+- **Rule kinds** (`kind`, with `offset_days`): `invoice_due` finds unpaid invoices (`issued`,
+  `sent` or `overdue` with something still open) due `offset_days` from today; `invoice_overdue`
+  finds those due `offset_days` ago; `renewal_due` finds active or trial subscriptions ending within
+  `offset_days`. A record is recorded at most once a day, and not at all once it has had
+  `max_reminders` reminders under the rule. An invoice with an open payment promise for today or later
+  is skipped, unless a person rejected that promise.
+- **When:** the hourly follow-up scan finds collections from 08:00 in the deployment's time zone
+  (`core.time_zone`), with that local date as the day.
+- **Sending.** For an active rule with reminders left, the run sends each reminder as the record's
+  owner (`collections.send_reminder`). An agent calling `collections.send_reminder` itself always
+  waits for a person's approval. The message is the rule's English or Arabic template
+  (`template_text_en`, `template_text_ar`), or a built-in one, in the customer's language (the
+  contact's `preferred_language`, then the invoice's `language`, then the deployment's). Its values
+  are `{invoice_number}`, `{amount}`, `{currency}`, `{due_date}`, `{customer_name}`,
+  `{subscription_name}` and `{end_date}`, always taken from the invoice or subscription, never written
+  by the model. The rule's `channel` must be `email` today: `whatsapp` and `sms` rules are refused,
+  and the owner is reminded instead, as when the customer has no email or asked not to be emailed.
+- **Promises.** Every five minutes new inbound replies on those invoices are read for a promise to pay
+  (amount and date, Arabic or English). A promise found is recorded as an `ai_payment_promise`
+  waiting for review. On the invoice's Collections panel staff confirm or reject it
+  (`POST /api/v1/ai/collections/promises/{id}/confirm`, `.../reject`) and later mark it kept or
+  broken (`.../status`), each with `If-Match` and update access to the invoice. The panel lists the
+  promises and reminders (`GET /api/v1/ai/collections/invoices/{id}/promises`, `.../reminders`).
+- **Switched off:** while AI chat is switched off, nothing is sent or read.
+
 ## Meeting briefs and notes
 
 A meeting is an `activity` whose `activity_type` is `meeting`. It is about a record through

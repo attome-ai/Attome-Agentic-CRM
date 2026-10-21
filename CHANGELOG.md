@@ -1452,6 +1452,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `reviewed_by`, `reviewed_at`) and `POST /api/v1/ai/collections/promises/{id}/status` (`kept` or
   `broken`), each under `If-Match` and update access to the invoice. A rejected promise no longer holds
   reminders back.
+- `docs/agents.md` describes collections and renewals (AI5-T8): rule kinds, offsets, the email channel, `max_reminders`,
+  approval for an agent's send, amounts from the invoice, and the `/api/v1/ai/collections/...` routes.
 - `docs/agents.md` describes meeting briefs and notes (AI6-T9): when briefs are made, what they read and
   how they respect record access, notes from transcripts, and confirmation with gated record updates.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
