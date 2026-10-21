@@ -1450,6 +1450,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- Customer 360 (G15-T1, `@attome/xrm/core/entity`): the account and contact pages show `xrm-customer-360`, the
+  customer's open deals, open tasks, unpaid invoices, active entitlements, assets and people (each loading its first
+  five and its count when opened, and hiding where its entity is not installed), the recent timeline and an AI summary
+  on request; the same component serves the agent workspace's context panel.
 - Community forums (G13-T1, new `community` pack): forum categories, threads with an accepted answer, posts,
   votes and ideas with statuses; business rules hold a new thread, post or idea with a link or a blocked term as
   `pending` for the moderation queue (a stored query and a Community menu); Community Moderator and Viewer roles.

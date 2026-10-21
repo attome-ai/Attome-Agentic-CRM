@@ -456,6 +456,15 @@ export const xrmAr = {
     reason: { stalled_deal: 'صفقة متوقفة', overdue_task: 'مهمة متأخرة', unanswered_customer: 'عميل ينتظر الرد' },
     status: { open: 'مفتوحة', reminded: 'تم التذكير', drafted: 'المسودة جاهزة', sent: 'أُرسلت', dismissed: 'تم التجاهل', resolved: 'تمت' },
   },
+  // G15-T1 — نظرة شاملة على العميل.
+  customer360: {
+    title: 'نظرة شاملة على العميل', summarise: 'ملخص بالذكاء الاصطناعي', summarising: 'جارٍ التلخيص…',
+    loading: 'جارٍ التحميل…', none: 'لا شيء هنا.',
+    sections: {
+      deals: 'الصفقات المفتوحة', tasks: 'المهام المفتوحة', invoices: 'الفواتير غير المسددة',
+      entitlements: 'الاستحقاقات السارية', assets: 'الأصول', contacts: 'الأشخاص', timeline: 'آخر النشاط',
+    },
+  },
   // AI7-T6 — تحويل التذاكر بين الوكلاء والموظفين.
   serviceHandoff: {
     title: 'التحويل', mine: 'تحويلاتي', none: 'لا شيء بانتظارك.',

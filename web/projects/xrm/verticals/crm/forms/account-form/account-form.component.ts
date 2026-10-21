@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { LangService, TranslatePipe } from '@attome/base';
 import {
+  Customer360Component,
   FieldInputComponent, XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs,
 } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
@@ -23,7 +24,7 @@ import type { FieldSchema } from '@attome/xrm';
   selector:   'xrm-account-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe],
+  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TranslatePipe, Customer360Component],
   styleUrls:  ['../../../../styles/xrm-form.css', './account-form.component.css'],
   templateUrl: './account-form.component.html',
 })

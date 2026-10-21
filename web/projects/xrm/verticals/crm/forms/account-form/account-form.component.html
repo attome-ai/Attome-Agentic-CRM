@@ -13,5 +13,9 @@
         </div>
       </div>
     </section>
+    @if (id(); as recordId) {
+      <!-- G15-T1 — the customer's open work, timeline and AI summary. -->
+      <xrm-customer-360 entity="account" [recordId]="recordId" />
+    }
   </ng-template>
 </xrm-base-form>

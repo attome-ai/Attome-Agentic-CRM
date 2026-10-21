@@ -541,6 +541,15 @@ export const xrmEn = {
     reason: { stalled_deal: 'Stalled deal', overdue_task: 'Overdue task', unanswered_customer: 'Customer waiting for an answer' },
     status: { open: 'Open', reminded: 'Reminded', drafted: 'Draft ready', sent: 'Sent', dismissed: 'Dismissed', resolved: 'Resolved' },
   },
+  // G15-T1 — a customer's 360 view.
+  customer360: {
+    title: 'Customer 360', summarise: 'AI summary', summarising: 'Summarising…', loading: 'Loading…',
+    none: 'Nothing here.',
+    sections: {
+      deals: 'Open deals', tasks: 'Open tasks', invoices: 'Unpaid invoices', entitlements: 'Active entitlements',
+      assets: 'Assets', contacts: 'People', timeline: 'Recent activity',
+    },
+  },
   // AI7-T6 — ticket hand-offs between agents and people.
   serviceHandoff: {
     title: 'Hand-off', mine: 'My hand-offs', none: 'Nothing is waiting for you.',

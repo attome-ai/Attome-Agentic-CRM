@@ -181,3 +181,8 @@ export type {
 // provideAttomeXrm lives here (not in the root `@attome/xrm` entry) because it
 // wires up EntityService, which this entry already owns.
 export { provideAttomeXrm }           from './services/provide';
+
+// G15-T1: the customer 360 panel, on the account and contact pages and in the
+// agent workspace's context panel.
+export { Customer360Component, SECTION_ROWS, sectionsFor } from './customer-360/customer-360.component';
+export type { Customer360Filter, Customer360Section } from './customer-360/customer-360.component';
