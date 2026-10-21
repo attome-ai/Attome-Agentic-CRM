@@ -233,6 +233,15 @@ pub enum LimitClass {
     ExternalCall,
 }
 
+/// Whether an action id says it sends a message to a person: `*.send`,
+/// `*.send_message`, `*.send_reminder` or `message.*`. Pure.
+pub fn is_message_send(id: &str) -> bool {
+    id.ends_with(".send")
+        || id.ends_with(".send_message")
+        || id.ends_with(".send_reminder")
+        || id.starts_with("message.")
+}
+
 impl ActionDescriptor {
     /// The limit this action counts against: an outside call by its effect,
     /// otherwise by what its id says it does.
@@ -241,9 +250,7 @@ impl ActionDescriptor {
         match self.effect {
             Effect::Read => LimitClass::None,
             Effect::External => LimitClass::ExternalCall,
-            Effect::Write if id.ends_with(".send") || id.starts_with("message.") => {
-                LimitClass::MessageSend
-            }
+            Effect::Write if is_message_send(id) => LimitClass::MessageSend,
             Effect::Write if id.ends_with(".delete") && id.starts_with("record.") => {
                 LimitClass::Delete
             }

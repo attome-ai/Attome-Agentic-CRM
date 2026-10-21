@@ -177,6 +177,15 @@ mod tests {
         let deletes = registry.ids_of_class(LimitClass::Delete);
         assert!(deletes.contains(&"record.delete".to_owned()));
         assert!(!deletes.contains(&"record.update".to_owned()));
+        // Every action that sends a person a message counts as one.
+        for id in [
+            "email.send",
+            "followup.send_message",
+            "collections.send_reminder",
+            "lead.send_message",
+        ] {
+            assert_eq!(class(id), LimitClass::MessageSend, "{id}");
+        }
     }
 
     fn all_on() -> AiEnablement {

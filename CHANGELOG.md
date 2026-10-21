@@ -1454,6 +1454,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   activates it) with its Service Resolver policy: read the case and the knowledge base, answer from it, update the case,
   translate, draft a reply and hand the case to a person, capped at Reversible with session and daily limits, so refunds and
   credits wait for a person. Its Arabic and English evaluation cases are `tests/fixtures/service_resolver.json`.
+- Agent message limits now count `followup.send_message`, `collections.send_reminder` and `lead.send_message` as
+  messages sent (`max_messages_per_day`): the message-send rule also matches `*.send_message` and `*.send_reminder`.
 - Agent permission cases (AH7-T1, `attome_ai::permission_test`): `negative_cases` lists, from an agent's policy, its
   capability packs' actions, its owner's privileges and the entities, every call the gate must stop (outside the
   allow-list, above the ceiling, a privilege the owner lacks, an entity the owner cannot read) and every Consequential
