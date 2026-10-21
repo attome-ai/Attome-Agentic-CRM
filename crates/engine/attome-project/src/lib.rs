@@ -1,6 +1,7 @@
 pub mod access;
 pub mod auth;
 pub mod baseline;
+pub mod budget_link;
 pub mod capacity;
 pub mod change_request;
 pub mod critical_path;
@@ -42,5 +43,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(baseline::openapi_fragment());
     doc.merge(change_request::openapi_fragment());
     doc.merge(timesheet::openapi_fragment());
+    doc.merge(budget_link::openapi_fragment());
     doc
 }

@@ -1326,6 +1326,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `survey_<entity>`) that creates its `response_entity` with one attribute per question plus respondent,
   regarding record and submitted time. Republishing the same survey applies nothing; a new question
   only adds its field.
+- Project budgets and invoices (V1-T2, finance pack `0003`): `POST /api/v1/projects/{id}/spend-check`
+  checks a spend against the budget line linked to the project; `POST /api/v1/projects/{id}/invoice-proposals`
+  sends billing an invoice request for the project's `account_ref`: `milestone` for one accepted
+  deliverable's `invoice_amount`, `time_and_materials` for billable hours on approved timesheets at each
+  person's billable rate. Deliverables and time entries keep the request in `invoice_request_ref`, so
+  nothing is proposed twice; people without a rate are left out and named.
 - Metric snapshots are banded (P9-T6): new rows say `on_track`, `at_risk` or `off_track` (and `failed`)
   instead of `ok`, `warn` and `crit`. A target's `at_risk_tolerance` (percent of the target) makes a
   near miss at risk and a bigger miss off track, for higher-is-better, lower-is-better and band metrics;
