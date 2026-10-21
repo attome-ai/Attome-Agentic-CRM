@@ -215,6 +215,32 @@ none by default.
 - **Owners** see their open follow-ups at `/ai/follow-ups` (`GET /api/v1/ai/follow-ups`) and dismiss
   them (`POST /api/v1/ai/follow-ups/{id}/dismiss`, `If-Match`).
 
+## Hand-offs between agents and people
+
+A ticket can move between an agent and people with a reason attached, so neither side starts cold.
+
+- **The ledger.** Each hand-off (`service_handoff`) records who handed the ticket (an agent or a
+  person) to whom (a person, a queue or an agent), a summary, the reasoning and its status:
+  `pending`, `accepted`, `returned` or `cancelled`. A ticket has at most one hand-off waiting. Every
+  step is written to the ticket's timeline with the summary, reasoning or note.
+- **An agent hands off** with `handoff.to_person` (`ticket_id`, `to_kind`, `to_ref`, `summary`,
+  `reasoning`). The reasoning is required, and the ticket and the person or queue must be ones the
+  agent's owner can see. To a person the ticket is assigned to them at once; to a queue it moves there
+  unassigned for the queue to hand out. Web chat keeps `bot.handoff`, which opens a work request.
+- **A person hands off** from the ticket (`POST /api/v1/service/tickets/{id}/handoff`) the same way.
+- **Accepting.** Only the person it was handed to, or an active member of the queue, accepts it
+  (`POST /api/v1/service/handoffs/{id}/accept`, `If-Match`); the ticket is then theirs. My hand-offs
+  (`/service/handoffs`, `GET /api/v1/service/handoffs`) lists what waits for me and my queues; the
+  ticket's card shows its newest hand-off.
+- **Handing back.** The ticket's assignee hands an agent's hand-off back with a note
+  (`POST /api/v1/service/handoffs/{id}/return`, `If-Match`). If the agent's session is still live, the
+  note becomes its next turn. Otherwise a new session of the same agent starts for the person who handed
+  it back, and its first turn carries the ticket, the original summary and reasoning, and the note. A
+  revoked or paused session is never resumed.
+- **What it does not do.** Queues, membership and claiming stay with the queue engine (V7, G4), and live
+  routing stays with J10; hand-offs only add the hand-off, the hand-back and their record. Each agent
+  hand-off counts in the agent's hand-off rate (Agent performance).
+
 ## Agent performance
 
 `/ai/agents/performance` (administrators; `GET /api/v1/admin/ai/agents/performance?from&to`) shows how

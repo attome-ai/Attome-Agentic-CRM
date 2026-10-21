@@ -1490,6 +1490,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `reviewed_by`, `reviewed_at`) and `POST /api/v1/ai/collections/promises/{id}/status` (`kept` or
   `broken`), each under `If-Match` and update access to the invoice. A rejected promise no longer holds
   reminders back.
+- `docs/agents.md` describes hand-offs between agents and people (AI7-T8): the ledger, accepting, handing back and what
+  the agent receives, and that queues, claims and live routing stay with their own engines.
 - `docs/agents.md` describes agent performance (AI8-T7): what each figure means, the time-saved estimates, the price
   source, the nightly recompute and the runs behind each number.
 - `docs/agents.md` describes collections and renewals (AI5-T8): rule kinds, offsets, the email channel, `max_reminders`,
