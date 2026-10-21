@@ -193,6 +193,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/agents/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_performance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/performance/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_backfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/agents/{agent}/usage": {
         parameters: {
             query?: never;
@@ -285,6 +317,38 @@ export interface paths {
          *     definition to `active`, refused below the agreement threshold.
          */
         post: operations["agent_go_live"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/performance/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_performance_daily"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_runs"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5579,6 +5643,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/outcomes/quality/by-agent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_quality_by_agent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/outcomes/quality/by-model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_quality_by_model"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/outcomes/summary": {
         parameters: {
             query?: never;
@@ -8238,6 +8334,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/collections/invoices/{id}/promises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_invoice_promises"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/collections/invoices/{id}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_invoice_reminders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/collections/promises/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirm_promise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/collections/promises/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reject_promise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/collections/promises/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_promise_status"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/conversations": {
         parameters: {
             query?: never;
@@ -8590,6 +8766,70 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["dismiss_followup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/meetings/{id}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_meeting_brief"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/meetings/{id}/brief/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["regenerate_meeting_brief"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/meetings/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_meeting_notes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/meetings/{id}/notes/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirm_meeting_notes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12308,6 +12548,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Posts a journal entry.
+         * @description Debits must equal credits, every account must take postings and the
+         *     date must fall in an open period; the entry is never changed afterwards.
+         */
+        post: operations["post_ledger_entry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/group-trial-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_group_trial_balance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/intercompany": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_intercompany_entry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/periods/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Closes a period.
+         * @description A closed period takes no entries until it is reopened; both are audited.
+         */
+        post: operations["post_ledger_period_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/periods/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopens a closed period.
+         * @description The reopening is audited like the close, with who did it.
+         */
+        post: operations["post_ledger_period_reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/source-postings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Posts a source document through its posting rule.
+         * @description The rule for the source kind names the journal and the accounts
+         *     debited and credited; each source posts once.
+         */
+        post: operations["post_ledger_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/limits/me": {
         parameters: {
             query?: never;
@@ -13768,6 +14122,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/procurement/purchase-orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels a purchase order.
+         * @description A draft or issued order releases its budget commitment with the status change.
+         */
+        post: operations["post_purchase_order_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/procurement/purchase-orders/{id}/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Changes a purchase order total.
+         * @description Within the rule tolerance the change applies at once; above it a re-approval opens and the change applies once approved.
+         */
+        post: operations["post_purchase_order_change"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/procurement/requisitions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels a requisition.
+         * @description What an approved requisition committed on its budget line is released with the status change.
+         */
+        post: operations["post_requisition_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/procurement/requisitions/{id}/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turns an approved requisition into a draft purchase order.
+         * @description The order copies the lines, the vendor must not be on hold, and the budget commitment moves to the order.
+         */
+        post: operations["post_requisition_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/procurement/requisitions/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submits a requisition for approval.
+         * @description The budget line is checked and the delegation of authority table picks the approvers by amount, category and cost centre.
+         */
+        post: operations["post_requisition_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/procurement/rfqs/{id}/award": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Awards a request for quotation.
+         * @description Only after its bids were opened at the deadline, only to one of its
+         *     on-time bids, and only with a reason, which is kept on the RFQ.
+         */
+        post: operations["post_rfq_award"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/program/{id}/summary": {
         parameters: {
             query?: never;
@@ -13810,6 +14285,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reject_change_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project/change-request/{id}/send-for-signoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sends a change request for the customer's signature.
+         * @description The change document goes to the signer in a K4 envelope; when it is
+         *     signed the change request is approved and the project rebaselined, and a
+         *     declined envelope rejects it.
+         */
+        post: operations["post_change_request_signoff"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13880,6 +14377,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/project/{id}/gantt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a project's Gantt chart draws.
+         * @description The work items with dates and critical-path float, their dependencies,
+         *     and the latest baseline's planned dates for the overlay.
+         */
+        get: operations["get_project_gantt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/project/{id}/summary": {
         parameters: {
             query?: never;
@@ -13906,6 +14424,49 @@ export interface paths {
         get: operations["work_item_rollup"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/invoice-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proposes an invoice for a project.
+         * @description A milestone invoices one accepted deliverable; time and materials
+         *     invoices the billable approved hours not yet proposed. Billing makes the
+         *     draft invoice; a repeat never proposes the same work twice.
+         */
+        post: operations["post_project_invoice_proposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/spend-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Checks a spend against the project's budget line.
+         * @description The line is the finance budget line linked to the project; the answer
+         *     says whether the spend fits, warns or is blocked by the line's setting.
+         */
+        post: operations["post_project_spend_check"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15496,6 +16057,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service/day-plans/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proposes a technicians' day plan.
+         * @description Ghost assignments that respect the hard rules and keep travel low; the
+         *     proposal is never committed.
+         */
+        post: operations["post_day_plan_propose"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_handoffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/handoffs/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["accept_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/handoffs/{id}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["return_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service/inbox": {
         parameters: {
             query?: never;
@@ -15532,6 +16162,30 @@ export interface paths {
         get: operations["list_service_inbox_mailboxes"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/returns/{id}/dispositions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Runs the disposition of every inspected return line.
+         * @description A refund makes a draft credit note on the line's invoice line, a
+         *     restock a return stock movement into the return's restock location,
+         *     and a replace a draft replacement order; repair, scrap and return to
+         *     vendor are recorded. Each line acts once: a repeat answers
+         *     `already_done` with what the line made.
+         */
+        post: operations["post_return_dispositions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15589,6 +16243,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service/tickets/{id}/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_ticket_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/tickets/{id}/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_ticket_handoffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/tickets/{id}/major-incident": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declares a major incident on a ticket.
+         * @description Sets the commander, pages whoever is on call on the chosen schedule and
+         *     the commander, opens a bridge on the video provider named, and posts a
+         *     status page incident. Declaring again answers the first declaration.
+         */
+        post: operations["post_major_incident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/tickets/{id}/major-incident/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Links tickets to a major incident.
+         * @description Each ticket gets the major incident as its parent; a ticket already
+         *     linked is answered as linked.
+         */
+        post: operations["post_major_incident_children"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/tickets/{id}/major-incident/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolves a major incident.
+         * @description Records the restore time on the ticket, resolves its status page
+         *     incident and posts the last update to subscribers.
+         */
+        post: operations["post_major_incident_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service/viewing": {
         parameters: {
             query?: never;
@@ -15639,6 +16389,28 @@ export interface paths {
         put?: never;
         /** Previews the warranty date backfill. */
         post: operations["post_warranty_backfill_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/work-orders/{id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ranks the technicians who can take a work order.
+         * @description Technicians pass the hard rules (skills, territory, hours and van
+         *     parts) and are ordered on-time first, then by travel estimate and SLA
+         *     slack. Nothing is assigned: the dispatcher picks.
+         */
+        get: operations["get_work_order_candidates"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -15934,6 +16706,57 @@ export interface paths {
         put?: never;
         /** Stops a subscriber's emails. */
         post: operations["post_status_unsubscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surveys/form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The survey page a signed link opens.
+         * @description A plain bilingual form that posts its answers; a link that is invalid,
+         *     expired or answered shows a page saying so.
+         */
+        get: operations["get_survey_form"];
+        put?: never;
+        /**
+         * Stores the answers a survey page posts, once.
+         * @description The same checks as the JSON route; the answer is a page, not JSON.
+         */
+        post: operations["post_survey_form"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surveys/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The survey a signed link opens.
+         * @description No sign-in: the link is the credential. A link that was answered, has
+         *     expired or was tampered with answers the same 404.
+         */
+        get: operations["get_survey_respond"];
+        put?: never;
+        /**
+         * Stores the answers of a signed link, once.
+         * @description Each answer is checked against its question; the response is written
+         *     only while it is unanswered, so one link answers one response.
+         */
+        post: operations["post_survey_respond"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16875,6 +17698,295 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["workflow_replay_trigger_dead_letter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Changes one assignment.
+         * @description The person's week is checked against their rule set; a published shift
+         *     needs a reason, which the person is told.
+         */
+        patch: operations["patch_workforce_assignment"];
+        trace?: never;
+    };
+    "/api/v1/workforce/coverage-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a person's absence would do to coverage.
+         * @description For a leave approval: the intervals of their published shifts that
+         *     would fall below requirement without them.
+         */
+        get: operations["get_workforce_coverage_impact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/groups/{id}/hiring-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The monthly hiring view of a planning group.
+         * @description Required full-time people from the stored forecast, beside the
+         *     current members and the gap.
+         */
+        get: operations["get_workforce_hiring_plan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/groups/{id}/schedules/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queues a schedule build for a planning group.
+         * @description The build runs as a job and writes one draft schedule with coverage;
+         *     read it by the schedules list once it finishes.
+         */
+        post: operations["post_workforce_schedule_build"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replaces the caller's own shift preferences.
+         * @description Weekday, preferred start and day off; only the caller's own rows change.
+         */
+        put: operations["put_workforce_my_preferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/me/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own schedule.
+         * @description Only their own shifts on published schedules, in a period of at most
+         *     two months.
+         */
+        get: operations["get_workforce_my_schedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/offers/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Takes a sent offer.
+         * @description Overtime adds the caller's shift to today's schedule; time off trims
+         *     their shift. The first to accept takes it.
+         */
+        post: operations["post_workforce_offer_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/offers/{id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sends a proposed intraday offer.
+         * @description The group's people who could take it are told: off shift then for
+         *     overtime, on shift for time off.
+         */
+        post: operations["post_workforce_offer_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists schedules.
+         * @description One-based pages, optionally for one planning group.
+         */
+        get: operations["list_workforce_schedules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reads a schedule.
+         * @description With its assignments and the build's coverage per day.
+         */
+        get: operations["get_workforce_schedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/schedules/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publishes a draft schedule.
+         * @description Each shift becomes a booking on the person's time, an overlapping
+         *     published schedule is superseded, and everyone scheduled is told.
+         */
+        post: operations["post_workforce_schedule_publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/schedules/{id}/what-if": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tries a schedule with a changed forecast, targets or headcount.
+         * @description Recomputes coverage and service level in memory and writes nothing.
+         */
+        post: operations["post_workforce_what_if"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/swaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Gives one of the caller's shifts to a colleague.
+         * @description Approved at once when the colleague's rules hold and coverage stays,
+         *     otherwise left for a planner.
+         */
+        post: operations["post_workforce_swap"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workforce/swaps/{id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decides a waiting swap.
+         * @description Approving gives the shift to the colleague; rejecting leaves it.
+         */
+        post: operations["post_workforce_swap_decide"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19213,6 +20325,95 @@ export interface components {
             output_schema: Record<string, never>;
             role?: string | null;
         };
+        /** @description An agent's sums over a range, and the rates read from them. */
+        AgentPerformance: {
+            /** Format: double */
+            accuracy?: number | null;
+            /** Format: uuid */
+            agent_id: string;
+            /**
+             * Format: int64
+             * @description Millionths of the price list's currency.
+             */
+            cost_micros: number;
+            /** Format: double */
+            cost_per_task_micros?: number | null;
+            /** @description `price_list`, or null when some tokens had no price. */
+            cost_unit?: string | null;
+            /** Format: double */
+            effectiveness_sum: number;
+            /** Format: double */
+            handoff_rate?: number | null;
+            /** Format: int64 */
+            handoffs: number;
+            /** Format: int64 */
+            input_tokens: number;
+            name?: string | null;
+            /** Format: int64 */
+            output_tokens: number;
+            /** Format: double */
+            resolution_rate?: number | null;
+            /** Format: int64 */
+            tasks_done: number;
+            /** Format: int64 */
+            tasks_measured: number;
+            /** Format: int64 */
+            tasks_resolved: number;
+            /**
+             * Format: int64
+             * @description An estimate: tasks times a per-source figure.
+             */
+            time_saved_seconds: number;
+        };
+        /** @description One day of an agent. */
+        AgentPerformanceDay: {
+            /** Format: int64 */
+            cost_micros: number;
+            cost_unit?: string | null;
+            /** Format: date */
+            day: string;
+            /** Format: double */
+            effectiveness_sum: number;
+            /** Format: int64 */
+            handoffs: number;
+            /** Format: int64 */
+            input_tokens: number;
+            /** Format: int64 */
+            output_tokens: number;
+            /** Format: int64 */
+            tasks_done: number;
+            /** Format: int64 */
+            tasks_measured: number;
+            /** Format: int64 */
+            tasks_resolved: number;
+            /** Format: int64 */
+            time_saved_seconds: number;
+        };
+        /**
+         * @description One run behind a number: an outcome row (`tasks`, `handoffs`) or a
+         *     session with its tokens that day (`cost`).
+         */
+        AgentRun: {
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            input_tokens?: number | null;
+            /** @description `outcome` or `session`. */
+            kind: string;
+            /** Format: date-time */
+            measured_at?: string | null;
+            /** Format: int64 */
+            output_tokens?: number | null;
+            regarding_entity?: string | null;
+            /** Format: uuid */
+            regarding_id?: string | null;
+            /** Format: uuid */
+            session_id?: string | null;
+            /** @description The outcome's source (`followup`, `collections`, `meeting`, `handoff`). */
+            source?: string | null;
+        };
         AgentSessionResponse: {
             /** Format: uuid */
             agent_definition_ref: string;
@@ -19224,6 +20425,13 @@ export interface components {
              *     was started with. It does not change for the life of the session.
              */
             risk_ceiling: string;
+        };
+        /** @description A backfill, as queued. */
+        AgentStatsBackfill: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
         };
         AgentUsageResponse: {
             items: components["schemas"]["AgentUsageView"][];
@@ -19307,6 +20515,19 @@ export interface components {
              */
             truncated: boolean;
         };
+        /** @description One collections reminder of an invoice (a follow-up ledger row). */
+        AiCollectionsReminder: {
+            /** Format: uuid */
+            id: string;
+            /** @description `invoice_due` or `invoice_overdue`. */
+            reason: string;
+            /** @description `open`, `reminded`, `sent`, `dismissed`, … */
+            status: string;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** Format: date */
+            window_start: string;
+        };
         /** @description One follow-up the caller owns. */
         AiFollowupItem: {
             /** Format: date-time */
@@ -19328,6 +20549,38 @@ export interface components {
         AiFollowupRunQueued: {
             /** Format: uuid */
             rule_id: string;
+        };
+        /** @description One payment promise on an invoice. */
+        AiPaymentPromise: {
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            note?: string | null;
+            /** Format: double */
+            promised_amount?: number | null;
+            /** Format: date */
+            promised_date?: string | null;
+            /** @description `pending`, `confirmed` or `rejected`. */
+            review_status?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** @description `agent`, `staff` or `portal`. */
+            source?: string | null;
+            /** @description `open`, `kept` or `broken`. */
+            status?: string | null;
+        };
+        /** @description What a review or status change left. */
+        AiPromiseChanged: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description A kept or broken promise. */
+        AiPromiseStatus: {
+            /** @description `kept` or `broken`. */
+            status: string;
         };
         AiStatus: {
             /** @description `inference.generation.model`; empty when none is configured. */
@@ -19890,6 +21143,35 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        /** @description An assignment change. */
+        AssignmentPatch: {
+            /** Format: date-time */
+            end_at?: string | null;
+            /** @description Required once the schedule is published; sent to the person. */
+            reason?: string | null;
+            /** Format: date-time */
+            start_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Give the shift to this person.
+             */
+            user_id?: string | null;
+        };
+        /** @description One assignment. */
+        AssignmentView: {
+            activity?: string | null;
+            booking_id?: string | null;
+            /** Format: date-time */
+            end_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            start_at?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
+        };
         /** @description One person's time in a meeting. */
         Attendee: {
             email?: string | null;
@@ -20291,6 +21573,24 @@ export interface components {
              */
             scope: string;
             view_metadata: unknown;
+        };
+        /** @description The award. */
+        AwardBody: {
+            /** Format: uuid */
+            bid_id: string;
+            /** @description Why this bid wins; kept on the RFQ. */
+            reason: string;
+        };
+        /** @description The awarded RFQ. */
+        Awarded: {
+            /** Format: date-time */
+            awarded_at: string;
+            /** Format: uuid */
+            bid_id: string;
+            /** Format: uuid */
+            rfq_id: string;
+            /** Format: uuid */
+            vendor_id?: string | null;
         };
         Backlog: {
             action_type: string;
@@ -20802,6 +22102,23 @@ export interface components {
         } | {
             /** @enum {string} */
             kind: "other";
+        };
+        /** @description What to build. */
+        BuildBody: {
+            /**
+             * Format: int64
+             * @description Seconds the solver may take (default 300).
+             */
+            deadline_secs?: number | null;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        /** @description The queued build. */
+        BuildQueued: {
+            /** Format: uuid */
+            run_id: string;
         };
         /** @description One record a bulk clone could not copy. */
         BulkCloneFailure: {
@@ -21419,6 +22736,24 @@ export interface components {
             /** Format: uuid */
             turn_id: string;
         };
+        /** @description One ranked candidate. */
+        Candidate: {
+            /** @description Parts the van lacks. */
+            missing_parts: string[];
+            /**
+             * Format: int64
+             * @description Minutes between arrival (now plus travel) and the job's due time;
+             *     negative when late.
+             */
+            slack_minutes?: number | null;
+            /**
+             * Format: int64
+             * @description Minutes to the site, when both points are known.
+             */
+            travel_minutes?: number | null;
+            /** Format: uuid */
+            user_id: string;
+        };
         CandidateExplanation: {
             /** Format: uuid */
             candidate_id: string;
@@ -21429,6 +22764,14 @@ export interface components {
             score: number;
             /** Format: double */
             threshold: number;
+        };
+        /** @description The answer. */
+        CandidateList: {
+            candidates: components["schemas"]["Candidate"][];
+            /** @description The hard rules applied: `skills`, `territory`, `hours`, `parts`. */
+            rules: string[];
+            /** Format: uuid */
+            work_order_id: string;
         };
         /**
          * @description One pack that contributed to a session's allowed-action set, with the
@@ -21686,6 +23029,11 @@ export interface components {
             /** Format: int64 */
             search_impressions_30d: number;
         };
+        /** @description A change order. */
+        ChangeBody: {
+            /** @description The order's new total, as a decimal string. */
+            new_total: string;
+        };
         /**
          * @description One row of the unified feed. `reference` is always the id of the actual
          *     source record (not this feed's own bookkeeping), so a caller can follow up
@@ -21932,6 +23280,16 @@ export interface components {
             /** Format: date-time */
             started_at: string;
             surface: string;
+        };
+        /** @description The tickets to link. */
+        ChildrenBody: {
+            ticket_ids: string[];
+        };
+        /** @description The linked tickets. */
+        ChildrenLinked: {
+            linked: string[];
+            /** Format: uuid */
+            ticket_id: string;
         };
         /** @description `GET .../fields/{field_id}/choice-usage`. */
         ChoiceUsage: {
@@ -23039,6 +24397,13 @@ export interface components {
         CounterpartyDecideBody: {
             decision: components["schemas"]["Decision"];
         };
+        /** @description What a person's absence does to coverage. */
+        CoverageImpact: {
+            dropped: components["schemas"]["DroppedInterval"][];
+            shifts_affected: number;
+            /** Format: uuid */
+            user_id: string;
+        };
         CrawlImportBody: {
             page_ids: string[];
         };
@@ -23320,7 +24685,7 @@ export interface components {
         };
         CreateReportBody: {
             /**
-             * @description `csv` or `xlsx` only for this pass — `pdf`/`html` are rejected by the
+             * @description `csv`, `xlsx` or `pptx` (P4-T1) — anything else is rejected by the
              *     `format` attribute's `choice` options (see module doc).
              */
             format: string;
@@ -23655,6 +25020,42 @@ export interface components {
             currency: string;
             entries: components["schemas"]["StatementEntry"][];
             opening_balance: string;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_AgentRun: {
+            items: {
+                /** Format: date-time */
+                at: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                input_tokens?: number | null;
+                /** @description `outcome` or `session`. */
+                kind: string;
+                /** Format: date-time */
+                measured_at?: string | null;
+                /** Format: int64 */
+                output_tokens?: number | null;
+                regarding_entity?: string | null;
+                /** Format: uuid */
+                regarding_id?: string | null;
+                /** Format: uuid */
+                session_id?: string | null;
+                /** @description The outcome's source (`followup`, `collections`, `meeting`, `handoff`). */
+                source?: string | null;
+            }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_ChangeFeedEntry: {
@@ -24208,6 +25609,18 @@ export interface components {
         };
         /** @enum {string} */
         DateBucket: "day" | "week" | "month" | "quarter" | "year" | "hijri_month" | "hijri_year";
+        /** @description A proposed day. */
+        DayPlan: {
+            assignments: components["schemas"]["Ghost"][];
+            /** @description Whether the time budget ended the improvement early. */
+            stopped_at_budget: boolean;
+            /**
+             * Format: int64
+             * @description Total travel, in minutes.
+             */
+            total_travel_minutes: number;
+            unassigned: string[];
+        };
         /** @description One DDL statement as the ledger recorded it. */
         DdlLogEntry: {
             /** Format: uuid */
@@ -24335,6 +25748,47 @@ export interface components {
             /** Format: uuid */
             proposal_id: string;
             status: string;
+        };
+        /** @description What to declare. */
+        DeclareBody: {
+            /** @description `teams`, `meet`, `zoom` or `jitsi`: open a bridge there. */
+            bridge_provider?: string | null;
+            /**
+             * Format: uuid
+             * @description The commander; the caller when absent.
+             */
+            commander_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The affected status component.
+             */
+            component_id?: string | null;
+            /** @description `minor`, `major` (default) or `critical`. */
+            impact?: string | null;
+            /** @description Show it on the public status page (default true). */
+            public?: boolean | null;
+            /**
+             * Format: uuid
+             * @description The on-call schedule to page.
+             */
+            schedule_id?: string | null;
+            /** @description The status page title; the ticket's subject when absent. */
+            status_title?: string | null;
+            status_title_ar?: string | null;
+        };
+        /** @description The declaration. */
+        Declared: {
+            already_declared: boolean;
+            bridge_error?: string | null;
+            bridge_url?: string | null;
+            /** Format: uuid */
+            commander_id?: string | null;
+            /** @description The people paged now (none when already declared). */
+            paged: string[];
+            /** Format: uuid */
+            status_incident_id?: string | null;
+            /** Format: uuid */
+            ticket_id: string;
         };
         /** @description A held action. */
         DeferredAction: {
@@ -24842,6 +26296,29 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @description One line's result. */
+        DispositionOutcome: {
+            disposition?: string | null;
+            error?: string | null;
+            /** Format: uuid */
+            line_id: string;
+            /**
+             * @description What the line made: `credit_note:{id}`, `stock_movement:{id}`,
+             *     `order:{id}` or `recorded`.
+             */
+            reference?: string | null;
+            /**
+             * @description `done` (acted now), `already_done`, `not_ready`, `busy` (another
+             *     call holds the line) or `failed`.
+             */
+            status: string;
+        };
+        /** @description Every line's result. */
+        DispositionRun: {
+            lines: components["schemas"]["DispositionOutcome"][];
+            /** Format: uuid */
+            return_id: string;
+        };
         /** @description DMARC messages for one domain and how many passed (SPF or DKIM aligned). */
         DmarcShare: {
             domain: string;
@@ -25056,6 +26533,18 @@ export interface components {
         };
         /** @enum {string} */
         Drillability: "exact" | "explain_only" | "none";
+        /** @description One interval that would fall short. */
+        DroppedInterval: {
+            /**
+             * Format: int32
+             * @description Coverage without the person.
+             */
+            coverage_without: number;
+            /** Format: int32 */
+            requirement: number;
+            /** Format: date-time */
+            start: string;
+        };
         DryRunResponse: {
             /** Format: int64 */
             matching_count: number;
@@ -26717,6 +28206,44 @@ export interface components {
             scopes: components["schemas"]["ScopeExportResult"][];
             status: string;
         };
+        /** @description The latest baseline. */
+        GanttBaseline: {
+            /** Format: uuid */
+            baseline_id: string;
+            /** Format: date-time */
+            captured_at?: string | null;
+            items: components["schemas"]["GanttBaselineItem"][];
+            label?: string | null;
+        };
+        /** @description One item's planned dates in the baseline. */
+        GanttBaselineItem: {
+            /** Format: date-time */
+            planned_due?: string | null;
+            /** Format: date-time */
+            planned_start?: string | null;
+            /** Format: uuid */
+            work_item_id: string;
+        };
+        /** @description One dependency. */
+        GanttDependency: {
+            /**
+             * @description `finish_to_start`, `start_to_start`, `finish_to_finish` or
+             *     `start_to_finish`.
+             */
+            dependency_type: string;
+            /** Format: double */
+            lag_days?: number | null;
+            /** Format: uuid */
+            predecessor_id: string;
+            /** Format: uuid */
+            successor_id: string;
+        };
+        /** @description Everything the chart needs. */
+        GanttView: {
+            baseline?: null | components["schemas"]["GanttBaseline"];
+            dependencies: components["schemas"]["GanttDependency"][];
+            items: components["schemas"]["WorkItemRollupRow"][];
+        };
         /** @description One coverage gap. */
         Gap: {
             /** Format: uuid */
@@ -26771,6 +28298,24 @@ export interface components {
             /** Format: date-time */
             expires_at?: string | null;
             slot: string;
+        };
+        /** @description One proposed visit. */
+        Ghost: {
+            /** Format: date-time */
+            end: string;
+            /** @description Position in the technician's route, 1 first. */
+            sequence: number;
+            /** Format: date-time */
+            start: string;
+            /** Format: uuid */
+            technician_id: string;
+            /**
+             * Format: int64
+             * @description Travel to this visit, in minutes (0 when not known).
+             */
+            travel_minutes: number;
+            /** Format: uuid */
+            work_order_id: string;
         };
         GoLive: {
             /**
@@ -26911,6 +28456,45 @@ export interface components {
              */
             expires_in_days?: number | null;
         };
+        /** @description One hand-off. */
+        Handoff: {
+            /** Format: date-time */
+            accepted_at?: string | null;
+            /** Format: uuid */
+            agent_session_ref?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            from_kind: string;
+            /** Format: uuid */
+            from_ref: string;
+            /** Format: uuid */
+            id: string;
+            reasoning: string;
+            /** Format: date-time */
+            returned_at?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** @description `pending`, `accepted`, `returned` or `cancelled`. */
+            status: string;
+            summary: string;
+            /** Format: uuid */
+            ticket_id: string;
+            to_kind: string;
+            /** Format: uuid */
+            to_ref: string;
+        };
+        /** @description A hand-off recorded. */
+        HandoffCreated: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ticket_id: string;
+        };
+        /** @description A hand-back to the agent. */
+        HandoffReturn: {
+            /** @description What the agent should do next. */
+            note: string;
+        };
         /** @description Completed agent `bot.handoff` invocations in the window. */
         HandoffStats: {
             /**
@@ -27013,6 +28597,32 @@ export interface components {
             name: string;
             /** Format: int32 */
             to_year: number;
+        };
+        /** @description One month of the hiring view. */
+        HiringMonth: {
+            /**
+             * Format: double
+             * @description Required less headcount (positive: hire).
+             */
+            gap?: number | null;
+            /** Format: int32 */
+            headcount: number;
+            /**
+             * Format: date
+             * @description The first day of the month.
+             */
+            month: string;
+            /**
+             * Format: double
+             * @description Full-time people the forecast needs; absent without a forecast.
+             */
+            required_fte?: number | null;
+        };
+        /** @description The hiring view. */
+        HiringPlan: {
+            /** Format: uuid */
+            group_id: string;
+            months: components["schemas"]["HiringMonth"][];
         };
         /**
          * @description How a value is compared in a history search.
@@ -27343,6 +28953,19 @@ export interface components {
             /** Format: date-time */
             started_at: string;
             status: string;
+        };
+        /** @description Both sides, posted. */
+        IntercompanyPosted: {
+            amount: string;
+            /** Format: uuid */
+            from_entry_id: string;
+            /**
+             * Format: uuid
+             * @description The link both entries carry.
+             */
+            intercompany_ref: string;
+            /** Format: uuid */
+            to_entry_id: string;
         };
         InvitationItem: {
             /** Format: date-time */
@@ -28188,6 +29811,54 @@ export interface components {
             join_url: string;
             provider: string;
         };
+        /** @description A meeting's brief. */
+        MeetingBriefView: {
+            brief_text?: string | null;
+            /** Format: date-time */
+            generated_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description `ar` or `en`. */
+            language?: string | null;
+            /** Format: uuid */
+            meeting_id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** @description `ready` or `failed`. */
+            status?: string | null;
+        };
+        /** @description Which items of the notes to keep. */
+        MeetingNotesConfirm: {
+            action_item_indexes?: number[];
+            /**
+             * Format: uuid
+             * @description The notes to confirm; omitted, the meeting's newest draft.
+             */
+            notes_id?: string | null;
+            record_update_indexes?: number[];
+        };
+        /** @description The notes job, as queued. */
+        MeetingNotesQueued: {
+            /**
+             * @description The job's queue key; one job per meeting, transcript and caller is
+             *     queued at a time.
+             */
+            job_key: string;
+            /** Format: uuid */
+            meeting_id: string;
+            /** @description False when the same job was already waiting. */
+            queued: boolean;
+            /** Format: uuid */
+            transcript_ref: string;
+        };
+        /** @description Asks for notes from a transcript. */
+        MeetingNotesRequest: {
+            /**
+             * Format: uuid
+             * @description The recording document whose transcript is read.
+             */
+            transcript_ref: string;
+        };
         MeetingReport: {
             attendance: components["schemas"]["Attendee"][];
             recordings: components["schemas"]["Recording"][];
@@ -28949,12 +30620,65 @@ export interface components {
             /** @description The branch or unit the device invoices for. */
             organization_unit: string;
         };
+        /** @description An entry to post. */
+        NewEntry: {
+            description?: string | null;
+            /** Format: date */
+            entry_date: string;
+            /** Format: uuid */
+            journal_id: string;
+            lines: components["schemas"]["NewLine"][];
+            /**
+             * @description The source document's kind and id; posting the same pair again
+             *     answers the entry already made.
+             */
+            source_kind?: string | null;
+            source_ref?: string | null;
+        };
         /** @description A new envelope. */
         NewEnvelope: {
             /** @description `attome_document` records the caller may read. */
             document_ids: string[];
             signers: components["schemas"]["NewSigner"][];
             title: string;
+        };
+        /** @description An inter-company posting. */
+        NewIntercompany: {
+            /** @description A positive decimal string. */
+            amount: string;
+            description?: string | null;
+            /** Format: date */
+            entry_date: string;
+            /**
+             * Format: uuid
+             * @description The account credited in the first company's books (its income or cash).
+             */
+            from_account: string;
+            /**
+             * Format: uuid
+             * @description The company that charges or lends.
+             */
+            from_company: string;
+            /** Format: uuid */
+            journal_id: string;
+            /**
+             * Format: uuid
+             * @description The account debited in the second company's books (its expense or asset).
+             */
+            to_account: string;
+            /**
+             * Format: uuid
+             * @description The company charged or lent to.
+             */
+            to_company: string;
+        };
+        /** @description One line to post. Amounts are decimal strings. */
+        NewLine: {
+            /** Format: uuid */
+            account_id: string;
+            credit?: string | null;
+            debit?: string | null;
+            memo?: string | null;
         };
         NewMcpServer: {
             allow_external?: boolean;
@@ -29093,6 +30817,14 @@ export interface components {
             platform: string;
             /** @description An APNs or FCM device token. */
             token?: string | null;
+        };
+        /** @description A person's hand-off of a ticket. */
+        NewTicketHandoff: {
+            reasoning: string;
+            summary: string;
+            to_kind: components["schemas"]["ToKind"];
+            /** Format: uuid */
+            to_ref: string;
         };
         NewWritePolicy: {
             /** @description A write action id, such as `record.update`. */
@@ -29255,6 +30987,14 @@ export interface components {
             state: string;
             /** Format: int64 */
             version_no: number;
+        };
+        /** @description An offer after a step. */
+        OfferState: {
+            /** Format: uuid */
+            offer_id: string;
+            status: string;
+            /** @description People told, when sent. */
+            told: number;
         };
         /** @description A published offering's version. */
         OfferingPublished: {
@@ -29467,6 +31207,14 @@ export interface components {
             node: string;
             version?: string | null;
         };
+        /** @description What to order. */
+        OrderBody: {
+            /**
+             * Format: uuid
+             * @description The vendor; the requisition's suggested vendor when absent.
+             */
+            vendor_id?: string | null;
+        };
         /** @description One item of an order, as its owner sees it. */
         OrderItemView: {
             /** Format: uuid */
@@ -29618,6 +31366,34 @@ export interface components {
              */
             pending: number;
             source_module: string;
+            /** Format: int64 */
+            total: number;
+        };
+        /**
+         * @description One group's proposals and their fates: how many were proposed, measured,
+         *     accepted as they were, edited, and rejected, and the mean effectiveness.
+         */
+        OutcomeQualityRow: {
+            /**
+             * Format: double
+             * @description accepted ÷ measured; null before anything is measured.
+             */
+            acceptance_rate?: number | null;
+            /** Format: int64 */
+            accepted: number;
+            /** Format: double */
+            avg_effectiveness?: number | null;
+            /** Format: int64 */
+            edited: number;
+            /** @description The model id (per-model report) or the agent (per-agent report). */
+            group?: string | null;
+            kind: string;
+            /** Format: int64 */
+            measured: number;
+            /** @description The prompt version (per-model report only). */
+            prompt_version?: string | null;
+            /** Format: int64 */
+            rejected: number;
             /** Format: int64 */
             total: number;
         };
@@ -29980,6 +31756,122 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AgentPerformance: {
+            items: {
+                /** Format: double */
+                accuracy?: number | null;
+                /** Format: uuid */
+                agent_id: string;
+                /**
+                 * Format: int64
+                 * @description Millionths of the price list's currency.
+                 */
+                cost_micros: number;
+                /** Format: double */
+                cost_per_task_micros?: number | null;
+                /** @description `price_list`, or null when some tokens had no price. */
+                cost_unit?: string | null;
+                /** Format: double */
+                effectiveness_sum: number;
+                /** Format: double */
+                handoff_rate?: number | null;
+                /** Format: int64 */
+                handoffs: number;
+                /** Format: int64 */
+                input_tokens: number;
+                name?: string | null;
+                /** Format: int64 */
+                output_tokens: number;
+                /** Format: double */
+                resolution_rate?: number | null;
+                /** Format: int64 */
+                tasks_done: number;
+                /** Format: int64 */
+                tasks_measured: number;
+                /** Format: int64 */
+                tasks_resolved: number;
+                /**
+                 * Format: int64
+                 * @description An estimate: tasks times a per-source figure.
+                 */
+                time_saved_seconds: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AgentPerformanceDay: {
+            items: {
+                /** Format: int64 */
+                cost_micros: number;
+                cost_unit?: string | null;
+                /** Format: date */
+                day: string;
+                /** Format: double */
+                effectiveness_sum: number;
+                /** Format: int64 */
+                handoffs: number;
+                /** Format: int64 */
+                input_tokens: number;
+                /** Format: int64 */
+                output_tokens: number;
+                /** Format: int64 */
+                tasks_done: number;
+                /** Format: int64 */
+                tasks_measured: number;
+                /** Format: int64 */
+                tasks_resolved: number;
+                /** Format: int64 */
+                time_saved_seconds: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AiCollectionsReminder: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** @description `invoice_due` or `invoice_overdue`. */
+                reason: string;
+                /** @description `open`, `reminded`, `sent`, `dismissed`, … */
+                status: string;
+                /** Format: date-time */
+                updated_at?: string | null;
+                /** Format: date */
+                window_start: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_AiFollowupItem: {
             items: {
                 /** Format: date-time */
@@ -29997,6 +31889,39 @@ export interface components {
                 status: string;
                 /** Format: date */
                 window_start: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AiPaymentPromise: {
+            items: {
+                /** Format: date-time */
+                created_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                note?: string | null;
+                /** Format: double */
+                promised_amount?: number | null;
+                /** Format: date */
+                promised_date?: string | null;
+                /** @description `pending`, `confirmed` or `rejected`. */
+                review_status?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** @description `agent`, `staff` or `portal`. */
+                source?: string | null;
+                /** @description `open`, `kept` or `broken`. */
+                status?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -32359,6 +34284,46 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Handoff: {
+            items: {
+                /** Format: date-time */
+                accepted_at?: string | null;
+                /** Format: uuid */
+                agent_session_ref?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                from_kind: string;
+                /** Format: uuid */
+                from_ref: string;
+                /** Format: uuid */
+                id: string;
+                reasoning: string;
+                /** Format: date-time */
+                returned_at?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** @description `pending`, `accepted`, `returned` or `cancelled`. */
+                status: string;
+                summary: string;
+                /** Format: uuid */
+                ticket_id: string;
+                to_kind: string;
+                /** Format: uuid */
+                to_ref: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_HijriMonthRow: {
             items: {
                 /**
@@ -33258,6 +35223,44 @@ export interface components {
                 scanned_at: string;
                 /** @description The entity the lookup points at. */
                 target_entity: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OutcomeQualityRow: {
+            items: {
+                /**
+                 * Format: double
+                 * @description accepted ÷ measured; null before anything is measured.
+                 */
+                acceptance_rate?: number | null;
+                /** Format: int64 */
+                accepted: number;
+                /** Format: double */
+                avg_effectiveness?: number | null;
+                /** Format: int64 */
+                edited: number;
+                /** @description The model id (per-model report) or the agent (per-agent report). */
+                group?: string | null;
+                kind: string;
+                /** Format: int64 */
+                measured: number;
+                /** @description The prompt version (per-model report only). */
+                prompt_version?: string | null;
+                /** Format: int64 */
+                rejected: number;
+                /** Format: int64 */
+                total: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -34358,6 +36361,33 @@ export interface components {
                 id: string;
                 /** @description The record's primary name, when its entity declares one. */
                 name?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ScheduleSummary: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: date */
+                period_from?: string | null;
+                /** Format: date */
+                period_to?: string | null;
+                /** Format: uuid */
+                planning_group_id?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                status?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -35599,6 +37629,12 @@ export interface components {
             /** @enum {string} */
             kind: "approval";
         };
+        /** @description A period's new status. */
+        PeriodStatus: {
+            /** Format: uuid */
+            period_id: string;
+            status: string;
+        };
         PermissionItem: {
             can_bulk: boolean;
             can_create: boolean;
@@ -36162,6 +38198,16 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        /** @description The posted entry. */
+        Posted: {
+            /** @description False when the source was posted before and this is that entry. */
+            created: boolean;
+            /** Format: uuid */
+            entry_id: string;
+            /** Format: uuid */
+            period_id: string;
+            total: string;
+        };
         /**
          * @description A proof-of-work challenge: find an `answer` such that SHA-256 of `nonce`
          *     followed by `answer` starts with `difficulty` zero bits, then send
@@ -36238,6 +38284,17 @@ export interface components {
             /** Format: double */
             score: number;
         };
+        /** @description One preference. */
+        Preference: {
+            day_off?: boolean;
+            /** @description `HH:MM`. */
+            preferred_start?: string | null;
+            /**
+             * Format: int32
+             * @description 0 Monday to 6 Sunday.
+             */
+            weekday: number;
+        };
         /** @description One change. */
         PreferenceChange: {
             channel: string;
@@ -36261,6 +38318,10 @@ export interface components {
         /** @description The subject's preferences. */
         Preferences: {
             purposes: components["schemas"]["PurposePreferences"][];
+        };
+        /** @description The caller's preferences, replacing what was there. */
+        PreferencesBody: {
+            preferences: components["schemas"]["Preference"][];
         };
         /** @description Modifiers applied on the server over the computed buckets. */
         Presentation: {
@@ -36382,6 +38443,26 @@ export interface components {
             code: string;
             detail?: Record<string, never> | null;
             message: string;
+        };
+        /** @description What a submit, order, cancel or change did. */
+        ProcurementStep: {
+            /**
+             * Format: uuid
+             * @description The approval opened, when one was.
+             */
+            approval_id?: string | null;
+            /** @description Set when the budget is over and the line only warns. */
+            budget_warning?: string | null;
+            /** @description The amount committed on the budget line after the step. */
+            committed?: string | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The purchase order made by an order step.
+             */
+            order_id?: string | null;
+            status: string;
         };
         ProfileEnqueueResponse: {
             /** Format: uuid */
@@ -36667,6 +38748,43 @@ export interface components {
             hash: string;
             side: components["schemas"]["ProofSide"];
         };
+        /** @description The proposal sent to billing. */
+        Proposal: {
+            /** @description The time entries the proposal took. */
+            entries: number;
+            /** Format: uuid */
+            project_id: string;
+            /** Format: uuid */
+            request_id?: string | null;
+            /** @description People with billable time but no billable rate, left out. */
+            unrated_users: string[];
+        };
+        /** @description What to propose. */
+        ProposalBody: {
+            /**
+             * Format: uuid
+             * @description The accepted deliverable, for a milestone.
+             */
+            deliverable_id?: string | null;
+            /** @description `milestone` or `time_and_materials`. */
+            kind: string;
+            /**
+             * Format: date
+             * @description The last day of time taken, for time and materials (today when
+             *     absent).
+             */
+            until?: string | null;
+        };
+        /** @description What to plan. */
+        ProposeBody: {
+            /** Format: date */
+            date: string;
+            /**
+             * @description The work orders to plan; by default the day's scheduled work orders
+             *     with no technician.
+             */
+            work_order_ids?: string[] | null;
+        };
         ProposeTriggered: {
             enqueued: boolean;
         };
@@ -36789,6 +38907,17 @@ export interface components {
              * @description The version this publish recorded.
              */
             version_number?: number | null;
+        };
+        /** @description The published schedule. */
+        Published: {
+            /** Format: int64 */
+            bookings: number;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: uuid */
+            schedule_id: string;
+            /** Format: int64 */
+            superseded: number;
         };
         /** @description D-521 — what a viewer of `dashboard_id` sees. */
         PublishedDashboard: {
@@ -37978,6 +40107,11 @@ export interface components {
         ResetRequestBody: {
             email: string;
         };
+        /** @description How it was resolved. */
+        ResolveBody: {
+            /** @description The last status update; a standard text when absent. */
+            message?: string | null;
+        };
         ResolveVariablesBody: {
             embed?: components["schemas"]["EmbedContext"];
             /**
@@ -37994,6 +40128,15 @@ export interface components {
             variables: {
                 [key: string]: unknown;
             };
+        };
+        /** @description The resolution. */
+        Resolved: {
+            /** Format: date-time */
+            restored_at: string;
+            /** Format: uuid */
+            status_incident_id?: string | null;
+            /** Format: uuid */
+            ticket_id: string;
         };
         /** @description What a restore did. */
         RestoreCounts: {
@@ -38800,6 +40943,11 @@ export interface components {
             /** Format: uuid */
             turn_id: string;
         };
+        /**
+         * @description Which number's runs to open.
+         * @enum {string}
+         */
+        RunsMetric: "tasks" | "handoffs" | "cost";
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
         };
@@ -39347,6 +41495,12 @@ export interface components {
             scenario_value?: number | null;
             status: string;
         };
+        /** @description A schedule with its assignments and coverage. */
+        ScheduleDetail: components["schemas"]["ScheduleSummary"] & {
+            assignments: components["schemas"]["AssignmentView"][];
+            /** @description The build's coverage per day (requirement, before, after). */
+            coverage: Record<string, never>;
+        };
         /**
          * @description How a schedule is made.
          * @enum {string}
@@ -39372,6 +41526,20 @@ export interface components {
             period_start: string;
             quantity?: string | null;
             revenue: string;
+        };
+        /** @description One schedule in a list. */
+        ScheduleSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            period_from?: string | null;
+            /** Format: date */
+            period_to?: string | null;
+            /** Format: uuid */
+            planning_group_id?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            status?: string | null;
         };
         /**
          * @description P-online-schema-change §4(d) — separately polled resource, same reasoning
@@ -39994,6 +42162,23 @@ export interface components {
             signer_name: string;
             signer_status: string;
         };
+        /** @description The request. */
+        SignoffBody: {
+            /**
+             * Format: uuid
+             * @description The change document, an `attome_document` record.
+             */
+            document_id: string;
+            signer_email: string;
+            signer_name: string;
+        };
+        /** @description The envelope sent. */
+        SignoffSent: {
+            /** Format: uuid */
+            change_request_id: string;
+            /** Format: uuid */
+            envelope_id: string;
+        };
         SignoffVerifyResponse: {
             /**
              * @description `None` only while the `DecisionDigest` audit event is pending: still in
@@ -40449,9 +42634,33 @@ export interface components {
         };
         /** @enum {string} */
         SortOrder: "value_desc" | "value_asc" | "key_asc" | "key_desc";
+        /** @description A source document to post through its rule. */
+        SourcePosting: {
+            /** @description A decimal string; negative posts the rule the other way round. */
+            amount: string;
+            description?: string | null;
+            /** Format: date */
+            entry_date: string;
+            source_kind: string;
+            source_ref: string;
+        };
         /** @description Full-set replace for which templates a space's editors may pick from. */
         SpaceTemplatesBody: {
             template_ids: string[];
+        };
+        /** @description The spend to check. */
+        SpendBody: {
+            /** @description A decimal string. */
+            amount: string;
+        };
+        /** @description The spend check. */
+        SpendCheck: {
+            /** @description What is left after the spend (negative: over). */
+            available_after: string;
+            /** Format: uuid */
+            budget_line_id: string;
+            /** @description `within`, `warn` or `blocked`. */
+            outcome: string;
         };
         /** @description One money window's month so far. */
         SpendLine: {
@@ -41133,6 +43342,28 @@ export interface components {
             /** @description `all`, `fields`, `chat`, `semantic_search`, `workflow_nodes` or `webchat`. */
             surface: string;
         };
+        /** @description The answers. */
+        SurveyAnswers: {
+            /** @description Question key to answer. */
+            answers: Record<string, never>;
+            token: string;
+        };
+        /** @description A survey as the respondent sees it. */
+        SurveyForm: {
+            /** @description The questions: key, label, label_ar, type, required, options. */
+            questions: Record<string, never>[];
+            title: string;
+            title_ar?: string | null;
+        };
+        /** @description Stored. */
+        SurveyThanks: {
+            received: boolean;
+        };
+        /** @description The link. */
+        SurveyToken: {
+            /** @description The signed token from the email. */
+            token: string;
+        };
         SurvivorshipRuleView: {
             /** Format: date-time */
             created_at: string;
@@ -41148,6 +43379,29 @@ export interface components {
             strategy: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description A swap or give-away. */
+        SwapBody: {
+            /**
+             * Format: uuid
+             * @description One of the caller's shifts.
+             */
+            assignment_id: string;
+            reason?: string | null;
+            /**
+             * Format: uuid
+             * @description The colleague who takes it.
+             */
+            to_user_id: string;
+        };
+        /** @description The swap's state. */
+        SwapResult: {
+            /** @description `approved` (applied) or `requested` (waiting for a planner). */
+            status: string;
+            /** Format: uuid */
+            swap_id: string;
+            /** @description Why it waits, when it does. */
+            waiting_because?: string | null;
         };
         /** @description One switch change. */
         SwitchEvent: {
@@ -41524,6 +43778,11 @@ export interface components {
         };
         /** @enum {string} */
         TimezoneSource: "page" | "user" | "utc";
+        /**
+         * @description Who a ticket is handed to.
+         * @enum {string}
+         */
+        ToKind: "agent" | "user" | "queue";
         /** @description One token that differs between a version and its scope's published one. */
         TokenChange: {
             after?: unknown;
@@ -41832,6 +44091,15 @@ export interface components {
             addressed_item_ref?: string | null;
             /** @description `open | addressed | dismissed`. */
             status: string;
+        };
+        /** @description One account's totals in a trial balance. */
+        TrialBalanceRow: {
+            /** Format: uuid */
+            account_id: string;
+            code?: string | null;
+            credit: string;
+            debit: string;
+            name?: string | null;
         };
         /** @description `GET /api/v1/admin/ai/agents/{id}/trial-report`. */
         TrialReport: {
@@ -42895,6 +45163,51 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description The what-if answer. */
+        WhatIf: {
+            days: components["schemas"]["WhatIfDay"][];
+            /** Format: int32 */
+            over: number;
+            /** Format: uuid */
+            schedule_id: string;
+            /** Format: int32 */
+            under: number;
+        };
+        /** @description The changes to try. */
+        WhatIfBody: {
+            /** Format: double */
+            aht_seconds?: number | null;
+            /**
+             * Format: double
+             * @description Volume multiplier (1.2 is 20% more), default 1.
+             */
+            forecast_multiplier?: number | null;
+            /**
+             * Format: int32
+             * @description Agents added to (or, negative, taken from) every interval.
+             */
+            headcount_delta?: number | null;
+            /** Format: double */
+            target_pct?: number | null;
+            /** Format: double */
+            target_secs?: number | null;
+        };
+        /** @description One day of the what-if. */
+        WhatIfDay: {
+            coverage: number[];
+            /** Format: date */
+            day: string;
+            /** Format: int32 */
+            over: number;
+            requirement: number[];
+            /**
+             * @description Service level per interval in percent (live channels; absent for
+             *     deferred work or an interval with no volume).
+             */
+            service_level: (number | null)[];
+            /** Format: int32 */
+            under: number;
+        };
         /** @enum {string} */
         WidgetCategory: "chart" | "text" | "operational" | "engine_native" | "geospatial" | "custom" | "kpi";
         /**
@@ -43613,6 +45926,107 @@ export interface operations {
             };
         };
     };
+    get_performance: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each agent's sums and rates over the range */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AgentPerformance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A reversed or over-long range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_backfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentStatsBackfill"];
+            };
+        };
+        responses: {
+            /** @description The backfill is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentStatsBackfill"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description to before from, or more than 400 days */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     agent_usage: {
         parameters: {
             query?: never;
@@ -43931,6 +46345,115 @@ export interface operations {
                 };
             };
             /** @description Not in testing, or below the threshold */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_performance_daily: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                /** @description The agent */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent's days in the range */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AgentPerformanceDay"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A reversed or over-long range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_runs: {
+        parameters: {
+            query: {
+                day: string;
+                /** @description `tasks`, `handoffs` or `cost`. */
+                metric: string;
+                /** @description The previous page's `next_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The agent */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runs behind one number */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_AgentRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown metric or cursor */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -61940,6 +64463,88 @@ export interface operations {
             };
         };
     };
+    get_quality_by_agent: {
+        parameters: {
+            query?: {
+                /** @description Days back from now, 1 to 365; 30 when omitted. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposals and their fates per agent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OutcomeQualityRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_quality_by_model: {
+        parameters: {
+            query?: {
+                /** @description Days back from now, 1 to 365; 30 when omitted. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposals and their fates per model and prompt version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OutcomeQualityRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_outcome_summary: {
         parameters: {
             query?: never;
@@ -72249,6 +74854,300 @@ export interface operations {
             };
         };
     };
+    list_invoice_promises: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invoice's payment promises */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AiPaymentPromise"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_invoice_reminders: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invoice's collections reminders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AiCollectionsReminder"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such invoice the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_promise: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The promise's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The payment promise */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPromiseChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such promise, or its invoice is not the caller's to change */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already reviewed, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reject_promise: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The promise's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The payment promise */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected; it no longer holds reminders back */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPromiseChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such promise, or its invoice is not the caller's to change */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already reviewed, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_promise_status: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The promise's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The payment promise */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiPromiseStatus"];
+            };
+        };
+        responses: {
+            /** @description Marked kept or broken */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPromiseChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such promise, or its invoice is not the caller's to change */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed, or a status other than kept or broken */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_conversations: {
         parameters: {
             query?: {
@@ -73238,6 +76137,217 @@ export interface operations {
                 };
             };
             /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_meeting_brief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The meeting activity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meeting's brief */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingBriefView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such meeting the caller may read, or no brief yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    regenerate_meeting_brief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The meeting activity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The action's outcome: the new brief, or why it waits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such meeting the caller may read, or AI is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The activity is not a meeting */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The AI budget is spent */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_meeting_notes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The meeting activity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingNotesRequest"];
+            };
+        };
+        responses: {
+            /** @description The notes are being made */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingNotesQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such meeting or recording the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_meeting_notes: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The notes' row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The meeting activity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingNotesConfirm"];
+            };
+        };
+        responses: {
+            /** @description The action's outcome: tasks made and updates proposed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such notes the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already confirmed, or a stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed, or an item that does not exist */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -83669,6 +86779,372 @@ export interface operations {
             };
         };
     };
+    post_ledger_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEntry"];
+            };
+        };
+        responses: {
+            /** @description Posted, or the entry its source made before */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Posted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The ledger is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The same source is being posted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unbalanced, a closed or missing period, or an account that takes no postings */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_group_trial_balance: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each account's debits and credits for the group, inter-company entries eliminated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialBalanceRow"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description to before from */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_intercompany_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewIntercompany"];
+            };
+        };
+        responses: {
+            /** @description Both sides posted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntercompanyPosted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The ledger pack's inter-company changeset is not applied */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Same company, no due-to/due-from account, an unbalanced side, or a closed period */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_ledger_period_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The period */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Closed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_period.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such period */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is not open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_ledger_period_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The period */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reopened */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_period.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such period */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is not closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_ledger_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourcePosting"];
+            };
+        };
+        responses: {
+            /** @description Posted, or the entry its source made before */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Posted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The ledger is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The same source is being posted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No posting rule, a zero amount or a closed period */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     my_limits: {
         parameters: {
             query?: never;
@@ -87753,6 +91229,426 @@ export interface operations {
             };
         };
     };
+    post_purchase_order_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the step did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcurementStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or procurement budgets are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in a status this step starts from, or being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Over budget, no rule or vendor, or a bad amount */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_purchase_order_change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeBody"];
+            };
+        };
+        responses: {
+            /** @description What the step did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcurementStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or procurement budgets are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in a status this step starts from, or being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Over budget, no rule or vendor, or a bad amount */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_requisition_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the step did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcurementStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or procurement budgets are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in a status this step starts from, or being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Over budget, no rule or vendor, or a bad amount */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_requisition_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderBody"];
+            };
+        };
+        responses: {
+            /** @description What the step did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcurementStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or procurement budgets are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in a status this step starts from, or being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Over budget, no rule or vendor, or a bad amount */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_requisition_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the step did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcurementStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or procurement budgets are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in a status this step starts from, or being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Over budget, no rule or vendor, or a bad amount */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_rfq_award: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The request for quotation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AwardBody"];
+            };
+        };
+        responses: {
+            /** @description Awarded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Awarded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks rfq.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such RFQ, or RFQs are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bids are still sealed, or it is already awarded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not its bid, a late bid, or no reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     program_summary: {
         parameters: {
             query?: never;
@@ -87944,6 +91840,78 @@ export interface operations {
                 };
             };
             /** @description The transition's guard refused it (the caller requested this change request) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_change_request_signoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The change request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignoffBody"];
+            };
+        };
+        responses: {
+            /** @description Sent for signature */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignoffSent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks project_change_request.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such change request or document, or sign-off is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not pending, not customer facing, or already out for sign-off */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No signer name or email */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -88244,6 +92212,56 @@ export interface operations {
             };
         };
     };
+    get_project_gantt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Work items, dependencies and the latest baseline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GanttView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project, or not visible to this caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     project_summary: {
         parameters: {
             query?: never;
@@ -88333,6 +92351,132 @@ export interface operations {
             };
             /** @description No such project, or not visible to this caller */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_project_invoice_proposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalBody"];
+            };
+        };
+        responses: {
+            /** @description The invoice request billing holds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks attome_project.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project, or project invoicing is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No account, an unaccepted deliverable or an unknown kind */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_project_spend_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The project */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpendBody"];
+            };
+        };
+        responses: {
+            /** @description Whether the spend fits the project's budget line */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendCheck"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks attome_project.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such project, or budgets are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No budget line, or not an amount */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -93185,6 +97329,261 @@ export interface operations {
             };
         };
     };
+    post_day_plan_propose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposeBody"];
+            };
+        };
+        responses: {
+            /** @description The proposed day */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayPlan"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks work_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Field service is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many work orders */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_handoffs: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hand-offs waiting for the caller or their queues */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Handoff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_handoff: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The hand-off's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The hand-off */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted; the ticket is the caller's */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Handoff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not handed to the caller or a queue of theirs */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such hand-off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No longer waiting, a stale row_version, or another hand-off in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    return_handoff: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The hand-off's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The hand-off */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffReturn"];
+            };
+        };
+        responses: {
+            /** @description Returned; the agent resumes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Handoff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the ticket's assignee */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such hand-off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already closed, a stale row_version, or another hand-off in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed, no note, or not an agent's hand-off */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_service_inbox: {
         parameters: {
             query: {
@@ -93259,6 +97658,65 @@ export interface operations {
             };
             /** @description Caller lacks service_ticket.read */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_return_dispositions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The return request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each line's result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispositionRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks return_request.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such return, or returns are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The return is not received or inspected yet */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -93436,6 +97894,346 @@ export interface operations {
             };
         };
     };
+    post_ticket_handoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ticket */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewTicketHandoff"];
+            };
+        };
+        responses: {
+            /** @description Handed off */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such ticket the caller can see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A hand-off of this ticket is already waiting or in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No summary or reasoning, or a target the caller cannot see */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ticket_handoffs: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ticket */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ticket's hand-offs, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Handoff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such ticket the caller can see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_major_incident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The service ticket */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclareBody"];
+            };
+        };
+        responses: {
+            /** @description Declared, or the earlier declaration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Declared"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such ticket, or ITSM is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Someone else is declaring it */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown impact */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_major_incident_children: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The major incident's ticket */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChildrenBody"];
+            };
+        };
+        responses: {
+            /** @description The tickets now linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChildrenLinked"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such ticket */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not declared as a major incident */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No tickets, or too many */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_major_incident_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The major incident's ticket */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveBody"];
+            };
+        };
+        responses: {
+            /** @description Resolved, or the earlier resolution */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resolved"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks service_ticket.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such ticket */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not declared as a major incident */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_viewing: {
         parameters: {
             query?: never;
@@ -93556,6 +98354,58 @@ export interface operations {
             };
             /** @description Caller lacks asset.update */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_work_order_candidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The work order */
+                id: string;
+                /** @description Also answer technicians whose van lacks parts (default false). */
+                include_without_parts: boolean;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ranked candidates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks work_order.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such work order, or field service is not installed */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -94484,6 +99334,127 @@ export interface operations {
             };
             /** @description The link is not valid */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_survey_form: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed token from the email. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The survey as a form page, or a page saying the link is no longer valid */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+        };
+    };
+    post_survey_form: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["SurveyToken"];
+            };
+        };
+        responses: {
+            /** @description A page thanking the respondent, or saying what is wrong */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": unknown;
+                };
+            };
+        };
+    };
+    get_survey_respond: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The signed token from the email. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The survey to answer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyForm"];
+                };
+            };
+            /** @description The link is not valid, has expired or was answered */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_survey_respond: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveyAnswers"];
+            };
+        };
+        responses: {
+            /** @description Stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyThanks"];
+                };
+            };
+            /** @description The link is not valid, has expired or was answered */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An answer does not fit its question */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -97647,6 +102618,816 @@ export interface operations {
             };
             /** @description Dispatch is overloaded or a dependency is unavailable; the dead letter is kept */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_workforce_assignment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The assignment's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The assignment */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentPatch"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such assignment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or a superseded schedule */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A rule breach (its codes), no If-Match, or no reason on a published shift */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workforce_coverage_impact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                from: string;
+                to: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The intervals that would fall short */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageImpact"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A backwards or too long period */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workforce_hiring_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The planning group */
+                id: string;
+                /** @description Months ahead, from this month (default 6, at most 24). */
+                months: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Required FTE per month against headcount */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiringPlan"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such planning group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_schedule_build: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The planning group */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuildBody"];
+            };
+        };
+        responses: {
+            /** @description The build is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuildQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such planning group, or builds are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A backwards or too long period */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_workforce_my_preferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesBody"];
+            };
+        };
+        responses: {
+            /** @description The caller's preferences now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preference"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A weekday or start out of range, or too many */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workforce_my_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                from: string;
+                to: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own published shifts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentView"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A backwards or too long period */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_offer_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sent offer */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Taken */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such offer, or not for the caller's group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not open, or someone took it first */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Time off for someone not on shift then */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_offer_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The proposed offer */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_offer.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such offer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a proposed offer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_workforce_schedules: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Only this planning group's schedules. */
+                group_id: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedules, newest period first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ScheduleSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Builds are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workforce_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The schedule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule with assignments and coverage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleDetail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_schedule_publish: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The schedule's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The draft schedule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Published"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or not a draft */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No If-Match */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_what_if: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The schedule */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatIfBody"];
+            };
+        };
+        responses: {
+            /** @description Requirement, coverage and service level with the changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatIf"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A multiplier out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_swap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwapBody"];
+            };
+        };
+        responses: {
+            /** @description Approved and applied, or waiting for a planner */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwapResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not one of the caller's shifts */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shift changed meanwhile, or its schedule is superseded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The colleague is not in the group, or is the caller */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_workforce_swap_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The swap request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideBody"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwapResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_swap_request.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such swap */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or the shift changed meanwhile */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
