@@ -62,6 +62,10 @@ pub enum ActionOutcome {
         deferred_action_id: Uuid,
         run_at: chrono::DateTime<chrono::Utc>,
     },
+    /// V2-D702: staged for the person's review with the session's other
+    /// staged actions. Nothing has executed, and nothing will until they
+    /// apply it (`POST /api/v1/ai/deferred-actions/apply`).
+    AwaitingReview { deferred_action_id: Uuid },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -90,6 +94,16 @@ impl ActionOutcome {
                     "run_at": run_at,
                     "detail": "Held for its undo window: it runs at run_at unless the \
                                person cancels it. Nothing has run yet.",
+                }),
+                provenance: None,
+            },
+            Self::AwaitingReview { deferred_action_id } => Self::Completed {
+                result: serde_json::json!({
+                    "status": "awaiting_review",
+                    "deferred_action_id": deferred_action_id,
+                    "detail": "Staged for the person's review: it has NOT run and runs only \
+                               if they apply it. Do not act as if it happened; tell the \
+                               person what is waiting for them.",
                 }),
                 provenance: None,
             },
@@ -322,6 +336,12 @@ pub async fn dispatch(
                 run_at: held.run_at,
             });
         }
+        GateDecision::Stage => {
+            let staged = crate::deferred::stage(state, descriptor, ctx, args).await?;
+            return Ok(ActionOutcome::AwaitingReview {
+                deferred_action_id: staged,
+            });
+        }
         GateDecision::ExecuteAndReport => report_to_owner = true,
         GateDecision::Execute => {}
     }
@@ -427,7 +447,9 @@ pub async fn run_deferred(
             Ok(
                 GateDecision::Execute
                 | GateDecision::ExecuteAndReport
-                | GateDecision::ExecuteAfterDelay { .. },
+                | GateDecision::ExecuteAfterDelay { .. }
+                // The person applied it: that is the review.
+                | GateDecision::Stage,
             ) => match dispatch_approved_agent_action_under(state, &request, None).await? {
                 ApprovedExecution::Executed(result) => Ok(DeferredRun::Executed(result)),
                 ApprovedExecution::Invalidated { reason } => Ok(DeferredRun::Invalidated(reason)),
@@ -993,7 +1015,8 @@ pub async fn dispatch_approved_agent_action_under(
         // gate path this function deliberately does not call.
         ActionOutcome::ConfirmationRequired { .. }
         | ActionOutcome::ApprovalRequired { .. }
-        | ActionOutcome::Scheduled { .. } => Err(AppError::internal(
+        | ActionOutcome::Scheduled { .. }
+        | ActionOutcome::AwaitingReview { .. } => Err(AppError::internal(
             "run_executor returned a gate-only outcome unreachable from this path",
         )),
     }
@@ -1101,7 +1124,8 @@ pub async fn dispatch_confirmed_agent_action(
         Ok(
             ActionOutcome::ConfirmationRequired { .. }
             | ActionOutcome::ApprovalRequired { .. }
-            | ActionOutcome::Scheduled { .. },
+            | ActionOutcome::Scheduled { .. }
+            | ActionOutcome::AwaitingReview { .. },
         ) => Err(AppError::internal(
             "run_executor returned a gate-only outcome unreachable from this path",
         )),

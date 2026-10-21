@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, signal } fro
 import { ApiError, ApiService, TranslatePipe, type Page } from '@attome/base';
 
 /** `autonomy::AutonomyLevel`, lowest first. */
-export const AUTONOMY_LEVELS = ['suggest', 'ask_first', 'act_with_undo', 'act_and_report', 'automatic'] as const;
+export const AUTONOMY_LEVELS = ['suggest', 'ask_first', 'act_on_review', 'act_with_undo', 'act_and_report', 'automatic'] as const;
 export type AutonomyLevel = (typeof AUTONOMY_LEVELS)[number];
 
 /** `autonomy::AutonomyRow`. */

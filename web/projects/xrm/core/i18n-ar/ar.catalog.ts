@@ -474,7 +474,8 @@ export const xrmAr = {
     undoSeconds: 'مهلة التراجع (بالثواني)', dailyLimit: 'الحد اليومي',
     consequentialWarning: 'لا يمكن التراجع عن هذا الإجراء بعد تنفيذه؛ في هذا المستوى يُنفَّذ دون موافقة على كل إجراء.',
     levels: {
-      suggest: 'اقتراح — ينفّذه شخص', ask_first: 'اسأل أولًا', act_with_undo: 'نفّذ مع مهلة تراجع',
+      suggest: 'اقتراح — ينفّذه شخص', ask_first: 'اسأل أولًا',
+      act_on_review: 'نفّذ بعد المراجعة — تعتمد الدفعة بنفسك', act_with_undo: 'نفّذ مع مهلة تراجع',
       act_and_report: 'نفّذ وأبلغ', automatic: 'تلقائي بالكامل',
     },
     risk: { Read: 'قراءة فقط', Reversible: 'يمكن التراجع عنه', Consequential: 'لا يمكن التراجع عنه' },
@@ -484,9 +485,13 @@ export const xrmAr = {
     intro: 'إجراءات محجوزة خلال مهلة التراجع. ألغِ أيًّا منها قبل تنفيذه؛ ويُتحقَّق منه مجددًا قبل التنفيذ مباشرة.',
     none: 'لا توجد إجراءات محجوزة.',
     runsAt: 'يُنفَّذ في', cancel: 'إلغاء',
+    review: {
+      title: 'بانتظار مراجعتك', intro: 'أعدّ وكيلٌ هذه الإجراءات. لم يُنفَّذ شيء؛ اعتمدها لتُنفَّذ بالترتيب، أو تجاهلها.',
+      apply: 'اعتماد', discard: 'تجاهل', applyAll: 'اعتماد الكل', discardAll: 'تجاهل الكل',
+    },
     by: { user: 'بواسطتك', agent: 'بواسطة وكيل' },
     status: {
-      pending: 'بانتظار', running: 'قيد التنفيذ', executed: 'تم', cancelled: 'أُلغي',
+      staged: 'بانتظار المراجعة', pending: 'بانتظار', running: 'قيد التنفيذ', executed: 'تم', cancelled: 'أُلغي',
       invalidated: 'لم يُنفَّذ', approval_required: 'يحتاج موافقة', failed: 'فشل',
     },
   },

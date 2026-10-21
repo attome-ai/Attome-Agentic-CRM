@@ -1023,6 +1023,17 @@ async fn tools_call(
             false,
         ),
 
+        // V2-D702: staged for the person's review. Nothing has run.
+        Ok(crate::execute::ActionOutcome::AwaitingReview { deferred_action_id }) => tool_result(
+            &json!({
+                "status": "awaiting_review",
+                "deferred_action_id": deferred_action_id,
+                "detail": "Staged for the person's review in Attome: it has NOT run and runs \
+                           only if they apply it.",
+            }),
+            false,
+        ),
+
         // A refusal is a tool result with `isError`, not a JSON-RPC error, so
         // the model sees it and can adapt. The message goes through
         // `sanitized`, which keeps an unlicensed, disabled, and non-existent

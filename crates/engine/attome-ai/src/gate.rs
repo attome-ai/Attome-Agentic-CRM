@@ -39,6 +39,10 @@ pub enum GateDecision {
     ExecuteAfterDelay { seconds: u32, report: bool },
     /// AH8 level 3: dispatch now and tell the person the agent acts for.
     ExecuteAndReport,
+    /// V2-D702 `act_on_review`: do not dispatch. Stage it in
+    /// `ai_deferred_action` with the session's other staged actions, for the
+    /// person the agent acts for to apply or discard together.
+    Stage,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -249,6 +253,7 @@ fn by_level(
                 },
             },
         },
+        AutonomyLevel::ActOnReview => GateDecision::Stage,
         AutonomyLevel::ActWithUndo => GateDecision::ExecuteAfterDelay {
             seconds: ctx.undo_window_seconds.unwrap_or(undo_seconds),
             report: true,
@@ -791,15 +796,17 @@ mod tests {
                                                  keyed={keyed} effect={effect:?} retry={retry:?} \
                                                  surface={surface:?} undo={undo:?}"
                                             );
-                                            // Below level two the only outcomes are a
-                                            // refusal, approval, or a confirmation the
-                                            // confirm path turns into approval.
+                                            // Below act_with_undo the only outcomes are
+                                            // a refusal, approval, a confirmation the
+                                            // confirm path turns into approval, or a
+                                            // stage the person applies.
                                             if !may_run {
                                                 assert!(
                                                     matches!(
                                                         decision,
                                                         Ok(GateDecision::RequiresApproval
-                                                            | GateDecision::ConfirmFirst { .. })
+                                                            | GateDecision::ConfirmFirst { .. }
+                                                            | GateDecision::Stage)
                                                             | Err(_)
                                                     ),
                                                     "unexpected {decision:?}"
@@ -817,7 +824,7 @@ mod tests {
 
         assert_eq!(
             checked,
-            3 * 2 * 3 * 3 * 2 * 2 * 2 * 6 * 2,
+            3 * 2 * 3 * 3 * 2 * 2 * 2 * 7 * 2,
             "the sweep must be complete"
         );
     }
@@ -885,6 +892,7 @@ mod tests {
             at(AutonomyLevel::AskFirst),
             Ok(GateDecision::RequiresApproval)
         );
+        assert_eq!(at(AutonomyLevel::ActOnReview), Ok(GateDecision::Stage));
         assert_eq!(
             at(AutonomyLevel::ActWithUndo),
             Ok(GateDecision::ExecuteAfterDelay {

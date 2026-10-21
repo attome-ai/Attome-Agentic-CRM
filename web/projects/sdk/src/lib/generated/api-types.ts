@@ -8416,6 +8416,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/deferred-actions/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/ai/deferred-actions/apply` — runs staged actions: one
+         *     agent session's, or chosen ones, now or after an undo window, in the
+         *     order they were staged.
+         */
+        post: operations["apply_deferred_actions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/deferred-actions/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/ai/deferred-actions/discard` — discards staged actions so
+         *     they never run.
+         */
+        post: operations["discard_deferred_actions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/deferred-actions/{id}/cancel": {
         parameters: {
             query?: never;
@@ -18884,6 +18925,11 @@ export interface components {
             run_at: string;
             /** @enum {string} */
             status: "scheduled";
+        } | {
+            /** Format: uuid */
+            deferred_action_id: string;
+            /** @enum {string} */
+            status: "awaiting_review";
         };
         ActionSummary: {
             cacheable: boolean;
@@ -19988,7 +20034,7 @@ export interface components {
          * @description How much an agent may do on its own. Ordered: a higher level does more.
          * @enum {string}
          */
-        AutonomyLevel: "suggest" | "ask_first" | "act_with_undo" | "act_and_report" | "automatic";
+        AutonomyLevel: "suggest" | "ask_first" | "act_on_review" | "act_with_undo" | "act_and_report" | "automatic";
         /** @description One stored row. */
         AutonomyRow: {
             action_id: string;
@@ -24180,11 +24226,14 @@ export interface components {
             /** @description `user` or `agent`. */
             initiator: string;
             reason?: string | null;
-            /** Format: date-time */
-            run_at: string;
             /**
-             * @description `pending`, `running`, `executed`, `cancelled`, `invalidated`,
-             *     `approval_required` or `failed`.
+             * Format: date-time
+             * @description `None` while staged for review.
+             */
+            run_at?: string | null;
+            /**
+             * @description `staged`, `pending`, `running`, `executed`, `cancelled`,
+             *     `invalidated`, `approval_required` or `failed`.
              */
             status: string;
         };
@@ -31172,11 +31221,14 @@ export interface components {
                 /** @description `user` or `agent`. */
                 initiator: string;
                 reason?: string | null;
-                /** Format: date-time */
-                run_at: string;
                 /**
-                 * @description `pending`, `running`, `executed`, `cancelled`, `invalidated`,
-                 *     `approval_required` or `failed`.
+                 * Format: date-time
+                 * @description `None` while staged for review.
+                 */
+                run_at?: string | null;
+                /**
+                 * @description `staged`, `pending`, `running`, `executed`, `cancelled`,
+                 *     `invalidated`, `approval_required` or `failed`.
                  */
                 status: string;
             }[];
@@ -37891,6 +37943,21 @@ export interface components {
         ReviewByBody: {
             /** Format: date */
             review_by?: string | null;
+        };
+        /**
+         * @description Which staged actions a review decision covers: one agent session's, or
+         *     chosen ones (at most [`MAX_REVIEW_IDS`]).
+         */
+        ReviewDecision: {
+            /** Format: uuid */
+            agent_session_id?: string | null;
+            ids?: string[] | null;
+            /**
+             * Format: int32
+             * @description Apply only: hold the applied actions this many seconds (30 to 86400)
+             *     before they run, cancellable; omit to run them now.
+             */
+            undo_window_seconds?: number | null;
         };
         RevokeSessionBody: {
             /**
@@ -72460,6 +72527,90 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    apply_deferred_actions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDecision"];
+            };
+        };
+        responses: {
+            /** @description The applied actions, now pending */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeferredAction"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither or both of agent_session_id and ids */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    discard_deferred_actions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDecision"];
+            };
+        };
+        responses: {
+            /** @description The discarded actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeferredAction"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither or both of agent_session_id and ids */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

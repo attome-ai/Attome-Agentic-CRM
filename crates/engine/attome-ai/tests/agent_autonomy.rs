@@ -43,7 +43,10 @@ async fn definition_session(f: &Fixture, definition: Uuid, tainted: bool) -> Age
         "CREATE TABLE IF NOT EXISTS ai_model (id uuid PRIMARY KEY, provider_model_id text)",
         "CREATE TABLE IF NOT EXISTS ai_agent (id uuid PRIMARY KEY, primary_model_ref uuid)",
     ] {
-        sqlx::query(ddl).execute(f.db()).await.expect("stand-in table");
+        sqlx::query(ddl)
+            .execute(f.db())
+            .await
+            .expect("stand-in table");
     }
     attome_ai::session::start(
         f.db(),
@@ -126,10 +129,17 @@ async fn with_no_level_a_consequential_agent_action_still_needs_approval() {
     let id = f.insert_record("open").await;
 
     let outcome = f
-        .dispatch(&ctx_for(&f, &session, "t1").await, DELETE, delete_args(&f, id))
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, id),
+        )
         .await
         .expect("dispatch");
-    assert!(matches!(outcome, ActionOutcome::ApprovalRequired { .. }), "{outcome:?}");
+    assert!(
+        matches!(outcome, ActionOutcome::ApprovalRequired { .. }),
+        "{outcome:?}"
+    );
     assert!(is_live(&f, id).await, "nothing ran");
 }
 
@@ -143,14 +153,25 @@ async fn at_automatic_it_runs_and_a_daily_limit_then_asks() {
     let second = f.insert_record("open").await;
 
     let outcome = f
-        .dispatch(&ctx_for(&f, &session, "t1").await, DELETE, delete_args(&f, first))
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, first),
+        )
         .await
         .expect("dispatch");
-    assert!(matches!(outcome, ActionOutcome::Completed { .. }), "{outcome:?}");
+    assert!(
+        matches!(outcome, ActionOutcome::Completed { .. }),
+        "{outcome:?}"
+    );
     assert!(!is_live(&f, first).await, "the delete ran on its own");
 
     let over = f
-        .dispatch(&ctx_for(&f, &session, "t2").await, DELETE, delete_args(&f, second))
+        .dispatch(
+            &ctx_for(&f, &session, "t2").await,
+            DELETE,
+            delete_args(&f, second),
+        )
         .await
         .expect("dispatch");
     assert!(
@@ -169,44 +190,76 @@ async fn at_act_with_undo_it_waits_then_runs_and_a_cancelled_one_never_runs() {
     let kept = f.insert_record("open").await;
     let cancelled = f.insert_record("open").await;
 
-    let ActionOutcome::Scheduled { deferred_action_id: run, .. } = f
-        .dispatch(&ctx_for(&f, &session, "t1").await, DELETE, delete_args(&f, kept))
+    let ActionOutcome::Scheduled {
+        deferred_action_id: run,
+        ..
+    } = f
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, kept),
+        )
         .await
         .expect("dispatch")
     else {
         panic!("act_with_undo holds the action");
     };
-    let ActionOutcome::Scheduled { deferred_action_id: stop, .. } = f
-        .dispatch(&ctx_for(&f, &session, "t2").await, DELETE, delete_args(&f, cancelled))
+    let ActionOutcome::Scheduled {
+        deferred_action_id: stop,
+        ..
+    } = f
+        .dispatch(
+            &ctx_for(&f, &session, "t2").await,
+            DELETE,
+            delete_args(&f, cancelled),
+        )
         .await
         .expect("dispatch")
     else {
         panic!("act_with_undo holds the action");
     };
     // A retried tool call returns the same held action.
-    let ActionOutcome::Scheduled { deferred_action_id: again, .. } = f
-        .dispatch(&ctx_for(&f, &session, "t1").await, DELETE, delete_args(&f, kept))
+    let ActionOutcome::Scheduled {
+        deferred_action_id: again,
+        ..
+    } = f
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, kept),
+        )
         .await
         .expect("dispatch")
     else {
         panic!("a retry is held too");
     };
     assert_eq!(again, run, "a retry never holds a second action");
-    assert!(is_live(&f, kept).await && is_live(&f, cancelled).await, "nothing ran yet");
+    assert!(
+        is_live(&f, kept).await && is_live(&f, cancelled).await,
+        "nothing ran yet"
+    );
 
-    sqlx::query("UPDATE ai_deferred_action SET status = 'cancelled' WHERE id = $1 AND status = 'pending'")
-        .bind(stop)
-        .execute(f.db())
-        .await
-        .unwrap();
+    sqlx::query(
+        "UPDATE ai_deferred_action SET status = 'cancelled' WHERE id = $1 AND status = 'pending'",
+    )
+    .bind(stop)
+    .execute(f.db())
+    .await
+    .unwrap();
     make_due(&f, run).await;
     make_due(&f, stop).await;
     attome_ai::deferred::sweep(&f.state).await.expect("sweep");
 
     assert_eq!(status_of(&f, run).await, "executed");
-    assert!(!is_live(&f, kept).await, "the held delete ran after its window");
+    assert!(
+        !is_live(&f, kept).await,
+        "the held delete ran after its window"
+    );
     assert_eq!(status_of(&f, stop).await, "cancelled");
-    assert!(is_live(&f, cancelled).await, "a cancelled action never runs");
+    assert!(
+        is_live(&f, cancelled).await,
+        "a cancelled action never runs"
+    );
 }
 
 #[tokio::test]
@@ -218,13 +271,145 @@ async fn untrusted_text_lowers_the_level_by_one() {
     let id = f.insert_record("open").await;
 
     let outcome = f
-        .dispatch(&ctx_for(&f, &tainted, "t1").await, DELETE, delete_args(&f, id))
+        .dispatch(
+            &ctx_for(&f, &tainted, "t1").await,
+            DELETE,
+            delete_args(&f, id),
+        )
+        .await
+        .expect("dispatch");
+    assert!(
+        matches!(outcome, ActionOutcome::AwaitingReview { .. }),
+        "act_with_undo on a tainted context is act_on_review: {outcome:?}"
+    );
+    assert!(is_live(&f, id).await);
+
+    set_level(&f, definition, AutonomyLevel::ActOnReview, None).await;
+    let other = f.insert_record("open").await;
+    let outcome = f
+        .dispatch(
+            &ctx_for(&f, &tainted, "t2").await,
+            DELETE,
+            delete_args(&f, other),
+        )
         .await
         .expect("dispatch");
     assert!(
         matches!(outcome, ActionOutcome::ApprovalRequired { .. }),
-        "act_with_undo on a tainted context is ask_first: {outcome:?}"
+        "act_on_review on a tainted context is ask_first: {outcome:?}"
     );
+    assert!(is_live(&f, other).await);
+}
+
+/// Applies or discards a session's staged actions through the routes' own
+/// function, as their owner.
+async fn decide(f: &Fixture, session: Uuid, apply: bool) -> usize {
+    let body = attome_ai::deferred::ReviewDecision {
+        agent_session_id: Some(session),
+        ids: None,
+        undo_window_seconds: None,
+    };
+    attome_ai::deferred::decide_review(&f.state, f.owner, false, &body, apply)
+        .await
+        .expect("decide")
+        .len()
+}
+
+#[tokio::test]
+async fn at_act_on_review_actions_wait_until_applied_and_run_in_order() {
+    let f = skip_if_no_db!(fixture().await);
+    let definition = Uuid::now_v7();
+    set_level(&f, definition, AutonomyLevel::ActOnReview, None).await;
+    let session = definition_session(&f, definition, false).await;
+    let first = f.insert_record("open").await;
+    let second = f.insert_record("open").await;
+
+    let mut staged = Vec::new();
+    for (key, id) in [("t1", first), ("t2", second)] {
+        let ActionOutcome::AwaitingReview { deferred_action_id } = f
+            .dispatch(
+                &ctx_for(&f, &session, key).await,
+                DELETE,
+                delete_args(&f, id),
+            )
+            .await
+            .expect("dispatch")
+        else {
+            panic!("act_on_review stages the action");
+        };
+        staged.push(deferred_action_id);
+    }
+    // A retried tool call returns the same staged action.
+    let ActionOutcome::AwaitingReview {
+        deferred_action_id: again,
+    } = f
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, first),
+        )
+        .await
+        .expect("dispatch")
+    else {
+        panic!("a retry is staged too");
+    };
+    assert_eq!(again, staged[0]);
+
+    // The sweep never runs a staged action.
+    attome_ai::deferred::sweep(&f.state).await.expect("sweep");
+    assert!(
+        is_live(&f, first).await && is_live(&f, second).await,
+        "nothing runs before review"
+    );
+    assert_eq!(status_of(&f, staged[0]).await, "staged");
+
+    // Someone else's review decision covers nothing.
+    let stranger = attome_ai::deferred::ReviewDecision {
+        agent_session_id: Some(session.id),
+        ids: None,
+        undo_window_seconds: None,
+    };
+    let none = attome_ai::deferred::decide_review(&f.state, Uuid::now_v7(), false, &stranger, true)
+        .await
+        .expect("decide");
+    assert!(
+        none.is_empty(),
+        "only the person the agent acts for applies"
+    );
+
+    assert_eq!(decide(&f, session.id, true).await, 2);
+    attome_ai::deferred::sweep(&f.state).await.expect("sweep");
+    for id in &staged {
+        assert_eq!(status_of(&f, *id).await, "executed");
+    }
+    assert!(
+        !is_live(&f, first).await && !is_live(&f, second).await,
+        "applied actions ran"
+    );
+}
+
+#[tokio::test]
+async fn discarded_staged_actions_never_run() {
+    let f = skip_if_no_db!(fixture().await);
+    let definition = Uuid::now_v7();
+    set_level(&f, definition, AutonomyLevel::ActOnReview, None).await;
+    let session = definition_session(&f, definition, false).await;
+    let id = f.insert_record("open").await;
+
+    let ActionOutcome::AwaitingReview { deferred_action_id } = f
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, id),
+        )
+        .await
+        .expect("dispatch")
+    else {
+        panic!("staged");
+    };
+    assert_eq!(decide(&f, session.id, false).await, 1);
+    attome_ai::deferred::sweep(&f.state).await.expect("sweep");
+    assert_eq!(status_of(&f, deferred_action_id).await, "cancelled");
     assert!(is_live(&f, id).await);
 }
 
@@ -236,8 +421,14 @@ async fn a_level_lowered_during_the_window_asks_instead_of_running() {
     let session = definition_session(&f, definition, false).await;
     let id = f.insert_record("open").await;
 
-    let ActionOutcome::Scheduled { deferred_action_id, .. } = f
-        .dispatch(&ctx_for(&f, &session, "t1").await, DELETE, delete_args(&f, id))
+    let ActionOutcome::Scheduled {
+        deferred_action_id, ..
+    } = f
+        .dispatch(
+            &ctx_for(&f, &session, "t1").await,
+            DELETE,
+            delete_args(&f, id),
+        )
         .await
         .expect("dispatch")
     else {
@@ -257,7 +448,9 @@ async fn a_person_can_hold_their_own_action_for_an_undo_window() {
     let id = f.insert_record("open").await;
     let ctx = f.user_ctx(f.owner).await.with_undo_window(30);
 
-    let ActionOutcome::Scheduled { deferred_action_id, .. } = f
+    let ActionOutcome::Scheduled {
+        deferred_action_id, ..
+    } = f
         .dispatch(&ctx, DELETE, delete_args(&f, id))
         .await
         .expect("dispatch")
@@ -288,5 +481,8 @@ async fn a_row_interrupted_mid_run_ends_failed_and_never_runs_again() {
     .unwrap();
     attome_ai::deferred::sweep(&f.state).await.expect("sweep");
     assert_eq!(status_of(&f, deferred).await, "failed");
-    assert!(is_live(&f, id).await, "an interrupted action is never re-run");
+    assert!(
+        is_live(&f, id).await,
+        "an interrupted action is never re-run"
+    );
 }

@@ -2681,7 +2681,8 @@ async fn execute_route(
         // indistinguishable from "the model declined".
         attome_ai::ActionOutcome::ConfirmationRequired { .. }
         | attome_ai::ActionOutcome::ApprovalRequired { .. }
-        | attome_ai::ActionOutcome::Scheduled { .. } => Err(AppError::internal(
+        | attome_ai::ActionOutcome::Scheduled { .. }
+        | attome_ai::ActionOutcome::AwaitingReview { .. } => Err(AppError::internal(
             "route.classify is Read-tier and must never require confirmation, approval or an undo window",
         )),
     }

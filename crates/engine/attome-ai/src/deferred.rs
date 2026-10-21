@@ -12,6 +12,12 @@
 //!   `_undo_window_seconds` argument. Asking never skips a confirmation or an
 //!   approval; it only delays an action that would run now.
 //!
+//! **Staged for review** (V2-D702, `act_on_review`): an agent's action can
+//! instead wait with no `run_at` as `staged`, grouped by its agent session,
+//! until the person it acts for applies the staged actions (all of a
+//! session's, or chosen ones) or discards them. Applying sets them `pending`
+//! to run now, or after an undo window, in the order they were staged.
+//!
 //! **Durable.** The row is the queue: `EngineJob::AiDeferredActionSweep` runs
 //! due rows every few seconds, so a restart loses nothing. A row is claimed
 //! once (`pending` → `running`) and never runs twice: one that stays
@@ -35,7 +41,7 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -87,9 +93,10 @@ pub struct DeferredAction {
     pub initiator: String,
     pub agent_session_id: Option<Uuid>,
     pub acting_user_id: Uuid,
-    pub run_at: DateTime<Utc>,
-    /// `pending`, `running`, `executed`, `cancelled`, `invalidated`,
-    /// `approval_required` or `failed`.
+    /// `None` while staged for review.
+    pub run_at: Option<DateTime<Utc>>,
+    /// `staged`, `pending`, `running`, `executed`, `cancelled`,
+    /// `invalidated`, `approval_required` or `failed`.
     pub status: String,
     pub reason: Option<String>,
     pub approval_id: Option<Uuid>,
@@ -191,6 +198,74 @@ pub async fn enqueue(
     Ok(Scheduled { id, run_at })
 }
 
+/// Stages an agent's action for the person's review (V2-D702). A retried
+/// tool call returns the row its first call made. The first action a session
+/// stages tells the person something is waiting for them.
+pub async fn stage(
+    state: &EngineState,
+    descriptor: &ActionDescriptor,
+    ctx: &ActionContext,
+    args: &Value,
+) -> Result<Uuid, AppError> {
+    let Some(session_id) = ctx.agent_session_id.filter(|_| ctx.is_agent()) else {
+        return Err(AppError::internal(
+            "only an agent invocation under a session is staged for review",
+        ));
+    };
+    let target = crate::execute::capture_target(state, ctx, args)
+        .await
+        .map(|t| serde_json::to_value(t).map_err(AppError::internal))
+        .transpose()?;
+    let inserted: Option<Uuid> = sqlx::query_scalar(
+        "INSERT INTO ai_deferred_action \
+           (action_id, args, initiator, agent_session_id, tool_call_id, acting_user_id, target, \
+            report_to_owner, run_at, status) \
+         VALUES ($1, $2, 'agent', $3, $4, $5, $6, true, NULL, 'staged') \
+         ON CONFLICT (agent_session_id, tool_call_id) WHERE tool_call_id IS NOT NULL DO NOTHING \
+         RETURNING id",
+    )
+    .bind(descriptor.id.0)
+    .bind(args)
+    .bind(session_id)
+    .bind(ctx.idempotency_key.as_deref())
+    .bind(ctx.security.user_id)
+    .bind(&target)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let id = match inserted {
+        Some(id) => id,
+        None => sqlx::query_scalar(
+            "SELECT id FROM ai_deferred_action WHERE agent_session_id = $1 AND tool_call_id = $2",
+        )
+        .bind(session_id)
+        .bind(ctx.idempotency_key.as_deref())
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?,
+    };
+    if inserted.is_some() {
+        let staged: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM ai_deferred_action \
+             WHERE agent_session_id = $1 AND status = 'staged'",
+        )
+        .bind(session_id)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if staged == 1 {
+            notify(
+                state,
+                ctx.security.user_id,
+                "An agent has actions for your review".to_owned(),
+                "They run only when you apply them, from your pending actions.".to_owned(),
+            )
+            .await;
+        }
+    }
+    Ok(id)
+}
+
 /// Tells the person an agent acts for what it did (AH8 level 3, and an
 /// undo-window action's end). Best effort, in-app only, after the action's
 /// own transaction: a lost note must not fail an action that already ran.
@@ -261,7 +336,7 @@ pub async fn sweep(state: &EngineState) -> Result<SweepStats, AppError> {
                updated_at = now() \
              WHERE id IN (SELECT id FROM ai_deferred_action \
                           WHERE status = 'pending' AND run_at <= now() \
-                          ORDER BY run_at LIMIT $1 FOR UPDATE SKIP LOCKED) \
+                          ORDER BY run_at, created_at LIMIT $1 FOR UPDATE SKIP LOCKED) \
              RETURNING id, action_id, args, initiator, agent_session_id, tool_call_id, \
                acting_user_id, target, report_to_owner, attempts",
         )
@@ -404,7 +479,7 @@ async fn list_deferred(
     let items: Vec<DeferredAction> = sqlx::query_as(&format!(
         "SELECT {LIST_COLUMNS} FROM ai_deferred_action \
          WHERE ($1 OR acting_user_id = $2) \
-         ORDER BY (status = 'pending') DESC, created_at DESC LIMIT $3 OFFSET $4"
+         ORDER BY (status IN ('staged', 'pending')) DESC, created_at DESC LIMIT $3 OFFSET $4"
     ))
     .bind(everyone)
     .bind(ctx.user_id)
@@ -455,7 +530,7 @@ async fn cancel_deferred(
     let cancelled: Option<DeferredAction> = sqlx::query_as(&format!(
         "UPDATE ai_deferred_action SET status = 'cancelled', cancelled_by = $2, \
            reason = 'cancelled before it ran', updated_at = now() \
-         WHERE id = $1 AND status = 'pending' AND ($3 OR acting_user_id = $2) \
+         WHERE id = $1 AND status IN ('pending', 'staged') AND ($3 OR acting_user_id = $2) \
          RETURNING {LIST_COLUMNS}"
     ))
     .bind(id)
@@ -502,8 +577,178 @@ async fn cancel_deferred(
     Ok(Json(cancelled))
 }
 
+/// Which staged actions a review decision covers: one agent session's, or
+/// chosen ones (at most [`MAX_REVIEW_IDS`]).
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReviewDecision {
+    #[serde(default)]
+    pub agent_session_id: Option<Uuid>,
+    #[serde(default)]
+    pub ids: Option<Vec<Uuid>>,
+    /// Apply only: hold the applied actions this many seconds (30 to 86400)
+    /// before they run, cancellable; omit to run them now.
+    #[serde(default)]
+    pub undo_window_seconds: Option<u32>,
+}
+
+pub const MAX_REVIEW_IDS: usize = 500;
+
+fn review_scope(body: &ReviewDecision) -> Result<(Option<Uuid>, Option<Vec<Uuid>>), AppError> {
+    match (&body.agent_session_id, &body.ids) {
+        (Some(s), None) => Ok((Some(*s), None)),
+        (None, Some(ids)) if !ids.is_empty() && ids.len() <= MAX_REVIEW_IDS => {
+            Ok((None, Some(ids.clone())))
+        }
+        _ => Err(AppError::Validation(format!(
+            "name either agent_session_id or ids (1 to {MAX_REVIEW_IDS}), not both"
+        ))),
+    }
+}
+
+/// Runs a review decision: apply (to `pending`) or discard (to
+/// `cancelled`), only on staged rows `user_id` may decide (their own, or any
+/// for an administrator).
+pub async fn decide_review(
+    state: &EngineState,
+    user_id: Uuid,
+    is_admin: bool,
+    body: &ReviewDecision,
+    apply: bool,
+) -> Result<Vec<DeferredAction>, AppError> {
+    let (session, ids) = review_scope(body)?;
+    let window = match body.undo_window_seconds {
+        None => 0,
+        Some(s)
+            if (crate::autonomy::MIN_UNDO_SECONDS..=crate::autonomy::MAX_UNDO_SECONDS)
+                .contains(&s) =>
+        {
+            s
+        }
+        Some(_) => {
+            return Err(AppError::Validation(
+                "undo_window_seconds must be between 30 and 86400".into(),
+            ));
+        }
+    };
+    let set = if apply {
+        "status = 'pending', run_at = now() + make_interval(secs => $5), reason = NULL"
+    } else {
+        "status = 'cancelled', cancelled_by = $4, reason = 'discarded in review'"
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let decided: Vec<DeferredAction> = sqlx::query_as(&format!(
+        "UPDATE ai_deferred_action SET {set}, updated_at = now() \
+         WHERE status = 'staged' \
+           AND ($1::uuid IS NULL OR agent_session_id = $1) \
+           AND ($2::uuid[] IS NULL OR id = ANY($2)) \
+           AND ($3 OR acting_user_id = $4) \
+           AND $5::float8 >= 0 \
+         RETURNING {LIST_COLUMNS}"
+    ))
+    .bind(session)
+    .bind(ids)
+    .bind(is_admin)
+    .bind(user_id)
+    .bind(f64::from(window))
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if !decided.is_empty() {
+        write_security_event(
+            &mut tx,
+            &attome_audit::audit_service(state),
+            SecurityEvent::new(
+                MandatoryCategory::Ai,
+                AuditOperation::Update,
+                user_id,
+                "ai_deferred_action",
+                session,
+            )
+            .named(if apply {
+                "ai.deferred_action.apply"
+            } else {
+                "ai.deferred_action.discard"
+            })
+            .comment(format!(
+                "{} staged agent action(s) {}",
+                decided.len(),
+                if apply { "applied" } else { "discarded" }
+            )),
+        )
+        .await?;
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(decided)
+}
+
+fn page(items: Vec<DeferredAction>) -> PaginatedResponse<DeferredAction> {
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    PaginatedResponse::new(
+        items,
+        total,
+        1,
+        i64::try_from(MAX_REVIEW_IDS).unwrap_or(i64::MAX),
+    )
+}
+
+/// `POST /api/v1/ai/deferred-actions/apply` — runs staged actions: one
+/// agent session's, or chosen ones, now or after an undo window, in the
+/// order they were staged.
+#[utoipa::path(
+    post,
+    path = "/api/v1/ai/deferred-actions/apply",
+    operation_id = "apply_deferred_actions",
+    tag = "action",
+    request_body = ReviewDecision,
+    responses(
+        (status = 200, description = "The applied actions, now pending", body = PaginatedResponse<DeferredAction>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "Neither or both of agent_session_id and ids", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Ai, AuditOperation::Update)])))),
+)]
+async fn apply_staged(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Json(body): Json<ReviewDecision>,
+) -> Result<Json<PaginatedResponse<DeferredAction>>, AppError> {
+    Ok(Json(page(
+        decide_review(&state, ctx.user_id, ctx.is_admin, &body, true).await?,
+    )))
+}
+
+/// `POST /api/v1/ai/deferred-actions/discard` — discards staged actions so
+/// they never run.
+#[utoipa::path(
+    post,
+    path = "/api/v1/ai/deferred-actions/discard",
+    operation_id = "discard_deferred_actions",
+    tag = "action",
+    request_body = ReviewDecision,
+    responses(
+        (status = 200, description = "The discarded actions", body = PaginatedResponse<DeferredAction>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "Neither or both of agent_session_id and ids", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Ai, AuditOperation::Update)])))),
+)]
+async fn discard_staged(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Json(body): Json<ReviewDecision>,
+) -> Result<Json<PaginatedResponse<DeferredAction>>, AppError> {
+    Ok(Json(page(
+        decide_review(&state, ctx.user_id, ctx.is_admin, &body, false).await?,
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route("/api/v1/ai/deferred-actions/apply", post(apply_staged))
+        .route("/api/v1/ai/deferred-actions/discard", post(discard_staged))
         .route("/api/v1/ai/deferred-actions", get(list_deferred))
         .route(
             "/api/v1/ai/deferred-actions/{id}/cancel",
@@ -513,8 +758,8 @@ pub fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(list_deferred, cancel_deferred),
-    components(schemas(DeferredAction))
+    paths(list_deferred, cancel_deferred, apply_staged, discard_staged),
+    components(schemas(DeferredAction, ReviewDecision))
 )]
 struct ApiDocFragment;
 

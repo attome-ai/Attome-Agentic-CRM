@@ -5,9 +5,14 @@
 //! |---|---|
 //! | 0 `suggest` | proposes; the person does it |
 //! | 1 `ask_first` | confirm (Reversible) or four-eyes approval (Consequential) |
+//! | `act_on_review` | staged; the person applies or discards the session's staged actions together (V2-D702) |
 //! | 2 `act_with_undo` | runs after an undo window, during which it can be cancelled |
 //! | 3 `act_and_report` | runs now and tells the person it acts for |
 //! | 4 `automatic` | runs now |
+//!
+//! The numbers are the stored codes; `act_on_review` is stored as 5 but
+//! ranks between `ask_first` and `act_with_undo` (the enum's order is the
+//! rank).
 //!
 //! **No row, no change.** An action with no row keeps the gate's built-in
 //! matrix exactly as before this module existed: a Reversible write runs and
@@ -54,17 +59,22 @@ pub const MAX_UNDO_SECONDS: u32 = 86_400;
 )]
 #[serde(rename_all = "snake_case")]
 pub enum AutonomyLevel {
-    Suggest = 0,
-    AskFirst = 1,
-    ActWithUndo = 2,
-    ActAndReport = 3,
-    Automatic = 4,
+    // Declared in rank order: the derived `Ord` is the rank.
+    Suggest,
+    AskFirst,
+    /// V2-D702: staged until the person applies the session's staged actions.
+    ActOnReview,
+    ActWithUndo,
+    ActAndReport,
+    Automatic,
 }
 
 impl AutonomyLevel {
-    pub const ALL: [Self; 5] = [
+    /// Every level, lowest first.
+    pub const ALL: [Self; 6] = [
         Self::Suggest,
         Self::AskFirst,
+        Self::ActOnReview,
         Self::ActWithUndo,
         Self::ActAndReport,
         Self::Automatic,
@@ -75,14 +85,23 @@ impl AutonomyLevel {
     pub fn lowered(self) -> Self {
         match self {
             Self::Suggest | Self::AskFirst => Self::Suggest,
-            Self::ActWithUndo => Self::AskFirst,
+            Self::ActOnReview => Self::AskFirst,
+            Self::ActWithUndo => Self::ActOnReview,
             Self::ActAndReport => Self::ActWithUndo,
             Self::Automatic => Self::ActAndReport,
         }
     }
 
+    /// The stored code. Stable: a new level takes a new code.
     pub fn as_i16(self) -> i16 {
-        self as i16
+        match self {
+            Self::Suggest => 0,
+            Self::AskFirst => 1,
+            Self::ActWithUndo => 2,
+            Self::ActAndReport => 3,
+            Self::Automatic => 4,
+            Self::ActOnReview => 5,
+        }
     }
 
     pub fn from_i16(v: i16) -> Option<Self> {
@@ -333,7 +352,7 @@ async fn used_today(
          + (SELECT COUNT(*) FROM ai_deferred_action d \
               JOIN agent_session s ON s.id = d.agent_session_id \
              WHERE s.agent_definition_ref = $1 AND d.action_id = $2 \
-               AND d.status IN ('pending', 'running') AND d.created_at >= $3)",
+               AND d.status IN ('staged', 'pending', 'running') AND d.created_at >= $3)",
     )
     .bind(definition)
     .bind(action_id)
@@ -774,6 +793,10 @@ mod tests {
         );
         assert_eq!(
             AutonomyLevel::ActWithUndo.lowered(),
+            AutonomyLevel::ActOnReview
+        );
+        assert_eq!(
+            AutonomyLevel::ActOnReview.lowered(),
             AutonomyLevel::AskFirst
         );
         assert_eq!(AutonomyLevel::AskFirst.lowered(), AutonomyLevel::Suggest);
@@ -785,7 +808,16 @@ mod tests {
         for level in AutonomyLevel::ALL {
             assert_eq!(AutonomyLevel::from_i16(level.as_i16()), Some(level));
         }
-        assert_eq!(AutonomyLevel::from_i16(5), None);
+        assert_eq!(AutonomyLevel::from_i16(6), None);
+        assert_eq!(
+            AutonomyLevel::ActOnReview.as_i16(),
+            5,
+            "stored codes never move"
+        );
+        for pair in AutonomyLevel::ALL.windows(2) {
+            assert!(pair[0] < pair[1], "ALL is in rank order");
+            assert_eq!(pair[1].lowered(), pair[0], "lowering is one rank down");
+        }
     }
 
     #[test]

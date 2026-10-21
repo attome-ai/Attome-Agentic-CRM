@@ -185,7 +185,8 @@ export const xrmEn = {
     undoSeconds: 'Undo window (seconds)', dailyLimit: 'Daily limit',
     consequentialWarning: 'This action cannot be called back once done; at this level it runs without per-action approval.',
     levels: {
-      suggest: 'Suggest — a person does it', ask_first: 'Ask first', act_with_undo: 'Act with undo window',
+      suggest: 'Suggest — a person does it', ask_first: 'Ask first',
+      act_on_review: 'Act on review — you apply the batch', act_with_undo: 'Act with undo window',
       act_and_report: 'Act and report', automatic: 'Fully automatic',
     },
     risk: { Read: 'Reads only', Reversible: 'Can be undone', Consequential: 'Cannot be undone' },
@@ -195,9 +196,13 @@ export const xrmEn = {
     intro: 'Actions held for their undo window. Cancel one before it runs; it is checked again just before it does.',
     none: 'No held actions.',
     runsAt: 'Runs at', cancel: 'Cancel',
+    review: {
+      title: 'Waiting for your review', intro: 'An agent prepared these. Nothing has run; apply them to run them in order, or discard them.',
+      apply: 'Apply', discard: 'Discard', applyAll: 'Apply all', discardAll: 'Discard all',
+    },
     by: { user: 'By you', agent: 'By an agent' },
     status: {
-      pending: 'Waiting', running: 'Running', executed: 'Done', cancelled: 'Cancelled',
+      staged: 'Waiting for review', pending: 'Waiting', running: 'Running', executed: 'Done', cancelled: 'Cancelled',
       invalidated: 'Did not run', approval_required: 'Needs approval', failed: 'Failed',
     },
   },

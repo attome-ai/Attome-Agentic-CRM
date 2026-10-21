@@ -38,8 +38,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   every write action stops at confirmation for an agent and consequential ones need a second
   person's approval.
 - **Autonomy levels (AH8, V2-D693).** Per agent and per action, an administrator sets how much the
-  agent may do alone: `suggest` (a person does it), `ask_first`, `act_with_undo` (it waits in an
-  undo window, then runs), `act_and_report` (it runs and tells the person) or `automatic`.
+  agent may do alone: `suggest` (a person does it), `ask_first`, `act_on_review` (it is staged
+  with the session's other staged actions until the person applies or discards them, V2-D702),
+  `act_with_undo` (it waits in an undo window, then runs), `act_and_report` (it runs and tells the
+  person) or `automatic`.
   `GET /api/v1/admin/ai/agents/{agent}/autonomy` lists every action with its level;
   `PUT .../autonomy/{action_id}` (`{ "level": "act_with_undo", "undo_seconds": 300,
   "daily_limit": 50 }`, with optional `money_cap_minor` and `currency`, `owned_records_only`,
@@ -47,6 +49,12 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   (screen: the agent form's Autonomy tab). Going over a limit asks first. Untrusted text the agent
   read (an inbound email, a document) always lowers the level by one, and `memory.remember` takes no
   level at all.
+- **Review a batch.** At `act_on_review` a call answers `awaiting_review`: nothing ran, and the
+  agent cannot build on the result. The person applies the staged actions with
+  `POST /api/v1/ai/deferred-actions/apply` (`{ "agent_session_id": "…" }` for the whole session, or
+  `{ "ids": [...] }`, optionally `"undo_window_seconds"`) or drops them with `.../discard` (screen:
+  the review section of `/ai/pending-actions`). Applied actions run in the order they were staged,
+  each re-checked like an approved one; each ends with its own result.
 - **The undo window.** Any write can be held before it runs, including one that cannot be undone
   afterwards (an email, a payment, a call to another system): an agent at `act_with_undo`, an agent
   that passes `_undo_window_seconds` in a tool call, or a person through

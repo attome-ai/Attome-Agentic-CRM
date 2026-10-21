@@ -387,7 +387,8 @@ async fn execute_decision(
         // today's gate matrix, not a guarantee.
         ActionOutcome::ConfirmationRequired { .. }
         | ActionOutcome::ApprovalRequired { .. }
-        | ActionOutcome::Scheduled { .. } => {
+        | ActionOutcome::Scheduled { .. }
+        | ActionOutcome::AwaitingReview { .. } => {
             tracing::error!(
                 decision_id = %id,
                 "dispatch returned a confirmation/approval outcome for a \

@@ -48592,6 +48592,154 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/ai/deferred-actions/apply": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/ai/deferred-actions/apply` — runs staged actions: one\nagent session's, or chosen ones, now or after an undo window, in the\norder they were staged.",
+        "operationId": "apply_deferred_actions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The applied actions, now pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeferredAction"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Neither or both of agent_session_id and ids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ai/deferred-actions/discard": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/ai/deferred-actions/discard` — discards staged actions so\nthey never run.",
+        "operationId": "discard_deferred_actions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The discarded actions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeferredAction"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Neither or both of agent_session_id and ids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ai/deferred-actions/{id}/cancel": {
       "post": {
         "tags": [
@@ -100622,6 +100770,26 @@
                 ]
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "V2-D702: staged for the person's review with the session's other\nstaged actions. Nothing has executed, and nothing will until they\napply it (`POST /api/v1/ai/deferred-actions/apply`).",
+            "required": [
+              "deferred_action_id",
+              "status"
+            ],
+            "properties": {
+              "deferred_action_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "awaiting_review"
+                ]
+              }
+            }
           }
         ],
         "description": "What an invocation produced."
@@ -103230,6 +103398,7 @@
         "enum": [
           "suggest",
           "ask_first",
+          "act_on_review",
           "act_with_undo",
           "act_and_report",
           "automatic"
@@ -113897,7 +114066,6 @@
           "action_id",
           "initiator",
           "acting_user_id",
-          "run_at",
           "status",
           "created_at"
         ],
@@ -113942,12 +114110,16 @@
             ]
           },
           "run_at": {
-            "type": "string",
-            "format": "date-time"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "`None` while staged for review."
           },
           "status": {
             "type": "string",
-            "description": "`pending`, `running`, `executed`, `cancelled`, `invalidated`,\n`approval_required` or `failed`."
+            "description": "`staged`, `pending`, `running`, `executed`, `cancelled`,\n`invalidated`, `approval_required` or `failed`."
           }
         }
       },
@@ -131802,7 +131974,6 @@
                 "action_id",
                 "initiator",
                 "acting_user_id",
-                "run_at",
                 "status",
                 "created_at"
               ],
@@ -131847,12 +132018,16 @@
                   ]
                 },
                 "run_at": {
-                  "type": "string",
-                  "format": "date-time"
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "`None` while staged for review."
                 },
                 "status": {
                   "type": "string",
-                  "description": "`pending`, `running`, `executed`, `cancelled`, `invalidated`,\n`approval_required` or `failed`."
+                  "description": "`staged`, `pending`, `running`, `executed`, `cancelled`,\n`invalidated`, `approval_required` or `failed`."
                 }
               }
             }
@@ -149089,6 +149264,39 @@
           }
         }
       },
+      "ReviewDecision": {
+        "type": "object",
+        "description": "Which staged actions a review decision covers: one agent session's, or\nchosen ones (at most [`MAX_REVIEW_IDS`]).",
+        "properties": {
+          "agent_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "undo_window_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Apply only: hold the applied actions this many seconds (30 to 86400)\nbefore they run, cancellable; omit to run them now.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
       "RevokeSessionBody": {
         "type": "object",
         "required": [
@@ -162079,6 +162287,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -162131,6 +162340,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

@@ -1249,7 +1249,7 @@ pub async fn run(
                 }
                 // AH8: `scheduled_as_completed` above already turned a held
                 // action into the `Completed` arm's tool result.
-                Ok(ActionOutcome::Scheduled { .. }) => {
+                Ok(ActionOutcome::Scheduled { .. } | ActionOutcome::AwaitingReview { .. }) => {
                     tracing::error!(
                         action_id = %call.name,
                         "a held action reached the turn loop unconverted"

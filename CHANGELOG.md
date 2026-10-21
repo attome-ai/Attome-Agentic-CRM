@@ -13,6 +13,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   row id (what the entity list, AI evidence and others sent before) is `400 invalid_cursor`; start
   again from the first page. The key derives from `auth.jwt_secret`, so all nodes agree and a key
   rotation keeps lists paging.
+- Act on review (AH8-T13, V2-D702): a new autonomy level, `act_on_review`, stages an agent's action
+  instead of running it; the person applies or discards an agent session's staged actions together
+  (`POST /api/v1/ai/deferred-actions/apply|discard`), and they run in order, each re-checked. New
+  outcome `awaiting_review`. Migration 0192.
 - Agent autonomy levels (AH8, V2-D693): an administrator can now let an agent run an action on its
   own, per agent and per action (`/api/v1/admin/ai/agents/{agent}/autonomy`), including a
   consequential one, which until now always waited for a second person's approval. With no level set

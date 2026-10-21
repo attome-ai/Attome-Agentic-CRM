@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiError, ApiService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
 
 /** `deferred::DeferredAction`. */
@@ -8,7 +8,8 @@ export interface DeferredAction {
   initiator:        'user' | 'agent';
   agent_session_id: string | null;
   acting_user_id:   string;
-  run_at:           string;
+  /** `null` while staged for review. */
+  run_at:           string | null;
   status:           string;
   reason:           string | null;
   approval_id:      string | null;
@@ -36,8 +37,30 @@ export class AiPendingActionsComponent implements OnInit {
   readonly error   = signal<string | null>(null);
   readonly busy    = signal<string | null>(null);
 
+  /** Staged actions, grouped by the agent session that staged them (V2-D702). */
+  readonly reviewGroups = computed(() => {
+    const groups = new Map<string, DeferredAction[]>();
+    for (const a of this.actions()) {
+      if (a.status !== 'staged' || !a.agent_session_id) continue;
+      groups.set(a.agent_session_id, [...(groups.get(a.agent_session_id) ?? []), a]);
+    }
+    return [...groups].map(([session, items]) => ({ session, items }));
+  });
+  /** Everything not waiting for review. */
+  readonly others = computed(() => this.actions().filter(a => a.status !== 'staged'));
+
   ngOnInit(): void {
     this.load();
+  }
+
+  /** Applies (runs) or discards staged actions: one, or a whole session's. */
+  decide(apply: boolean, scope: { agent_session_id: string } | { ids: string[] }, busyKey: string): void {
+    this.busy.set(busyKey);
+    this.error.set(null);
+    this.api.post<unknown>(`/api/v1/ai/deferred-actions/${apply ? 'apply' : 'discard'}`, scope).subscribe({
+      next: () => { this.busy.set(null); this.load(); },
+      error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); this.load(); },
+    });
   }
 
   load(): void {

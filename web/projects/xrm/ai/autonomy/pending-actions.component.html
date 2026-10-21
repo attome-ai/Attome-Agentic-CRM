@@ -4,16 +4,50 @@
   @if (error(); as message) {
     <p class="au-error" role="alert">{{ message }}</p>
   }
-  @if (actions().length === 0) {
+
+  @for (group of reviewGroups(); track group.session) {
+    <div class="au-review" [attr.data-session]="group.session">
+      <h3>{{ 'aiPending.review.title' | translate }} ({{ group.items.length }})</h3>
+      <p class="au-muted">{{ 'aiPending.review.intro' | translate }}</p>
+      <div class="au-actions">
+        <button type="button" [disabled]="busy() === group.session"
+                (click)="decide(true, { agent_session_id: group.session }, group.session)">
+          {{ 'aiPending.review.applyAll' | translate }}
+        </button>
+        <button type="button" [disabled]="busy() === group.session"
+                (click)="decide(false, { agent_session_id: group.session }, group.session)">
+          {{ 'aiPending.review.discardAll' | translate }}
+        </button>
+      </div>
+      <ul class="au-list">
+        @for (a of group.items; track a.id) {
+          <li class="au-item au-pending" [attr.data-id]="a.id">
+            <span class="au-action"><code dir="ltr">{{ a.action_id }}</code></span>
+            <span class="au-muted">{{ a.created_at | localDate }}</span>
+            <button type="button" [disabled]="busy() === a.id" (click)="decide(true, { ids: [a.id] }, a.id)">
+              {{ 'aiPending.review.apply' | translate }}
+            </button>
+            <button type="button" [disabled]="busy() === a.id" (click)="decide(false, { ids: [a.id] }, a.id)">
+              {{ 'aiPending.review.discard' | translate }}
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (others().length === 0 && reviewGroups().length === 0) {
     <p class="au-muted">{{ 'aiPending.none' | translate }}</p>
-  } @else {
+  } @else if (others().length > 0) {
     <ul class="au-list">
-      @for (a of actions(); track a.id) {
+      @for (a of others(); track a.id) {
         <li class="au-item" [class.au-pending]="a.status === 'pending'" [attr.data-id]="a.id">
           <span class="au-action"><code dir="ltr">{{ a.action_id }}</code></span>
           <span>{{ ('aiPending.by.' + a.initiator) | translate }}</span>
           <span>{{ ('aiPending.status.' + a.status) | translate }}</span>
-          <span class="au-muted">{{ 'aiPending.runsAt' | translate }} {{ a.run_at | localDate }}</span>
+          @if (a.run_at) {
+            <span class="au-muted">{{ 'aiPending.runsAt' | translate }} {{ a.run_at | localDate }}</span>
+          }
           @if (a.reason) {
             <span class="au-muted">{{ a.reason }}</span>
           }

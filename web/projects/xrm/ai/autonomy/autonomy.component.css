@@ -11,3 +11,6 @@
 .au-item input[type='number'] { inline-size: 6rem; }
 .au-pending { border-inline-start: 4px solid var(--warning-color, #8a4b00); }
 .au-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.au-review { display: flex; flex-direction: column; gap: 0.5rem; padding-block: 0.75rem; padding-inline: 0.75rem; border: 1px solid var(--warning-color, #8a4b00); border-radius: 0.5rem; }
+.au-review h3 { margin-block: 0; font-size: 1rem; }
+.au-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
