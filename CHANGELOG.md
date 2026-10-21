@@ -1450,6 +1450,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   caller can see to a person, queue or agent the caller can see, with a structured summary and required
   reasoning, through the service hand-off ledger; it records an `agent_task` outcome under rule
   `ai.handoff`, which agent performance counts. `bot.handoff` is unchanged for web chat.
+- Inter-company postings (W5-T2, ledger pack `0002`): `POST /api/v1/ledger/intercompany` posts both companies' entries in one
+  transaction (due-from and income in the first company's books, expense and due-to in the second's, from each pair's
+  `gl_intercompany_account`), linked by `intercompany_ref`; `GET /api/v1/ledger/group-trial-balance?from&to` leaves
+  linked entries out, eliminating them from group figures.
 - `docs/workforce.md` documents workforce management (G17-T17): the records, the staffing requirement, schedule builds and
   publishing, what-if and hiring plans, staff self-service, intraday offers, the agent tools, and what is not built yet.
 - AI outcome quality (O11-T1): `record.ai_field`, `record.classify`, `knowledge.answer` and `route.classify`

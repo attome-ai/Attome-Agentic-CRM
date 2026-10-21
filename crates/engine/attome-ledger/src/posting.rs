@@ -240,12 +240,54 @@ pub async fn post_journal(
             });
         }
     }
+    let (entry_id, period, total) = insert_entry(
+        &mut tx,
+        state,
+        ctx,
+        entry,
+        &lines,
+        source.as_ref(),
+        EntryCompany::default(),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Posted {
+        entry_id,
+        period_id: period,
+        created: true,
+        total: total.to_string(),
+    })
+}
+
+/// The company an entry belongs to and, for an inter-company entry, its
+/// link and counterparty.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct EntryCompany {
+    /// The entry's `organization_ref`; `None` leaves it unset.
+    pub organization: Option<Uuid>,
+    /// `(link shared by both sides, the other company)`.
+    pub link: Option<(Uuid, Uuid)>,
+}
+
+/// Checks an entry's journal, period and accounts and writes it with its
+/// lines and its audit event inside `tx`: the posting both a plain entry
+/// and each side of an inter-company posting share. Answers
+/// `(entry, period, total)`.
+pub(crate) async fn insert_entry(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entry: &NewEntry,
+    lines: &[CheckedLine],
+    source: Option<&(String, String)>,
+    company: EntryCompany,
+) -> Result<(Uuid, Uuid, Decimal), AppError> {
     let journal: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM gl_journal WHERE id = $1 \
             AND (is_active IS NULL OR is_active = true))",
     )
     .bind(entry.journal_id)
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     if !journal {
@@ -258,7 +300,7 @@ pub async fn post_journal(
           ORDER BY starts_on DESC LIMIT 1 FOR SHARE",
     )
     .bind(entry.entry_date)
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     let Some((period, status)) = period else {
@@ -284,7 +326,7 @@ pub async fn post_journal(
             AND (is_active IS NULL OR is_active = true)",
     )
     .bind(&accounts)
-    .fetch_all(&mut *tx)
+    .fetch_all(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     if let Some(bad) = accounts.iter().find(|a| !postable.contains(a)) {
@@ -293,23 +335,43 @@ pub async fn post_journal(
         )));
     }
     let total: Decimal = lines.iter().map(|l| l.1).sum();
-    let entry_id: Uuid = sqlx::query_scalar(
+    // W5-T2: an inter-company entry also names its link and counterparty
+    // (ledger pack 0002); a plain one leaves those columns alone, so it
+    // posts before that changeset is applied.
+    let link_columns = if company.link.is_some() {
+        ", intercompany_ref, counterparty_ref"
+    } else {
+        ""
+    };
+    let link_values = if company.link.is_some() {
+        ", $11, $12"
+    } else {
+        ""
+    };
+    let insert = format!(
         "INSERT INTO gl_entry (id, journal_ref, period_ref, entry_date, description, source_kind, \
-             source_ref, total, status, created_by, owner_ref) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::numeric, 'posted', $9, $9) RETURNING id",
-    )
-    .bind(Uuid::now_v7())
-    .bind(entry.journal_id)
-    .bind(period)
-    .bind(entry.entry_date)
-    .bind(entry.description.as_deref().map(str::trim))
-    .bind(source.as_ref().map(|s| s.0.clone()))
-    .bind(source.as_ref().map(|s| s.1.clone()))
-    .bind(total.to_string())
-    .bind(ctx.user_id)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
+             source_ref, total, status, created_by, owner_ref, organization_ref{link_columns}) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::numeric, 'posted', $9, $9, $10{link_values}) \
+         RETURNING id"
+    );
+    let mut query = sqlx::query_scalar::<_, Uuid>(&insert)
+        .bind(Uuid::now_v7())
+        .bind(entry.journal_id)
+        .bind(period)
+        .bind(entry.entry_date)
+        .bind(entry.description.as_deref().map(str::trim))
+        .bind(source.map(|s| s.0.clone()))
+        .bind(source.map(|s| s.1.clone()))
+        .bind(total.to_string())
+        .bind(ctx.user_id)
+        .bind(company.organization);
+    if let Some((link, counterparty)) = company.link {
+        query = query.bind(link.to_string()).bind(counterparty);
+    }
+    let entry_id: Uuid = query
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
     for (i, (account, debit, credit, memo)) in lines.iter().enumerate() {
         sqlx::query(
             "INSERT INTO gl_entry_line (id, entry_ref, line_no, account_ref, debit, credit, memo, \
@@ -324,12 +386,12 @@ pub async fn post_journal(
         .bind(credit.to_string())
         .bind(memo.as_deref())
         .bind(ctx.user_id)
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(AppError::internal)?;
     }
     attome_audit::write_business_event_in_tx(
-        &mut tx,
+        tx,
         &attome_audit::audit_service(state),
         attome_audit::BusinessEvent::new(
             "gl_entry",
@@ -340,13 +402,7 @@ pub async fn post_journal(
         ),
     )
     .await?;
-    attome_db::tx::commit(tx).await?;
-    Ok(Posted {
-        entry_id,
-        period_id: period,
-        created: true,
-        total: total.to_string(),
-    })
+    Ok((entry_id, period, total))
 }
 
 /// `(journal, debit account, credit account, description)`.

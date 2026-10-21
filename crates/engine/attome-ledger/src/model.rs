@@ -22,6 +22,6 @@ impl EngineModel for LedgerModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::posting::routes()
+        crate::posting::routes().merge(crate::intercompany::routes())
     }
 }
