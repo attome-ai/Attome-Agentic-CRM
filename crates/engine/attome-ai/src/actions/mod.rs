@@ -13,6 +13,7 @@
 //! `GET /api/v1/search` route calls.
 
 pub mod agent_playground;
+pub mod agent_stats;
 pub mod agent_supervise;
 pub mod ai_field;
 pub mod billing;
@@ -131,6 +132,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(crate::meeting::notes::descriptors());
     all.extend(meeting::descriptors());
     all.extend(collections::descriptors());
+    all.extend(agent_stats::descriptors());
     all
 }
 
@@ -199,5 +201,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(crate::meeting::notes::executors());
     all.extend(meeting::executors());
     all.extend(collections::executors());
+    all.extend(agent_stats::executors());
     all
 }

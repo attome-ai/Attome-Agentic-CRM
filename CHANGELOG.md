@@ -1434,6 +1434,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   amount, number and date filled from the invoice or subscription; `collections.record_promise`
   (Reversible) records an `ai_payment_promise` with the customer's own words. Rules on `whatsapp` or `sms`
   are refused until those channels are sent. Both record `agent_task` outcomes.
+- Agent performance routes and action (AI8-T4/T5): `GET /api/v1/admin/ai/agents/performance?from&to`
+  (each agent's sums and the rates read from them: resolution, accuracy, hand-off rate, cost per task),
+  `GET /api/v1/admin/ai/agents/{id}/performance/daily` and `GET /api/v1/admin/ai/agents/{id}/runs?day&metric`
+  (the outcome rows or sessions behind one number, keyset-paged), administrators only, with no message
+  text or record values; the read-only `agent.performance` action answers the same for the operations
+  agent and MCP.
 - Agent performance rollup (AI8-T2/T3): `ai_agent_daily_stat` is computed per agent and UTC day from the
   outcome ledger's `agent_task` rows (done, resolved, measured, effectiveness, hand-offs), the agent's
   message tokens and their price (configured prices, else the approved model catalogue; unpriced tokens add

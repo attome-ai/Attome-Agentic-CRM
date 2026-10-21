@@ -52,6 +52,7 @@ pub mod a2a;
 pub mod actions;
 pub mod agent;
 pub mod agent_stats;
+pub mod agent_stats_routes;
 pub mod ai_status;
 /// C10-B — deployment-wide chatbot figures (`/admin/ai/bot-analytics`).
 pub mod analytics;
@@ -237,6 +238,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(followup_routes::openapi_fragment());
     doc.merge(collections_routes::openapi_fragment());
     doc.merge(agent_stats::openapi_fragment());
+    doc.merge(agent_stats_routes::openapi_fragment());
     doc.merge(meeting::routes::openapi_fragment());
     doc
 }

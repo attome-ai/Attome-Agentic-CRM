@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d8721974e8714813eb27c65858310cafe4a1e023008b9c4da34f029d03284551",
+  "checksum": "sha256:f7ce4406b48b4a94f5690d45c508edbce8493eb3b77a2b9c47e4641a3d7ba8af",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -302,6 +302,7 @@
               "agent.delegate",
               "agent.kill",
               "agent.pause",
+              "agent.performance",
               "agent.playground_complete",
               "agent.resume",
               "approval.status",
