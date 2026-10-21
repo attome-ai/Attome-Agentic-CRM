@@ -2945,6 +2945,10 @@ pub const WORKFORCE_INTRADAY: attome_jobs::JobType =
 
 /// G14-T2: published surveys sent, from the change feed, when a record
 /// reaches their trigger value (a closed case).
+/// AI7-T4: a ticket handed back to the agent that handed it off.
+pub const AI_HANDBACK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::handoff::HANDBACK_JOB, 1);
+
 /// AI8-T3: yesterday's per-agent rollup, and a backfill of a range.
 pub const AGENT_STATS_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::NIGHTLY_JOB, 1);
@@ -3364,6 +3368,22 @@ pub fn register_job_types() {
                 if proposed > 0 {
                     tracing::info!(proposed, "intraday offers proposed");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            AI_HANDBACK,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_AI) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let handback: attome_service::handoff::HandBack = job.payload()?;
+                let outcome = attome_ai::handback::run(&state, &handback)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(handoff = %handback.handoff_id, ?outcome, "hand-back run");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
