@@ -378,6 +378,9 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 std::time::Duration::from_secs(15),
             );
         }
+        // AA10-T6: background chunks slow down while requests are slow or
+        // the replica lags.
+        attome_jobs::throttle::spawn(std::sync::Arc::new(attome_server::ServerLoad::default()));
         attome_api::spawn_chainer_lag_refresh(
             base_state.clone(),
             std::time::Duration::from_secs(15),

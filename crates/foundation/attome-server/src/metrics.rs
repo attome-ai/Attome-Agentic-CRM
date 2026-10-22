@@ -189,6 +189,31 @@ pub fn route_latencies(text: &str) -> Vec<RouteLatency> {
 mod latency_tests {
     use super::*;
 
+    /// AA10-T6: the reading is the p95 of the requests since the previous
+    /// reading, not since the process started.
+    #[test]
+    fn server_load_reads_the_last_window() {
+        let text = |fast: u64, slow: u64| {
+            let name = AXUM_HTTP_REQUESTS_DURATION_SECONDS;
+            format!(
+                "{name}_bucket{{method=\"GET\",endpoint=\"/a\",le=\"0.05\"}} {fast}\n\
+                 {name}_bucket{{method=\"GET\",endpoint=\"/a\",le=\"0.5\"}} {}\n\
+                 {name}_bucket{{method=\"GET\",endpoint=\"/a\",le=\"+Inf\"}} {}\n",
+                fast + slow,
+                fast + slow
+            )
+        };
+        let load = ServerLoad::default();
+        let first = load.reading_from(Some(&text(100, 0)));
+        assert!(first.p95_ms.unwrap() <= 50.0, "{first:?}");
+        // The next window holds only slow requests.
+        let second = load.reading_from(Some(&text(100, 50)));
+        assert!(second.p95_ms.unwrap() > 300.0, "{second:?}");
+        // Nothing served since: no reading, so nothing is slowed.
+        assert_eq!(load.reading_from(Some(&text(100, 50))).p95_ms, None);
+        assert_eq!(load.reading_from(None).p95_ms, None);
+    }
+
     #[test]
     fn percentiles_come_from_the_buckets() {
         let text = format!(
@@ -710,6 +735,105 @@ pub(crate) fn record_capability_rejection(capability: &'static str) {
     metrics::counter!("capability_rejections_total", "capability" => capability).increment(1);
 }
 
+/// AA10-T6: the last replica lag this process read, in milliseconds;
+/// `u64::MAX` until one is read (no replica, or not read yet).
+static LAST_REPLICA_LAG_MS: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(u64::MAX);
+
+fn remember_replica_lag(seconds: f64) {
+    let ms = (seconds.max(0.0) * 1000.0) as u64;
+    LAST_REPLICA_LAG_MS.store(ms, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// AA10-T6: this node's load for [`attome_jobs::throttle`]: the p95 of the
+/// requests served since the last reading (all routes, from the request
+/// duration histogram), and the last replica lag. Both are `None` when
+/// metrics are off or nothing has been measured, which slows nothing down.
+#[derive(Debug, Default)]
+pub struct ServerLoad {
+    previous: std::sync::Mutex<Vec<(f64, u64)>>,
+}
+
+/// Every route's request duration buckets added together, `+Inf` last.
+pub(crate) fn all_route_buckets(text: &str) -> Vec<(f64, u64)> {
+    use std::collections::BTreeMap;
+    let bucket_name = format!("{AXUM_HTTP_REQUESTS_DURATION_SECONDS}_bucket{{");
+    let mut by_le: BTreeMap<String, u64> = BTreeMap::new();
+    for line in text.lines().filter(|l| l.starts_with(&bucket_name)) {
+        let Some(le) = labels_of(line)
+            .into_iter()
+            .find(|(k, _)| k == "le")
+            .map(|(_, v)| v)
+        else {
+            continue;
+        };
+        let Some(count) = line
+            .rsplit(' ')
+            .next()
+            .and_then(|v| v.trim().parse::<f64>().ok())
+        else {
+            continue;
+        };
+        *by_le.entry(le).or_default() += count as u64;
+    }
+    let mut buckets: Vec<(f64, u64)> = by_le
+        .into_iter()
+        .filter_map(|(le, c)| {
+            let bound = if le == "+Inf" {
+                f64::INFINITY
+            } else {
+                le.parse().ok()?
+            };
+            Some((bound, c))
+        })
+        .collect();
+    buckets.sort_by(|a, b| a.0.total_cmp(&b.0));
+    buckets
+}
+
+impl ServerLoad {
+    /// The p95, in ms, of the requests between `previous` and `now`.
+    fn window_p95_ms(previous: &[(f64, u64)], now: &[(f64, u64)]) -> Option<f64> {
+        let delta: Vec<(f64, u64)> = now
+            .iter()
+            .map(|&(bound, count)| {
+                let before = previous
+                    .iter()
+                    .find(|(b, _)| *b == bound)
+                    .map_or(0, |(_, c)| *c);
+                (bound, count.saturating_sub(before))
+            })
+            .collect();
+        let total = delta.last().map_or(0, |d| d.1);
+        (total > 0).then(|| quantile(&delta, 0.95) * 1000.0)
+    }
+
+    /// One reading from the Prometheus text `text`.
+    pub fn reading_from(&self, text: Option<&str>) -> attome_jobs::throttle::LoadReading {
+        let p95_ms = text.and_then(|text| {
+            let now = all_route_buckets(text);
+            let mut previous = self
+                .previous
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            let p95 = Self::window_p95_ms(&previous, &now);
+            *previous = now;
+            p95
+        });
+        let lag = LAST_REPLICA_LAG_MS.load(std::sync::atomic::Ordering::Relaxed);
+        attome_jobs::throttle::LoadReading {
+            p95_ms,
+            replica_lag_secs: (lag != u64::MAX).then(|| lag as f64 / 1000.0),
+        }
+    }
+}
+
+impl attome_jobs::throttle::LoadSource for ServerLoad {
+    fn reading(&self) -> attome_jobs::throttle::LoadReading {
+        self.reading_from(render_current().as_deref())
+    }
+}
+
 async fn refresh_replica_lag_once(state: &AppState) {
     let primary_lsn: Result<String, sqlx::Error> =
         sqlx::query_scalar("SELECT pg_current_wal_insert_lsn()::text")
@@ -743,6 +867,7 @@ async fn refresh_replica_lag_once(state: &AppState) {
             metrics::gauge!("db_replica_lag_bytes").set(row.lag_bytes.unwrap_or(0) as f64);
             // No transaction has replayed yet on a brand-new replica -> 0, not stale.
             metrics::gauge!("db_replica_lag_seconds").set(row.lag_seconds.unwrap_or(0.0).max(0.0));
+            remember_replica_lag(row.lag_seconds.unwrap_or(0.0));
         }
         Ok(_) => {
             metrics::gauge!("db_replica_lag_bytes").set(0.0);

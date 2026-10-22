@@ -45,7 +45,8 @@ pub use capability::{
     CapabilityStatuses, ProbeOutcome,
 };
 pub use metrics::{
-    build_layer_and_handle, metrics_routes, spawn_pool_gauge_refresh, spawn_replica_lag_refresh,
+    ServerLoad, build_layer_and_handle, metrics_routes, spawn_pool_gauge_refresh,
+    spawn_replica_lag_refresh,
 };
 pub use middleware::profiler::apply_profiler_layer;
 pub use middleware::request_meta::{

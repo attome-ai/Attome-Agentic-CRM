@@ -130,6 +130,10 @@ and the list of a person's own batches are on the API: `GET /api/v1/jobs/{id}`,
 `POST /api/v1/jobs/{id}/cancel` and `GET /api/v1/jobs`. People see the work they started under
 **My background work**.
 
+Before each chunk the runner waits on the node's shared speed controller (`attome_jobs::throttle`):
+no wait while requests are fast and the replica keeps up, 200 ms when the p95 is 100 to 300 ms or
+the replica is 5 to 30 s behind, and 1 s beyond that, so a long job gives way to people.
+
 Keep chunks bounded (a thousand rows is typical) and read them by keyset, never by offset. Never call
 external services inside `process`: the transaction must stay short, so do outside calls before or
 after the chunk.

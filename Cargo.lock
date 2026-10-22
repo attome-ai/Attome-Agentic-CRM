@@ -1360,6 +1360,7 @@ dependencies = [
  "attome-types",
  "chrono",
  "chrono-tz",
+ "metrics",
  "serde",
  "serde_json",
  "sqlx",

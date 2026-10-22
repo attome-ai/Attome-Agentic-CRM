@@ -20,6 +20,10 @@ pub mod registry;
 /// workers and restarts. See the module docs.
 pub mod schedule;
 
+/// AA10-T6: the shared delay between background chunks, from how busy the
+/// node is.
+pub mod throttle;
+
 use chrono::{DateTime, Utc};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 

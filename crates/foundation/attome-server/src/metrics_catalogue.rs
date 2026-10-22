@@ -353,6 +353,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "طلبات HTTP حسب الطريقة والمسار والحالة.",
     },
     MetricInfo {
+        name: "background_chunk_delay_ms",
+        kind: "gauge",
+        unit: "milliseconds",
+        en: "How long background jobs wait between chunks while the node is busy.",
+        ar: "مدة انتظار المهام الخلفية بين الدفعات عندما يكون الخادم مشغولًا.",
+    },
+    MetricInfo {
         name: "base_cache_redis_ops_total",
         kind: "counter",
         unit: "operations",
@@ -710,6 +717,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "طلبات مكررة أُجيبت بأن نتيجة الطلب الأصلي غير معروفة، حسب العملية.",
     },
     MetricInfo {
+        name: "integration_oauth_refresh_failures_total",
+        kind: "counter",
+        unit: "renewals",
+        en: "OAuth token renewals for an integration system that failed, by system.",
+        ar: "عمليات تجديد رمز OAuth الفاشلة لنظام تكامل، حسب النظام.",
+    },
+    MetricInfo {
         name: "integration_webhook_total",
         kind: "counter",
         unit: "webhooks",
@@ -736,6 +750,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "requests",
         en: "Requests refused because this node could not catch up to the caller's own metadata write in time.",
         ar: "طلبات رُفضت لأن هذه العقدة لم تلحق في الوقت المناسب بتعديل البيانات الوصفية الذي أجراه المستخدم نفسه.",
+    },
+    MetricInfo {
+        name: "metadata_switch_seconds",
+        kind: "histogram",
+        unit: "seconds",
+        en: "How long a node took to serve a new metadata version after it was published.",
+        ar: "المدة التي استغرقها الخادم لخدمة إصدار البيانات الوصفية الجديد بعد نشره.",
     },
     MetricInfo {
         name: "object_storage_probe_latency_seconds",

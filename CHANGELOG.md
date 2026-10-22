@@ -168,6 +168,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Background jobs that run in chunks slow down while the node is busy (AA10-T6): every five seconds
+  the server reads the p95 latency of the requests it served since the last look and the read
+  replica's lag, and the batch runner waits 0 ms, 200 ms or 1 s before each chunk (p95 under
+  100 ms and lag under 5 s; up to 300 ms and 30 s; above). Gauge `background_chunk_delay_ms`.
 - OAuth 2.0 for integration systems (Z1-T11): `auth_type` `oauth2_client_credentials` (credential
   `{"client_id", "client_secret"}`) and `oauth2_refresh_token` (plus a first `refresh_token`), with
   the provider's `token_url` and optional `scope` in the system's config. Tokens are stored

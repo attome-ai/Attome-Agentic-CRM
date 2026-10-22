@@ -147,6 +147,8 @@ pub async fn run<B: BatchJob>(
             finish(pool, id, BatchStatus::Cancelled).await?;
             return Ok(RunOutcome::Cancelled);
         }
+        // AA10-T6: wait while the node is busy serving people.
+        crate::throttle::global().pace().await;
         let Some((chunk, next)) = job.next_chunk(checkpoint.as_ref()).await? else {
             finish(pool, id, BatchStatus::Finished).await?;
             return Ok(RunOutcome::Finished);
