@@ -78298,11 +78298,21 @@
         },
         "responses": {
           "200": {
-            "description": "A bounded query page, with its ETag when the query is over one entity",
+            "description": "A bounded query page, with its ETag when the query is over one entity. AA7-T7: with `Accept: application/msgpack` the same page as MessagePack, its rows as arrays in the order `data.fields` names",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExecResponse"
+                }
+              },
+              "application/msgpack": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
                 }
               }
             }
@@ -174741,6 +174751,6 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

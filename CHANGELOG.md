@@ -168,6 +168,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- `POST /api/v1/query/execute` answers in MessagePack when the request sends
+  `Accept: application/msgpack` (AA7-T7): the same page, with each row an array in the order
+  `data.fields` names, so attribute names travel once. JSON stays the default; responses carry
+  `Vary: Accept`.
 - `docs/metadata-versions.md` (Y8-T13): how a metadata publish reaches every node (the Postgres
   doorbell, the `cache.metadata_poll_interval_secs` safety-net poll, the `registry` readiness flag),
   the `Attome-Metadata-Version` header the web app reloads on, builder pins, and rollback.

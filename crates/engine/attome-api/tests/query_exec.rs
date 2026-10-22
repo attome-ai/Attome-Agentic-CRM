@@ -3365,3 +3365,81 @@ fn different_roles_never_share_list_etag() {
         );
     })
 }
+
+/// AA7-T7: with `Accept: application/msgpack` the same page comes back as
+/// MessagePack, each row an array in `data.fields` order, and it decodes to
+/// exactly the rows the JSON answer has.
+#[test]
+fn msgpack_list_decodes_to_same_rows_as_json() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, qid, _) = etag_fixture(&system, &app, &cookie).await;
+        create_titled_record(&app, &cookie, &logicalname, "second").await;
+
+        let run = |accept: &'static str| {
+            let app = app.clone();
+            let cookie = cookie.clone();
+            async move {
+                let req = Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/query/execute")
+                    .header("cookie", &cookie)
+                    .header("sec-fetch-site", "same-origin")
+                    .header("content-type", "application/json")
+                    .header("cache-control", "no-cache")
+                    .header("accept", accept)
+                    .body(Body::from(format!(r#"{{"query_id":"{qid}"}}"#)))
+                    .unwrap();
+                let res = app.oneshot(req).await.expect("request");
+                assert_eq!(res.status(), StatusCode::OK);
+                let content_type = res
+                    .headers()
+                    .get("content-type")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or_default()
+                    .to_owned();
+                let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+                    .await
+                    .expect("body");
+                (content_type, bytes.to_vec())
+            }
+        };
+
+        let (json_type, json_bytes) = run("application/json").await;
+        assert!(json_type.starts_with("application/json"), "{json_type}");
+        let json: serde_json::Value = serde_json::from_slice(&json_bytes).expect("JSON page");
+
+        let (pack_type, pack_bytes) = run("application/msgpack").await;
+        assert_eq!(pack_type, "application/msgpack");
+        let packed: serde_json::Value =
+            rmp_serde::from_slice(&pack_bytes).expect("MessagePack page");
+
+        let fields: Vec<String> = packed["data"]["fields"]
+            .as_array()
+            .expect("fields")
+            .iter()
+            .map(|f| f.as_str().expect("field name").to_owned())
+            .collect();
+        let rows: Vec<serde_json::Value> = packed["data"]["rows"]
+            .as_array()
+            .expect("rows")
+            .iter()
+            .map(|row| {
+                let cells = row.as_array().expect("a row is an array");
+                let mut object = serde_json::Map::new();
+                for (field, cell) in fields.iter().zip(cells) {
+                    object.insert(field.clone(), cell.clone());
+                }
+                serde_json::Value::Object(object)
+            })
+            .collect();
+        let records = json["data"]["records"].as_array().expect("records");
+        assert_eq!(records.len(), 2);
+        assert_eq!(&rows, records);
+        assert_eq!(packed["data"]["columns"], json["data"]["columns"]);
+        assert_eq!(packed["metadata"], json["metadata"]);
+        assert!(pack_bytes.len() < json_bytes.len(), "names are sent once");
+    })
+}

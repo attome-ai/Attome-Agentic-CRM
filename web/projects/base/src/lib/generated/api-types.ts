@@ -93906,13 +93906,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description A bounded query page, with its ETag when the query is over one entity */
+            /** @description A bounded query page, with its ETag when the query is over one entity. AA7-T7: with `Accept: application/msgpack` the same page as MessagePack, its rows as arrays in the order `data.fields` names */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ExecResponse"];
+                    "application/msgpack": number[];
                 };
             };
             /** @description AA7-T3: unchanged since the ETag in If-None-Match */

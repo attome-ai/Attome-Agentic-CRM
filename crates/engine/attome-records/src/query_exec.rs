@@ -1434,7 +1434,10 @@ fn plan_rows(plan: &Value) -> i64 {
         ("If-None-Match" = Option<String>, Header, description = "AA7-T3: the ETag of an earlier answer; 304 when nothing it depends on has changed"),
     ),
     responses(
-        (status = 200, description = "A bounded query page, with its ETag when the query is over one entity", body = ExecResponse),
+        (status = 200, description = "A bounded query page, with its ETag when the query is over one entity. AA7-T7: with `Accept: application/msgpack` the same page as MessagePack, its rows as arrays in the order `data.fields` names", content(
+            (ExecResponse = "application/json"),
+            (Vec<u8> = "application/msgpack"),
+        )),
         (status = 304, description = "AA7-T3: unchanged since the ETag in If-None-Match"),
         (status = 422, description = "Invalid filter, ordering, or pagination contract"),
     ),
@@ -1472,10 +1475,108 @@ async fn execute(
             .into_response());
     }
     let page = execute_cached(&state, &ctx, &headers, body).await?;
-    Ok(match etag {
-        Some(tag) => ([(axum::http::header::ETAG, tag)], Json(page)).into_response(),
-        None => Json(page).into_response(),
-    })
+    let mut response = if wants_msgpack(&headers) {
+        let bytes = rmp_serde::to_vec_named(&packed(page)).map_err(AppError::internal)?;
+        (
+            [(
+                axum::http::header::CONTENT_TYPE,
+                axum::http::HeaderValue::from_static(MSGPACK),
+            )],
+            bytes,
+        )
+            .into_response()
+    } else {
+        Json(page).into_response()
+    };
+    // The JSON and MessagePack answers differ, so a cache keys on Accept.
+    response.headers_mut().insert(
+        axum::http::header::VARY,
+        axum::http::HeaderValue::from_static("Accept"),
+    );
+    if let Some(tag) = etag.and_then(|tag| axum::http::HeaderValue::from_str(&tag).ok()) {
+        response.headers_mut().insert(axum::http::header::ETAG, tag);
+    }
+    Ok(response)
+}
+
+/// AA7-T7: the MessagePack media type `query/execute` answers in when asked.
+pub const MSGPACK: &str = "application/msgpack";
+
+/// AA7-T7: whether `Accept` asks for MessagePack (and does not refuse it
+/// with `q=0`). JSON stays the default for every other `Accept`.
+fn wants_msgpack(headers: &axum::http::HeaderMap) -> bool {
+    headers
+        .get_all(axum::http::header::ACCEPT)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(','))
+        .any(|range| {
+            let mut parts = range.split(';').map(str::trim);
+            let media = parts.next().unwrap_or_default();
+            let refused = parts.any(|p| {
+                p.strip_prefix("q=")
+                    .and_then(|q| q.trim().parse::<f32>().ok())
+                    .is_some_and(|q| q <= 0.0)
+            });
+            !refused
+                && (media.eq_ignore_ascii_case(MSGPACK)
+                    || media.eq_ignore_ascii_case("application/x-msgpack"))
+        })
+}
+
+/// AA7-T7: the page with each record as an array, so attribute names travel
+/// once. `data.fields` names the array positions: the columns in their
+/// order, then any other key a record carries. A key a record lacks is
+/// `null`. Everything else is the JSON page unchanged.
+fn packed(mut page: Value) -> Value {
+    let Some(data) = page.get_mut("data").and_then(Value::as_object_mut) else {
+        return page;
+    };
+    let records = match data.remove("records") {
+        Some(Value::Array(records)) => records,
+        _ => Vec::new(),
+    };
+    let mut fields: Vec<String> = data
+        .get("columns")
+        .and_then(Value::as_array)
+        .map(|columns| {
+            columns
+                .iter()
+                .filter_map(|c| c.get("name").and_then(Value::as_str))
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+    for record in &records {
+        if let Some(object) = record.as_object() {
+            for key in object.keys() {
+                if !fields.iter().any(|f| f == key) {
+                    fields.push(key.clone());
+                }
+            }
+        }
+    }
+    let rows: Vec<Value> = records
+        .into_iter()
+        .map(|record| {
+            let mut object = match record {
+                Value::Object(object) => object,
+                _ => serde_json::Map::new(),
+            };
+            Value::Array(
+                fields
+                    .iter()
+                    .map(|f| object.remove(f).unwrap_or(Value::Null))
+                    .collect(),
+            )
+        })
+        .collect();
+    data.insert(
+        "fields".to_owned(),
+        Value::Array(fields.into_iter().map(Value::String).collect()),
+    );
+    data.insert("rows".to_owned(), Value::Array(rows));
+    page
 }
 
 /// AA7-T3: whether `If-None-Match` lists `tag` (or `*`), comparing weakly.
@@ -3402,5 +3503,53 @@ mod proptests {
             let _ = build_columns(Some(&td), &sql_cols);
             let _ = build_columns(None, &sql_cols);
         }
+    }
+}
+
+/// AA7-T7: MessagePack answers.
+#[cfg(test)]
+mod msgpack_tests {
+    use super::*;
+
+    #[test]
+    fn msgpack_is_chosen_only_when_accept_asks_for_it() {
+        let accept = |v: &str| {
+            let mut h = axum::http::HeaderMap::new();
+            h.insert(axum::http::header::ACCEPT, v.parse().expect("header"));
+            wants_msgpack(&h)
+        };
+        assert!(accept("application/msgpack"));
+        assert!(accept("application/json;q=0.5, application/x-msgpack"));
+        assert!(!accept("application/json"));
+        assert!(!accept("*/*"));
+        assert!(!accept("application/msgpack;q=0"));
+        assert!(!wants_msgpack(&axum::http::HeaderMap::new()));
+    }
+
+    #[test]
+    fn msgpack_page_sends_attribute_names_once_and_round_trips() {
+        let page = json!({
+            "metadata": { "query_id": "q" },
+            "data": {
+                "columns": [{ "name": "id" }, { "name": "title" }],
+                "records": [
+                    { "id": "a", "title": "one", "extra": 1 },
+                    { "id": "b" }
+                ],
+                "page": 1
+            }
+        });
+        let packed = packed(page);
+        assert_eq!(packed["data"]["fields"], json!(["id", "title", "extra"]));
+        assert_eq!(
+            packed["data"]["rows"],
+            json!([["a", "one", 1], ["b", null, null]])
+        );
+        assert!(packed["data"].get("records").is_none());
+        assert_eq!(packed["data"]["page"], 1);
+
+        let bytes = rmp_serde::to_vec_named(&packed).expect("encode");
+        let back: Value = rmp_serde::from_slice(&bytes).expect("decode");
+        assert_eq!(back, packed);
     }
 }

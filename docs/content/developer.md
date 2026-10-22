@@ -14,7 +14,8 @@ entities and fields.
 - **Records**: `GET/POST /api/v1/{entity}`, `GET/PATCH/DELETE /api/v1/{entity}/{id}`. An update needs
   `If-Match: "<row_version>"` from the record you read; a stale version answers 409.
 - **Queries**: `POST /api/v1/query/execute` runs a stored query or a view with filters, keyset
-  paging (`after_id`) and an optional exact total.
+  paging (`after_id`) and an optional exact total. Send `Accept: application/msgpack` for a
+  smaller MessagePack answer: each row is an array in the order `data.fields` names.
 - **Lists** answer `{items, total, page, page_size}` (pages start at 1); unbounded lists use a cursor
   (`next_cursor`).
 - **Retries**: send `Idempotency-Key` on a create or an action; a retry with the same key gets the
