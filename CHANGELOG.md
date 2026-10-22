@@ -168,6 +168,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- `docs/metadata-versions.md` (Y8-T13): how a metadata publish reaches every node (the Postgres
+  doorbell, the `cache.metadata_poll_interval_secs` safety-net poll, the `registry` readiness flag),
+  the `Attome-Metadata-Version` header the web app reloads on, builder pins, and rollback.
 - A record read with a matching `If-None-Match` answers `304` from a cached row version instead of a
   database probe (AA7-T8); a write drops the cached version on every node.
 - `GET /api/v1/schema/{logicalname}` answers from in-memory metadata and sends an `ETag`; a request

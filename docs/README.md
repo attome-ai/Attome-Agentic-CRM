@@ -26,6 +26,7 @@
 - [Rule language functions](rule-language.md): language versions and the functions V2 adds.
 - [Data layer](data-layer.md): pools, statement classes, retry, locks, query tags, read-your-writes and the censuses.
 - [Caching](caching.md): adding a cache with a CacheSpec and TieredCache, partitions, sensitivity, failure, dependencies, warm start, quotas and purging.
+- [Metadata versions](metadata-versions.md): how a publish reaches every node, the version header, readiness, pins and rollback.
 - [Background jobs](jobs.md): registering a job type, schedules and batch jobs with checkpoints, progress and cancel.
 - [Slow statements](slow-queries.md): turning on pg_stat_statements and auto_explain, reading query tags and plans.
 - [Backup](backup.md), [Versions and support](versions-and-support.md), [API versions](api-versions.md), [API workflows (Arazzo)](api/arazzo/), [Model servers](model-servers.md)
