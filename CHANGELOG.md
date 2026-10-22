@@ -168,6 +168,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Bulk reassign and bulk share (Q14-T5): `POST /api/v1/admin/security/record-shares/bulk` reassigns
+  records to a user or team, or shares them, selected by id (up to 10,000) or by current owner.
+  `preview: true` answers the count and the first 50 records; otherwise it starts a background
+  batch (progress at `GET /api/v1/jobs/{id}`, cancel at `POST /api/v1/jobs/{id}/cancel`) that works
+  500 records at a time, each chunk with one security event naming its records.
 - `POST /api/v1/query/execute` answers in MessagePack when the request sends
   `Accept: application/msgpack` (AA7-T7): the same page, with each row an array in the order
   `data.fields` names, so attribute names travel once. JSON stays the default; responses carry

@@ -72,7 +72,7 @@ type ShareRow = (Uuid, i16, Uuid, i16, Option<Uuid>, Option<DateTime<Utc>>);
 /// `grants::CreateGrantBody`/`teams::AddTeamMemberBody` already resolve
 /// email → id rather than accepting a raw user_id (an admin operating this
 /// API works from emails/names, not UUIDs).
-async fn resolve_principal(
+pub(super) async fn resolve_principal(
     db: &attome_db::DbPool,
     user_email: Option<&str>,
     team_name: Option<&str>,
@@ -123,7 +123,7 @@ async fn resolve_principal(
 /// only models `view`/`action` (the two an access *check* ever requires);
 /// this admin surface also needs to accept/return `deny`, which is
 /// grant-only, never a check argument.
-fn capability_to_i16(s: &str) -> Result<i16, AppError> {
+pub(super) fn capability_to_i16(s: &str) -> Result<i16, AppError> {
     match s {
         "view" => Ok(0),
         "action" => Ok(1),

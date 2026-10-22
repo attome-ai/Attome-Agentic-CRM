@@ -12,6 +12,10 @@ can also be scripted with an API key.
   what a role may read, create, update and delete, and how far (own records, team, organization,
   everyone) through `/api/v1/admin/security/role-entity-access`.
 - **Teams, positions and record shares** extend access to the people around a record's owner.
+- **Bulk reassign and share** (`/api/v1/admin/security/record-shares/bulk`): hand every record a
+  leaver owns to someone else, or share a list of records, in the background. Send `preview: true`
+  first to see how many records it changes; the job then works 500 at a time and shows its
+  progress under **My background work**.
 - **Field profiles** open sensitive fields (salaries, national IDs) to the roles that need them;
   everyone else sees them masked.
 - **Access reviews** (`/api/v1/admin/security/access-reviews`) ask managers to confirm who still

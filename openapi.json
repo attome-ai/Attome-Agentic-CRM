@@ -39106,6 +39106,97 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/record-shares/bulk": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Bulk reassign or share, previewed or started as a background job.",
+        "description": "Q14-T5: with `preview` the count and first 50 records; otherwise a batch\njob that works 500 records at a time, each chunk with its own security\nevent naming its records. Progress at `GET /api/v1/jobs/{job_id}`.",
+        "operationId": "bulk_access",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAccessBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Preview: the count and the first 50 records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkAccessPreview"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Started: the batch to follow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkAccessStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a preview writes nothing; a start only queues the batch, and the job writes one Access/OwnerChange or Access/Grant event per chunk of 500 with the chunk's record ids",
+          "reason": "delegated",
+          "via": "security_bulk_access job"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/record-shares/reassign-owner": {
       "put": {
         "tags": [
@@ -113439,6 +113530,99 @@
           }
         }
       },
+      "BulkAccessBody": {
+        "type": "object",
+        "required": [
+          "operation",
+          "entity",
+          "records"
+        ],
+        "properties": {
+          "capability": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For `share`: `view`, `action` or `deny`. Ignored for `reassign`."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/BulkOperation"
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "`true`: answer the count and the first 50 records, change nothing."
+          },
+          "records": {
+            "$ref": "#/components/schemas/RecordSelection"
+          },
+          "team_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "... or a team by name (exactly one of the two)."
+          },
+          "user_email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The new owner or the share's principal: a user by email ..."
+          }
+        }
+      },
+      "BulkAccessPreview": {
+        "type": "object",
+        "required": [
+          "count",
+          "record_ids"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Live records the operation would change."
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The first 50 of them, by id."
+          }
+        }
+      },
+      "BulkAccessStarted": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "total",
+          "record_ids"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The batch: `GET /api/v1/jobs/{job_id}` for progress."
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The first 50 records, as the preview shows them."
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "BulkCloneFailure": {
         "type": "object",
         "description": "One record a bulk clone could not copy.",
@@ -113695,6 +113879,14 @@
         "enum": [
           "legacy",
           "listed"
+        ]
+      },
+      "BulkOperation": {
+        "type": "string",
+        "description": "What to do to the selected records.",
+        "enum": [
+          "reassign",
+          "share"
         ]
       },
       "BulkOperationResponse": {
@@ -158667,6 +158859,30 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "RecordSelection": {
+        "type": "object",
+        "description": "Which records a bulk operation covers: exactly one of the two.",
+        "properties": {
+          "owner_email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Every live record owned by the user with this email."
+          },
+          "record_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "These records (at most 10,000)."
           }
         }
       },

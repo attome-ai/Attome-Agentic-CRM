@@ -6978,6 +6978,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/record-shares/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk reassign or share, previewed or started as a background job.
+         * @description Q14-T5: with `preview` the count and first 50 records; otherwise a batch
+         *     job that works 500 records at a time, each chunk with its own security
+         *     event naming its records. Progress at `GET /api/v1/jobs/{job_id}`.
+         */
+        post: operations["bulk_access"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/record-shares/reassign-owner": {
         parameters: {
             query?: never;
@@ -22410,6 +22432,39 @@ export interface components {
             /** Format: uuid */
             run_id: string;
         };
+        BulkAccessBody: {
+            /** @description For `share`: `view`, `action` or `deny`. Ignored for `reassign`. */
+            capability?: string | null;
+            entity: string;
+            operation: components["schemas"]["BulkOperation"];
+            /** @description `true`: answer the count and the first 50 records, change nothing. */
+            preview?: boolean;
+            records: components["schemas"]["RecordSelection"];
+            /** @description ... or a team by name (exactly one of the two). */
+            team_name?: string | null;
+            /** @description The new owner or the share's principal: a user by email ... */
+            user_email?: string | null;
+        };
+        BulkAccessPreview: {
+            /**
+             * Format: int64
+             * @description Live records the operation would change.
+             */
+            count: number;
+            /** @description The first 50 of them, by id. */
+            record_ids: string[];
+        };
+        BulkAccessStarted: {
+            /**
+             * Format: uuid
+             * @description The batch: `GET /api/v1/jobs/{job_id}` for progress.
+             */
+            job_id: string;
+            /** @description The first 50 records, as the preview shows them. */
+            record_ids: string[];
+            /** Format: int64 */
+            total: number;
+        };
         /** @description One record a bulk clone could not copy. */
         BulkCloneFailure: {
             /**
@@ -22522,6 +22577,11 @@ export interface components {
          * @enum {string}
          */
         BulkFieldMode: "legacy" | "listed";
+        /**
+         * @description What to do to the selected records.
+         * @enum {string}
+         */
+        BulkOperation: "reassign" | "share";
         BulkOperationResponse: {
             /** Format: uuid */
             id: string;
@@ -40009,6 +40069,13 @@ export interface components {
             /** @description For a lookup: the referenced records' names at the time of the change. */
             old_lookup_name?: string | null;
             old_value?: string | null;
+        };
+        /** @description Which records a bulk operation covers: exactly one of the two. */
+        RecordSelection: {
+            /** @description Every live record owned by the user with this email. */
+            owner_email?: string | null;
+            /** @description These records (at most 10,000). */
+            record_ids?: string[] | null;
         };
         /**
          * @description Phase 3 reference data: rows of one entity keyed by a declared business
@@ -69808,6 +69875,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordShareItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_access: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkAccessBody"];
+            };
+        };
+        responses: {
+            /** @description Preview: the count and the first 50 records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkAccessPreview"];
+                };
+            };
+            /** @description Started: the batch to follow */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkAccessStarted"];
                 };
             };
             /** @description Missing or invalid credentials */

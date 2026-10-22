@@ -2876,6 +2876,13 @@ pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calen
 /// transcription (payload `{"call_id"}`).
 pub const VOICE_RECORDING: attome_jobs::JobType = attome_jobs::JobType::new("voice_recording", 1);
 
+/// Q14-T5: a bulk reassign or bulk share, run as a batch in chunks of 500
+/// (payload `attome_security::admin::BulkAccessPayload`).
+pub const SECURITY_BULK_ACCESS: attome_jobs::JobType = attome_jobs::JobType {
+    lane: attome_jobs::Lane::Batch,
+    ..attome_jobs::JobType::new(attome_security::admin::BULK_ACCESS_JOB, 1)
+};
+
 /// A5-T2: an option set value merged into another, rewritten on every record
 /// that holds it, as the person who asked (payload
 /// `attome_api::model_admin::option_merge::MergePayload`).
@@ -3126,6 +3133,15 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SECURITY_BULK_ACCESS,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_security::admin::BulkAccessPayload = job.payload()?;
+                attome_security::admin::run_bulk_access(&state, payload).await
             },
         ) {
             tracing::error!(%error, "job type registration failed");

@@ -19,6 +19,8 @@
 
 mod access_reviews;
 mod account_state;
+mod bulk_access;
+pub use bulk_access::{BULK_ACCESS_JOB, BulkAccessPayload, run_bulk_access};
 mod bulk_fields;
 /// B17-T4: device registration, status and remote wipe.
 mod devices;
@@ -64,6 +66,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = grants::openapi_fragment();
     for fragment in [
         access_reviews::openapi_fragment(),
+        bulk_access::openapi_fragment(),
         bulk_fields::openapi_fragment(),
         sessions::openapi_fragment(),
         privileges::openapi_fragment(),
@@ -94,6 +97,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .merge(access_reviews::routes())
+        .merge(bulk_access::routes())
         .merge(bulk_fields::routes())
         .merge(grants::routes())
         .merge(sessions::routes())
