@@ -17,6 +17,16 @@ pub(crate) fn test_config_with_public_endpoint(
     endpoint: &str,
     public_endpoint: &str,
 ) -> AppConfig {
+    test_config_with_storage(serde_json::json!({
+        "s3_endpoint": endpoint, "s3_public_endpoint": public_endpoint,
+        "s3_region": "us-east-1",
+        "s3_access_key": "test-access-key", "s3_secret_key": "test-secret-key",
+        "s3_bucket": bucket
+    }))
+}
+
+/// Z6-T1: the same throwaway configuration with `storage` set to `storage`.
+pub(crate) fn test_config_with_storage(storage: serde_json::Value) -> AppConfig {
     let json = format!(
         r#"{{
             "app": {{
@@ -36,12 +46,7 @@ pub(crate) fn test_config_with_public_endpoint(
                 "connection_pool_size": 1, "timeout": 500, "l1_cache_size_mb": 1,
                 "l1_cache_ttl_seconds": 60
             }},
-            "storage": {{
-                "s3_endpoint": "{endpoint}", "s3_public_endpoint": "{public_endpoint}",
-                "s3_region": "us-east-1",
-                "s3_access_key": "test-access-key", "s3_secret_key": "test-secret-key",
-                "s3_bucket": "{bucket}"
-            }},
+            "storage": {storage},
             "auth": {{
                 "jwt_secret": "test-only-throwaway-secret-32-bytes-min", "jwt_issuer": "test",
                 "apikey_hash_pepper": "test-only-throwaway-pepper-32-bytes-min"

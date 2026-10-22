@@ -144,7 +144,9 @@ pub fn confirmable(status: Option<&str>, lines: usize) -> Result<(), AppError> {
         Some(_) => return Err(AppError::Conflict("only a draft order can be confirmed")),
     }
     if lines == 0 {
-        return Err(AppError::Validation("an order needs at least one line".into()));
+        return Err(AppError::Validation(
+            "an order needs at least one line".into(),
+        ));
     }
     Ok(())
 }
@@ -345,21 +347,23 @@ async fn order_quote_locked(
 }
 
 /// Makes the order for a won opportunity, once.
+/// The opportunity fields an order copies: stage, account, currency, name.
+type OpportunityOrderRow = (Option<String>, Option<Uuid>, Option<String>, Option<String>);
+
 pub async fn order_from_opportunity(
     state: &EngineState,
     ctx: &SecurityContext,
     opportunity: Uuid,
 ) -> Result<OrderMade, AppError> {
     attome_records::entity_crud::read_record_bulk(state, ctx, "opportunity", opportunity).await?;
-    let row: Option<(Option<String>, Option<Uuid>, Option<String>, Option<String>)> =
-        sqlx::query_as(
-            "SELECT stage::text, account_ref, currency, name FROM opportunity \
+    let row: Option<OpportunityOrderRow> = sqlx::query_as(
+        "SELECT stage::text, account_ref, currency, name FROM opportunity \
               WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
-        )
-        .bind(opportunity)
-        .fetch_optional(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
+    )
+    .bind(opportunity)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
     let (stage, account, currency, name) = row.ok_or(AppError::NotFound)?;
     if stage.as_deref() != Some("closed_won") {
         return Err(AppError::Conflict("only a won opportunity can be ordered"));

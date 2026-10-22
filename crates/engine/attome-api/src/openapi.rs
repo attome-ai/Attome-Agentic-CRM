@@ -83,6 +83,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::webcrawl_admin::openapi_fragment(), "core"),
         (attome_content::admin::openapi_fragment(), "content"),
         (crate::content_public::openapi_fragment(), "core"),
+        (crate::storage_local::openapi_fragment(), "core"),
         (crate::service_public::openapi_fragment(), "core"),
         (attome_content::space_admin::openapi_fragment(), "content"),
         (

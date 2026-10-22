@@ -279,7 +279,8 @@ pub async fn run() -> ExitCode {
     // `attome init` writes `unset` credentials for a Solo install without an
     // object store: file uploads are unavailable there, which is not a
     // failure to start.
-    let storage_unconfigured = config.storage.s3_access_key == "unset";
+    let storage_unconfigured = config.storage.backend == attome_config::StorageBackend::S3
+        && config.storage.s3_access_key == "unset";
     if storage_unconfigured {
         results.push(pass(
             "storage",
@@ -294,7 +295,7 @@ pub async fn run() -> ExitCode {
                 if health.reachable {
                     results.push(pass(
                         "storage",
-                        format!("reachable at {}", config.storage.s3_endpoint),
+                        format!("reachable at {}", storage_location(&config)),
                     ));
                 } else {
                     // `detail` (never serialized) keeps the full backend error for
@@ -700,6 +701,22 @@ fn print_readable(results: &[CheckResult]) {
             "\n{failed} of {} checks need attention. Fix them and run `attome doctor` again.",
             results.len()
         );
+    }
+}
+
+/// Z6-T1: where the chosen storage backend keeps files, for the report.
+fn storage_location(config: &AppConfig) -> String {
+    let storage = &config.storage;
+    match storage.backend {
+        attome_config::StorageBackend::S3 => storage.s3_endpoint.clone(),
+        attome_config::StorageBackend::Local => format!("folder {}", storage.local.path),
+        attome_config::StorageBackend::Azure => {
+            format!(
+                "Azure account {} container {}",
+                storage.azure.account, storage.azure.container
+            )
+        }
+        attome_config::StorageBackend::Gcs => format!("GCS bucket {}", storage.gcs.bucket),
     }
 }
 

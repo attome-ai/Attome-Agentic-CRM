@@ -39,6 +39,9 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+/// An approved model's id, cost unit, input and output cost.
+type ModelPriceRow = (String, Option<String>, Option<f64>, Option<f64>);
+
 /// The backfill job's name.
 pub const BACKFILL_JOB: &str = "ai_agent_stats_backfill";
 /// The nightly job's name.
@@ -182,7 +185,7 @@ async fn prices_for(
     if rest.is_empty() {
         return Ok(prices);
     }
-    let rows: Vec<(String, Option<String>, Option<f64>, Option<f64>)> = sqlx::query_as(
+    let rows: Vec<ModelPriceRow> = sqlx::query_as(
         "SELECT provider_model_id, cost_unit::text, input_cost::float8, output_cost::float8 \
            FROM ai_model \
           WHERE provider_model_id = ANY($1) AND approval_status = 'approved' \

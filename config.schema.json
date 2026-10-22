@@ -527,6 +527,32 @@
       ],
       "type": "object"
     },
+    "AzureStorageSettings": {
+      "description": "Z6-T1: `storage.azure`, used when `storage.backend = \"azure\"`.",
+      "properties": {
+        "access_key": {
+          "description": "The storage account's shared access key. Presigned links are signed\nwith it, so it must be a key rather than a token.",
+          "type": "string",
+          "writeOnly": true
+        },
+        "account": {
+          "default": "",
+          "description": "The storage account name.",
+          "type": "string"
+        },
+        "container": {
+          "default": "",
+          "description": "The blob container that holds the files.",
+          "type": "string"
+        },
+        "endpoint": {
+          "default": "",
+          "description": "A custom endpoint (an Azurite emulator, a sovereign cloud). Empty (the\ndefault) is the public Azure endpoint for the account.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "BackupSection": {
       "properties": {
         "dir": {
@@ -910,6 +936,56 @@
         }
       ]
     },
+    "CatalogueModel": {
+      "description": "Z9-T3 — one model in `inference.catalogue`.",
+      "properties": {
+        "adapter": {
+          "default": "openai_compatible",
+          "description": "The adapter that calls it. Only `openai_compatible` exists today\n(Z9-T1); native adapters arrive with Z9-T2.",
+          "type": "string"
+        },
+        "allowed_labels": {
+          "description": "The labels of content it may be sent. Defaults to `public` and\n`internal`: a model receives personal, financial or health data only\nwhen an operator says so.",
+          "items": {
+            "$ref": "#/$defs/DataLabel"
+          },
+          "type": "array"
+        },
+        "capabilities": {
+          "description": "What it can do.",
+          "items": {
+            "$ref": "#/$defs/ModelCapability"
+          },
+          "type": "array"
+        },
+        "cost_per_1k_tokens": {
+          "default": 0.0,
+          "description": "What 1,000 tokens cost, in the deployment's currency. 0 for a\nself-hosted model with no per-token price.",
+          "format": "double",
+          "type": "number"
+        },
+        "id": {
+          "description": "The model id requested from the provider, recorded on every output.",
+          "type": "string"
+        },
+        "max_context": {
+          "description": "The largest context it accepts, in tokens.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "self_hosted": {
+          "default": false,
+          "description": "Whether it runs inside the deployment. Only self-hosted models receive\n`secret` content, or any content when\n`inference.allow_external_provider` is off.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "max_context"
+      ],
+      "type": "object"
+    },
     "ChangeFeedSection": {
       "properties": {
         "retention_days": {
@@ -972,6 +1048,26 @@
         }
       },
       "type": "object"
+    },
+    "DataLabel": {
+      "description": "Z9-T3 — a data sensitivity label (A1), lowest to highest. A request\ncarries the highest label of the content it sends; a model receives it\nonly when the label is in its `allowed_labels`.",
+      "oneOf": [
+        {
+          "enum": [
+            "public",
+            "internal",
+            "personal",
+            "financial",
+            "health"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "secret",
+          "description": "Never leaves the deployment: only a self-hosted model receives it.",
+          "type": "string"
+        }
+      ]
     },
     "DatabasePoolSize": {
       "description": "One pool's size override; `max_connections` is validated to `1..=1000`.",
@@ -1538,6 +1634,22 @@
       },
       "type": "object"
     },
+    "GcsStorageSettings": {
+      "description": "Z6-T1: `storage.gcs`, used when `storage.backend = \"gcs\"`.",
+      "properties": {
+        "bucket": {
+          "default": "",
+          "description": "The bucket that holds the files.",
+          "type": "string"
+        },
+        "service_account_key": {
+          "description": "The service account key, as the JSON document Google issues. Presigned\nlinks are signed with its private key.",
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "type": "object"
+    },
     "GoogleAiSection": {
       "description": "Only `api_key` is a real per-deployment credential today — no engine\ncrate calls the Gemini API yet, so\n`base_url`/`default_model`/`timeout_seconds` were dropped (D-099-era\nscaffolding for a feature that was never wired up); reintroduce them\nalongside whatever crate actually builds the client once one exists.",
       "properties": {
@@ -1666,6 +1778,13 @@
             "integer",
             "null"
           ]
+        },
+        "catalogue": {
+          "description": "Z9-T3 — the model catalogue the router picks from: each model's\ncapabilities, context size, cost and the data labels it may be sent.\nEmpty by default: nothing is routed by catalogue, and every task runs\non `generation` (or its `task_models` entry) as before.",
+          "items": {
+            "$ref": "#/$defs/CatalogueModel"
+          },
+          "type": "array"
         },
         "embedding": {
           "$ref": "#/$defs/InferenceEndpoint",
@@ -1897,6 +2016,27 @@
       },
       "type": "object"
     },
+    "LocalStorageSettings": {
+      "description": "Z6-T1: `storage.local`, used when `storage.backend = \"local\"`.",
+      "properties": {
+        "path": {
+          "default": "",
+          "description": "The folder that holds the files. Created at boot when it does not\nexist. Required with the local backend.",
+          "type": "string"
+        },
+        "public_base_url": {
+          "default": "",
+          "description": "Address browsers reach the server at, put in front of the signed\nlinks (`https://crm.example.com`). Empty (the default) hands out links\nrelative to the server, which a browser on the same origin follows.",
+          "type": "string"
+        },
+        "url_signing_key": {
+          "description": "Key that signs the short-lived upload and download links the server\nhands out in place of presigned bucket URLs (at least 32 bytes). Every\nprocess of the deployment needs the same value, so a link one process\nmints is accepted by another.",
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "type": "object"
+    },
     "MetadataSection": {
       "description": "`metadata` — additive, every field defaulted, so a config file without it\nkeeps today's behaviour: an unset mode is `auto` (see\n[`ChangesetsSection::mode`]).",
       "properties": {
@@ -1971,6 +2111,16 @@
         "password"
       ],
       "type": "object"
+    },
+    "ModelCapability": {
+      "description": "Z9-T3 — what a catalogue model can do.",
+      "enum": [
+        "chat",
+        "tools",
+        "vision",
+        "embeddings"
+      ],
+      "type": "string"
     },
     "ModelPrice": {
       "additionalProperties": false,
@@ -2865,12 +3015,50 @@
       ],
       "type": "object"
     },
+    "StorageBackend": {
+      "description": "Z6-T1: which object store holds this deployment's files. Every backend\ngoes through the `object_store` crate, so engines see one `ObjectStore`\nwhatever is behind it.",
+      "oneOf": [
+        {
+          "const": "s3",
+          "description": "An S3-compatible bucket (AWS S3, RustFS, MinIO): the `s3_*` settings.\nThe default.",
+          "type": "string"
+        },
+        {
+          "const": "local",
+          "description": "A folder on this machine: `storage.local`. One node only, since other\nnodes cannot see the folder. Browsers upload and download through the\nserver's own signed `/api/v1/storage/local/` route instead of\npresigned bucket URLs.",
+          "type": "string"
+        },
+        {
+          "const": "azure",
+          "description": "An Azure Blob Storage container: `storage.azure`.",
+          "type": "string"
+        },
+        {
+          "const": "gcs",
+          "description": "A Google Cloud Storage bucket: `storage.gcs`.",
+          "type": "string"
+        }
+      ]
+    },
     "StorageSection": {
       "properties": {
+        "azure": {
+          "$ref": "#/$defs/AzureStorageSettings"
+        },
+        "backend": {
+          "$ref": "#/$defs/StorageBackend",
+          "description": "`s3` (the default), `local`, `azure` or `gcs`. Only the chosen\nbackend's settings are used; the `s3_*` settings may be left out for\nthe others."
+        },
         "clamd_address": {
           "default": "",
           "description": "`host:port` of a ClamAV `clamd` daemon (INSTREAM protocol) the async\nscan job submits uploaded bytes to. Empty (the default) means no\nscanner is configured — the scan job then fails closed (rejects,\nnever promotes) rather than silently skipping malware scanning.",
           "type": "string"
+        },
+        "gcs": {
+          "$ref": "#/$defs/GcsStorageSettings"
+        },
+        "local": {
+          "$ref": "#/$defs/LocalStorageSettings"
         },
         "max_deployment_storage_bytes": {
           "default": null,
@@ -2900,12 +3088,15 @@
           ]
         },
         "s3_access_key": {
+          "default": "",
           "type": "string"
         },
         "s3_bucket": {
+          "default": "",
           "type": "string"
         },
         "s3_endpoint": {
+          "default": "",
           "type": "string"
         },
         "s3_public_endpoint": {
@@ -2914,6 +3105,7 @@
           "type": "string"
         },
         "s3_region": {
+          "default": "",
           "type": "string"
         },
         "s3_secret_key": {
@@ -2926,13 +3118,6 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "s3_endpoint",
-        "s3_region",
-        "s3_access_key",
-        "s3_secret_key",
-        "s3_bucket"
-      ],
       "type": "object"
     },
     "TranslationSection": {

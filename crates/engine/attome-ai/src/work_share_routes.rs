@@ -21,7 +21,6 @@ use axum::{
 };
 use chrono::{DateTime, Days, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 

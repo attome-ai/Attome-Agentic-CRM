@@ -10,8 +10,9 @@ pub enum StorageError {
     Store(#[from] object_store::Error),
 
     /// Signing a presigned URL failed: crypto-provider config, credential
-    /// fetch, or URL construction inside `AmazonS3::signed_url`. Never
-    /// "unsupported" — the only backend this crate builds always signs. The
+    /// fetch, or URL construction inside the store's `signed_url`. Never
+    /// "unsupported" — every backend this crate builds signs (local disk
+    /// through its own links, [`StorageError::InvalidLink`]). The
     /// source is kept so a caller's `AppError::internal` logs the real cause
     /// while the HTTP client sees only a masked 500.
     #[error("presign failed: {0}")]
@@ -24,6 +25,17 @@ pub enum StorageError {
 
     #[error("invalid object path: {0}")]
     InvalidPath(String),
+
+    /// Z6-T1: a local-disk link that is expired, signed for another method,
+    /// key or expiry, or presented to a store that is not on local disk. One
+    /// variant for all of them, so the route answers each the same way.
+    #[error("invalid or expired storage link")]
+    InvalidLink,
+
+    /// Z6-T1: the store could not be set up at boot (the local folder could
+    /// not be created). Names the setting, never a secret.
+    #[error("storage setup failed: {0}")]
+    Setup(String),
 }
 
 #[cfg(test)]

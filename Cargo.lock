@@ -2131,6 +2131,8 @@ name = "attome-storage"
 version = "0.1.0"
 dependencies = [
  "attome-config",
+ "hex",
+ "hmac 0.12.1",
  "http",
  "metrics",
  "object_store",
@@ -2138,9 +2140,11 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "zeroize",
 ]
 
 [[package]]
@@ -4800,6 +4804,7 @@ dependencies = [
  "futures-util",
  "http",
  "http-body-util",
+ "httparse",
  "humantime",
  "hyper",
  "itertools 0.15.0",

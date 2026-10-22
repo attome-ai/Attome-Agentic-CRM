@@ -8,7 +8,7 @@
 //! `deployment.sovereign` understands it) or `outside`. Backups and their
 //! copies join the list when U6's backup settings exist.
 
-use attome_config::{AppConfig, CacheBackend, endpoint_is_in_deployment};
+use attome_config::{AppConfig, CacheBackend, StorageBackend, endpoint_is_in_deployment};
 use serde_json::{Value, json};
 
 /// One place data is kept or sent.
@@ -60,16 +60,44 @@ pub fn places(config: &AppConfig) -> Vec<Place> {
             config.database.host, config.database.port, config.database.dbname
         ),
     );
-    let s3 = if config.storage.s3_endpoint.trim().is_empty() {
-        "https://s3.amazonaws.com".to_owned()
-    } else {
-        config.storage.s3_endpoint.clone()
-    };
-    add(
-        "store",
-        "files (object store)",
-        format!("{s3} bucket {}", config.storage.s3_bucket),
-    );
+    let storage = &config.storage;
+    match storage.backend {
+        StorageBackend::S3 => {
+            let s3 = if storage.s3_endpoint.trim().is_empty() {
+                "https://s3.amazonaws.com".to_owned()
+            } else {
+                storage.s3_endpoint.clone()
+            };
+            add(
+                "store",
+                "files (object store)",
+                format!("{s3} bucket {}", storage.s3_bucket),
+            );
+        }
+        // A folder on this machine is inside by definition; it is listed
+        // after the closure's last use below.
+        StorageBackend::Local => {}
+        StorageBackend::Azure => {
+            let endpoint = if storage.azure.endpoint.trim().is_empty() {
+                format!("https://{}.blob.core.windows.net", storage.azure.account)
+            } else {
+                storage.azure.endpoint.clone()
+            };
+            add(
+                "store",
+                "files (Azure Blob Storage)",
+                format!("{endpoint} container {}", storage.azure.container),
+            );
+        }
+        StorageBackend::Gcs => add(
+            "store",
+            "files (Google Cloud Storage)",
+            format!(
+                "https://storage.googleapis.com bucket {}",
+                storage.gcs.bucket
+            ),
+        ),
+    }
     if let Some(anchor) = &config.audit.anchor_store {
         let endpoint = if anchor.s3_endpoint.trim().is_empty() {
             "https://s3.amazonaws.com".to_owned()
@@ -77,6 +105,14 @@ pub fn places(config: &AppConfig) -> Vec<Place> {
             anchor.s3_endpoint.clone()
         };
         add("store", "audit anchors", endpoint);
+    }
+    if storage.backend == StorageBackend::Local {
+        out.push(Place {
+            kind: "store",
+            what: "files (local folder)".to_owned(),
+            location: storage.local.path.clone(),
+            inside: true,
+        });
     }
     match config.cache.backend {
         CacheBackend::Memory => {

@@ -19,7 +19,8 @@ use super::helpers::{
 };
 use super::{
     AnchorStoreSection, AppConfig, CacheRole, CacheRoleOverride, CacheSentinelConfig, ConfigError,
-    build_redis_sentinel_url, build_redis_url, cidr_contains, parse_cidr, urlencoding,
+    StorageBackend, build_redis_sentinel_url, build_redis_url, cidr_contains, parse_cidr,
+    urlencoding,
 };
 
 impl AppConfig {
@@ -596,14 +597,34 @@ impl AppConfig {
             })
         };
         let mut out: Vec<(String, String)> = Vec::new();
-        // An empty S3 endpoint means AWS S3 itself.
-        if self.storage.s3_endpoint.trim().is_empty() {
-            out.push((
+        match self.storage.backend {
+            // An empty S3 endpoint means AWS S3 itself.
+            StorageBackend::S3 if self.storage.s3_endpoint.trim().is_empty() => out.push((
                 "storage.s3_endpoint".to_owned(),
                 "empty means AWS S3; a sovereign deployment names its own object store".to_owned(),
-            ));
-        } else {
-            out.extend(check("storage.s3_endpoint", &self.storage.s3_endpoint));
+            )),
+            StorageBackend::S3 => {
+                out.extend(check("storage.s3_endpoint", &self.storage.s3_endpoint));
+            }
+            StorageBackend::Local => {}
+            // An empty Azure endpoint means the public Azure cloud.
+            StorageBackend::Azure if self.storage.azure.endpoint.trim().is_empty() => out.push((
+                "storage.azure.endpoint".to_owned(),
+                "empty means the public Azure cloud; a sovereign deployment names its own \
+                 object store"
+                    .to_owned(),
+            )),
+            StorageBackend::Azure => {
+                out.extend(check(
+                    "storage.azure.endpoint",
+                    &self.storage.azure.endpoint,
+                ));
+            }
+            StorageBackend::Gcs => out.push((
+                "storage.backend".to_owned(),
+                "gcs is Google's cloud; a sovereign deployment names its own object store"
+                    .to_owned(),
+            )),
         }
         if let Some(anchor) = &self.audit.anchor_store {
             if anchor.s3_endpoint.trim().is_empty() {
@@ -743,6 +764,10 @@ impl AppConfig {
         if let Some(coordination) = &self.cache.roles.coordination {
             validate_cache_timeout_ms("cache.roles.coordination.timeout", coordination.timeout)?;
         }
+        // Z6-T1 — see `validate_storage_backend`.
+        self.validate_storage_backend(production)?;
+        // Z9-T3 — see `validate_model_catalogue`.
+        validate_model_catalogue(&self.inference.catalogue)?;
         Self::check_secret_ring("auth.jwt_secret", &self.auth.jwt_secret, production)?;
         Self::check_signing_seeds("auth.jwt_signing_keys", &self.auth.jwt_signing_keys)?;
         // P-api-key-hashing (D-112, revised) — unconditional, unlike the
@@ -1303,7 +1328,9 @@ impl AppConfig {
         // check as its production one, once it opts in. `None` (the
         // default — no residency claim configured) is a no-op, same "ships
         // dark" posture as `retention`/`idempotency`/`approval`.
-        if let Some(data_region) = &self.deployment.data_region
+        // Z6-T1: only an S3 bucket has an `s3_region` to compare with.
+        if self.storage.backend == StorageBackend::S3
+            && let Some(data_region) = &self.deployment.data_region
             && !data_region.eq_ignore_ascii_case(&self.storage.s3_region)
         {
             return Err(ConfigError::Invalid {
@@ -1497,6 +1524,87 @@ impl AppConfig {
     /// The deprecated bool still maps — BEM-D4's one-release compatibility, so
     /// an existing `config.json` keeps booting byte-identically — but the
     /// credential rule below applies whichever key selected the mode.
+    /// Z6-T1: the chosen storage backend has the settings it needs. Only the
+    /// chosen backend is checked; the others' settings are ignored.
+    fn validate_storage_backend(&self, production: bool) -> Result<(), ConfigError> {
+        let storage = &self.storage;
+        let backend = match storage.backend {
+            StorageBackend::S3 => "s3",
+            StorageBackend::Local => "local",
+            StorageBackend::Azure => "azure",
+            StorageBackend::Gcs => "gcs",
+        };
+        let required = |field: &str, value: &str| -> Result<(), ConfigError> {
+            if value.trim().is_empty() {
+                return Err(ConfigError::Invalid {
+                    field: field.into(),
+                    reason: format!("must be set when storage.backend = \"{backend}\""),
+                });
+            }
+            Ok(())
+        };
+        match storage.backend {
+            StorageBackend::S3 => required("storage.s3_bucket", &storage.s3_bucket),
+            StorageBackend::Local => {
+                required("storage.local.path", &storage.local.path)?;
+                Self::check_secret(
+                    "storage.local.url_signing_key",
+                    storage.local.url_signing_key.expose(),
+                    production,
+                )?;
+                let base = storage.local.public_base_url.trim();
+                if !base.is_empty() && url::Url::parse(base).is_err() {
+                    return Err(ConfigError::Invalid {
+                        field: "storage.local.public_base_url".into(),
+                        reason: "must be an absolute URL such as https://crm.example.com, or \
+                                 empty for links relative to the server"
+                            .into(),
+                    });
+                }
+                if production && !base.is_empty() && !base.starts_with("https://") {
+                    return Err(ConfigError::Insecure {
+                        field: "storage.local.public_base_url".into(),
+                        reason: "must use \"https://\" when app.deployment_profile = \
+                                 \"production\": the signed links are bearer credentials"
+                            .into(),
+                    });
+                }
+                Ok(())
+            }
+            StorageBackend::Azure => {
+                required("storage.azure.account", &storage.azure.account)?;
+                required("storage.azure.container", &storage.azure.container)?;
+                required(
+                    "storage.azure.access_key",
+                    storage.azure.access_key.expose(),
+                )?;
+                if production {
+                    Self::check_not_template_secret(
+                        "storage.azure.access_key",
+                        storage.azure.access_key.expose(),
+                    )?;
+                    let endpoint = storage.azure.endpoint.trim();
+                    if !endpoint.is_empty() && !endpoint.starts_with("https://") {
+                        return Err(ConfigError::Insecure {
+                            field: "storage.azure.endpoint".into(),
+                            reason: "must use \"https://\" when app.deployment_profile = \
+                                     \"production\""
+                                .into(),
+                        });
+                    }
+                }
+                Ok(())
+            }
+            StorageBackend::Gcs => {
+                required("storage.gcs.bucket", &storage.gcs.bucket)?;
+                required(
+                    "storage.gcs.service_account_key",
+                    storage.gcs.service_account_key.expose(),
+                )
+            }
+        }
+    }
+
     fn validate_email_transport(&self) -> Result<(), ConfigError> {
         const MODES: &[&str] = &["implicit", "starttls", "none"];
         if let Some(mode) = self.email.tls_mode.as_deref() {
@@ -1592,11 +1700,13 @@ impl AppConfig {
         {
             Self::check_not_template_secret("cache.sentinel.sentinel_password", password)?;
         }
-        Self::check_not_template_secret("storage.s3_access_key", &self.storage.s3_access_key)?;
-        Self::check_not_template_secret(
-            "storage.s3_secret_key",
-            self.storage.s3_secret_key.expose(),
-        )?;
+        if self.storage.backend == StorageBackend::S3 {
+            Self::check_not_template_secret("storage.s3_access_key", &self.storage.s3_access_key)?;
+            Self::check_not_template_secret(
+                "storage.s3_secret_key",
+                self.storage.s3_secret_key.expose(),
+            )?;
+        }
         if self.email.enabled {
             Self::check_not_template_secret(
                 "email.smtp_password",
@@ -1657,7 +1767,7 @@ impl AppConfig {
                     .into(),
             });
         }
-        if !self.storage.s3_verify_ssl {
+        if self.storage.backend == StorageBackend::S3 && !self.storage.s3_verify_ssl {
             return Err(ConfigError::Insecure {
                 field: "storage.s3_verify_ssl".into(),
                 reason: "must be true when app.deployment_profile = \"production\" — false \
@@ -1670,7 +1780,9 @@ impl AppConfig {
         // endpoint's scheme alone decides plaintext vs TLS; `s3_verify_ssl`
         // only governs certificate verification, so it does not make an
         // `http://` endpoint safe.
-        if !self.storage.s3_endpoint.is_empty() && !self.storage.s3_endpoint.starts_with("https://")
+        if self.storage.backend == StorageBackend::S3
+            && !self.storage.s3_endpoint.is_empty()
+            && !self.storage.s3_endpoint.starts_with("https://")
         {
             return Err(ConfigError::Insecure {
                 field: "storage.s3_endpoint".into(),
@@ -1681,7 +1793,8 @@ impl AppConfig {
                 ),
             });
         }
-        if !self.storage.s3_public_endpoint.is_empty()
+        if self.storage.backend == StorageBackend::S3
+            && !self.storage.s3_public_endpoint.is_empty()
             && !self.storage.s3_public_endpoint.starts_with("https://")
         {
             return Err(ConfigError::Insecure {
@@ -2383,6 +2496,38 @@ pub(crate) fn validate_inference_timeout_secs(field: &str, value: u64) -> Result
 /// bucket would span whole providers; above /128 is not an IPv6 prefix.
 pub(crate) const IPV6_BUCKET_PREFIX_MIN: u8 = 32;
 pub(crate) const IPV6_BUCKET_PREFIX_MAX: u8 = 128;
+
+/// Z9-T3: every catalogue model has a unique id, a known adapter, a context
+/// size and a price that is a number of zero or more.
+pub(crate) fn validate_model_catalogue(
+    catalogue: &[super::CatalogueModel],
+) -> Result<(), ConfigError> {
+    let mut seen = std::collections::HashSet::new();
+    for (i, model) in catalogue.iter().enumerate() {
+        let field = format!("inference.catalogue[{i}]");
+        let id = model.id.trim();
+        let reason = if id.is_empty() {
+            Some("id must be set".to_owned())
+        } else if !seen.insert(id.to_owned()) {
+            Some(format!("id {id:?} is listed twice"))
+        } else if model.adapter != "openai_compatible" {
+            Some(format!(
+                "adapter {:?} is not known; the only adapter is \"openai_compatible\"",
+                model.adapter
+            ))
+        } else if model.max_context == 0 {
+            Some("max_context must be above 0".to_owned())
+        } else if !model.cost_per_1k_tokens.is_finite() || model.cost_per_1k_tokens < 0.0 {
+            Some("cost_per_1k_tokens must be 0 or more".to_owned())
+        } else {
+            None
+        };
+        if let Some(reason) = reason {
+            return Err(ConfigError::Invalid { field, reason });
+        }
+    }
+    Ok(())
+}
 
 pub(crate) fn validate_ipv6_bucket_prefix(value: u8) -> Result<(), ConfigError> {
     if !(IPV6_BUCKET_PREFIX_MIN..=IPV6_BUCKET_PREFIX_MAX).contains(&value) {

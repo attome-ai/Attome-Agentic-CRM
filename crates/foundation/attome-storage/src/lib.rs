@@ -1,4 +1,7 @@
-//! S3-compatible object storage (AWS S3 / RustFS / MinIO) for the platform.
+//! Object storage for the platform: S3-compatible (AWS S3 / RustFS / MinIO)
+//! by default, or a local folder, Azure Blob Storage or Google Cloud Storage
+//! (`storage.backend`, Z6-T1). Every backend goes through `object_store`, so
+//! engines see one `ObjectStore` whatever is behind it.
 //!
 //! # What this crate owns
 //!
@@ -7,8 +10,10 @@
 //!   [`create_storage_client`] for `config.storage`,
 //!   [`create_storage_client_for`] for any other bucket (the audit-anchor
 //!   store, D-352).
-//! - SigV4 presigned upload/download URLs ([`presign_upload`],
-//!   [`presign_download`]).
+//! - Presigned upload/download URLs ([`presign_upload`],
+//!   [`presign_download`]): SigV4 for S3, a SAS for Azure, a V4 signature for
+//!   GCS, and for local disk a signed link to the server's own
+//!   [`LOCAL_LINK_PATH`] route, checked there by [`verify_local_link`].
 //! - The storage reachability probe ([`health_check`]), and its operator-only
 //!   twin for the presign endpoint ([`public_endpoint_health_check`]).
 //!
@@ -96,6 +101,7 @@
 mod client;
 mod error;
 pub mod health;
+mod local;
 pub mod mirror;
 mod presign;
 #[cfg(test)]
@@ -106,4 +112,5 @@ pub use error::StorageError;
 pub use health::{
     ClamAvHealth, StorageHealth, clamav_health_check, health_check, public_endpoint_health_check,
 };
+pub use local::{LOCAL_LINK_PATH, verify_local_link};
 pub use presign::{presign_download, presign_upload};

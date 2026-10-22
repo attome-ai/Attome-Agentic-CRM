@@ -53,15 +53,16 @@ pub mod secret_inventory;
 
 pub use config::{
     AiEnablement, AiSurface, AnchorStoreSection, ApiKeyPepper, AppConfig, AppSection, AuthSection,
-    BackupSection, CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection,
-    CaptchaConfig, CaptchaProvider, ChangesetLayer, ChangesetMode, ChangesetsSection, ConfigError,
-    DatabasePoolSize, DatabasePools, DatabaseSection, DocgenSection, EinvoiceSection,
-    EmailProviders, EmailSection, EventsSection, FleetSection, GoogleAiSection, InferenceEndpoint,
-    InferenceSection, IntegrationSection, KdfSection, MetadataSection, ModelPrice,
+    AzureStorageSettings, BackupSection, CacheBackend, CacheRole, CacheRoleOverride, CacheRoles,
+    CacheSection, CaptchaConfig, CaptchaProvider, CatalogueModel, ChangesetLayer, ChangesetMode,
+    ChangesetsSection, ConfigError, DataLabel, DatabasePoolSize, DatabasePools, DatabaseSection,
+    DocgenSection, EinvoiceSection, EmailProviders, EmailSection, EventsSection, FleetSection,
+    GcsStorageSettings, GoogleAiSection, InferenceEndpoint, InferenceSection, IntegrationSection,
+    KdfSection, LocalStorageSettings, MetadataSection, ModelCapability, ModelPrice,
     NotificationSection, ObservabilitySection, OidcProviderConfig, OidcSection, PortalSection,
     RateLimitSection, ReleaseReportSection, RuntimeDbCredentials, S2SSection, S2sSeededClient,
     S2sSeededPermission, S3Target, SendGridSettings, SesSettings, ShedPermits, ShedSection,
-    SpendSection, StatementClassOverrides, StatementClassTimeouts, StorageSection,
+    SpendSection, StatementClassOverrides, StatementClassTimeouts, StorageBackend, StorageSection,
     TranslationSection, WebchatSection, WebcrawlSection, cidr_contains, config_json_schema,
     endpoint_is_in_deployment,
 };

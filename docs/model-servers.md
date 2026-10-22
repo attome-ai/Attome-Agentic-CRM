@@ -79,3 +79,40 @@ generation and embeddings pointed at the profile's servers, and prints the `dock
 command that starts them. It never downloads weights. A profile is installable only once it is
 approved, which needs every file's checksum and size from weights that were downloaded, tested and
 scored; until then `init` lists it and refuses.
+
+## Model catalogue and routing
+
+`inference.catalogue` lists the models the gateway may route a task to. Each entry says what the
+model can do and which data it may see:
+
+```json
+"inference": {
+  "allow_external_provider": false,
+  "catalogue": [
+    { "id": "qwen3-8b", "self_hosted": true, "capabilities": ["chat", "tools"],
+      "max_context": 32768, "cost_per_1k_tokens": 0,
+      "allowed_labels": ["public", "internal", "personal", "financial", "health", "secret"] },
+    { "id": "frontier-large", "capabilities": ["chat", "tools", "vision"],
+      "max_context": 200000, "cost_per_1k_tokens": 0.015,
+      "allowed_labels": ["public", "internal"] }
+  ]
+}
+```
+
+- `capabilities`: any of `chat`, `tools`, `vision`, `embeddings`.
+- `allowed_labels`: the sensitivity labels of content the model may receive, from `public`,
+  `internal`, `personal`, `financial`, `health` and `secret`. Unset means `public` and `internal`.
+- `adapter`: `openai_compatible` (the only one today).
+
+Each AI task names what it needs (capabilities, the smallest context it fits in, small or large),
+and the router picks the **cheapest** model that meets those needs and may receive the request's
+highest label; a cost tie goes to the smaller or larger model as the task prefers. The data rules
+come first and are never traded for price:
+
+- content goes only to a model whose `allowed_labels` include its label;
+- `secret` content goes only to a `self_hosted` model;
+- without `inference.allow_external_provider`, only `self_hosted` models receive anything.
+
+When no model qualifies the task is refused with an error naming the task and the label, rather
+than sent somewhere it should not go. An empty catalogue (the default) changes nothing: tasks run
+on `inference.generation` or their `inference.task_models` entry.

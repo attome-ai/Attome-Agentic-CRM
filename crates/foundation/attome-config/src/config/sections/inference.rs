@@ -151,6 +151,7 @@ impl std::fmt::Debug for InferenceSection {
             .field("spend", &self.spend)
             .field("translation", &self.translation)
             .field("task_models", &self.task_models)
+            .field("catalogue", &self.catalogue)
             .finish()
     }
 }
@@ -299,6 +300,78 @@ pub struct InferenceSection {
     /// not listed runs on `generation`.
     #[serde(default)]
     pub task_models: std::collections::BTreeMap<String, uuid::Uuid>,
+
+    /// Z9-T3 — the model catalogue the router picks from: each model's
+    /// capabilities, context size, cost and the data labels it may be sent.
+    /// Empty by default: nothing is routed by catalogue, and every task runs
+    /// on `generation` (or its `task_models` entry) as before.
+    #[serde(default)]
+    pub catalogue: Vec<CatalogueModel>,
+}
+
+/// Z9-T3 — a data sensitivity label (A1), lowest to highest. A request
+/// carries the highest label of the content it sends; a model receives it
+/// only when the label is in its `allowed_labels`.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum DataLabel {
+    Public,
+    Internal,
+    Personal,
+    Financial,
+    Health,
+    /// Never leaves the deployment: only a self-hosted model receives it.
+    Secret,
+}
+
+/// Z9-T3 — what a catalogue model can do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelCapability {
+    Chat,
+    Tools,
+    Vision,
+    Embeddings,
+}
+
+/// Z9-T3 — one model in `inference.catalogue`.
+#[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
+pub struct CatalogueModel {
+    /// The model id requested from the provider, recorded on every output.
+    pub id: String,
+    /// The adapter that calls it. Only `openai_compatible` exists today
+    /// (Z9-T1); native adapters arrive with Z9-T2.
+    #[serde(default = "default_catalogue_adapter")]
+    pub adapter: String,
+    /// What it can do.
+    #[serde(default)]
+    pub capabilities: Vec<ModelCapability>,
+    /// The largest context it accepts, in tokens.
+    pub max_context: u32,
+    /// What 1,000 tokens cost, in the deployment's currency. 0 for a
+    /// self-hosted model with no per-token price.
+    #[serde(default)]
+    pub cost_per_1k_tokens: f64,
+    /// Whether it runs inside the deployment. Only self-hosted models receive
+    /// `secret` content, or any content when
+    /// `inference.allow_external_provider` is off.
+    #[serde(default)]
+    pub self_hosted: bool,
+    /// The labels of content it may be sent. Defaults to `public` and
+    /// `internal`: a model receives personal, financial or health data only
+    /// when an operator says so.
+    #[serde(default = "default_allowed_labels")]
+    pub allowed_labels: Vec<DataLabel>,
+}
+
+fn default_catalogue_adapter() -> String {
+    "openai_compatible".to_owned()
+}
+
+fn default_allowed_labels() -> Vec<DataLabel> {
+    vec![DataLabel::Public, DataLabel::Internal]
 }
 
 /// D-489 — the canonical KB article, so the case→draft loop runs unconfigured.
@@ -331,6 +404,7 @@ impl Default for InferenceSection {
             spend: SpendSection::default(),
             translation: TranslationSection::default(),
             task_models: std::collections::BTreeMap::new(),
+            catalogue: Vec::new(),
         }
     }
 }

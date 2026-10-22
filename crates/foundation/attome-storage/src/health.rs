@@ -1,5 +1,5 @@
-//! P-health-readiness — read-only reachability check for the S3/RustFS
-//! backend, consumed by `xrm-server`'s `/health/dependencies` diagnostic
+//! P-health-readiness — read-only reachability check for the storage
+//! backend (S3/RustFS, local disk, Azure, GCS), consumed by `xrm-server`'s `/health/dependencies` diagnostic
 //! endpoint (never `/health/ready` — a down storage backend must not pull an
 //! otherwise-healthy, DB-serving node out of load-balancer rotation).
 //!
@@ -144,10 +144,8 @@ pub async fn health_check(client: &StorageClient) -> StorageHealth {
 /// breaks every presigned URL's signature), or a public endpoint that serves
 /// a different bucket all surface as a failed category here.
 pub async fn public_endpoint_health_check(client: &StorageClient) -> Option<StorageHealth> {
-    if std::sync::Arc::ptr_eq(&client.inner, &client.presign_store) {
-        return None;
-    }
-    Some(probe(client.presign_store.as_ref(), Instant::now()).await)
+    let public = client.public_store.as_ref()?;
+    Some(probe(public.as_ref(), Instant::now()).await)
 }
 
 async fn probe(store: &dyn object_store::ObjectStore, start: Instant) -> StorageHealth {

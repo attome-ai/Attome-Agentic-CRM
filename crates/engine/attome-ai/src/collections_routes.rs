@@ -29,6 +29,9 @@ use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+/// A collections follow-up: id, reason, status, window start, last update.
+type FollowupRow = (Uuid, String, String, NaiveDate, Option<DateTime<Utc>>);
+
 const PROMISE_ENTITY: &str = "ai_payment_promise";
 
 /// One payment promise on an invoice.
@@ -192,7 +195,7 @@ pub async fn invoice_reminders(
     .fetch_one(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let rows: Vec<(Uuid, String, String, NaiveDate, Option<DateTime<Utc>>)> = sqlx::query_as(
+    let rows: Vec<FollowupRow> = sqlx::query_as(
         "SELECT id, reason, status, window_start, updated_at FROM ai_followup_item \
           WHERE entity_logical_name = 'invoice' AND record_id = $1 \
             AND reason IN ('invoice_due', 'invoice_overdue') \

@@ -171,6 +171,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `docs/metadata-versions.md` (Y8-T13): how a metadata publish reaches every node (the Postgres
   doorbell, the `cache.metadata_poll_interval_secs` safety-net poll, the `registry` readiness flag),
   the `Attome-Metadata-Version` header the web app reloads on, builder pins, and rollback.
+- Model catalogue and routing (Z9-T3): `inference.catalogue` lists models with their capabilities,
+  context size, price, whether they are self-hosted and the data labels they may receive; the
+  router picks the cheapest model that fits a task and may see its content, keeps `secret` content
+  on self-hosted models and refuses rather than breaking a rule. Empty by default, which changes
+  nothing. `docs/model-servers.md` has the settings.
+- File storage backends (Z6-T1): `storage.backend` is `s3` (the default, unchanged), `local` (a
+  folder on this machine), `azure` (Azure Blob Storage) or `gcs` (Google Cloud Storage), all through
+  the same client. On local disk, upload and download links point at the server's own signed
+  `GET/PUT /api/v1/storage/local` route instead of a bucket. The `s3_*` settings are now optional
+  when another backend is chosen. `docs/storage.md` has the settings.
 - A record read with a matching `If-None-Match` answers `304` from a cached row version instead of a
   database probe (AA7-T8); a write drops the cached version on every node.
 - `GET /api/v1/schema/{logicalname}` answers from in-memory metadata and sends an `ETag`; a request

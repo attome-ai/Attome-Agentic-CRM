@@ -432,7 +432,7 @@ pub fn same_value(current: Option<&Value>, recorded: Option<&str>) -> bool {
             (Some(a), Ok(b)) => (a - b).abs() < 1e-9,
             _ => false,
         },
-        (Some(other), Some(r)) => other.to_string() == r,
+        (Some(other), Some(r)) => serde_json::to_string(other).is_ok_and(|text| text == r),
     }
 }
 
@@ -633,10 +633,20 @@ pub async fn plan_undo<R: UndoReader>(
 /// attributes it names and its detail. Pure.
 pub fn item_parts(
     step: &UndoStep,
-) -> (String, Uuid, &'static str, &'static str, Vec<String>, Option<String>) {
+) -> (
+    String,
+    Uuid,
+    &'static str,
+    &'static str,
+    Vec<String>,
+    Option<String>,
+) {
     match step {
         UndoStep::RevertFields {
-            entity, record_id, set, ..
+            entity,
+            record_id,
+            set,
+            ..
         } => (
             entity.clone(),
             *record_id,
@@ -769,7 +779,9 @@ pub async fn start_rollback_since(
     let db = &state.base.db;
     let sessions = sessions_of_agent_since(db, agent_ref, since).await?;
     if sessions.is_empty() {
-        return Err(AppError::Validation("the agent has no session since that time".into()));
+        return Err(AppError::Validation(
+            "the agent has no session since that time".into(),
+        ));
     }
     let live: Vec<Uuid> = sqlx::query_scalar(
         "SELECT id FROM agent_session \
@@ -781,8 +793,7 @@ pub async fn start_rollback_since(
     .map_err(AppError::internal)?;
     let reason = format!("rollback since {}", since.to_rfc3339());
     for session in &live {
-        crate::session::revoke(db, *session, requester.user_id, &reason)
-            .await?;
+        crate::session::revoke(db, *session, requester.user_id, &reason).await?;
     }
     let scope = UndoScope::AgentSince { agent_ref, since };
     start_undo_scoped(state, requester, &sessions, scope).await
@@ -945,18 +956,11 @@ async fn apply(
             )
             .await
         }
-        UndoStep::Restore { entity, record_id } => {
-            attome_records::entity_crud::restore_record_for(
-                state,
-                ctx,
-                user,
-                entity,
-                *record_id,
-                None,
-            )
-            .await
-            .map(|_| ())
-        }
+        UndoStep::Restore { entity, record_id } => attome_records::entity_crud::restore_record_for(
+            state, ctx, user, entity, *record_id, None,
+        )
+        .await
+        .map(|_| ()),
         UndoStep::Skip { .. } | UndoStep::NotUndoable { .. } => Ok(()),
     }
 }
@@ -995,7 +999,9 @@ pub async fn run_undo(state: &EngineState, run: Uuid) -> Result<(), AppError> {
     for (item, step) in items {
         let result = match step.map(serde_json::from_value::<UndoStep>) {
             Some(Ok(step)) => apply(state, &ctx, run, &step).await,
-            _ => Err(AppError::Validation("the planned step could not be read".into())),
+            _ => Err(AppError::Validation(
+                "the planned step could not be read".into(),
+            )),
         };
         let (outcome, detail) = outcome_of(&result);
         sqlx::query(
@@ -1165,7 +1171,9 @@ mod tests {
     fn reverted(steps: &[UndoStep]) -> Option<(i64, &Map<String, Value>)> {
         steps.iter().find_map(|s| match s {
             UndoStep::RevertFields {
-                expected_row_version, set, ..
+                expected_row_version,
+                set,
+                ..
             } => Some((*expected_row_version, set)),
             _ => None,
         })
@@ -1259,7 +1267,10 @@ mod tests {
             .collect();
         assert_eq!(
             reasons,
-            ["a hard delete cannot be undone", "the message was already sent"]
+            [
+                "a hard delete cannot be undone",
+                "the message was already sent"
+            ]
         );
     }
 

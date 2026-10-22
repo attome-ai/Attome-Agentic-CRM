@@ -86,6 +86,9 @@ pub mod communication;
 /// M52 Phase 1 (D-465) — delivery-status timeline child entity
 /// (`communication_event`). Seed-only, same shape as `communication_seed`.
 mod content_public;
+/// Z6-T1: the signed `/api/v1/storage/local` route the local-disk storage
+/// backend hands out in place of presigned bucket URLs.
+mod storage_local;
 /// M12 (data management) — record export. `pub` only for `process`, which
 /// `crates/server/src/jobs.rs`'s `EngineJob::DataExport` arm calls; the
 /// route handlers stay module-private.

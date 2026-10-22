@@ -89744,6 +89744,168 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/storage/local": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Download a file through a local-disk storage link",
+        "description": "Z6-T1: the stand-in for a presigned bucket download when files are kept\non the server's disk. The signed link is the credential; the file is sent\nas an attachment and never rendered.",
+        "operationId": "download_local_object",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The object key the link was signed for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expires",
+            "in": "path",
+            "description": "When the link stops working, in seconds since 1970 (UTC).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "signature",
+            "in": "path",
+            "description": "HMAC-SHA256 of the method, key and expiry, in hex.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stored file, as an attachment",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "description": "The link is expired or altered, the file is gone, or this deployment does not keep files on local disk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Upload a file through a local-disk storage link",
+        "description": "Z6-T1: the stand-in for a presigned bucket upload when files are kept on\nthe server's disk. The signed link names the one object an upload session\nwas created for; finalize and the malware scan check what was written.",
+        "operationId": "upload_local_object",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The object key the link was signed for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expires",
+            "in": "path",
+            "description": "When the link stops working, in seconds since 1970 (UTC).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "signature",
+            "in": "path",
+            "description": "HMAC-SHA256 of the method, key and expiry, in hex.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The file's bytes",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Stored"
+          },
+          "404": {
+            "description": "The link is expired or altered, or this deployment does not keep files on local disk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Larger than app.max_body_size_bytes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "writes the bytes of an upload session to quarantine, as a presigned bucket PUT does; the scan result (FileScanned) and field promotion (Entity/Update) are audited on their own paths",
+          "reason": "delegated",
+          "via": "files_scan.rs / entity_crud update"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/surveys/form": {
       "get": {
         "tags": [
@@ -174528,6 +174690,7 @@
     }
   ],
   "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -174579,6 +174742,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": []
+  }
 }

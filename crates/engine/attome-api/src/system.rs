@@ -329,6 +329,9 @@ impl EngineSystem {
             // handler's doc) and reachable at authn/authz time only because
             // its path is one of `bypass.rs`'s `EXACT_BYPASS_PATHS`.
             .merge(crate::content_public::routes())
+            // Z6-T1: local-disk storage links — public and bypass-listed like
+            // content_public; the signed link is the credential.
+            .merge(crate::storage_local::routes())
             // Self-service portal (M70, D-423) — same "public, own manual
             // license check, bypass-listed" shape as content_public above.
             .merge(crate::service_public::routes())

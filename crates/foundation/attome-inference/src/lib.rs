@@ -1,7 +1,9 @@
 //! The platform's single model-transport crate (D-360, invariant I-11).
 //!
 //! **What belongs here:** HTTP to a model server, batching, timeouts, retries,
-//! token accounting, model identity. That is the whole list.
+//! token accounting, model identity, and choosing a model from the catalogue
+//! by a task's needs and the data label it is given (Z9-T3, [`router`]).
+//! That is the whole list.
 //!
 //! **What does not:** prompts, templates, conversation state, security
 //! contexts, entity or record knowledge, and — most importantly — any notion
@@ -42,16 +44,19 @@ use serde::{Deserialize, Serialize};
 /// Z9-T1: one provider-neutral way to call a model.
 pub mod adapter;
 pub mod budget;
+pub mod catalogue;
 pub mod embed;
 pub mod generate;
 pub mod models;
 pub mod ocr;
 pub mod rerank;
+pub mod router;
 pub mod speech;
 pub mod telemetry;
 #[cfg(feature = "test-support")]
 pub mod testing;
 
+pub use catalogue::{Catalogue, ModelEntry};
 pub use embed::{EMBEDDINGS_PATH, EmbedKind, EmbeddingClient};
 pub use generate::{
     CHAT_COMPLETIONS_PATH, ChatMessage, FinishReason, GenerationClient, GenerationRequest,
@@ -60,6 +65,7 @@ pub use generate::{
 pub use models::{MODELS_PATH, ModelListAuth, ModelListing, list_models, parse_model_listing};
 pub use ocr::{OcrClient, OcrText};
 pub use rerank::RerankClient;
+pub use router::{PreferredSize, RouteError, TaskNeeds, route};
 pub use speech::{Segment, SpeechClient, TRANSCRIPTIONS_PATH, Transcript};
 
 /// An HTTP client a caller built, plus any further check that caller

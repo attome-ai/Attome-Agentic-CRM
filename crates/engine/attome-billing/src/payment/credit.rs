@@ -29,7 +29,7 @@ use std::str::FromStr;
 use attome_core::EngineState;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{Duration, NaiveDate};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};

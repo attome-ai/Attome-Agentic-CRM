@@ -1,6 +1,7 @@
-//! `storage` section — the S3-compatible object-storage endpoint and its
-//! upload-quota/malware-scan knobs, plus [`S3Target`], the connection-parameter
-//! view every S3-backed bucket in this platform is built from.
+//! `storage` section — the object-storage backend (S3-compatible, local disk,
+//! Azure Blob or GCS) and its upload-quota/malware-scan knobs, plus
+//! [`S3Target`], the connection-parameter view every S3-backed bucket in this
+//! platform is built from.
 
 use serde::Deserialize;
 
@@ -53,8 +54,122 @@ impl std::fmt::Debug for S3Target<'_> {
     }
 }
 
+/// Z6-T1: which object store holds this deployment's files. Every backend
+/// goes through the `object_store` crate, so engines see one `ObjectStore`
+/// whatever is behind it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum StorageBackend {
+    /// An S3-compatible bucket (AWS S3, RustFS, MinIO): the `s3_*` settings.
+    /// The default.
+    #[default]
+    S3,
+    /// A folder on this machine: `storage.local`. One node only, since other
+    /// nodes cannot see the folder. Browsers upload and download through the
+    /// server's own signed `/api/v1/storage/local/` route instead of
+    /// presigned bucket URLs.
+    Local,
+    /// An Azure Blob Storage container: `storage.azure`.
+    Azure,
+    /// A Google Cloud Storage bucket: `storage.gcs`.
+    Gcs,
+}
+
+/// Z6-T1: `storage.local`, used when `storage.backend = "local"`.
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct LocalStorageSettings {
+    /// The folder that holds the files. Created at boot when it does not
+    /// exist. Required with the local backend.
+    #[serde(default)]
+    pub path: String,
+    /// Key that signs the short-lived upload and download links the server
+    /// hands out in place of presigned bucket URLs (at least 32 bytes). Every
+    /// process of the deployment needs the same value, so a link one process
+    /// mints is accepted by another.
+    #[serde(default)]
+    pub url_signing_key: Secret,
+    /// Address browsers reach the server at, put in front of the signed
+    /// links (`https://crm.example.com`). Empty (the default) hands out links
+    /// relative to the server, which a browser on the same origin follows.
+    #[serde(default)]
+    pub public_base_url: String,
+}
+
+impl std::fmt::Debug for LocalStorageSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LocalStorageSettings")
+            .field("path", &self.path)
+            .field("url_signing_key", &"[REDACTED]")
+            .field("public_base_url", &self.public_base_url)
+            .finish()
+    }
+}
+
+/// Z6-T1: `storage.azure`, used when `storage.backend = "azure"`.
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct AzureStorageSettings {
+    /// The storage account name.
+    #[serde(default)]
+    pub account: String,
+    /// The blob container that holds the files.
+    #[serde(default)]
+    pub container: String,
+    /// The storage account's shared access key. Presigned links are signed
+    /// with it, so it must be a key rather than a token.
+    #[serde(default)]
+    pub access_key: Secret,
+    /// A custom endpoint (an Azurite emulator, a sovereign cloud). Empty (the
+    /// default) is the public Azure endpoint for the account.
+    #[serde(default)]
+    pub endpoint: String,
+}
+
+impl std::fmt::Debug for AzureStorageSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AzureStorageSettings")
+            .field("account", &self.account)
+            .field("container", &self.container)
+            .field("access_key", &"[REDACTED]")
+            .field("endpoint", &self.endpoint)
+            .finish()
+    }
+}
+
+/// Z6-T1: `storage.gcs`, used when `storage.backend = "gcs"`.
+#[derive(Clone, Default, Deserialize, schemars::JsonSchema)]
+pub struct GcsStorageSettings {
+    /// The bucket that holds the files.
+    #[serde(default)]
+    pub bucket: String,
+    /// The service account key, as the JSON document Google issues. Presigned
+    /// links are signed with its private key.
+    #[serde(default)]
+    pub service_account_key: Secret,
+}
+
+impl std::fmt::Debug for GcsStorageSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GcsStorageSettings")
+            .field("bucket", &self.bucket)
+            .field("service_account_key", &"[REDACTED]")
+            .finish()
+    }
+}
+
 #[derive(Clone, Deserialize, schemars::JsonSchema)]
 pub struct StorageSection {
+    /// `s3` (the default), `local`, `azure` or `gcs`. Only the chosen
+    /// backend's settings are used; the `s3_*` settings may be left out for
+    /// the others.
+    #[serde(default)]
+    pub backend: StorageBackend,
+    #[serde(default)]
+    pub local: LocalStorageSettings,
+    #[serde(default)]
+    pub azure: AzureStorageSettings,
+    #[serde(default)]
+    pub gcs: GcsStorageSettings,
+    #[serde(default)]
     pub s3_endpoint: String,
     /// Endpoint embedded in presigned upload/download URLs, which browsers
     /// (or any other client) request directly. SigV4 signs the `Host`, so the
@@ -70,9 +185,13 @@ pub struct StorageSection {
     /// client-reachable (e.g. AWS S3 proper).
     #[serde(default)]
     pub s3_public_endpoint: String,
+    #[serde(default)]
     pub s3_region: String,
+    #[serde(default)]
     pub s3_access_key: String,
+    #[serde(default)]
     pub s3_secret_key: Secret,
+    #[serde(default)]
     pub s3_bucket: String,
     /// Whether HTTPS certificates from the S3 endpoints are verified. It does
     /// not choose the transport: the endpoint's scheme does (`http://` is
@@ -159,6 +278,10 @@ impl StorageSection {
 impl std::fmt::Debug for StorageSection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StorageSection")
+            .field("backend", &self.backend)
+            .field("local", &self.local)
+            .field("azure", &self.azure)
+            .field("gcs", &self.gcs)
             .field("s3_endpoint", &self.s3_endpoint)
             .field("s3_public_endpoint", &self.s3_public_endpoint)
             .field("s3_region", &self.s3_region)

@@ -30,7 +30,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -192,10 +192,7 @@ pub(crate) async fn post_undo(
 ) -> Result<(StatusCode, Json<UndoStarted>), AppError> {
     require_session(&state, &ctx, session).await?;
     let run = crate::undo::start_undo(&state, &ctx, &[session]).await?;
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(UndoStarted { undo_run_id: run }),
-    ))
+    Ok((StatusCode::ACCEPTED, Json(UndoStarted { undo_run_id: run })))
 }
 
 #[utoipa::path(
@@ -223,8 +220,7 @@ pub(crate) async fn get_rollback_preview(
     let audit_days = state.base.config.retention.audit_days;
     check_since(query.since, Utc::now(), audit_days)?;
     let db = &state.base.db;
-    let sessions = crate::undo::sessions_of_agent_since(db, agent, query.since)
-        .await?;
+    let sessions = crate::undo::sessions_of_agent_since(db, agent, query.since).await?;
     let steps = crate::undo::plan_sessions(&state, &ctx, &sessions).await?;
     let total = i64::try_from(steps.len()).map_err(AppError::internal)?;
     Ok(Json(RollbackPreview {
@@ -259,12 +255,8 @@ pub(crate) async fn post_rollback(
     }
     let audit_days = state.base.config.retention.audit_days;
     check_since(body.since, Utc::now(), audit_days)?;
-    let run = crate::undo::start_rollback_since(&state, &ctx, agent, body.since)
-        .await?;
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(UndoStarted { undo_run_id: run }),
-    ))
+    let run = crate::undo::start_rollback_since(&state, &ctx, agent, body.since).await?;
+    Ok((StatusCode::ACCEPTED, Json(UndoStarted { undo_run_id: run })))
 }
 
 type RunRow = (

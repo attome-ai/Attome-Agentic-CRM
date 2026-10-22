@@ -1,9 +1,12 @@
 use std::time::Duration;
 
 use http::Method;
-use object_store::{path::Path, signer::Signer};
+use object_store::path::Path;
 
-use crate::{StorageError, client::StorageClient};
+use crate::{
+    StorageError,
+    client::{Presign, StorageClient},
+};
 
 /// SigV4's ceiling for a presigned URL's lifetime (`X-Amz-Expires`): 7 days.
 pub(crate) const MAX_PRESIGN_EXPIRY: Duration = Duration::from_secs(7 * 24 * 60 * 60);
@@ -12,7 +15,9 @@ pub(crate) const MAX_PRESIGN_EXPIRY: Duration = Duration::from_secs(7 * 24 * 60 
 /// `key` is the object path inside the bucket, e.g. `"tenants/uuid/files/photo.jpg"`.
 ///
 /// The URL is signed for `storage.s3_public_endpoint` when that is set,
-/// otherwise for `s3_endpoint`. `expires_in` must be between 1 second and
+/// otherwise for `s3_endpoint`. On the local-disk backend it is a signed link
+/// to the server's own `/api/v1/storage/local` route instead (Z6-T1,
+/// [`crate::verify_local_link`]). `expires_in` must be between 1 second and
 /// 7 days ([`StorageError::InvalidExpiry`] otherwise).
 pub async fn presign_upload(
     client: &StorageClient,
@@ -62,13 +67,14 @@ async fn presign_url(
 
     let path = Path::parse(key).map_err(|e| StorageError::InvalidPath(e.to_string()))?;
 
-    let url = client
-        .presign_store
-        .signed_url(method, &path, expires_in)
-        .await
-        .map_err(StorageError::Presign)?;
-
-    Ok(url.to_string())
+    match &client.presign {
+        Presign::Store(signer) => Ok(signer
+            .signed_url(method, &path, expires_in)
+            .await
+            .map_err(StorageError::Presign)?
+            .to_string()),
+        Presign::Local(signer) => signer.link(&method, path.as_ref(), expires_in),
+    }
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────

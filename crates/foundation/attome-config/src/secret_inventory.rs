@@ -160,6 +160,15 @@ pub const SECRETS: &[SecretSpec] = &[
         &["server-to-server clients seeded at boot"],
     ),
     value("storage.s3_secret_key", &["file storage (object store)"]),
+    value(
+        "storage.local.url_signing_key",
+        &["file storage links (local disk)"],
+    ),
+    value("storage.azure.access_key", &["file storage (Azure Blob)"]),
+    value(
+        "storage.gcs.service_account_key",
+        &["file storage (Google Cloud Storage)"],
+    ),
 ];
 
 /// One secret as this node is configured: `name` is its concrete path (a

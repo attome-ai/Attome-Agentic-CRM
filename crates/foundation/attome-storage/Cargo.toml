@@ -1,6 +1,6 @@
 [package]
 name         = "attome-storage"
-description  = "Attome's object storage client (S3-compatible: RustFS, MinIO, AWS S3)."
+description  = "Attome's object storage client (S3-compatible, local disk, Azure Blob, GCS)."
 version.workspace      = true
 edition.workspace      = true
 rust-version.workspace = true
@@ -12,13 +12,17 @@ publish.workspace      = true
 
 [dependencies]
 attome-config.workspace = true
+hex.workspace           = true
+hmac.workspace          = true
 http.workspace          = true
 metrics.workspace       = true
 object_store.workspace  = true
 serde.workspace         = true
+sha2.workspace          = true
 thiserror.workspace     = true
 tokio.workspace         = true
 tracing.workspace       = true
+zeroize.workspace       = true
 
 [dev-dependencies]
 reqwest.workspace    = true

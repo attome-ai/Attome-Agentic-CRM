@@ -270,6 +270,104 @@ fn omitting_a_whole_optional_section_still_yields_its_documented_field_defaults(
     assert!(config.jobs.run_worker_inline);
 }
 
+/// Z6-T1: the chosen storage backend must have its own settings; the other
+/// backends' settings are not required.
+#[test]
+fn validate_requires_the_chosen_storage_backends_settings() {
+    use crate::config::StorageBackend;
+
+    let mut config = minimal_valid_config();
+    config.storage.backend = StorageBackend::Local;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("storage.local.path"), "{err}");
+
+    config.storage.local.path = "data/files".into();
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("storage.local.url_signing_key"), "{err}");
+
+    config.storage.local.url_signing_key = "test-only-local-link-key-32-bytes-min".into();
+    config.storage.s3_bucket = String::new();
+    config.validate().expect("local needs no s3_* settings");
+
+    config.storage.local.public_base_url = "not a url".into();
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("storage.local.public_base_url"), "{err}");
+
+    config.storage.backend = StorageBackend::Azure;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("storage.azure.account"), "{err}");
+
+    config.storage.backend = StorageBackend::Gcs;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("storage.gcs.bucket"), "{err}");
+
+    config.storage.backend = StorageBackend::S3;
+    let err = config.validate().unwrap_err().to_string();
+    assert!(err.contains("storage.s3_bucket"), "{err}");
+}
+
+/// Z9-T3: a catalogue model needs a unique id, a known adapter, a context
+/// size and a price of zero or more; allowed labels default to public and
+/// internal.
+#[test]
+fn validate_checks_the_model_catalogue() {
+    use crate::config::{CatalogueModel, DataLabel};
+
+    let model = |id: &str| -> CatalogueModel {
+        serde_json::from_value(serde_json::json!({ "id": id, "max_context": 8192 }))
+            .expect("a catalogue model parses")
+    };
+    let mut config = minimal_valid_config();
+    config.inference.catalogue = vec![model("small"), model("large")];
+    config.validate().expect("two distinct models are valid");
+    assert_eq!(
+        config.inference.catalogue[0].allowed_labels,
+        vec![DataLabel::Public, DataLabel::Internal]
+    );
+    assert_eq!(config.inference.catalogue[0].adapter, "openai_compatible");
+
+    for (bad, needle) in [
+        (vec![model("a"), model("a")], "listed twice"),
+        (vec![model(" ")], "id must be set"),
+        (
+            vec![CatalogueModel {
+                max_context: 0,
+                ..model("a")
+            }],
+            "max_context",
+        ),
+        (
+            vec![CatalogueModel {
+                cost_per_1k_tokens: -1.0,
+                ..model("a")
+            }],
+            "cost_per_1k_tokens",
+        ),
+        (
+            vec![CatalogueModel {
+                adapter: "bedrock".into(),
+                ..model("a")
+            }],
+            "adapter",
+        ),
+    ] {
+        config.inference.catalogue = bad;
+        let err = config.validate().unwrap_err().to_string();
+        assert!(err.contains(needle), "{err}");
+    }
+    assert!(DataLabel::Secret > DataLabel::Health && DataLabel::Health > DataLabel::Public);
+}
+
+#[test]
+fn storage_backend_defaults_to_s3_and_parses_by_name() {
+    use crate::config::StorageBackend;
+
+    assert_eq!(minimal_valid_config().storage.backend, StorageBackend::S3);
+    let parsed: StorageBackend = serde_json::from_str("\"local\"").expect("parse");
+    assert_eq!(parsed, StorageBackend::Local);
+    assert!(serde_json::from_str::<StorageBackend>("\"ftp\"").is_err());
+}
+
 #[test]
 fn validate_rejects_a_missing_apikey_hash_pepper() {
     let mut config = minimal_valid_config();

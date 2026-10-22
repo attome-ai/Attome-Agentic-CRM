@@ -42,8 +42,8 @@ pub use sections::einvoice::EinvoiceSection;
 pub use sections::events::EventsSection;
 pub use sections::fleet::FleetSection;
 pub use sections::inference::{
-    AiEnablement, AiSurface, InferenceEndpoint, InferenceSection, ModelPrice, SpendSection,
-    TranslationSection, endpoint_is_in_deployment,
+    AiEnablement, AiSurface, CatalogueModel, DataLabel, InferenceEndpoint, InferenceSection,
+    ModelCapability, ModelPrice, SpendSection, TranslationSection, endpoint_is_in_deployment,
 };
 pub use sections::integration::IntegrationSection;
 pub use sections::metadata::{
@@ -55,7 +55,10 @@ pub use sections::observability::{
 };
 pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
 pub use sections::shed::{ShedPermits, ShedSection};
-pub use sections::storage::{S3Target, StorageSection};
+pub use sections::storage::{
+    AzureStorageSettings, GcsStorageSettings, LocalStorageSettings, S3Target, StorageBackend,
+    StorageSection,
+};
 pub use sections::webchat::WebchatSection;
 pub use sections::webcrawl::WebcrawlSection;
 

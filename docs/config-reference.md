@@ -344,6 +344,7 @@ D-360 / P-inference — model endpoints and the AI kill-switch (TODO-055). Ships
 | `inference.ai.workflow_nodes` | boolean | `false` |  | AI nodes inside workflows (`MODULE_AUTOMATION`). |
 | `inference.allow_external_provider` | boolean | `false` |  | Whether [`Self::generation`]/[`Self::embedding`] may point outside the data plane. |
 | `inference.caller_token_budget_per_min` | integer, optional | `null` |  | BIN-D7 — deprecated: accepted and ignored, nothing enforces it (the per-caller budget lives in `xrm-ai`'s budget guard). Kept for one release so an existing config still loads; boot warns when it is set (`AppConfig::deprecated_keys`), then the field goes. |
+| `inference.catalogue` | array of object |  |  | Z9-T3 — the model catalogue the router picks from: each model's capabilities, context size, cost and the data labels it may be sent. Empty by default: nothing is routed by catalogue, and every task runs on `generation` (or its `task_models` entry) as before. |
 | `inference.embedding.api_key` | string, optional |  | yes | Optional bearer token. Local serving processes normally need none; this exists for a deployment fronting them with an authenticating proxy, and for the config-gated external-provider case below. |
 | `inference.embedding.base_url` | string | `""` |  | Base URL of the serving process, e.g. `http://127.0.0.1:8000/v1`. Empty means "not configured", which the client reports as unavailable rather than attempting a request to an empty host. |
 | `inference.embedding.model` | string | `""` |  | The model id to request. Recorded on every suggestion as provenance (`model_id`), so an auditor can answer "which model wrote this" — see TODO-054. |
@@ -538,15 +539,25 @@ Required.
 
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
+| `storage.azure.access_key` | string |  | yes | The storage account's shared access key. Presigned links are signed with it, so it must be a key rather than a token. |
+| `storage.azure.account` | string | `""` |  | The storage account name. |
+| `storage.azure.container` | string | `""` |  | The blob container that holds the files. |
+| `storage.azure.endpoint` | string | `""` |  | A custom endpoint (an Azurite emulator, a sovereign cloud). Empty (the default) is the public Azure endpoint for the account. |
+| `storage.backend` | `s3` \| `local` \| `azure` \| `gcs` |  |  | `s3` (the default), `local`, `azure` or `gcs`. Only the chosen backend's settings are used; the `s3_*` settings may be left out for the others. |
 | `storage.clamd_address` | string | `""` |  | `host:port` of a ClamAV `clamd` daemon (INSTREAM protocol) the async scan job submits uploaded bytes to. Empty (the default) means no scanner is configured — the scan job then fails closed (rejects, never promotes) rather than silently skipping malware scanning. |
+| `storage.gcs.bucket` | string | `""` |  | The bucket that holds the files. |
+| `storage.gcs.service_account_key` | string |  | yes | The service account key, as the JSON document Google issues. Presigned links are signed with its private key. |
+| `storage.local.path` | string | `""` |  | The folder that holds the files. Created at boot when it does not exist. Required with the local backend. |
+| `storage.local.public_base_url` | string | `""` |  | Address browsers reach the server at, put in front of the signed links (`https://crm.example.com`). Empty (the default) hands out links relative to the server, which a browser on the same origin follows. |
+| `storage.local.url_signing_key` | string |  | yes | Key that signs the short-lived upload and download links the server hands out in place of presigned bucket URLs (at least 32 bytes). Every process of the deployment needs the same value, so a link one process mints is accepted by another. |
 | `storage.max_deployment_storage_bytes` | integer, optional | `null` |  | Soft cap on the whole deployment's promoted (`clean`) file storage — meaningful because D-099's data-plane model is one dedicated deployment per customer, so this is that customer's total quota, not a cross-customer figure. `None` (the default) disables the check, same reasoning and TODO as `max_user_storage_bytes` above. |
 | `storage.max_upload_size_bytes` | integer | `26214400` |  | Max `declared_size_bytes` an upload session may declare; enforced at finalize (HEAD-verified against what was actually PUT), not at presign time (§4.2's documented limitation). |
 | `storage.max_user_storage_bytes` | integer, optional | `null` |  | Soft cap on one user's total upload-session footprint: the sum of `declared_max_size_bytes` across their non-terminal sessions (`pending`/`uploaded`/`scanning`) plus `actual_size_bytes` across their `clean` ones. Checked in `create_upload_session` before a new session is created (item 26 remediation — a per-user quota). `None` (the default) disables the check: an unmeasured cap would be a guess, not evidence (guidelines §14) — TODO(item 26): pick a real number with the ops/customer team once there is usage data, then set this in each deployment's `config.json`. |
-| `storage.s3_access_key` | string |  |  |  |
-| `storage.s3_bucket` | string |  |  |  |
-| `storage.s3_endpoint` | string |  |  |  |
+| `storage.s3_access_key` | string | `""` |  |  |
+| `storage.s3_bucket` | string | `""` |  |  |
+| `storage.s3_endpoint` | string | `""` |  |  |
 | `storage.s3_public_endpoint` | string | `""` |  | Endpoint embedded in presigned upload/download URLs, which browsers (or any other client) request directly. SigV4 signs the `Host`, so the URL must be signed for the address the client will actually contact; a proxy rewriting the host afterwards invalidates the signature. |
-| `storage.s3_region` | string |  |  |  |
+| `storage.s3_region` | string | `""` |  |  |
 | `storage.s3_secret_key` | string |  | yes |  |
 | `storage.s3_verify_ssl` | boolean | `true` |  | Whether HTTPS certificates from the S3 endpoints are verified. It does not choose the transport: the endpoint's scheme does (`http://` is plaintext whatever this says; `https://`, or empty for AWS S3, is TLS). `false` accepts any certificate on a TLS endpoint. Production refuses `false`. |
 

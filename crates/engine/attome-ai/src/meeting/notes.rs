@@ -231,7 +231,7 @@ pub fn admissible_updates(
         .filter(|u| {
             attributes
                 .get(&u.entity)
-                .is_some_and(|attrs| attrs.iter().any(|a| *a == u.attribute))
+                .is_some_and(|attrs| attrs.contains(&u.attribute))
         })
         .filter(|u| {
             let quote = normalised(&u.quote);

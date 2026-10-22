@@ -16941,6 +16941,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/storage/local": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a file through a local-disk storage link
+         * @description Z6-T1: the stand-in for a presigned bucket download when files are kept
+         *     on the server's disk. The signed link is the credential; the file is sent
+         *     as an attachment and never rendered.
+         */
+        get: operations["download_local_object"];
+        /**
+         * Upload a file through a local-disk storage link
+         * @description Z6-T1: the stand-in for a presigned bucket upload when files are kept on
+         *     the server's disk. The signed link names the one object an upload session
+         *     was created for; finalize and the malware scan check what was written.
+         */
+        put: operations["upload_local_object"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/surveys/form": {
         parameters: {
             query?: never;
@@ -100787,6 +100815,90 @@ export interface operations {
             };
             /** @description The link is not valid */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    download_local_object: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The object key the link was signed for. */
+                key: string;
+                /** @description When the link stops working, in seconds since 1970 (UTC). */
+                expires: number;
+                /** @description HMAC-SHA256 of the method, key and expiry, in hex. */
+                signature: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored file, as an attachment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description The link is expired or altered, the file is gone, or this deployment does not keep files on local disk */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_local_object: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The object key the link was signed for. */
+                key: string;
+                /** @description When the link stops working, in seconds since 1970 (UTC). */
+                expires: number;
+                /** @description HMAC-SHA256 of the method, key and expiry, in hex. */
+                signature: string;
+            };
+            cookie?: never;
+        };
+        /** @description The file's bytes */
+        requestBody: {
+            content: {
+                "application/octet-stream": number[];
+            };
+        };
+        responses: {
+            /** @description Stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The link is expired or altered, or this deployment does not keep files on local disk */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Larger than app.max_body_size_bytes */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
