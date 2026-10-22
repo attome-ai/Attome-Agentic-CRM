@@ -334,7 +334,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_auth_rejects_oauth2_client_credentials_in_phase_1() {
+    fn apply_auth_refers_oauth2_to_a_named_connection() {
         let system = stub_system("https://example.com".into(), "oauth2_client_credentials");
         let client = reqwest::Client::new();
         let err = apply_auth(
@@ -344,7 +344,7 @@ mod tests {
             b"",
         )
         .unwrap_err();
-        assert!(err.to_string().contains("not implemented"));
+        assert!(err.to_string().contains("named connection"), "{err}");
     }
 
     #[test]

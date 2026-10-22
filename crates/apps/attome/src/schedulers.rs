@@ -108,6 +108,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // Z1-T11: integration OAuth tokens renewed ahead of expiry, every five minutes.
+    crate::jobs::spawn_oauth_refresh_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // D15-T2: personal mail onto matching records, every five minutes.
     crate::jobs::spawn_mail_capture_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // J2-T2: shared mailboxes into cases, leads and contacts, every two minutes.

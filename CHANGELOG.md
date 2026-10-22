@@ -168,6 +168,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- OAuth 2.0 for integration systems (Z1-T11): `auth_type` `oauth2_client_credentials` (credential
+  `{"client_id", "client_secret"}`) and `oauth2_refresh_token` (plus a first `refresh_token`), with
+  the provider's `token_url` and optional `scope` in the system's config. Tokens are stored
+  encrypted in `integration_oauth_token` (migration 0202), used while they have more than a minute
+  left, and renewed every five minutes when under ten minutes remain; a failed renewal records a
+  masked reason, counts `integration_oauth_refresh_failures_total` and logs
+  `integration.oauth.refresh_failed`.
 - Bulk reassign and bulk share (Q14-T5): `POST /api/v1/admin/security/record-shares/bulk` reassigns
   records to a user or team, or shares them, selected by id (up to 10,000) or by current owner.
   `preview: true` answers the count and the first 50 records; otherwise it starts a background

@@ -25,7 +25,7 @@ use crate::credential::{self, Credential};
 use crate::system::IntegrationSystem;
 
 /// The auth types a connection can apply.
-pub const AUTH_TYPES: [&str; 7] = [
+pub const AUTH_TYPES: [&str; 8] = [
     "api_key",
     "api_key_header",
     "bearer",
@@ -33,6 +33,7 @@ pub const AUTH_TYPES: [&str; 7] = [
     "hmac",
     "client_certificate",
     "oauth2_client_credentials",
+    "oauth2_refresh_token",
 ];
 
 /// The header an `api_key_header` connection uses when its config names
@@ -50,6 +51,8 @@ pub struct Connection {
     /// `api_key_header`: the header the key goes in.
     pub auth_header: Option<String>,
     credential_ref: Option<String>,
+    /// The system's raw `config`: OAuth reads its `token_url` and `scope`.
+    config: Option<String>,
 }
 
 fn header_name_ok(name: &str) -> bool {
@@ -80,6 +83,7 @@ impl Connection {
             base_url: system.base_url.clone(),
             auth_header,
             credential_ref: system.credential_ref.clone(),
+            config: system.config.clone(),
         }
     }
 
@@ -119,6 +123,21 @@ impl Connection {
         body: &[u8],
     ) -> Result<reqwest::RequestBuilder, AppError> {
         let credential = self.credential(db, ring).await?;
+        if crate::oauth::OAUTH_AUTH_TYPES.contains(&self.auth_type.as_str()) {
+            // Z1-T11: the stored access token, renewed first when it has
+            // less than a minute left.
+            let endpoint = crate::oauth::GuardedEndpoint::new()?;
+            let token = crate::oauth::access_token(
+                db,
+                ring,
+                self,
+                self.config.as_deref(),
+                self.needs(credential.as_ref())?,
+                &endpoint,
+            )
+            .await?;
+            return Ok(token.bearer(request));
+        }
         self.authorize(request, credential.as_ref(), body)
     }
 
@@ -146,9 +165,16 @@ impl Connection {
                 self.needs(credential)?;
                 Ok(request)
             }
-            "oauth2_client_credentials" => Err(AppError::Validation(
-                "auth_type = oauth2_client_credentials is not implemented yet".into(),
-            )),
+            // Z1-T11: the token comes from the database, so only
+            // `apply_auth` can authorize these.
+            "oauth2_client_credentials" | "oauth2_refresh_token" => {
+                Err(AppError::Validation(format!(
+                    "auth_type = {} needs its stored token: call the system through a named \
+                     connection (Connection::apply_auth); the connector adapters do not \
+                     support OAuth yet",
+                    self.auth_type
+                )))
+            }
             other => Err(AppError::internal(format!(
                 "unknown auth_type {other:?} reached a connection; admin.rs should have rejected it"
             ))),

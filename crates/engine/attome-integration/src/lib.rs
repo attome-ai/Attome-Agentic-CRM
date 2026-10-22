@@ -23,6 +23,8 @@ pub mod inbound_mail;
 /// D15-T2: which personal emails are captured, onto which addresses.
 pub mod mail_capture;
 pub mod model;
+/// Z1-T11: OAuth 2.0 tokens, stored encrypted and renewed before expiry.
+pub mod oauth;
 /// J4-T1: SMS sending and delivery receipts.
 pub mod sms;
 pub mod system;

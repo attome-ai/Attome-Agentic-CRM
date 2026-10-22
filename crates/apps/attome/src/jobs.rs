@@ -2793,6 +2793,8 @@ const DEDUP_KEY_FLEET_POLL: &str = "fleet-poll";
 const DEDUP_KEY_SECRET_AGE_REMINDER: &str = "secret-age-reminder";
 /// D15-T3: the calendar sync (a registered job type).
 const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
+/// Z1-T11: integration OAuth tokens renewed before expiry.
+const DEDUP_KEY_OAUTH_REFRESH: &str = "integration-oauth-refresh";
 /// D15-T2: the personal mail capture (a registered job type).
 const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
 /// J2-T2: the shared mailbox routing (a registered job type).
@@ -2871,6 +2873,11 @@ pub const SECRET_AGE_REMINDER: attome_jobs::JobType =
 /// D15-T3: two-way sync of meetings with people's own calendars. A
 /// registered type, like the reminder above.
 pub const CALENDAR_SYNC: attome_jobs::JobType = attome_jobs::JobType::new("calendar_sync", 1);
+
+/// Z1-T11: every OAuth token of an integration system with under ten
+/// minutes left is renewed (fast lane; no payload).
+pub const OAUTH_REFRESH: attome_jobs::JobType =
+    attome_jobs::JobType::new("integration_oauth_refresh", 1);
 
 /// J6-T3: a call's recording to a document on the call, then to
 /// transcription (payload `{"call_id"}`).
@@ -4020,6 +4027,26 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OAUTH_REFRESH,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let endpoint = attome_integration::oauth::GuardedEndpoint::new()
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                let summary = attome_integration::oauth::refresh_due(
+                    &state.base.db,
+                    &attome_integration::credential::ring(&state),
+                    &endpoint,
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if summary.refreshed + summary.failed > 0 {
+                    tracing::info!(?summary, "integration OAuth refresh: run complete");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALENDAR_SYNC,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let summary = attome_integration::connector::adapters::calendar_sync::run(&state)
@@ -4171,6 +4198,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_SECRET_AGE_REMINDER
         }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
+        EngineJob::Registered(job) if job.name == OAUTH_REFRESH.name => DEDUP_KEY_OAUTH_REFRESH,
         EngineJob::Registered(job) if job.name == MAIL_CAPTURE.name => DEDUP_KEY_MAIL_CAPTURE,
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
@@ -4628,6 +4656,26 @@ pub fn spawn_secret_age_reminder_scheduler(db: DbPool, interval: std::time::Dura
         job,
         DEDUP_KEY_SECRET_AGE_REMINDER,
         "secret age reminder",
+    );
+}
+
+/// Z1-T11: every five minutes, integration OAuth tokens renewed before
+/// they expire.
+pub fn spawn_oauth_refresh_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(OAUTH_REFRESH.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "integration OAuth refresh: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_OAUTH_REFRESH,
+        "integration OAuth refresh",
     );
 }
 

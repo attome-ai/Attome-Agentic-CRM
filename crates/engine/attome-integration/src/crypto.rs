@@ -35,6 +35,49 @@ pub fn decrypt_credential(
         .map(attome_types::secret::SecretString::into_exposed)
 }
 
+/// Z1-T11: an OAuth token column of `integration_oauth_token`, bound to its
+/// system's row and its column, so an access token's ciphertext never
+/// decrypts as a refresh token or as another system's.
+fn token_binding(
+    system_id: uuid::Uuid,
+    column: &'static str,
+) -> attome_auth::envelope::RowBinding<'static> {
+    attome_auth::envelope::RowBinding {
+        table: "integration_oauth_token",
+        column,
+        row_id: system_id,
+    }
+}
+
+pub fn encrypt_token(
+    ring: &KeyRing,
+    system_id: uuid::Uuid,
+    column: &'static str,
+    plaintext: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::encrypt_bound(
+        FIELD_NAME,
+        ring,
+        plaintext,
+        token_binding(system_id, column),
+    )
+}
+
+pub fn decrypt_token(
+    ring: &KeyRing,
+    system_id: uuid::Uuid,
+    column: &'static str,
+    encoded: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::decrypt_bound(
+        FIELD_NAME,
+        ring,
+        encoded,
+        token_binding(system_id, column),
+    )
+    .map(attome_types::secret::SecretString::into_exposed)
+}
+
 /// Last 4 characters of a plaintext secret, for the "configured, ending in
 /// ****1234" admin-UI display — never the full value.
 pub fn last4(secret: &str) -> Option<String> {
