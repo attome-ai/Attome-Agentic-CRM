@@ -990,7 +990,7 @@ async fn send_test(
         return Err(AppError::NotFound);
     };
     attome_jobs::enqueue_in_tx(
-        &mut tx,
+        tx.tx(),
         attome_core::jobs::EngineJob::EventsDeliverWebhook { delivery_id },
     )
     .await
@@ -1075,7 +1075,7 @@ async fn replay_since(
     .map_err(AppError::internal)?;
     for delivery_id in &ids {
         attome_jobs::enqueue_in_tx_dedup(
-            &mut tx,
+            tx.tx(),
             attome_core::jobs::EngineJob::EventsDeliverWebhook {
                 delivery_id: *delivery_id,
             },
