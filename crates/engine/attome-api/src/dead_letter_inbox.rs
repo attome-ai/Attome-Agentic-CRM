@@ -583,6 +583,160 @@ pub async fn run_group_replay(
     Ok(())
 }
 
+/// The Z7 job type of the hourly dead-letter sweep (M5-T4).
+pub const SWEEP_JOB: &str = "dead_letter_sweep";
+
+/// A group that gained at least this many items since the last sweep is
+/// growing.
+pub const GROWTH_THRESHOLD: i64 = 10;
+
+/// How a group moved since the last sweep.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroupChange {
+    New,
+    Growing,
+    Steady,
+}
+
+/// Compares this sweep's groups with the counts the last sweep stored.
+pub fn classify_changes(
+    previous: &std::collections::HashMap<String, i64>,
+    current: &[DeadLetterGroup],
+    threshold: i64,
+) -> Vec<(String, GroupChange)> {
+    current
+        .iter()
+        .map(|g| {
+            let change = match previous.get(&g.cause_group) {
+                None => GroupChange::New,
+                Some(before) if g.count - before >= threshold => GroupChange::Growing,
+                Some(_) => GroupChange::Steady,
+            };
+            (g.cause_group.clone(), change)
+        })
+        .collect()
+}
+
+/// What one sweep did.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct SweepSummary {
+    pub new_groups: Vec<String>,
+    pub growing_groups: Vec<String>,
+    /// Items discarded for being older than the retention window.
+    pub archived: u64,
+}
+
+/// M5-T4: the hourly sweep over every dead-letter source.
+///
+/// 1. Retention: an item that first failed more than `retention_days` ago
+///    (`jobs.dead_letter_retention_days`; 0 keeps everything) is discarded
+///    through its source as the system user, with the reason on the audit
+///    event, which stays as its record.
+/// 2. Groups that are new since the last sweep, or grew by
+///    [`GROWTH_THRESHOLD`] items, count on `dead_letter_groups_new_total` /
+///    `dead_letter_groups_growing_total`, which the built-in alerts
+///    `DeadLetterGroupNew` / `DeadLetterGroupGrowing` watch;
+///    `dead_letter_items` and `dead_letter_oldest_age_seconds` are set per
+///    source (`DeadLetterOldItem`).
+/// 3. `dead_letter_group_watch` (migration 0206) keeps this sweep's counts
+///    for the next one; an emptied group's row is deleted.
+pub async fn sweep(state: &EngineState, retention_days: i64) -> Result<SweepSummary, AppError> {
+    let mut summary = SweepSummary::default();
+    let (mut items, _) = scan(state, None).await?;
+
+    if retention_days > 0 {
+        let cutoff = Utc::now() - chrono::Duration::days(retention_days);
+        let reason = format!("retention: first failed more than {retention_days} days ago");
+        let expired: Vec<DeadLetter> = items
+            .iter()
+            .filter(|i| i.first_seen < cutoff)
+            .cloned()
+            .collect();
+        if !expired.is_empty() {
+            let actor = attome_workflow::entity_trigger::ensure_system_user(&state.base.db).await?;
+            let all = sources();
+            for item in &expired {
+                let Some(source) = all.iter().find(|s| s.source() == item.source) else {
+                    continue;
+                };
+                if source.discard(state, &item.id, actor, &reason).await? {
+                    summary.archived += 1;
+                }
+            }
+            items.retain(|i| i.first_seen >= cutoff);
+        }
+    }
+
+    let groups = group(&items);
+    let previous: std::collections::HashMap<String, i64> = sqlx::query_as::<_, (String, i64)>(
+        "SELECT cause_group, last_count FROM dead_letter_group_watch",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+    for (cause_group, change) in classify_changes(&previous, &groups, GROWTH_THRESHOLD) {
+        let source = group_source(&cause_group).unwrap_or("unknown").to_string();
+        match change {
+            GroupChange::New => {
+                metrics::counter!("dead_letter_groups_new_total", "source" => source).increment(1);
+                summary.new_groups.push(cause_group);
+            }
+            GroupChange::Growing => {
+                metrics::counter!("dead_letter_groups_growing_total", "source" => source)
+                    .increment(1);
+                summary.growing_groups.push(cause_group);
+            }
+            GroupChange::Steady => {}
+        }
+    }
+    for (name, count, oldest) in per_source(&items) {
+        metrics::gauge!("dead_letter_items", "source" => name).set(count as f64);
+        let age = oldest.map_or(0.0, |t| (Utc::now() - t).num_seconds().max(0) as f64);
+        metrics::gauge!("dead_letter_oldest_age_seconds", "source" => name).set(age);
+    }
+
+    let names: Vec<String> = groups.iter().map(|g| g.cause_group.clone()).collect();
+    let sources_of: Vec<String> = groups.iter().map(|g| g.source.clone()).collect();
+    let counts: Vec<i64> = groups.iter().map(|g| g.count).collect();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "INSERT INTO dead_letter_group_watch (cause_group, source, last_count) \
+         SELECT * FROM UNNEST($1::text[], $2::text[], $3::bigint[]) \
+         ON CONFLICT (cause_group) DO UPDATE \
+            SET last_count = EXCLUDED.last_count, last_checked_at = now()",
+    )
+    .bind(&names)
+    .bind(&sources_of)
+    .bind(&counts)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::query("DELETE FROM dead_letter_group_watch WHERE NOT (cause_group = ANY($1))")
+        .bind(&names)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(summary)
+}
+
+/// Per source: how many items and the oldest first failure; every source
+/// is listed, so an emptied source's gauges drop to zero.
+fn per_source(items: &[DeadLetter]) -> Vec<(&'static str, usize, Option<DateTime<Utc>>)> {
+    sources()
+        .iter()
+        .map(|s| {
+            let name = s.source();
+            let mine = items.iter().filter(|i| i.source == name);
+            let count = mine.clone().count();
+            let oldest = mine.map(|i| i.first_seen).min();
+            (name, count, oldest)
+        })
+        .collect()
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/dead-letters", get(list_items))
@@ -684,5 +838,38 @@ mod tests {
             names,
             ["jobs", "batch_jobs", "flow_trigger", "flow_run", "webhook"]
         );
+    }
+
+    #[test]
+    fn dead_letter_alerts_classify_new_growing_and_steady_groups() {
+        let groups = group(&[
+            item("webhook:s1:timeout", 1, "a"),
+            item("jobs:SendEmail:connect", 2, "b"),
+            item("flow_run:v/n:other", 3, "c"),
+        ]);
+        let mut previous = std::collections::HashMap::new();
+        previous.insert("jobs:SendEmail:connect".to_string(), 1_i64);
+        previous.insert("flow_run:v/n:other".to_string(), -9_i64);
+        let changes: std::collections::HashMap<String, GroupChange> =
+            classify_changes(&previous, &groups, GROWTH_THRESHOLD)
+                .into_iter()
+                .collect();
+        assert_eq!(changes["webhook:s1:timeout"], GroupChange::New);
+        assert_eq!(changes["jobs:SendEmail:connect"], GroupChange::Steady);
+        assert_eq!(changes["flow_run:v/n:other"], GroupChange::Growing);
+    }
+
+    #[test]
+    fn dead_letter_alerts_report_every_source_even_when_empty() {
+        let counts = per_source(&[item("webhook:s1:timeout", 1, "a")]);
+        assert_eq!(counts.len(), sources().len());
+        let webhook = counts
+            .iter()
+            .find(|(n, _, _)| *n == "webhook")
+            .expect("webhook");
+        assert_eq!(webhook.1, 1);
+        assert!(webhook.2.is_some());
+        let jobs = counts.iter().find(|(n, _, _)| *n == "jobs").expect("jobs");
+        assert_eq!((jobs.1, jobs.2), (0, None));
     }
 }

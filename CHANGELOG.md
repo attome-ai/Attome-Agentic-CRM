@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Dead-letter alerts and retention (M5-T4): an hourly `dead_letter_sweep` job discards items that
+  first failed more than `jobs.dead_letter_retention_days` ago (through their source, as the system
+  user, with the reason on the audit event), and counts groups that are new or gained ten or more
+  items since the last sweep (`dead_letter_groups_new_total`, `dead_letter_groups_growing_total`;
+  gauges `dead_letter_items`, `dead_letter_oldest_age_seconds`). Built-in alerts
+  `DeadLetterGroupNew`, `DeadLetterGroupGrowing` and `DeadLetterOldItem`, each with a runbook.
+  Migration 0206 (`dead_letter_group_watch`).
 - Dead-letter inbox screen (M5-T3) at `/xrm/jobs/dead-letters`: groups with their count, last
   failure, a sample message and a "new today" / "still failing" marker; replay a group at a chosen
   number of items a minute; open a group to replay one item or discard it with a reason. English

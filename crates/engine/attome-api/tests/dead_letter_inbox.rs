@@ -459,3 +459,70 @@ fn dead_letter_inbox_replays_a_group_after_a_preview() {
         assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
+
+/// M5-T4: the sweep calls a group new once, growing after ten more items,
+/// and discards an item past the retention window.
+#[test]
+fn dead_letter_alerts_new_growing_and_retention() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let (variant, _) = seed_group(&db, 1).await;
+        let group = format!("jobs:{variant}:timeout");
+
+        let first = attome_api::dead_letter_inbox::sweep(&state, 0)
+            .await
+            .expect("sweep");
+        assert!(first.new_groups.contains(&group), "a new group is reported");
+        let second = attome_api::dead_letter_inbox::sweep(&state, 0)
+            .await
+            .expect("sweep");
+        assert!(!second.new_groups.contains(&group), "only once");
+
+        for _ in 0..10 {
+            seed_more(&db, &variant).await;
+        }
+        let third = attome_api::dead_letter_inbox::sweep(&state, 0)
+            .await
+            .expect("sweep");
+        assert!(
+            third.growing_groups.contains(&group),
+            "ten more items is growing"
+        );
+
+        let old = format!("dead-letter-inbox-old-{}", Uuid::now_v7());
+        sqlx::query(
+            "INSERT INTO apalis.jobs \
+                 (job, id, job_type, status, attempts, max_attempts, last_error, done_at) \
+             VALUES ($1, $2, 'attome_job', 'Killed', 5, 5, 'boom', now() - interval '100 days')",
+        )
+        .bind(serde_json::json!({"version": 1, "variant": variant, "payload": {}}))
+        .bind(&old)
+        .execute(&db)
+        .await
+        .expect("seed an old dead letter");
+        let fourth = attome_api::dead_letter_inbox::sweep(&state, 90)
+            .await
+            .expect("sweep");
+        assert!(fourth.archived >= 1);
+        assert_eq!(
+            status_of(&db, &old).await,
+            None,
+            "past retention it is discarded"
+        );
+    })
+}
+
+async fn seed_more(db: &attome_db::DbPool, variant: &str) {
+    sqlx::query(
+        "INSERT INTO apalis.jobs \
+             (job, id, job_type, status, attempts, max_attempts, last_error, done_at) \
+         VALUES ($1, $2, 'attome_job', 'Killed', 5, 5, 'request timed out', now())",
+    )
+    .bind(serde_json::json!({"version": 1, "variant": variant, "payload": {}}))
+    .bind(format!("dead-letter-inbox-{}", Uuid::now_v7()))
+    .execute(db)
+    .await
+    .expect("seed a dead-lettered job");
+}

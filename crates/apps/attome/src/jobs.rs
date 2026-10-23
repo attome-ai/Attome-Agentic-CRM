@@ -2819,6 +2819,7 @@ const DEDUP_KEY_SECRET_AGE_REMINDER: &str = "secret-age-reminder";
 const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
 /// Z1-T11: integration OAuth tokens renewed before expiry.
 const DEDUP_KEY_OAUTH_REFRESH: &str = "integration-oauth-refresh";
+const DEDUP_KEY_DEAD_LETTER_SWEEP: &str = "dead-letter-sweep";
 /// D15-T2: the personal mail capture (a registered job type).
 const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
 /// J2-T2: the shared mailbox routing (a registered job type).
@@ -2919,6 +2920,11 @@ pub const SECURITY_BULK_ACCESS: attome_jobs::JobType = attome_jobs::JobType {
 /// `attome_api::model_admin::option_merge::MergePayload`).
 pub const OPTION_SET_MERGE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::model_admin::option_merge::MERGE_JOB, 1);
+
+/// M5-T4: hourly, dead-letter retention and the new / growing group
+/// counters the built-in alerts watch (no payload).
+pub const DEAD_LETTER_SWEEP: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::dead_letter_inbox::SWEEP_JOB, 1);
 
 /// M5-T2: a dead-letter group replayed at a set pace, as the person who
 /// started it (payload `attome_api::dead_letter_inbox::GroupReplayPayload`).
@@ -3158,6 +3164,24 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DEAD_LETTER_SWEEP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let days = state.base.config.jobs.dead_letter_retention_days;
+                let summary = attome_api::dead_letter_inbox::sweep(&state, days)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    new_groups = summary.new_groups.len(),
+                    growing_groups = summary.growing_groups.len(),
+                    archived = summary.archived,
+                    "dead-letter sweep: done"
+                );
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -4243,6 +4267,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
         EngineJob::Registered(job) if job.name == OAUTH_REFRESH.name => DEDUP_KEY_OAUTH_REFRESH,
+        EngineJob::Registered(job) if job.name == DEAD_LETTER_SWEEP.name => {
+            DEDUP_KEY_DEAD_LETTER_SWEEP
+        }
         EngineJob::Registered(job) if job.name == MAIL_CAPTURE.name => DEDUP_KEY_MAIL_CAPTURE,
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
@@ -4711,6 +4738,25 @@ pub fn spawn_secret_age_reminder_scheduler(db: DbPool, interval: std::time::Dura
         job,
         DEDUP_KEY_SECRET_AGE_REMINDER,
         "secret age reminder",
+    );
+}
+
+/// M5-T4: hourly, the dead-letter sweep.
+pub fn spawn_dead_letter_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(DEAD_LETTER_SWEEP.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "dead-letter sweep: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_DEAD_LETTER_SWEEP,
+        "dead-letter sweep",
     );
 }
 

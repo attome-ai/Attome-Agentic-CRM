@@ -45,6 +45,42 @@
       "for_minutes": 10
     },
     {
+      "name": "DeadLetterGroupNew",
+      "severity": "warning",
+      "summary": "Work started failing for good in a new way (a new dead-letter group)",
+      "runbook": "observability/runbooks/DeadLetterGroupNew.md",
+      "kind": "increase",
+      "metric": "dead_letter_groups_new_total",
+      "window_minutes": 120,
+      "op": ">",
+      "value": 0,
+      "for_minutes": 0
+    },
+    {
+      "name": "DeadLetterGroupGrowing",
+      "severity": "warning",
+      "summary": "A dead-letter group gained ten or more items within an hour",
+      "runbook": "observability/runbooks/DeadLetterGroupGrowing.md",
+      "kind": "increase",
+      "metric": "dead_letter_groups_growing_total",
+      "window_minutes": 120,
+      "op": ">",
+      "value": 0,
+      "for_minutes": 0
+    },
+    {
+      "name": "DeadLetterOldItem",
+      "severity": "info",
+      "summary": "A dead letter has waited more than seven days untriaged",
+      "runbook": "observability/runbooks/DeadLetterOldItem.md",
+      "kind": "threshold",
+      "metric": "dead_letter_oldest_age_seconds",
+      "aggregate": "max",
+      "op": ">",
+      "value": 604800,
+      "for_minutes": 60
+    },
+    {
       "name": "JobBacklogOld",
       "severity": "warning",
       "summary": "The oldest waiting background job has waited more than 15 minutes",

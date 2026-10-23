@@ -69,7 +69,7 @@ pub(crate) fn workflow_system_user_id() -> Uuid {
     Uuid::from_u128(0x0000_0000_0000_0000_0000_0057_0f10_0001)
 }
 
-pub(crate) async fn ensure_system_user(db: &PgPool) -> Result<Uuid, AppError> {
+pub async fn ensure_system_user(db: &PgPool) -> Result<Uuid, AppError> {
     let id = workflow_system_user_id();
     sqlx::query(
         "INSERT INTO user_account (id, user_name, email, is_active, created_at) \
