@@ -47,6 +47,11 @@ impl Secret {
     fn expose(&self) -> &str {
         &self.0
     }
+
+    /// The value, for an adapter of this crate to put on the wire.
+    pub(crate) fn wire_value(&self) -> &str {
+        &self.0
+    }
 }
 
 impl std::fmt::Debug for Secret {

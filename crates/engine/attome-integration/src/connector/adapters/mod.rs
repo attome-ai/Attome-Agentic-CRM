@@ -1,10 +1,16 @@
 /// D15-T3: two-way calendar sync of meetings.
 pub mod calendar_sync;
+/// S12-T2: what the ERP connectors exchange with Attome.
+pub mod erp;
 /// J2-T1: the IMAP, Graph and Gmail readers behind `mailbox`.
 pub mod mail;
 pub mod mailbox;
+/// S12-T2: Odoo over JSON-RPC.
+pub mod odoo;
 pub mod reputation;
 pub mod rest;
+/// S12-T2: SAP Business One over its Service Layer.
+pub mod sap_b1;
 /// J4-T1: SMS segments, senders and the provider codecs.
 pub mod sms;
 pub mod sms_twilio;

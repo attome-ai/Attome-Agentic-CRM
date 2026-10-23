@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Odoo and SAP Business One connectors (S12-T2): customers, products, sales orders and invoices
+  are pulled into `account`, `product`, `order` and `invoice` records keyed by the ERP's id
+  (Odoo JSON-RPC `search_read` by offset; the SAP B1 Service Layer with its session cookie and
+  `odata.nextLink` pages, signing in again when the session expires). Only customers are pushed
+  back (Odoo partners, SAP business partners); orders and invoices stay the ERP's.
 - Connector SDK (S12-T1): `attome_integration::connector::sdk` reads a declarative connector
   (`config.sdk`: base URL, auth none/bearer/basic/header/OAuth client credentials, endpoints with
   path templates, records pointer and cursor/page/offset/`Link` paging, rate limit, retries) and
