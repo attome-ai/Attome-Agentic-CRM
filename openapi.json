@@ -78237,6 +78237,779 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/master/held": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists held contributions waiting for a steward.",
+        "description": "An administrator sees every master entity's; a steward sees only the\nentities of the data domains they own or steward.",
+        "operationId": "master_held_list",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Held contributions, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MasterHeldContribution"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/master/{entity}/contributions/{cid}/detach": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Detaches a contribution from its golden record.",
+        "description": "The golden record is rebuilt without it; the contribution keeps the\ngolden record's id for its history.",
+        "operationId": "master_contribution_detach",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "description": "The attached contribution",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detached; its golden record's rebuild is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterRebuildQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or contribution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contribution is not attached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/master/{entity}/contributions/{cid}/reject": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rejects a held contribution.",
+        "description": "It is detached and keeps the steward's reason; it never reaches its\ngolden record.",
+        "operationId": "master_contribution_reject",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "description": "The held contribution",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MasterRejectBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Detached with the reason"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or contribution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contribution is not held",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data, or no reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/master/{entity}/contributions/{cid}/release": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Releases a held contribution.",
+        "description": "The payload (the corrected one when sent, else the stored one) is\nvalidated again; a valid one is attached to its golden record and a\nrebuild queued. Of two stewards releasing it at once, one wins.",
+        "operationId": "master_contribution_release",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "description": "The held contribution",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MasterReleaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Attached; its golden record's rebuild is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterRebuildQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or contribution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contribution is not held",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data, or the payload still fails validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/master/{entity}/{id}/certify": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sets a golden record's certification.",
+        "description": "A golden record is `draft` until a steward certifies it; `retired` takes\nit out of use.",
+        "operationId": "master_certify",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The golden record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MasterCertifyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new and the previous certification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterCertified"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or golden record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data, or an unknown status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/master/{entity}/{id}/pins": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Pins an attribute of a golden record.",
+        "description": "The survivorship rebuild leaves a pinned attribute alone. With `value`,\nthe value is first written through the generic update path (validation,\naudit, row version); without it the current value is kept.",
+        "operationId": "master_pin",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The golden record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MasterPinBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Pinned: rebuilds leave the attribute alone"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or golden record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed while the value was set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data, an unknown attribute, or an invalid value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/master/{entity}/{id}/pins/{attribute}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Unpins an attribute of a golden record.",
+        "description": "The survivorship rules choose its value again: a rebuild of the golden\nrecord is queued.",
+        "operationId": "master_unpin",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The master entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The golden record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attribute",
+            "in": "path",
+            "description": "The pinned attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unpinned; a rebuild is queued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, golden record or pin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not master data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/mcp": {
       "post": {
         "tags": [
@@ -91959,6 +92732,200 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/scenarios/{id}/simulations": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Lists a scenario's rule-change and flow-change simulations.",
+        "description": "Newest first, each with how many records or runs it affects, so runs of\nthe same rule or flow can be compared.",
+        "operationId": "scenario_simulation_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The scenario",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The scenario's simulations, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ScenarioSimulation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Runs a rule-change or flow-change simulation for a scenario.",
+        "description": "`rule_change` previews a business rule over the stored records (the\nrecords it would refuse); `flow_change` replays a flow version over the\nflow's latest finished runs (the runs that would go differently). The\nresult is stored against the scenario; nothing else is written.",
+        "operationId": "scenario_simulation_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The scenario",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioSimulationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The simulation, stored against the scenario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioSimulation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such scenario, rule, flow or version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind, a flow change without its version, or last out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/schema/{logicalname}": {
       "get": {
         "tags": [
@@ -93406,6 +94373,101 @@
           "note": "computes a proposal and writes nothing; the dispatcher assigns what they accept",
           "reason": "dry_run",
           "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/service/device-readings": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Records readings posted by devices that know only their own id.",
+        "description": "Each reading names `device_id`; the asset holding that device id is\nlooked up and the reading is created on it through the generic write\npath. A reading of an unknown device, or one that fails validation, is\nanswered with its error and does not stop the others. Device rules see\nthe readings on the next device readings run.",
+        "operationId": "post_device_readings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceReadingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each reading's result, in order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceReadingsResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset_meter_reading.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Device readings are not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No readings, or more than 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -128930,6 +129992,13 @@
           "owner_ref"
         ],
         "properties": {
+          "external_system": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "L1-T7: the system this subscriber is, as master-data contributions\nname it; a golden-record change then carries its own external id."
+          },
           "filter_entity_logicalnames": {
             "type": [
               "array",
@@ -132590,6 +133659,99 @@
           "suggested_dir": {
             "type": "string",
             "description": "The conventional home for entity overrides — the only subtree from\nwhich `provide-xrm-forms.ts` can import with a library-safe relative\npath, and therefore the only one this tool auto-registers."
+          }
+        }
+      },
+      "DeviceReadingIn": {
+        "type": "object",
+        "description": "One reading a device posts.",
+        "required": [
+          "device_id",
+          "meter",
+          "reading"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "description": "The device's id, as the asset's `device_id` holds it."
+          },
+          "meter": {
+            "type": "string"
+          },
+          "read_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the device read it; now when absent."
+          },
+          "reading": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DeviceReadingResult": {
+        "type": "object",
+        "description": "One posted reading's result.",
+        "required": [
+          "device_id"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why none was: `unknown_device`, `invalid` or the write's error."
+          },
+          "reading_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The reading record made, when one was."
+          }
+        }
+      },
+      "DeviceReadingsIn": {
+        "type": "object",
+        "description": "Readings a device posts, up to 500.",
+        "required": [
+          "readings"
+        ],
+        "properties": {
+          "readings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceReadingIn"
+            }
+          }
+        }
+      },
+      "DeviceReadingsResult": {
+        "type": "object",
+        "description": "Each posted reading's result, in order.",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceReadingResult"
+            }
           }
         }
       },
@@ -142398,6 +143560,35 @@
           }
         }
       },
+      "MasterCertified": {
+        "type": "object",
+        "description": "A certification change.",
+        "required": [
+          "status",
+          "previous"
+        ],
+        "properties": {
+          "previous": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "MasterCertifyBody": {
+        "type": "object",
+        "description": "A golden record's new certification.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "`draft`, `certified` or `retired`."
+          }
+        }
+      },
       "MasterData": {
         "type": "object",
         "description": "An entity's master-data settings (`entity_info.is_master`, `hub_style`).",
@@ -142414,6 +143605,105 @@
           },
           "is_master": {
             "type": "boolean"
+          }
+        }
+      },
+      "MasterHeldContribution": {
+        "type": "object",
+        "description": "One held contribution.",
+        "required": [
+          "entity",
+          "id",
+          "source_system",
+          "external_id",
+          "received_at"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "held_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_system": {
+            "type": "string"
+          }
+        }
+      },
+      "MasterPinBody": {
+        "type": "object",
+        "description": "A pin of one attribute.",
+        "required": [
+          "attribute"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "value": {
+            "description": "The value to set before pinning; the current value is kept when\nabsent."
+          }
+        }
+      },
+      "MasterRebuildQueued": {
+        "type": "object",
+        "description": "What a release or detach did to the golden record.",
+        "required": [
+          "golden_id",
+          "rebuild_queued"
+        ],
+        "properties": {
+          "golden_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rebuild_queued": {
+            "type": "boolean",
+            "description": "False when an identical rebuild was already waiting."
+          }
+        }
+      },
+      "MasterRejectBody": {
+        "type": "object",
+        "description": "A held contribution's rejection.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why it is rejected; kept on the contribution."
+          }
+        }
+      },
+      "MasterReleaseBody": {
+        "type": "object",
+        "description": "A held contribution's release; `{}` validates the stored payload again.",
+        "properties": {
+          "payload": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The corrected payload; the stored one is validated again when absent.",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
           }
         }
       },
@@ -156736,6 +158026,76 @@
           }
         }
       },
+      "PaginatedResponse_MasterHeldContribution": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One held contribution.",
+              "required": [
+                "entity",
+                "id",
+                "source_system",
+                "external_id",
+                "received_at"
+              ],
+              "properties": {
+                "entity": {
+                  "type": "string"
+                },
+                "external_id": {
+                  "type": "string"
+                },
+                "held_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "received_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "source_system": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_MatchRuleView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -161692,6 +163052,105 @@
                     "null"
                   ],
                   "description": "The record's primary name, when its entity declares one."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ScenarioSimulation": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One stored scenario simulation.",
+              "required": [
+                "id",
+                "scenario_id",
+                "kind",
+                "subject_id",
+                "affected",
+                "affected_ids",
+                "result",
+                "created_by",
+                "created_at"
+              ],
+              "properties": {
+                "affected": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Records the rule would refuse, or past runs that would go\ndifferently."
+                },
+                "affected_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "The first affected records (rule) or the differing runs (flow)."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`rule_change` or `flow_change`."
+                },
+                "result": {
+                  "type": "object",
+                  "description": "The full simulation result."
+                },
+                "scenario_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "subject_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "subject_version_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
                 }
               }
             }
@@ -175838,6 +177297,106 @@
           }
         }
       },
+      "ScenarioSimulation": {
+        "type": "object",
+        "description": "One stored scenario simulation.",
+        "required": [
+          "id",
+          "scenario_id",
+          "kind",
+          "subject_id",
+          "affected",
+          "affected_ids",
+          "result",
+          "created_by",
+          "created_at"
+        ],
+        "properties": {
+          "affected": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Records the rule would refuse, or past runs that would go\ndifferently."
+          },
+          "affected_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The first affected records (rule) or the differing runs (flow)."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`rule_change` or `flow_change`."
+          },
+          "result": {
+            "type": "object",
+            "description": "The full simulation result."
+          },
+          "scenario_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ScenarioSimulationBody": {
+        "type": "object",
+        "description": "A rule-change or flow-change run for a scenario.",
+        "required": [
+          "kind",
+          "subject_id"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`rule_change` or `flow_change`."
+          },
+          "last": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "`flow_change`: how many of the flow's latest finished runs, 1 to 50\n(default 10)."
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The business rule (`rule_change`) or the flow definition\n(`flow_change`)."
+          },
+          "version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`flow_change`: the version to replay."
+          }
+        }
+      },
       "ScheduleDetail": {
         "allOf": [
           {
@@ -180721,6 +182280,13 @@
             "type": "string",
             "format": "date-time"
           },
+          "external_system": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "L1-T7: the system this subscriber is, for its own external ids."
+          },
           "filter_entity_logicalnames": {
             "type": [
               "array",
@@ -184886,6 +186452,13 @@
           "row_version"
         ],
         "properties": {
+          "external_system": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "L1-T7: omitting it keeps the current one; an empty one removes it."
+          },
           "filter_entity_logicalnames": {
             "type": [
               "array",
@@ -187238,7 +188811,6 @@
     }
   ],
   "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -187290,5 +188862,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }

@@ -14383,6 +14383,155 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/master/held": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists held contributions waiting for a steward.
+         * @description An administrator sees every master entity's; a steward sees only the
+         *     entities of the data domains they own or steward.
+         */
+        get: operations["master_held_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/contributions/{cid}/detach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Detaches a contribution from its golden record.
+         * @description The golden record is rebuilt without it; the contribution keeps the
+         *     golden record's id for its history.
+         */
+        post: operations["master_contribution_detach"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/contributions/{cid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rejects a held contribution.
+         * @description It is detached and keeps the steward's reason; it never reaches its
+         *     golden record.
+         */
+        post: operations["master_contribution_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/contributions/{cid}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Releases a held contribution.
+         * @description The payload (the corrected one when sent, else the stored one) is
+         *     validated again; a valid one is attached to its golden record and a
+         *     rebuild queued. Of two stewards releasing it at once, one wins.
+         */
+        post: operations["master_contribution_release"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/{id}/certify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sets a golden record's certification.
+         * @description A golden record is `draft` until a steward certifies it; `retired` takes
+         *     it out of use.
+         */
+        post: operations["master_certify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/{id}/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pins an attribute of a golden record.
+         * @description The survivorship rebuild leaves a pinned attribute alone. With `value`,
+         *     the value is first written through the generic update path (validation,
+         *     audit, row version); without it the current value is kept.
+         */
+        post: operations["master_pin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master/{entity}/{id}/pins/{attribute}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unpins an attribute of a golden record.
+         * @description The survivorship rules choose its value again: a rebuild of the golden
+         *     record is queued.
+         */
+        delete: operations["master_unpin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -17032,6 +17181,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scenarios/{id}/simulations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists a scenario's rule-change and flow-change simulations.
+         * @description Newest first, each with how many records or runs it affects, so runs of
+         *     the same rule or flow can be compared.
+         */
+        get: operations["scenario_simulation_list"];
+        put?: never;
+        /**
+         * Runs a rule-change or flow-change simulation for a scenario.
+         * @description `rule_change` previews a business rule over the stored records (the
+         *     records it would refuse); `flow_change` replays a flow version over the
+         *     flow's latest finished runs (the runs that would go differently). The
+         *     result is stored against the scenario; nothing else is written.
+         */
+        post: operations["scenario_simulation_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/schema/{logicalname}": {
         parameters: {
             query?: never;
@@ -17411,6 +17588,30 @@ export interface paths {
          *     proposal is never committed.
          */
         post: operations["post_day_plan_propose"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/device-readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Records readings posted by devices that know only their own id.
+         * @description Each reading names `device_id`; the asset holding that device id is
+         *     looked up and the reading is created on it through the generic write
+         *     path. A reading of an unknown device, or one that fails validation, is
+         *     answered with its error and does not stop the others. Device rules see
+         *     the readings on the next device readings run.
+         */
+        post: operations["post_device_readings"];
         delete?: never;
         options?: never;
         head?: never;
@@ -26633,6 +26834,11 @@ export interface components {
             state_field: string;
         };
         CreateSubscriptionBody: {
+            /**
+             * @description L1-T7: the system this subscriber is, as master-data contributions
+             *     name it; a golden-record change then carries its own external id.
+             */
+            external_system?: string | null;
             filter_entity_logicalnames?: string[] | null;
             /**
              * @description Matches a named change-feed event (`attome_core::change_feed::
@@ -28097,6 +28303,39 @@ export interface components {
              *     path, and therefore the only one this tool auto-registers.
              */
             suggested_dir: string;
+        };
+        /** @description One reading a device posts. */
+        DeviceReadingIn: {
+            /** @description The device's id, as the asset's `device_id` holds it. */
+            device_id: string;
+            meter: string;
+            /**
+             * Format: date-time
+             * @description When the device read it; now when absent.
+             */
+            read_at?: string | null;
+            /** Format: double */
+            reading: number;
+            unit?: string | null;
+        };
+        /** @description One posted reading's result. */
+        DeviceReadingResult: {
+            device_id: string;
+            /** @description Why none was: `unknown_device`, `invalid` or the write's error. */
+            error?: string | null;
+            /**
+             * Format: uuid
+             * @description The reading record made, when one was.
+             */
+            reading_id?: string | null;
+        };
+        /** @description Readings a device posts, up to 500. */
+        DeviceReadingsIn: {
+            readings: components["schemas"]["DeviceReadingIn"][];
+        };
+        /** @description Each posted reading's result, in order. */
+        DeviceReadingsResult: {
+            results: components["schemas"]["DeviceReadingResult"][];
         };
         /** @description One device, as an administrator sees it. */
         DeviceRow: {
@@ -32068,11 +32307,60 @@ export interface components {
             /** @description `form`, `portal`, `import` or `staff` (default). */
             source?: string | null;
         };
+        /** @description A certification change. */
+        MasterCertified: {
+            previous: string;
+            status: string;
+        };
+        /** @description A golden record's new certification. */
+        MasterCertifyBody: {
+            /** @description `draft`, `certified` or `retired`. */
+            status: string;
+        };
         /** @description An entity's master-data settings (`entity_info.is_master`, `hub_style`). */
         MasterData: {
             /** @description `registry`, `consolidation` or `coexistence`; `null` when unset. */
             hub_style?: string | null;
             is_master: boolean;
+        };
+        /** @description One held contribution. */
+        MasterHeldContribution: {
+            entity: string;
+            external_id: string;
+            held_reason?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            received_at: string;
+            source_system: string;
+        };
+        /** @description A pin of one attribute. */
+        MasterPinBody: {
+            attribute: string;
+            /**
+             * @description The value to set before pinning; the current value is kept when
+             *     absent.
+             */
+            value?: unknown;
+        };
+        /** @description What a release or detach did to the golden record. */
+        MasterRebuildQueued: {
+            /** Format: uuid */
+            golden_id: string;
+            /** @description False when an identical rebuild was already waiting. */
+            rebuild_queued: boolean;
+        };
+        /** @description A held contribution's rejection. */
+        MasterRejectBody: {
+            /** @description Why it is rejected; kept on the contribution. */
+            reason: string;
+        };
+        /** @description A held contribution's release; `{}` validates the stored payload again. */
+        MasterReleaseBody: {
+            /** @description The corrected payload; the stored one is validated again when absent. */
+            payload?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** @description One field of a match rule (`match_rule.fields`). */
         MatchField: {
@@ -37508,6 +37796,30 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MasterHeldContribution: {
+            items: {
+                entity: string;
+                external_id: string;
+                held_reason?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                received_at: string;
+                source_system: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_MatchRuleView: {
             items: {
                 auto_merge: boolean;
@@ -39327,6 +39639,46 @@ export interface components {
                 id: string;
                 /** @description The record's primary name, when its entity declares one. */
                 name?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ScenarioSimulation: {
+            items: {
+                /**
+                 * Format: int64
+                 * @description Records the rule would refuse, or past runs that would go
+                 *     differently.
+                 */
+                affected: number;
+                /** @description The first affected records (rule) or the differing runs (flow). */
+                affected_ids: string[];
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by: string;
+                /** Format: uuid */
+                id: string;
+                /** @description `rule_change` or `flow_change`. */
+                kind: string;
+                /** @description The full simulation result. */
+                result: Record<string, never>;
+                /** Format: uuid */
+                scenario_id: string;
+                /** Format: uuid */
+                subject_id: string;
+                /** Format: uuid */
+                subject_version_id?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -44832,6 +45184,55 @@ export interface components {
             scenario_value?: number | null;
             status: string;
         };
+        /** @description One stored scenario simulation. */
+        ScenarioSimulation: {
+            /**
+             * Format: int64
+             * @description Records the rule would refuse, or past runs that would go
+             *     differently.
+             */
+            affected: number;
+            /** @description The first affected records (rule) or the differing runs (flow). */
+            affected_ids: string[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `rule_change` or `flow_change`. */
+            kind: string;
+            /** @description The full simulation result. */
+            result: Record<string, never>;
+            /** Format: uuid */
+            scenario_id: string;
+            /** Format: uuid */
+            subject_id: string;
+            /** Format: uuid */
+            subject_version_id?: string | null;
+        };
+        /** @description A rule-change or flow-change run for a scenario. */
+        ScenarioSimulationBody: {
+            /** @description `rule_change` or `flow_change`. */
+            kind: string;
+            /**
+             * Format: int64
+             * @description `flow_change`: how many of the flow's latest finished runs, 1 to 50
+             *     (default 10).
+             */
+            last?: number | null;
+            /**
+             * Format: uuid
+             * @description The business rule (`rule_change`) or the flow definition
+             *     (`flow_change`).
+             */
+            subject_id: string;
+            /**
+             * Format: uuid
+             * @description `flow_change`: the version to replay.
+             */
+            version_id?: string | null;
+        };
         /** @description A schedule with its assignments and coverage. */
         ScheduleDetail: components["schemas"]["ScheduleSummary"] & {
             assignments: components["schemas"]["AssignmentView"][];
@@ -46716,6 +47117,8 @@ export interface components {
         SubscriptionDetail: {
             /** Format: date-time */
             created_at: string;
+            /** @description L1-T7: the system this subscriber is, for its own external ids. */
+            external_system?: string | null;
             filter_entity_logicalnames?: string[] | null;
             filter_event_names?: string[] | null;
             filter_expression?: string | null;
@@ -48246,6 +48649,8 @@ export interface components {
             state_field: string;
         };
         UpdateSubscriptionBody: {
+            /** @description L1-T7: omitting it keeps the current one; an empty one removes it. */
+            external_system?: string | null;
             /**
              * @description Omitting the field keeps the current filter; providing one (`[]` for
              *     "match nothing" or a non-empty list) replaces it wholesale. Phase 1
@@ -96706,6 +97111,460 @@ export interface operations {
             };
         };
     };
+    master_held_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Held contributions, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MasterHeldContribution"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_contribution_detach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The attached contribution */
+                cid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Detached; its golden record's rebuild is queued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterRebuildQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or contribution */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contribution is not attached */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_contribution_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The held contribution */
+                cid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MasterRejectBody"];
+            };
+        };
+        responses: {
+            /** @description Detached with the reason */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or contribution */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contribution is not held */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data, or no reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_contribution_release: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The held contribution */
+                cid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MasterReleaseBody"];
+            };
+        };
+        responses: {
+            /** @description Attached; its golden record's rebuild is queued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterRebuildQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or contribution */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contribution is not held */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data, or the payload still fails validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_certify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The golden record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MasterCertifyBody"];
+            };
+        };
+        responses: {
+            /** @description The new and the previous certification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterCertified"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or golden record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data, or an unknown status */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The golden record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MasterPinBody"];
+            };
+        };
+        responses: {
+            /** @description Pinned: rebuilds leave the attribute alone */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or golden record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record changed while the value was set */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data, an unknown attribute, or an invalid value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    master_unpin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The master entity */
+                entity: string;
+                /** @description The golden record */
+                id: string;
+                /** @description The pinned attribute */
+                attribute: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unpinned; a rebuild is queued */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, golden record or pin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not master data */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mcp_endpoint: {
         parameters: {
             query?: never;
@@ -105098,6 +105957,121 @@ export interface operations {
             };
         };
     };
+    scenario_simulation_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The scenario */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scenario's simulations, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ScenarioSimulation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scenario_simulation_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The scenario */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioSimulationBody"];
+            };
+        };
+        responses: {
+            /** @description The simulation, stored against the scenario */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioSimulation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such scenario, rule, flow or version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind, a flow change without its version, or last out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_schema: {
         parameters: {
             query?: never;
@@ -105957,6 +106931,66 @@ export interface operations {
                 };
             };
             /** @description Too many work orders */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_device_readings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceReadingsIn"];
+            };
+        };
+        responses: {
+            /** @description Each reading's result, in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceReadingsResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks asset_meter_reading.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Device readings are not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No readings, or more than 500 */
             422: {
                 headers: {
                     [name: string]: unknown;
