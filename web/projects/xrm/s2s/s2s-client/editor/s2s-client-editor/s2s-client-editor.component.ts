@@ -62,6 +62,8 @@ export class S2sClientEditorComponent implements OnInit {
   editCanActAs = false;
   /** S11-T1: a new public key to store (blank keeps the current one). */
   editOauthKey = '';
+  /** A PEM header, not interface text, so it is not in the catalogue. */
+  readonly pemPlaceholder = '-----BEGIN PUBLIC KEY-----';
   /** S11-T1: whether to remove the stored key on save. */
   removeOauthKey = false;
   /** S11-T1: the OAuth scopes, space-separated. */

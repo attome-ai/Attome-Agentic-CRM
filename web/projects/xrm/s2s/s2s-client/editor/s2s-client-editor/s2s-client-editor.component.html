@@ -56,7 +56,7 @@
       <div class="field">
         <label for="s2s-client-oauth-key">{{ 's2sClientPage.oauthKey' | translate }}</label>
         <textarea id="s2s-client-oauth-key" rows="4" [(ngModel)]="editOauthKey" dir="ltr"
-                  [disabled]="removeOauthKey" placeholder="-----BEGIN PUBLIC KEY-----"
+                  [disabled]="removeOauthKey" [placeholder]="pemPlaceholder"
                   aria-describedby="s2s-client-oauth-key-hint"></textarea>
         <p id="s2s-client-oauth-key-hint" class="cell-muted" data-oauth-key-state>
           {{ (client()?.oauth_public_key_set ? 's2sClientPage.oauthKeySet' : 's2sClientPage.oauthKeyNone') | translate }}
