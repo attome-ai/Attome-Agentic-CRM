@@ -63,6 +63,44 @@ fn valid_retry_class(s: &str) -> bool {
     matches!(s, "standard" | "extended")
 }
 
+/// M13-T2: a target auth header name and value, both or neither; the name
+/// must be a plain header token and not one the delivery sets itself.
+fn checked_target_auth(
+    name: Option<&str>,
+    value: Option<&str>,
+) -> Result<Option<(String, String)>, AppError> {
+    let (name, value) = match (name.map(str::trim), value) {
+        (None | Some(""), None) => return Ok(None),
+        (Some(name), Some(value)) if !name.is_empty() && !value.is_empty() => (name, value),
+        _ => {
+            return Err(AppError::Validation(
+                "target_auth_header and target_auth_value go together".into(),
+            ));
+        }
+    };
+    let token = name
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+    let reserved = [
+        "content-type",
+        "content-length",
+        "host",
+        "idempotency-key",
+        "webhook-id",
+        "webhook-timestamp",
+        "webhook-signature",
+        "x-attome-signature",
+    ]
+    .contains(&name.to_ascii_lowercase().as_str());
+    if !token || reserved || name.len() > 100 || value.len() > 4096 {
+        return Err(AppError::Validation(
+            "target_auth_header must be a plain header name the delivery does not set itself"
+                .into(),
+        ));
+    }
+    Ok(Some((name.to_owned(), value.to_owned())))
+}
+
 fn checked_payload_shape(s: &str) -> Result<&'static str, AppError> {
     crate::payload::PayloadShape::parse(s)
         .map(crate::payload::PayloadShape::as_str)
@@ -101,6 +139,12 @@ struct CreateSubscriptionBody {
     /// body carries besides the entity, record id and operation.
     #[serde(default)]
     payload_shape: Option<String>,
+    /// M13-T2: a header the target wants on every delivery, e.g.
+    /// `Authorization`; its value is write-only.
+    #[serde(default)]
+    target_auth_header: Option<String>,
+    #[serde(default)]
+    target_auth_value: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -130,10 +174,16 @@ struct UpdateSubscriptionBody {
     /// M13-T1: `id`, `changes` or `full`; omitting it keeps the current one.
     #[serde(default)]
     payload_shape: Option<String>,
+    /// M13-T2: replaces the target's auth header (name and value together);
+    /// an empty name removes it; omitting both keeps it.
+    #[serde(default)]
+    target_auth_header: Option<String>,
+    #[serde(default)]
+    target_auth_value: Option<String>,
     row_version: i64,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
 struct SubscriptionDetail {
     id: Uuid,
     name: String,
@@ -151,6 +201,8 @@ struct SubscriptionDetail {
     owner_ref: Uuid,
     /// M13-T1: `id`, `changes` or `full`.
     payload_shape: String,
+    /// M13-T2: the target auth header's name; its value is never returned.
+    target_auth_header: Option<String>,
     row_version: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -186,6 +238,9 @@ struct SubscriptionCreatedResponse {
     name: String,
     kind: String,
     webhook_secret: String,
+    /// M13-T2: the same secret as a Standard Webhooks verifier takes it
+    /// (`whsec_…`), for the `webhook-signature` header. Shown once.
+    webhook_secret_standard: String,
     created_at: DateTime<Utc>,
 }
 
@@ -193,6 +248,8 @@ struct SubscriptionCreatedResponse {
 struct SecretRotatedResponse {
     id: Uuid,
     webhook_secret: String,
+    /// M13-T2: the new secret in Standard Webhooks form. Shown once.
+    webhook_secret_standard: String,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -342,6 +399,10 @@ async fn create_subscription(
         .unwrap_or_else(|| delivery::default_max_attempts(&retry_class))
         .clamp(1, MAX_ATTEMPTS_CEILING);
     let payload_shape = checked_payload_shape(body.payload_shape.as_deref().unwrap_or("full"))?;
+    let target_auth = checked_target_auth(
+        body.target_auth_header.as_deref(),
+        body.target_auth_value.as_deref(),
+    )?;
 
     let url = reqwest::Url::parse(&body.target_url)
         .map_err(|_| AppError::Validation("target_url is not a valid URL".into()))?;
@@ -368,6 +429,14 @@ async fn create_subscription(
     let raw_secret = crypto::generate_secret();
     let new_id = Uuid::now_v7();
     let secret_encrypted = crypto::encrypt_webhook_secret(&ring, new_id, &raw_secret)?;
+    let standard_secret = crypto::standard_secret(&raw_secret)?;
+    let (auth_header, auth_encrypted) = match &target_auth {
+        Some((name, value)) => (
+            Some(name.clone()),
+            Some(crypto::encrypt_target_auth(&ring, new_id, value)?),
+        ),
+        None => (None, None),
+    };
 
     let mut tx = SecurityTx::begin(
         &state,
@@ -385,8 +454,9 @@ async fn create_subscription(
         "INSERT INTO event_subscription \
             (id, name, kind, filter_entity_logicalnames, filter_operations, filter_event_names, \
              filter_expression, target_url, webhook_secret_encrypted, retry_class, \
-             max_attempts, owner_ref, created_by, payload_shape) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
+             max_attempts, owner_ref, created_by, payload_shape, target_auth_header, \
+             target_auth_value_encrypted) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) \
          RETURNING id, name, kind, created_at",
     )
     .bind(new_id)
@@ -403,6 +473,8 @@ async fn create_subscription(
     .bind(body.owner_ref)
     .bind(created_by)
     .bind(payload_shape)
+    .bind(&auth_header)
+    .bind(&auth_encrypted)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -415,6 +487,7 @@ async fn create_subscription(
             name: row.1,
             kind: row.2,
             webhook_secret: raw_secret,
+            webhook_secret_standard: standard_secret,
             created_at: row.3,
         }),
     ))
@@ -515,6 +588,25 @@ async fn update_subscription(
         .unwrap_or(cur.8)
         .clamp(1, MAX_ATTEMPTS_CEILING);
     let new_payload_shape = checked_payload_shape(body.payload_shape.as_deref().unwrap_or(&cur.9))?;
+    // M13-T2: `None` keeps the target auth header, `Some(None)` removes it.
+    let auth_change: Option<Option<(String, String)>> = match (
+        body.target_auth_header.as_deref(),
+        body.target_auth_value.as_deref(),
+    ) {
+        (None, None) => None,
+        (Some(name), None) if name.trim().is_empty() => Some(None),
+        (name, value) => Some(checked_target_auth(name, value)?),
+    };
+    let (auth_header, auth_encrypted) = match &auth_change {
+        Some(Some((name, value))) => {
+            let ring = state.base.secrets.load().webhook_signing_key.clone();
+            (
+                Some(name.clone()),
+                Some(crypto::encrypt_target_auth(&ring, id, value)?),
+            )
+        }
+        _ => (None, None),
+    };
 
     let new_target_url = match body.target_url {
         Some(raw) => {
@@ -545,6 +637,9 @@ async fn update_subscription(
             SET name = $2, is_active = $3, filter_entity_logicalnames = $4, \
                 filter_operations = $5, filter_event_names = $6, filter_expression = $7, \
                 target_url = $8, retry_class = $9, max_attempts = $10, payload_shape = $12, \
+                target_auth_header = CASE WHEN $13 THEN $14 ELSE target_auth_header END, \
+                target_auth_value_encrypted = \
+                    CASE WHEN $13 THEN $15 ELSE target_auth_value_encrypted END, \
                 updated_at = NOW(), row_version = row_version + 1 \
           WHERE id = $1 AND row_version = $11 AND is_deleted = FALSE",
     )
@@ -560,6 +655,9 @@ async fn update_subscription(
     .bind(new_max_attempts)
     .bind(body.row_version)
     .bind(new_payload_shape)
+    .bind(auth_change.is_some())
+    .bind(&auth_header)
+    .bind(&auth_encrypted)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -600,6 +698,7 @@ async fn rotate_secret(
     }
     let raw_secret = crypto::generate_secret();
     let secret_encrypted = crypto::encrypt_webhook_secret(&ring, id, &raw_secret)?;
+    let standard_secret = crypto::standard_secret(&raw_secret)?;
 
     let mut tx = SecurityTx::begin(
         &state,
@@ -633,6 +732,7 @@ async fn rotate_secret(
     Ok(Json(SecretRotatedResponse {
         id,
         webhook_secret: raw_secret,
+        webhook_secret_standard: standard_secret,
     }))
 }
 
@@ -790,58 +890,20 @@ async fn ensure_system_user_exists(db: &attome_db::DbPool, user_id: Uuid) -> Res
     Ok(())
 }
 
-#[allow(clippy::type_complexity)]
 async fn fetch_detail(
     db: &attome_db::DbPool,
     id: Uuid,
 ) -> Result<Option<SubscriptionDetail>, AppError> {
-    #[allow(clippy::type_complexity)]
-    let row: Option<(
-        Uuid,
-        String,
-        String,
-        bool,
-        Option<Vec<String>>,
-        Option<Vec<String>>,
-        Option<Vec<String>>,
-        Option<String>,
-        Option<String>,
-        String,
-        i32,
-        Uuid,
-        i64,
-        DateTime<Utc>,
-        DateTime<Utc>,
-        String,
-    )> = sqlx::query_as(
+    sqlx::query_as(
         "SELECT id, name, kind, is_active, filter_entity_logicalnames, filter_operations, \
                 filter_event_names, filter_expression, target_url, retry_class, max_attempts, \
-                owner_ref, row_version, created_at, updated_at, payload_shape \
+                owner_ref, payload_shape, target_auth_header, row_version, created_at, updated_at \
          FROM event_subscription WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(id)
     .fetch_optional(db)
     .await
-    .map_err(AppError::internal)?;
-
-    Ok(row.map(|r| SubscriptionDetail {
-        id: r.0,
-        name: r.1,
-        kind: r.2,
-        is_active: r.3,
-        filter_entity_logicalnames: r.4,
-        filter_operations: r.5,
-        filter_event_names: r.6,
-        filter_expression: r.7,
-        target_url: r.8,
-        retry_class: r.9,
-        max_attempts: r.10,
-        owner_ref: r.11,
-        payload_shape: r.15,
-        row_version: r.12,
-        created_at: r.13,
-        updated_at: r.14,
-    }))
+    .map_err(AppError::internal)
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────

@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Standard Webhooks signatures and target auth headers (M13-T2): every webhook delivery also carries
+  `webhook-id` (the event id), `webhook-timestamp` and `webhook-signature` (`v1,` + base64
+  HMAC-SHA256 of `id.timestamp.body`), so a receiver can verify with any Standard Webhooks library;
+  creating a subscription or rotating its secret returns the secret in that form too
+  (`webhook_secret_standard`, `whsec_…`). A subscription may name `target_auth_header` and
+  `target_auth_value` (write-only, encrypted, bound to its row; migration 0208) to send on every
+  delivery. `X-Attome-Signature` stays as before.
 - Notification delivery settings on the Notifications page (M15-T3): beside the grid of kinds by
   channels, a person chooses how low-priority notifications arrive (each on its own, hourly or daily
   summary) and their quiet hours. English and Arabic.

@@ -94,6 +94,75 @@ pub fn sign_header(secret_hex: &str, timestamp_ms: &str, body: &[u8]) -> Result<
     Ok(format!("t={timestamp_ms},v1={sig_hex}"))
 }
 
+/// M13-T2: the Standard Webhooks headers (standardwebhooks.com), sent beside
+/// [`SIGNATURE_HEADER`] so a receiver can use a stock verifier library.
+pub const STANDARD_ID_HEADER: &str = "webhook-id";
+pub const STANDARD_TIMESTAMP_HEADER: &str = "webhook-timestamp";
+pub const STANDARD_SIGNATURE_HEADER: &str = "webhook-signature";
+
+fn secret_bytes(secret_hex: &str) -> Result<Vec<u8>, AppError> {
+    hex::decode(secret_hex).map_err(|_| AppError::internal("webhook secret is not valid hex"))
+}
+
+/// The subscription secret as a Standard Webhooks verifier takes it:
+/// `whsec_` and the base64 of the secret's bytes.
+pub fn standard_secret(secret_hex: &str) -> Result<String, AppError> {
+    use base64::Engine as _;
+    Ok(format!(
+        "whsec_{}",
+        base64::engine::general_purpose::STANDARD.encode(secret_bytes(secret_hex)?)
+    ))
+}
+
+/// `v1,<base64 HMAC-SHA256 of "{msg_id}.{timestamp_s}.{body}">`, the
+/// Standard Webhooks `webhook-signature` value. `timestamp_s` is Unix
+/// seconds, as `webhook-timestamp` carries it.
+pub fn sign_standard(
+    secret_hex: &str,
+    msg_id: &str,
+    timestamp_s: &str,
+    body: &[u8],
+) -> Result<String, AppError> {
+    use base64::Engine as _;
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(&secret_bytes(secret_hex)?)
+        .map_err(|_| AppError::internal("HMAC accepts any key length"))?;
+    mac.update(msg_id.as_bytes());
+    mac.update(b".");
+    mac.update(timestamp_s.as_bytes());
+    mac.update(b".");
+    mac.update(body);
+    Ok(format!(
+        "v1,{}",
+        base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes())
+    ))
+}
+
+/// M13-T2: a target's static auth header value is bound to its row.
+fn auth_binding(subscription_id: uuid::Uuid) -> attome_auth::envelope::RowBinding<'static> {
+    attome_auth::envelope::RowBinding {
+        table: "event_subscription",
+        column: "target_auth_value_encrypted",
+        row_id: subscription_id,
+    }
+}
+
+pub fn encrypt_target_auth(
+    ring: &KeyRing,
+    subscription_id: uuid::Uuid,
+    plaintext: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::encrypt_bound(FIELD_NAME, ring, plaintext, auth_binding(subscription_id))
+}
+
+pub fn decrypt_target_auth(
+    ring: &KeyRing,
+    subscription_id: uuid::Uuid,
+    encoded: &str,
+) -> Result<String, AppError> {
+    attome_auth::envelope::decrypt_bound(FIELD_NAME, ring, encoded, auth_binding(subscription_id))
+        .map(attome_types::secret::SecretString::into_exposed)
+}
+
 /// Constant-time verification counterpart — not on the sending path (nothing
 /// in this deployment verifies its own outbound signatures), but proves
 /// `sign_header`'s output actually matches what a receiver reconstructs,
@@ -175,6 +244,32 @@ mod tests {
         assert!(
             decrypt_secret(&ring_b, &encrypted).is_err(),
             "wrong key must not decrypt"
+        );
+    }
+
+    /// The Standard Webhooks specification's own example: secret, message
+    /// id, timestamp and payload, and the signature its reference libraries
+    /// compute for them.
+    #[test]
+    fn sign_standard_matches_the_standard_webhooks_example() {
+        use base64::Engine as _;
+        let raw = base64::engine::general_purpose::STANDARD
+            .decode("MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw")
+            .unwrap();
+        let secret = hex::encode(raw);
+        assert_eq!(
+            standard_secret(&secret).unwrap(),
+            "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+        );
+        assert_eq!(
+            sign_standard(
+                &secret,
+                "msg_p5jXN8AQM9LWM0D4loKWxJek",
+                "1614265330",
+                br#"{"test": 2432232314}"#
+            )
+            .unwrap(),
+            "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE="
         );
     }
 }

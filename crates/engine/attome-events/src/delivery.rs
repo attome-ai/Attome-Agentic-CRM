@@ -150,6 +150,8 @@ struct SubscriptionRow {
     max_attempts: i32,
     owner_ref: Uuid,
     payload_shape: String,
+    target_auth_header: Option<String>,
+    target_auth_value_encrypted: Option<String>,
 }
 
 /// Delivers (or terminally fails) one `event_delivery` row.
@@ -285,8 +287,22 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         serde_json::to_vec(&body).map_err(AppError::internal)?
     };
 
-    let timestamp_ms = Utc::now().timestamp_millis().to_string();
+    let now = Utc::now();
+    let timestamp_ms = now.timestamp_millis().to_string();
     let signature = crypto::sign_header(&secret, &timestamp_ms, &body_bytes)?;
+    // M13-T2: the Standard Webhooks trio, keyed on the event id (also the
+    // Idempotency-Key), so every retry of one event carries the same id.
+    let standard_id = delivery.event_id.to_string();
+    let standard_timestamp = now.timestamp().to_string();
+    let standard_signature =
+        crypto::sign_standard(&secret, &standard_id, &standard_timestamp, &body_bytes)?;
+    let target_auth = match (&sub.target_auth_header, &sub.target_auth_value_encrypted) {
+        (Some(name), Some(encrypted)) => Some((
+            name.clone(),
+            crypto::decrypt_target_auth(&ring, delivery.subscription_ref, encrypted)?,
+        )),
+        _ => None,
+    };
 
     let client = attome_server::ssrf_guard::GuardedClient::new(15).map_err(AppError::internal)?;
     let Ok(request) = client.post(url) else {
@@ -301,13 +317,18 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         return Ok(());
     };
     let attempt_started = std::time::Instant::now();
-    let send_result = request
+    let request = request
         .header(crypto::SIGNATURE_HEADER, signature)
+        .header(crypto::STANDARD_ID_HEADER, &standard_id)
+        .header(crypto::STANDARD_TIMESTAMP_HEADER, standard_timestamp)
+        .header(crypto::STANDARD_SIGNATURE_HEADER, standard_signature)
         .header("Content-Type", "application/json")
-        .header("Idempotency-Key", delivery.event_id.to_string())
-        .body(body_bytes)
-        .send()
-        .await;
+        .header("Idempotency-Key", delivery.event_id.to_string());
+    let request = match target_auth {
+        Some((name, value)) => request.header(name, value),
+        None => request,
+    };
+    let send_result = request.body(body_bytes).send().await;
     telemetry::attempt(kind, attempt_started.elapsed().as_secs_f64());
     breaker.breaker.record(match &send_result {
         Ok(resp) => !unwell(resp.status()),
@@ -503,7 +524,8 @@ async fn load_subscription(
 ) -> Result<Option<SubscriptionRow>, AppError> {
     sqlx::query_as(
         "SELECT kind, is_active, is_deleted, target_url, webhook_secret_encrypted, \
-                max_attempts, owner_ref, payload_shape \
+                max_attempts, owner_ref, payload_shape, target_auth_header, \
+                target_auth_value_encrypted \
          FROM event_subscription WHERE id = $1",
     )
     .bind(subscription_id)

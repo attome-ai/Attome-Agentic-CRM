@@ -24,6 +24,7 @@ attome-security.workspace = true
 attome-server.workspace   = true
 attome-types.workspace    = true
 axum.workspace            = true
+base64.workspace          = true
 chrono.workspace          = true
 hex.workspace             = true
 hmac.workspace            = true
