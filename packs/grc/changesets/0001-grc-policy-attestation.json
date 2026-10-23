@@ -1,0 +1,687 @@
+{
+  "author": "packs",
+  "checksum": "sha256:26a13a16a9a6ed782772d8fb02185fd08fa53a5bf0569eddb44bd158962d71e4",
+  "closed_at": "2026-10-23T00:00:00Z",
+  "description": "Policy reviews, attestations and exceptions (R9-T1): a review date and cadence on each policy, attestation campaigns asking a role's holders to acknowledge a policy's current version by a date, and exceptions to a policy that are approved and expire.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d10-7f11-9a11-11c011c011f1",
+  "layer": "product",
+  "name": "grc-policy-attestation",
+  "opened_at": "2026-10-23T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review By",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "review_by",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "grc_policy",
+        "field": "review_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review Every (days)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "review_every_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "grc_policy",
+        "field": "review_every_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review Reminded For",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "review_reminded_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "grc_policy",
+        "field": "review_reminded_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Attestation Campaign",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "grc_attestation_campaign",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "grc_attestation_campaign"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "grc_attestation_campaign",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Policy",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "policy_ref",
+          "lookup_entity": "grc_policy",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "grc_attestation_campaign",
+        "field": "policy_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Role",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "role_ref",
+          "lookup_entity": "role",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "grc_attestation_campaign",
+        "field": "role_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Due On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "due_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "grc_attestation_campaign",
+        "field": "due_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "grc_attestation_campaign",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reminded On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reminded_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "grc_attestation_campaign",
+        "field": "reminded_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Policy Exception",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "grc_policy_exception",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "grc_policy_exception"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "grc_policy_exception",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Policy",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "policy_ref",
+          "lookup_entity": "grc_policy",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "grc_policy_exception",
+        "field": "policy_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "grc_policy_exception",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "requested",
+              "approved",
+              "rejected",
+              "expired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "grc_policy_exception",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Expires On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "expires_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "grc_policy_exception",
+        "field": "expires_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approved By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approved_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "grc_policy_exception",
+        "field": "approved_by"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ المراجعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy.review_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المراجعة كل (يوم)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy.review_every_days",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ذُكّر بالمراجعة عن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy.review_reminded_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حملة إقرار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السياسة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign.policy_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدور"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign.role_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الاستحقاق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign.due_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التذكير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_attestation_campaign.reminded_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "استثناء من سياسة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السياسة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception.policy_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception.reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينتهي في"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception.expires_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اعتمده"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "grc_policy_exception.approved_by",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "grc"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "grc",
+  "seq": 1,
+  "title": "Pack: policy reviews, attestations and exceptions"
+}

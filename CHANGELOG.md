@@ -188,6 +188,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Policy reviews, attestations and exceptions (R9-T1): the new grc pack adds a review date and
+  cadence to policies, attestation campaigns (a policy, a role, a due date) and policy exceptions
+  (requested, approved, rejected, expired). The daily `grc_policy_sweep` job reminds a policy's
+  owner once, 14 days before its review; asks each holder of an open campaign's role who has not
+  acknowledged the policy's current version, once per campaign; closes campaigns past their due
+  date; and expires approved exceptions past `expires_on`.
 - Page SEO audit on save (E13-T7): with `content.seo_audit` on, saving a content page audits its
   draft after the save commits (never blocking it): missing or badly sized title and description,
   duplicates within the space, one H1, heading order, images without alt text, thin content, links

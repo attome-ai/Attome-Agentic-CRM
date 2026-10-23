@@ -87,6 +87,12 @@ data breaches with when they were found and the deadline to notify the regulator
 Internal audit (R13): engagements, workpapers with evidence files, findings with rating, owner and
 due date, and follow-ups until a finding is verified closed.
 
+## grc
+
+Policy reviews, attestations and exceptions (R9): a review date and cadence on the platform's
+`grc_policy`, attestation campaigns asking a role's holders to acknowledge a policy's current
+version by a date, and exceptions that are approved and expire. Needs the GRC module.
+
 ## bcm
 
 Business continuity (R15): business impact analysis per process (RTO, RPO, maximum tolerable

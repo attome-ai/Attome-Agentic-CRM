@@ -23,6 +23,8 @@ pub mod auth;
 pub mod lifecycle;
 pub mod mapping;
 pub mod model;
+/// R9-T1: policy reviews, attestation campaigns and exceptions.
+pub mod policy;
 pub mod reg_change;
 pub mod risk;
 pub mod seed;

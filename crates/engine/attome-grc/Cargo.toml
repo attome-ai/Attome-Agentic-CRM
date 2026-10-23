@@ -16,6 +16,7 @@ attome-core.workspace     = true
 attome-db.workspace       = true
 attome-metadata.workspace = true
 attome-modules.workspace  = true
+attome-notification.workspace = true
 attome-server.workspace   = true
 attome-types.workspace    = true
 axum.workspace            = true
