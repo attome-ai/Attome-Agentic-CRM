@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- OpenLineage export (L5-T6): `GET /api/v1/lineage/export/openlineage` (administrators, off unless
+  `lineage.export_enabled`) returns one OpenLineage `RunEvent` per definition, with the entities it
+  reads and writes as datasets; names only, audited as an export.
 - Lead domain match (D24-T4): a new lead with a work email at a known company's domain gets that
   account as `suggested_account_ref` (CRM pack changeset 0004), off the change feed, without any
   provider call; the enrichment runner skips records already known this way.

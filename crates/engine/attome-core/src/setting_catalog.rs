@@ -415,6 +415,15 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(true),
         ),
+        // L5-T6: the lineage graph's OpenLineage export.
+        SettingDescriptor::new(
+            "lineage.export_enabled",
+            "Whether administrators may pull the lineage graph as OpenLineage events          (GET /api/v1/lineage/export/openlineage): names of definitions, entities and          attributes only, never record values. Off by default (L5-T6).",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         SettingDescriptor::new(
             "customer_tests.require_pass_before_publish",
             "Before a changeset apply or a model publish, run every active blocking customer test \

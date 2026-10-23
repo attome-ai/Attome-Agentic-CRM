@@ -14,7 +14,14 @@
 //!   entities or attributes, cycles among definitions, and attributes no
 //!   definition uses.
 //!
+//! - `GET /api/v1/lineage/export/openlineage` (administrators, behind
+//!   `lineage.export_enabled`) exports the graph as OpenLineage events
+//!   ([`lineage_export`], L5-T6).
+//!
 //! The handlers parse and shape; the engine reads.
+
+/// L5-T6: the graph as OpenLineage events.
+pub mod lineage_export;
 
 use attome_core::EngineState;
 use attome_core::lineage::graph::{self, Cleanup, Comparison, Direction, Graph, NodeRef};
@@ -165,11 +172,15 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/lineage/compare", get(compare))
         .route("/api/v1/lineage/cleanup", get(cleanup))
+        .route(
+            "/api/v1/lineage/export/openlineage",
+            get(lineage_export::openlineage),
+        )
         .route("/api/v1/lineage/{kind}/{ref}", get(walk))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(walk, compare, cleanup))]
+#[openapi(paths(walk, compare, cleanup, lineage_export::openlineage))]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {

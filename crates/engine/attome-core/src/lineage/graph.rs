@@ -398,6 +398,63 @@ async fn edges_at(conn: &mut PgConnection, version: i64) -> Result<BTreeSet<Grap
         .collect())
 }
 
+/// L5-T6: one edge of the whole graph, as an export reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Edge {
+    /// The definition that uses `to`.
+    pub from: NodeRef,
+    pub from_label: String,
+    pub to: NodeRef,
+    pub edge_kind: String,
+    pub confidence: String,
+}
+
+/// The most edges one export reads.
+pub const MAX_EXPORT_EDGES: usize = 50_000;
+
+/// L5-T6: every edge of the current graph, up to [`MAX_EXPORT_EDGES`];
+/// `true` when there were more.
+pub async fn all_edges(conn: &mut PgConnection) -> Result<(Vec<Edge>, bool), AppError> {
+    let sql = format!(
+        "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute,                 edge_kind, confidence FROM {EDGES_AT} e           ORDER BY from_kind, from_ref, to_entity, to_attribute LIMIT {}",
+        MAX_EXPORT_EDGES + 1
+    );
+    let rows: Vec<EdgeRow> = sqlx::query_as(&sql)
+        .bind(None::<i64>)
+        .fetch_all(conn)
+        .await
+        .map_err(AppError::internal)?;
+    let truncated = rows.len() > MAX_EXPORT_EDGES;
+    Ok((
+        rows.into_iter()
+            .take(MAX_EXPORT_EDGES)
+            .map(
+                |(
+                    from_kind,
+                    from_ref,
+                    from_label,
+                    to_kind,
+                    to_ref,
+                    to_entity,
+                    to_attribute,
+                    edge_kind,
+                    confidence,
+                )| Edge {
+                    from: NodeRef::Definition {
+                        kind: from_kind,
+                        id: from_ref,
+                    },
+                    from_label,
+                    to: NodeRef::target(&to_kind, to_ref, &to_entity, &to_attribute),
+                    edge_kind,
+                    confidence,
+                },
+            )
+            .collect(),
+        truncated,
+    ))
+}
+
 /// The edges added and removed between two versions.
 #[derive(Debug, Clone, Default, Serialize, utoipa::ToSchema)]
 pub struct Comparison {
