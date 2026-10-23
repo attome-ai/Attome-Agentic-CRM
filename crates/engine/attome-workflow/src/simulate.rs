@@ -24,12 +24,20 @@
 //! different abstraction it doesn't otherwise use (guidelines §1: extend an
 //! existing boundary, don't relocate a concept to force a fit).
 //!
-//! **Entirely synchronous.** No node simulated here performs I/O of any
-//! kind — not even a read — which is what makes "never a real side effect"
-//! true by construction rather than by a per-node discipline that could
-//! silently slip: `simulate_entity_write` checks the entity registry
+//! **The pass is synchronous and writes nothing.** No node simulated in the
+//! pass performs I/O of any kind, which is what makes "never a real side
+//! effect" true by construction rather than by a per-node discipline that
+//! could silently slip: `simulate_entity_write` checks the entity registry
 //! (`state.entities`, an in-process `ArcSwap` snapshot, not a query) and
 //! nothing else touches the database, the network, or the job queue.
+//!
+//! **M4-T1: reads around the pass.** [`run_simulation_reading`] may read
+//! real data, always as the person simulating (`read_record`, the same
+//! record-level and field access as `GET /api/v1/{entity}/{id}`): before
+//! the pass, the record named in the request becomes the trigger's output;
+//! after it, each update step's trace gains the record's current values of
+//! the fields it would change (`before`) beside the computed ones
+//! (`values`). Reads never write, so the D-431 contract holds.
 
 use std::collections::{HashMap, HashSet};
 
@@ -82,7 +90,7 @@ const MAX_SIMULATE_ITERATIONS: usize = 2000;
 )]
 async fn simulate_version(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    ctx: Authorized<Admin>,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<SimulateRequestBody>,
 ) -> Result<Json<SimulateResponse>, AppError> {
@@ -98,15 +106,135 @@ async fn simulate_version(
     let graph = Graph::parse(&graph_json)
         .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
 
-    let module_steps = dry_run_module_steps(&state, &graph, &body.trigger_payload).await;
-    let (status, trace) = run_simulation_with(
+    let trigger_payload = match &body.read_record {
+        Some(record) => with_real_record(&state, &ctx, body.trigger_payload, record).await?,
+        None => body.trigger_payload,
+    };
+    let module_steps = dry_run_module_steps(&state, &graph, &trigger_payload).await;
+    let (status, trace) = run_simulation_reading(
         &state,
+        &ctx,
         &graph,
-        body.trigger_payload,
+        trigger_payload,
         &body.approval_decisions,
         &module_steps,
-    );
+    )
+    .await;
     Ok(Json(SimulateResponse { status, trace }))
+}
+
+/// M4-T1: `payload` with the record merged in as `{entity, record_id,
+/// record}`, read as `ctx` (a record `ctx` may not read is the same 403/404
+/// the record's own GET answers).
+pub async fn with_real_record(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    payload: Value,
+    record: &crate::model::SimulateRecordRef,
+) -> Result<Value, AppError> {
+    let read =
+        attome_records::entity_crud::read_record(state, ctx, &record.entity, record.id).await?;
+    let data = serde_json::to_value(read)
+        .map_err(AppError::internal)?
+        .get("data")
+        .cloned()
+        .unwrap_or(Value::Null);
+    Ok(merge_record(payload, &record.entity, record.id, data))
+}
+
+/// The trigger payload with the read record merged over it.
+pub(crate) fn merge_record(payload: Value, entity: &str, id: Uuid, data: Value) -> Value {
+    let mut out = match payload {
+        Value::Object(map) => map,
+        Value::Null => serde_json::Map::new(),
+        other => {
+            let mut map = serde_json::Map::new();
+            map.insert("payload".into(), other);
+            map
+        }
+    };
+    out.insert("entity".into(), Value::String(entity.to_owned()));
+    out.insert("record_id".into(), Value::String(id.to_string()));
+    out.insert("record".into(), data);
+    Value::Object(out)
+}
+
+/// M4-T1: [`run_simulation_with`], then each update step's trace gains the
+/// record's current values of the fields it would change, read as `ctx`. A
+/// record `ctx` cannot read leaves `before_error` instead; nothing fails.
+pub async fn run_simulation_reading(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    graph: &Graph,
+    trigger_payload: Value,
+    approval_decisions: &HashMap<String, String>,
+    module_steps: &ModuleStepDryRuns,
+) -> (String, Vec<SimulateNodeTrace>) {
+    let (status, mut trace) = run_simulation_with(
+        state,
+        graph,
+        trigger_payload,
+        approval_decisions,
+        module_steps,
+    );
+    for entry in &mut trace {
+        if entry.node_type != "update_record" || entry.status != "succeeded" {
+            continue;
+        }
+        let (Some(entity), Some(id)) = (
+            entry
+                .output
+                .get("entity")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            entry
+                .output
+                .get("record_id")
+                .and_then(Value::as_str)
+                .and_then(|s| Uuid::parse_str(s).ok()),
+        ) else {
+            continue;
+        };
+        let fields: Vec<String> = entry
+            .output
+            .get("fields")
+            .and_then(Value::as_array)
+            .map(|f| {
+                f.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let read = attome_records::entity_crud::read_record(state, ctx, &entity, id).await;
+        let Value::Object(output) = &mut entry.output else {
+            continue;
+        };
+        match read.and_then(|r| serde_json::to_value(r).map_err(AppError::internal)) {
+            Ok(record) => {
+                output.insert("before".into(), pick_fields(record.get("data"), &fields));
+            }
+            Err(e) => {
+                output.insert("before_error".into(), Value::String(e.to_string()));
+            }
+        }
+    }
+    (status, trace)
+}
+
+/// The named fields of a record's `data`, `null` for one the caller may not
+/// see (the read already left it out).
+pub(crate) fn pick_fields(data: Option<&Value>, fields: &[String]) -> Value {
+    let mut out = serde_json::Map::new();
+    for field in fields {
+        out.insert(
+            field.clone(),
+            data.and_then(|d| d.get(field))
+                .cloned()
+                .unwrap_or(Value::Null),
+        );
+    }
+    Value::Object(out)
 }
 
 /// E8-T2: what each module step's handler says it would do. The handlers
@@ -670,10 +798,18 @@ fn simulate_entity_write(
         "would {verb} a {entity_name:?} record with {} field(s) — validated, never written",
         data.len()
     ));
+    // M4-T1: the record and the computed values, so the reading wrapper can
+    // put the current ones beside them.
+    let record_id = input
+        .get("record_id")
+        .and_then(|v| v.as_str().or_else(|| v.get("id").and_then(Value::as_str)))
+        .map(str::to_owned);
     let output = serde_json::json!({
         "would_write": true,
         "entity": entity_name,
         "fields": data.keys().collect::<Vec<_>>(),
+        "values": Value::Object(data.clone()),
+        "record_id": record_id,
     });
     Ok(SimOutcome::Succeeded { output, would_have })
 }
@@ -893,4 +1029,40 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod reading_tests {
+    use super::*;
+
+    #[test]
+    fn simulation_reads_merge_the_record_over_the_payload() {
+        let id = Uuid::now_v7();
+        let merged = merge_record(
+            serde_json::json!({ "source": "manual", "record": "overwritten" }),
+            "account",
+            id,
+            serde_json::json!({ "name": "Acme" }),
+        );
+        assert_eq!(merged["source"], "manual");
+        assert_eq!(merged["entity"], "account");
+        assert_eq!(merged["record_id"], id.to_string());
+        assert_eq!(merged["record"]["name"], "Acme");
+        let wrapped = merge_record(serde_json::json!(7), "account", id, Value::Null);
+        assert_eq!(wrapped["payload"], 7);
+    }
+
+    #[test]
+    fn simulation_reads_pick_only_the_fields_a_step_would_change() {
+        let data = serde_json::json!({ "stage": "open", "amount": 10, "owner": "x" });
+        let picked = pick_fields(Some(&data), &["stage".into(), "missing".into()]);
+        assert_eq!(
+            picked,
+            serde_json::json!({ "stage": "open", "missing": null })
+        );
+        assert_eq!(
+            pick_fields(None, &["stage".into()]),
+            serde_json::json!({ "stage": null })
+        );
+    }
 }

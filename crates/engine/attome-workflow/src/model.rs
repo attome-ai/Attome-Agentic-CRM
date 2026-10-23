@@ -291,6 +291,19 @@ pub struct SimulateRequestBody {
     /// approval gate a caller didn't think to pre-decide.
     #[serde(default)]
     pub approval_decisions: std::collections::HashMap<String, String>,
+    /// M4-T1: a real record to run the flow against. It is read as the
+    /// person simulating (record access and field grants apply) and handed
+    /// to the trigger as `{entity, record_id, record}` merged over
+    /// `trigger_payload`. Nothing is written.
+    #[serde(default)]
+    pub read_record: Option<SimulateRecordRef>,
+}
+
+/// M4-T1: the record a simulation reads.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SimulateRecordRef {
+    pub entity: String,
+    pub id: Uuid,
 }
 
 impl std::fmt::Debug for SimulateRequestBody {

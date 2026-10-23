@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Flow simulation reads real data (M4-T1): `POST /api/v1/workflow/definitions/{id}/versions/{version_id}/simulate`
+  takes `read_record: {entity, id}`, read as the person simulating (record access and field grants
+  apply) and handed to the trigger as `{entity, record_id, record}`. Each update step's trace now
+  shows `values` (what it would write), `record_id` and `before` (the record's current values of
+  those fields, or `before_error` when the record cannot be read). Nothing is written.
 - Flow loops, error branches and run limits (M1-T4): node type `for_each` runs the flow named by
   `definition_logicalname` once per batch of its `items` (`batch_size` 1–100, default 100), each
   batch with `{items, batch_index, batch_count}` as input, and waits for every batch run; its output
