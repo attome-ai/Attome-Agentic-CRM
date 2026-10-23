@@ -43,7 +43,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, patch, post},
+    routing::{get, patch},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -643,7 +643,7 @@ pub async fn read(
         return Ok(Read::ResyncNeeded("the subscription has ended"));
     }
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
-    let mut snapshot: Option<String> = None;
+    let mut snapshot: Option<String>;
     let mut position = match cursor {
         None => {
             let start = horizon(&mut conn).await?;

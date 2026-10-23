@@ -24,7 +24,7 @@ use std::time::Duration;
 use attome_core::EngineState;
 use attome_core::dead_letter::{DeadLetter, DeadLetterSource, ReplayOutcome};
 use attome_server::authz::{Admin, Authorized};
-use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
+use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse, Warning};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
@@ -132,7 +132,7 @@ fn group_source(cause_group: &str) -> Option<&str> {
 async fn scan(
     state: &EngineState,
     wanted: Option<&str>,
-) -> Result<(Vec<DeadLetter>, Vec<String>), AppError> {
+) -> Result<(Vec<DeadLetter>, Vec<Warning>), AppError> {
     let mut items = Vec::new();
     let mut warnings = Vec::new();
     for source in sources() {
@@ -141,10 +141,13 @@ async fn scan(
         }
         let found = source.list(state, 0, SCAN_LIMIT).await?;
         if found.len() as i64 == SCAN_LIMIT && source.count(state).await? > SCAN_LIMIT {
-            warnings.push(format!(
-                "{} holds more than {SCAN_LIMIT} dead letters; only the newest {SCAN_LIMIT} are grouped",
-                source.source()
-            ));
+            warnings.push(Warning {
+                code: "dead_letters_truncated".into(),
+                message: format!(
+                    "{} holds more than {SCAN_LIMIT} dead letters; only the newest {SCAN_LIMIT} are grouped",
+                    source.source()
+                ),
+            });
         }
         items.extend(found);
     }

@@ -189,6 +189,7 @@ async fn audit_job_replay(state: &EngineState, actor: Uuid, id: &str) -> Result<
             .comment(format!("id={id}")),
         )
         .await
+        .map(|_| ())
 }
 
 /// The discard handler's audit event (same layering note as
@@ -221,6 +222,7 @@ async fn audit_job_discard(
             .comment(comment),
         )
         .await
+        .map(|_| ())
 }
 
 /// BJB-6c — discards one dead letter: the row is deleted while it is still
