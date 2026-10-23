@@ -134,6 +134,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::stage_process_api::openapi_fragment(), "core"),
         (crate::inbound_hooks::openapi_fragment(), "core"),
         (crate::change_stream::openapi_fragment(), "core"),
+        (crate::lineage_admin::openapi_fragment(), "core"),
         (crate::signoff::openapi_fragment(), "core"),
         (crate::profiler_admin::openapi_fragment(), "core"),
         (crate::system_health::openapi_fragment(), "core"),

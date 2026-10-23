@@ -231,6 +231,8 @@ mod service_public;
 pub mod inbound_hooks;
 /// L7-T3: change-stream subscriptions for integration identities.
 pub mod change_stream;
+/// L5-T4: lineage graph routes.
+pub mod lineage_admin;
 pub mod schedules_admin;
 pub mod stage_process_api;
 pub mod settings_admin;

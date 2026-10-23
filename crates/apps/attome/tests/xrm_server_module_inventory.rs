@@ -183,6 +183,8 @@ const BASELINE: &[&str] = &[
     "inbound_hooks",
     // L7-T3: change-stream subscriptions read by S2S identities.
     "change_stream",
+    // L5-T4: the lineage graph read over every engine's definitions.
+    "lineage_admin",
     "seed_support",
     // M7-T2/T3: stage processes read for forms and measured from stage_move.
     "stage_process_api",

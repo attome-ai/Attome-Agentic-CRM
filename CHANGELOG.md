@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Lineage graph routes (L5-T4): `GET /api/v1/lineage/{kind}/{ref}` walks up or down from an
+  entity, attribute or definition, by depth and definition kind, as of a graph version, and flags
+  definitions that use personal attributes; nodes the caller may not see are counted, not listed.
+  `GET /api/v1/lineage/compare?from=&to=` and `GET /api/v1/lineage/cleanup` (administrators). A
+  replaced edge is now kept in `lineage_edge_history`.
 - Change-stream subscriptions (L7-T3): an administrator subscribes an S2S client to entities
   (`/api/v1/change-stream/subscriptions`) with operation, changed-attribute and rule-condition
   filters and a payload level (`id`, `changes`, `record`). The client reads its events in commit

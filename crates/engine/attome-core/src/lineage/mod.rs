@@ -14,6 +14,8 @@
 //! as it stood after every publish can be told apart.
 
 pub mod capture;
+/// L5-T4: walking, comparing and tidying the graph.
+pub mod graph;
 /// L5-T3: the impact engine.
 pub mod impact;
 
@@ -154,6 +156,22 @@ pub async fn write_edges(
          SELECT COALESCE(MAX(version), 0) + 1 FROM lineage_version RETURNING version",
     )
     .fetch_one(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    // L5-T4: the edges being replaced stay readable as of the versions they
+    // were valid in.
+    sqlx::query(
+        "INSERT INTO lineage_edge_history \
+             (from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
+              edge_kind, confidence, valid_from, valid_to) \
+         SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
+                edge_kind, confidence, graph_version, $3 \
+           FROM metadata_reference WHERE from_kind = $1 AND from_ref = $2",
+    )
+    .bind(from_kind)
+    .bind(from_ref)
+    .bind(version)
+    .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
     sqlx::query("DELETE FROM metadata_reference WHERE from_kind = $1 AND from_ref = $2")
