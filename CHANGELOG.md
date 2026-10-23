@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Scheduled flows over records (M12-T1): a schedule trigger with `for_each_record_of: "<view id>"`
+  starts, per slot, a batch job (`workflow_record_schedule`) that pages the view 100 ids at a time
+  (read as the flow's publisher) and starts one run per record, with the record as the run's
+  correlated record. A replayed chunk starts nothing twice. `overlap: "skip"` (default) skips a slot
+  while the previous slot's batch still runs; `"queue"` starts it anyway. Missed slots still run once.
 - Business-time waits and event-wait timeouts (M10-T3): `wait` and `wait_for_event` nodes take
   `business_time` (count only the working hours of `calendar_id`, else the deployment's default
   calendar, skipping its holidays) and `relative_to` (count from a date field of the wired record

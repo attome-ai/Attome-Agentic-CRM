@@ -22,6 +22,16 @@
 //! once however many workers sweep; a start that fails releases its claim so
 //! the next sweep retries it. Missed slots older than the newest one are not
 //! replayed: a server that was down all night runs a nightly flow once.
+//!
+//! **M12-T1: once per record of a view.** A trigger whose config names
+//! `for_each_record_of: "<view id>"` does not start one run per slot: the
+//! slot starts a Z7 batch job ([`RECORD_SCHEDULE_JOB`]) that pages the view
+//! (keyset, [`RECORD_PAGE`] ids at a time, read as the flow's publisher) and
+//! starts one run per record, the record as the run's correlated record and
+//! `{trigger, slot_at, record_id}` as its context. Each run's start is keyed
+//! by (version, node, slot, record), so a chunk replayed after a crash
+//! starts nothing twice. `overlap: "skip"` (the default) skips a slot while
+//! the previous slot's batch still runs; `"queue"` starts it anyway.
 
 use attome_core::EngineState;
 use attome_types::AppError;
@@ -33,6 +43,187 @@ use crate::graph::Graph;
 
 /// How far back a missed slot is still started.
 pub const LOOKBACK_MINUTES: i64 = 24 * 60;
+
+/// M12-T1: the Z7 job type of a slot's run over a view's records.
+pub const RECORD_SCHEDULE_JOB: &str = "workflow_record_schedule";
+
+/// M12-T1: record ids read per chunk.
+pub const RECORD_PAGE: i64 = 100;
+
+/// M12-T1: the view a trigger runs over, from `config.for_each_record_of`.
+pub fn record_view(config: &Value) -> Option<Uuid> {
+    config
+        .get("for_each_record_of")
+        .and_then(Value::as_str)
+        .and_then(|raw| Uuid::parse_str(raw).ok())
+}
+
+/// M12-T1: whether a slot is skipped while the previous one's batch runs.
+pub fn skips_overlap(config: &Value) -> bool {
+    config.get("overlap").and_then(Value::as_str) != Some("queue")
+}
+
+/// M12-T1: a record run's start key, the same for a replayed chunk.
+pub fn record_run_key(version: Uuid, node_id: &str, slot_at: DateTime<Utc>, record: Uuid) -> Uuid {
+    Uuid::new_v5(
+        &Uuid::NAMESPACE_OID,
+        format!(
+            "attome-workflow/record-schedule:{version}:{node_id}:{}:{record}",
+            slot_at.to_rfc3339()
+        )
+        .as_bytes(),
+    )
+}
+
+/// M12-T1: a record batch's work.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RecordSchedulePayload {
+    pub batch_id: Uuid,
+    pub definition_version_id: Uuid,
+    pub node_id: String,
+    pub view_id: Uuid,
+    pub slot_at: DateTime<Utc>,
+    pub started_by: Option<Uuid>,
+}
+
+fn batch_name(version: Uuid, node_id: &str) -> String {
+    format!("{RECORD_SCHEDULE_JOB}:{version}:{node_id}")
+}
+
+/// Starts a slot's batch over `view_id`; `None` when it was skipped because
+/// the previous slot's batch still runs.
+async fn start_record_batch(
+    state: &EngineState,
+    entry: &ScheduleEntry,
+    view_id: Uuid,
+    slot_at: DateTime<Utc>,
+    skip_overlap: bool,
+) -> Result<Option<Uuid>, AppError> {
+    let name = batch_name(entry.definition_version_id, &entry.node_id);
+    if skip_overlap {
+        let running: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM job_batch WHERE name = $1 AND status = 'running')",
+        )
+        .bind(&name)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if running {
+            return Ok(None);
+        }
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let batch_id = attome_jobs::batch::start(&mut tx, &name, None, entry.started_by)
+        .await
+        .map_err(AppError::internal)?;
+    let payload = RecordSchedulePayload {
+        batch_id,
+        definition_version_id: entry.definition_version_id,
+        node_id: entry.node_id.clone(),
+        view_id,
+        slot_at,
+        started_by: entry.started_by,
+    };
+    // Built here, not through the registry: a node that only schedules may
+    // not have registered the job type (the worker has).
+    let job = attome_jobs::RegisteredJob {
+        name: RECORD_SCHEDULE_JOB.to_string(),
+        version: 1,
+        payload: serde_json::to_value(&payload).map_err(AppError::internal)?,
+        next: None,
+    };
+    attome_jobs::enqueue_in_tx(&mut tx, attome_core::jobs::EngineJob::Registered(job))
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Some(batch_id))
+}
+
+struct RecordBatch<'a> {
+    state: &'a EngineState,
+    ctx: std::sync::Arc<attome_server::security::SecurityContext>,
+    payload: RecordSchedulePayload,
+}
+
+impl attome_jobs::batch::BatchJob for RecordBatch<'_> {
+    type Chunk = Vec<Uuid>;
+
+    async fn next_chunk(
+        &self,
+        checkpoint: Option<&Value>,
+    ) -> Result<Option<(Self::Chunk, Value)>, attome_jobs::registry::BoxError> {
+        let after = checkpoint
+            .and_then(|c| c["after"].as_str())
+            .and_then(|s| Uuid::parse_str(s).ok());
+        let ids = attome_records::query_exec::execute_view_ids_page(
+            self.state,
+            &self.ctx,
+            self.payload.view_id,
+            after,
+            RECORD_PAGE,
+        )
+        .await?;
+        Ok(ids
+            .last()
+            .copied()
+            .map(|last| (ids, serde_json::json!({ "after": last }))))
+    }
+
+    /// Each start commits on its own; the runner's `tx` carries only the
+    /// checkpoint.
+    async fn process(
+        &self,
+        _tx: &mut sqlx::Transaction<'static, sqlx::Postgres>,
+        ids: Self::Chunk,
+    ) -> Result<i64, attome_jobs::registry::BoxError> {
+        let p = &self.payload;
+        let mut started = 0;
+        for record_id in ids {
+            let context = serde_json::json!({
+                "trigger": "schedule",
+                "slot_at": p.slot_at.to_rfc3339(),
+                "record_id": record_id,
+            });
+            let key = record_run_key(p.definition_version_id, &p.node_id, p.slot_at, record_id);
+            if crate::instance_admin::start_instance_for_event(
+                self.state,
+                p.definition_version_id,
+                &p.node_id,
+                p.started_by,
+                Some(record_id),
+                context,
+                key,
+            )
+            .await?
+            .is_some()
+            {
+                started += 1;
+            }
+        }
+        Ok(started)
+    }
+}
+
+/// M12-T1: runs a slot's batch over its view (the binary registers this
+/// under [`RECORD_SCHEDULE_JOB`]). The view is read as the person who
+/// published the flow.
+pub async fn run_record_batch(
+    state: &EngineState,
+    payload: RecordSchedulePayload,
+) -> Result<(), attome_jobs::registry::BoxError> {
+    let Some(user) = payload.started_by else {
+        return Err("a record schedule needs the flow's publisher to read the view as".into());
+    };
+    let ctx = state.base.security.resolve(user).await?;
+    let batch_id = payload.batch_id;
+    let job = RecordBatch {
+        state,
+        ctx,
+        payload,
+    };
+    attome_jobs::batch::run(&state.base.db, batch_id, &job).await?;
+    Ok(())
+}
 
 /// One trigger's schedule.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -309,6 +500,42 @@ pub async fn run_due_at(
             continue;
         }
 
+        // M12-T1: a slot over a view's records starts a batch, not a run.
+        if let Some(view_id) = record_view(&node.config) {
+            match start_record_batch(state, &entry, view_id, slot_at, skips_overlap(&node.config))
+                .await
+            {
+                Ok(Some(_)) => started += 1,
+                Ok(None) => tracing::info!(
+                    definition_version_id = %entry.definition_version_id,
+                    node_id = %entry.node_id,
+                    %slot_at,
+                    "workflow schedule trigger: the previous slot's records still run; slot skipped"
+                ),
+                Err(e) => {
+                    tracing::error!(
+                        definition_version_id = %entry.definition_version_id,
+                        node_id = %entry.node_id,
+                        %slot_at,
+                        error = %e,
+                        "workflow schedule trigger: record batch start failed; the slot is released for retry"
+                    );
+                    sqlx::query(
+                        "DELETE FROM workflow_schedule_slot \
+                          WHERE definition_version_id = $1 AND node_id = $2 AND slot_at = $3 \
+                            AND instance_id IS NULL",
+                    )
+                    .bind(entry.definition_version_id)
+                    .bind(&entry.node_id)
+                    .bind(slot_at)
+                    .execute(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+                }
+            }
+            continue;
+        }
+
         let context = serde_json::json!({
             "trigger": "schedule",
             "slot_at": slot_at.to_rfc3339(),
@@ -448,5 +675,33 @@ mod schedule_trigger_tests {
         ] {
             assert!(parse_schedule(&bad).is_err(), "{bad} must be rejected");
         }
+    }
+
+    #[test]
+    fn schedule_trigger_record_runs_name_their_view_and_overlap() {
+        let view = Uuid::now_v7();
+        let config = serde_json::json!({ "for_each_record_of": view.to_string() });
+        assert_eq!(record_view(&config), Some(view));
+        assert!(skips_overlap(&config), "skip is the default");
+        assert!(!skips_overlap(&serde_json::json!({ "overlap": "queue" })));
+        assert_eq!(
+            record_view(&serde_json::json!({ "for_each_record_of": "x" })),
+            None
+        );
+    }
+
+    #[test]
+    fn schedule_trigger_record_run_key_is_stable_per_slot_and_record() {
+        let (version, record) = (Uuid::now_v7(), Uuid::now_v7());
+        let slot = DateTime::parse_from_rfc3339("2026-10-23T06:00:00Z")
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_default();
+        let key = record_run_key(version, "t", slot, record);
+        assert_eq!(key, record_run_key(version, "t", slot, record));
+        assert_ne!(
+            key,
+            record_run_key(version, "t", slot + Duration::days(1), record)
+        );
+        assert_ne!(key, record_run_key(version, "t", slot, Uuid::now_v7()));
     }
 }

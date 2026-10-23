@@ -2921,6 +2921,13 @@ pub const SECURITY_BULK_ACCESS: attome_jobs::JobType = attome_jobs::JobType {
 pub const OPTION_SET_MERGE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::model_admin::option_merge::MERGE_JOB, 1);
 
+/// M12-T1: a schedule slot's flow runs over a view's records, as a batch
+/// (payload `attome_workflow::schedule_trigger::RecordSchedulePayload`).
+pub const WORKFLOW_RECORD_SCHEDULE: attome_jobs::JobType = attome_jobs::JobType {
+    lane: attome_jobs::Lane::Batch,
+    ..attome_jobs::JobType::new(attome_workflow::schedule_trigger::RECORD_SCHEDULE_JOB, 1)
+};
+
 /// M5-T4: hourly, dead-letter retention and the new / growing group
 /// counters the built-in alerts watch (no payload).
 pub const DEAD_LETTER_SWEEP: attome_jobs::JobType =
@@ -3164,6 +3171,16 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            WORKFLOW_RECORD_SCHEDULE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_workflow::schedule_trigger::RecordSchedulePayload =
+                    job.payload()?;
+                attome_workflow::schedule_trigger::run_record_batch(&state, payload).await
             },
         ) {
             tracing::error!(%error, "job type registration failed");

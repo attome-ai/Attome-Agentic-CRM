@@ -1830,6 +1830,35 @@ pub async fn execute_stored_query_ids(
     Ok(out)
 }
 
+/// M12-T1: one keyset page of the record ids a view returns to `ctx`, after
+/// `after`, through the same path as [`execute_stored_query`] (the view's
+/// query, privilege gate, record scoping, read-only pool, statement
+/// timeout) with only `id` selected. An empty page is the end.
+pub async fn execute_view_ids_page(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    view_id: Uuid,
+    after: Option<Uuid>,
+    page_size: i64,
+) -> Result<Vec<Uuid>, AppError> {
+    let Some(mut request) =
+        ExecuteQueryRequest::for_draft_widget(Some(view_id), None, page_size, Vec::new())
+    else {
+        return Ok(Vec::new());
+    };
+    request.select = Some(vec!["id".to_owned()]);
+    request.after_id = after;
+    request.force_cursor = true;
+    let response = execute_stored_query(state, ctx, request).await?;
+    Ok(response
+        .data
+        .records
+        .iter()
+        .filter_map(|record| record.get("id").and_then(Value::as_str))
+        .filter_map(|id| Uuid::parse_str(id).ok())
+        .collect())
+}
+
 /// E7-T3: how many rows the stored query returns to `ctx`: the exact count,
 /// or the planner's estimate once the set is too large to count.
 pub async fn estimate_stored_query_rows(
