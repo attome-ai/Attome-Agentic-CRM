@@ -6,6 +6,8 @@ pub mod dispatch;
 pub mod engine;
 pub mod follows;
 pub mod model;
+/// M15-T1: one notify API over the dispatch engine.
+pub mod notify;
 pub mod poller;
 pub mod preferences;
 /// J12-T1: Web Push, APNs and FCM.

@@ -260,6 +260,25 @@ fn derive_text_from_html(html: &str) -> String {
         .join("\n")
 }
 
+/// M15-T1: the channels the template for (`key`, `locale`) sends to (its
+/// default channels, else the engine's default) and whether it is
+/// mandatory; `None` when no such template exists.
+pub(crate) async fn template_channels(
+    conn: &mut sqlx::PgConnection,
+    key: &str,
+    locale: &str,
+) -> Result<Option<(Vec<String>, bool)>, AppError> {
+    Ok(load_template(conn, key, locale).await?.map(|tpl| {
+        let channels = tpl
+            .default_channels
+            .as_deref()
+            .map(parse_channel_list)
+            .filter(|c| !c.is_empty())
+            .unwrap_or_else(|| DEFAULT_CHANNELS.iter().map(|s| s.to_string()).collect());
+        (channels, tpl.is_mandatory)
+    }))
+}
+
 /// Looks up the template row for (template_key, locale), falling back to the
 /// "en" locale if the requested one has no row -- bilingual support (F164)
 /// degrades to the base locale rather than failing the whole dispatch.

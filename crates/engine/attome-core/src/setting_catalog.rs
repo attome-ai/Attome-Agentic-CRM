@@ -736,6 +736,23 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             || json!("UTC"),
         ),
         SettingDescriptor::new(
+            "notification.quiet_hours",
+            "Your quiet hours, in your own time zone, as {\"start\": \"22:00\", \"end\": \"07:00\"}: low and normal priority notifications skip push and SMS then (in-app and email still arrive). Empty: no quiet hours (M15-T1).",
+            || {
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "start": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                        "end": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                    },
+                    "additionalProperties": false,
+                })
+            },
+            PERSONAL,
+            false,
+            || json!({}),
+        ),
+        SettingDescriptor::new(
             "mail_capture.enabled",
             "Whether emails in your connected mailbox with known contacts and \
              leads are captured onto their records (D15-T2).",
