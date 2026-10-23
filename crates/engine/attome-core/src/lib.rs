@@ -99,6 +99,8 @@ pub mod credential_columns;
 pub mod crud;
 pub mod data_definition;
 pub mod data_domain;
+/// L6-T8: reading stored data profiles.
+pub mod data_profile;
 /// M5-T1: one shape for dead letters from every source.
 pub mod dead_letter;
 pub mod defaults_scope;

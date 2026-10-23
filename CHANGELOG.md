@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data profile agent tools (L6-T8): `profile.summary` returns the newest profile of an entity as
+  masked statistics only (counts for every attribute, ranges only for non-sensitive ones, no top
+  values or texts), and `profile.explain` adds one budgeted model call explaining it in words.
 - Hand-documented lineage links (L5-T5): `POST /api/v1/lineage/manual-links` records an outside
   system (connector, events, import, warehouse, source) or a missed definition use feeding or reading
   an entity, marked `hand` with who documented it and why; `DELETE .../manual-links/{id}` removes

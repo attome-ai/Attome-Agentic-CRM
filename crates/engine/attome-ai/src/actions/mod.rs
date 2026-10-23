@@ -14,12 +14,6 @@
 
 /// M6-T2: `flow_template.adapt`, a template's parameters mapped to local entities.
 pub mod adapt_flow_template;
-/// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
-pub mod lineage;
-/// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
-pub mod governance;
-/// Q2-T5: identity.broker_steps, identity.explain_signin_failure.
-pub mod identity_assist;
 pub mod agent_playground;
 pub mod agent_stats;
 pub mod agent_supervise;
@@ -42,18 +36,26 @@ pub mod draft_email;
 pub mod duplicates;
 pub mod extract_document;
 pub mod followup;
+/// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
+pub mod governance;
 pub mod graph;
+/// Q2-T5: identity.broker_steps, identity.explain_signin_failure.
+pub mod identity_assist;
 /// AI3-T1: filing an inbound email on the records made from it.
 pub mod inbox;
 pub mod knowledge;
 pub mod knowledge_answer;
 /// AI1-T1: the lead qualifier's consent-checked contact steps.
 pub mod lead_qualifier;
+/// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
+pub mod lineage;
 pub mod meeting;
 pub mod memory;
 pub mod model_edit;
 pub mod nl_query;
 pub mod ops_slo;
+/// L6-T8: profile.summary, profile.explain.
+pub mod profile;
 pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
@@ -109,6 +111,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(sentiment::descriptor());
     all.push(adapt_flow_template::descriptor());
     all.extend(lineage::descriptors());
+    all.extend(profile::descriptors());
     all.extend(governance::descriptors());
     all.extend(identity_assist::descriptors());
     all.push(extract_document::descriptor());
@@ -186,6 +189,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(sentiment::TextSentiment));
     all.push(Box::new(adapt_flow_template::FlowTemplateAdapt));
     all.extend(lineage::executors());
+    all.extend(profile::executors());
     all.extend(governance::executors());
     all.extend(identity_assist::executors());
     all.push(Box::new(extract_document::DocumentExtract));

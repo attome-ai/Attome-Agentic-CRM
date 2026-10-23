@@ -98,7 +98,9 @@ pub async fn file_message(
     let data = message.data();
     let field = |key: &str| data.get(key).and_then(Value::as_str);
     if !fileable(field("channel"), field("direction")) {
-        return Err(AppError::Validation("only an inbound email can be filed".into()));
+        return Err(AppError::Validation(
+            "only an inbound email can be filed".into(),
+        ));
     }
     if field("entity_name") == Some(entity) && field("record_id") == Some(&record_id.to_string()) {
         let unchanged = json!({ "communication_id": communication_id, "filed": false });
