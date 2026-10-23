@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, computed, inject, input, output, signal,
 } from '@angular/core';
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormRecord, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
@@ -253,7 +253,7 @@ export class BulkEditDialogComponent {
   /** The setting's whole value as last read, so a save keeps other entities' actions. */
   private savedValue: unknown = {};
 
-  form = new FormGroup<Record<string, FormControl<unknown>>>({});
+  form = new FormRecord<FormControl<unknown>>({});
 
   openDialog(): void {
     if (this.applying()) return;
@@ -266,7 +266,7 @@ export class BulkEditDialogComponent {
     this.resetRun();
     this.drafts.set([]);
     this.quiet.set(false);
-    this.form = new FormGroup<Record<string, FormControl<unknown>>>({});
+    this.form = new FormRecord<FormControl<unknown>>({});
     this.fields.set([]);
     this.loadSaved();
     this.entitySvc.getSchema(this.entityName()).subscribe({
