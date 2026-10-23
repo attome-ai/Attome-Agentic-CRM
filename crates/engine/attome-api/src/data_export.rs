@@ -1056,7 +1056,7 @@ async fn export_xlsx(
         .await
         .map_err(AppError::internal)?;
 
-    Ok((row_count, checksum))
+    Ok((row_count, checksum, snapshot))
 }
 
 pub fn routes() -> Router<EngineState> {
