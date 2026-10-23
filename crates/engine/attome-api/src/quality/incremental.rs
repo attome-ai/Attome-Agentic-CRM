@@ -398,6 +398,7 @@ pub async fn enqueue_rescan(
         &key,
     )
     .await
+    .map_err(AppError::internal)
 }
 
 /// One rescan batch of `entity` after `after`: the next cursor, or `None`

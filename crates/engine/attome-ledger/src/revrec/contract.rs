@@ -141,7 +141,10 @@ pub async fn sweep(state: &EngineState) -> Result<usize, AppError> {
                 source_id: e.record_id,
             };
             let key = format!("revrec-contract:{}:{}", e.entity_logicalname, e.record_id);
-            if attome_jobs::enqueue_dedup(&state.base.db, job, &key).await? {
+            if attome_jobs::enqueue_dedup(&state.base.db, job, &key)
+                .await
+                .map_err(AppError::internal)?
+            {
                 queued += 1;
             }
         }

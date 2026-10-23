@@ -146,7 +146,8 @@ pub async fn ingest(
         },
         &format!("master-rebuild:{entity}:{golden}"),
     )
-    .await?;
+    .await
+    .map_err(AppError::internal)?;
     Ok(Ingested::Attached {
         contribution,
         golden,
