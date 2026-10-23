@@ -14,8 +14,10 @@
 
 use attome_auth::SessionClaims;
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_security::SecurityContextExt;
+use attome_server::authz::{Admin, Authorized, Privilege, PrivilegeKey};
 use attome_server::capability::{Available, BatchJobs};
+use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -47,6 +49,20 @@ pub mod drift;
 
 /// L6-T4: personal data found in unlabelled attributes.
 mod pii;
+
+/// L6-T6: reading data profiles (and profiling a staged import) without
+/// `system.admin`: a holder reads the profiles of entities they may read,
+/// without the attributes their field security hides.
+pub struct MetadataRead;
+
+impl PrivilegeKey for MetadataRead {
+    const KEY: &'static str = "metadata.read";
+}
+
+/// L6-T6: the most staged rows a file profile reads.
+const FILE_PROFILE_ROWS: i64 = 100_000;
+/// L6-T6: the most columns a file profile keeps.
+const FILE_PROFILE_COLUMNS: usize = 500;
 
 /// How long the profile scan may run.
 const SCAN_TIMEOUT: &str = "120s";
@@ -135,6 +151,7 @@ async fn enqueue_profile(
             entity_logicalname: entity_name,
             user_id: claims.sub,
             full_scan: body.full_scan,
+            import_job_id: None,
         }),
     )
     .await
@@ -165,6 +182,8 @@ struct DataProfileRow {
     created_by: Uuid,
     created_at: DateTime<Utc>,
     completed_at: Option<DateTime<Utc>>,
+    /// L6-T6: the import whose staged rows this profile read.
+    import_job_ref: Option<Uuid>,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -189,9 +208,19 @@ struct ListProfilesQuery {
 )]
 async fn list_profiles(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<MetadataRead>>,
     Query(query): Query<ListProfilesQuery>,
 ) -> Result<Json<PaginatedResponse<DataProfileRow>>, AppError> {
+    // L6-T6: the entities the caller may read (every one for an admin).
+    let readable: Option<Vec<String>> = (!ctx.is_admin).then(|| {
+        state
+            .entities
+            .load()
+            .iter()
+            .filter(|m| ctx.require(&m.logicalname, "read").is_ok())
+            .map(|m| m.logicalname.clone())
+            .collect()
+    });
     let PageWindow {
         page,
         page_size,
@@ -204,23 +233,31 @@ async fn list_profiles(
     );
 
     let items: Vec<DataProfileRow> = sqlx::query_as(
-        "SELECT id, entity_logicalname, status, row_count, fields, sample_size, full_scan, error, created_by, created_at, completed_at \
+        "SELECT id, entity_logicalname, status, row_count, fields, sample_size, full_scan, error, created_by, created_at, completed_at, import_job_ref \
            FROM data_profile \
           WHERE is_deleted = false AND ($1::text IS NULL OR entity_logicalname = $1) \
+            AND ($4::text[] IS NULL OR entity_logicalname = ANY($4)) \
           ORDER BY created_at DESC LIMIT $2 OFFSET $3",
     )
     .bind(&query.entity)
     .bind(page_size)
     .bind(offset)
+    .bind(&readable)
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    let items: Vec<DataProfileRow> = items
+        .into_iter()
+        .map(|row| hide_unreadable(&state, &ctx, row))
+        .collect();
 
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM data_profile \
-          WHERE is_deleted = false AND ($1::text IS NULL OR entity_logicalname = $1)",
+          WHERE is_deleted = false AND ($1::text IS NULL OR entity_logicalname = $1) \
+            AND ($2::text[] IS NULL OR entity_logicalname = ANY($2))",
     )
     .bind(&query.entity)
+    .bind(&readable)
     .fetch_one(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -243,18 +280,283 @@ async fn list_profiles(
 )]
 async fn get_profile(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<MetadataRead>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataProfileRow>, AppError> {
     let row: Option<DataProfileRow> = sqlx::query_as(
-        "SELECT id, entity_logicalname, status, row_count, fields, sample_size, full_scan, error, created_by, created_at, completed_at \
+        "SELECT id, entity_logicalname, status, row_count, fields, sample_size, full_scan, error, created_by, created_at, completed_at, import_job_ref \
            FROM data_profile WHERE id = $1 AND is_deleted = false",
     )
     .bind(id)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    Ok(Json(row.ok_or(AppError::NotFound)?))
+    let row = row.ok_or(AppError::NotFound)?;
+    // L6-T6: a profile of an entity the caller may not read does not exist
+    // for them.
+    if ctx.require(&row.entity_logicalname, "read").is_err() {
+        return Err(AppError::NotFound);
+    }
+    Ok(Json(hide_unreadable(&state, &ctx, row)))
+}
+
+/// L6-T6: drops the field summaries of sensitive attributes the caller has
+/// no field-read grant on.
+fn hide_unreadable(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    mut row: DataProfileRow,
+) -> DataProfileRow {
+    if ctx.is_admin {
+        return row;
+    }
+    let registry = state.entities.load();
+    let hidden: std::collections::HashSet<String> = registry
+        .get(&row.entity_logicalname)
+        .map(|meta| {
+            meta.attrs
+                .iter()
+                .filter(|a| {
+                    a.is_sensitive && !ctx.has_field_read_grant(&meta.logicalname, &a.logicalname)
+                })
+                .map(|a| a.logicalname.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Value::Array(fields) = &mut row.fields {
+        fields.retain(|f| {
+            f["field"]
+                .as_str()
+                .is_none_or(|name| !hidden.contains(name))
+        });
+    }
+    row
+}
+
+#[derive(Deserialize, ToSchema)]
+struct FileProfileBody {
+    /// The import job whose staged rows to profile.
+    import_job_id: Uuid,
+}
+
+/// Profiles a staged import before it is applied.
+///
+/// L6-T6: reads the import's staged rows (as mapped, else as uploaded) in a
+/// job, with the same statistics, pattern shapes and masking as an entity
+/// profile, up to 100,000 rows. The import's creator or an administrator,
+/// holding `metadata.read` and allowed to read the import's entity.
+#[utoipa::path(
+    post,
+    path = "/api/v1/data/profile:file",
+    tag = "admin",
+    operation_id = "data_profile_file",
+    request_body = FileProfileBody,
+    responses(
+        (status = 202, description = "Queued", body = ProfileEnqueueResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks metadata.read, or may not read the entity", body = ErrorResponse),
+        (status = 404, description = "No such import of the caller's", body = ErrorResponse),
+        (status = 422, description = "The import is not staged", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Create)])))),
+)]
+async fn enqueue_file_profile(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<MetadataRead>>,
+    _jobs: Available<BatchJobs>,
+    Json(body): Json<FileProfileBody>,
+) -> Result<(StatusCode, Json<ProfileEnqueueResponse>), AppError> {
+    let job: Option<(String, Uuid, String)> = sqlx::query_as(
+        "SELECT entity_logicalname, created_by, status FROM import_job WHERE id = $1",
+    )
+    .bind(body.import_job_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (entity, created_by, status) = job.ok_or(AppError::NotFound)?;
+    if created_by != ctx.user_id && !ctx.is_admin {
+        return Err(AppError::NotFound);
+    }
+    ctx.require(&entity, "read")?;
+    if status == "uploaded" {
+        return Err(AppError::Validation(
+            "the import is not staged yet: its rows have not been read".into(),
+        ));
+    }
+    let profile_id = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "INSERT INTO data_profile (id, entity_logicalname, status, created_by, import_job_ref) \
+         VALUES ($1, $2, 'pending', $3, $4)",
+    )
+    .bind(profile_id)
+    .bind(&entity)
+    .bind(ctx.user_id)
+    .bind(body.import_job_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::BusinessEvent,
+                entity_name: Some(entity.clone()),
+                record_id: Some(profile_id),
+                operation: AuditOperation::Create,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: Some(body.import_job_id),
+                event_name: Some("data_profile_file_requested".to_owned()),
+                event_comment: None,
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::DataProfile(attome_core::jobs::DataProfilePayload {
+            profile_id,
+            entity_logicalname: entity,
+            user_id: ctx.user_id,
+            full_scan: true,
+            import_job_id: Some(body.import_job_id),
+        }),
+    )
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(ProfileEnqueueResponse {
+            id: profile_id,
+            status: "pending".into(),
+        }),
+    ))
+}
+
+/// L6-T6: profiles an import's staged rows into `profile_id`.
+async fn process_file(
+    state: &EngineState,
+    profile_id: Uuid,
+    entity: &str,
+    import_job: Uuid,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE data_profile SET status = 'running', row_version = row_version + 1 WHERE id = $1",
+    )
+    .bind(profile_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let rows: Vec<Value> = match sqlx::query_scalar(
+        "SELECT COALESCE(mapped, raw) FROM import_stage WHERE job_id = $1 \
+          ORDER BY row_no LIMIT $2",
+    )
+    .bind(import_job)
+    .bind(FILE_PROFILE_ROWS)
+    .fetch_all(state.base.long_pool(&state.base.db))
+    .await
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            mark_failed(
+                state,
+                profile_id,
+                &format!("staged rows could not be read: {e}"),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
+    let registry = state.entities.load();
+    let attrs: Vec<attome_core::AttrInfo> = registry
+        .get(entity)
+        .map(|m| m.attrs.clone())
+        .unwrap_or_default();
+    drop(registry);
+    let (columns, fields) = profile_rows(&rows, &attrs);
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM import_stage WHERE job_id = $1")
+        .bind(import_job)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    tracing::info!(%profile_id, columns, rows = rows.len(), "file profile computed");
+    sqlx::query(
+        "UPDATE data_profile \
+            SET status = 'completed', row_count = $2, fields = $3, sample_size = $4, \
+                full_scan = $5, completed_at = NOW(), row_version = row_version + 1 \
+          WHERE id = $1",
+    )
+    .bind(profile_id)
+    .bind(total)
+    .bind(Value::Array(fields))
+    .bind(rows.len() as i64)
+    .bind(total <= rows.len() as i64)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// L6-T6: the field summaries of staged rows, one per column (the union of
+/// the rows' keys, at most 500), with an attribute of the same name's label
+/// deciding the masking; and the column count.
+fn profile_rows(rows: &[Value], attrs: &[attome_core::AttrInfo]) -> (usize, Vec<Value>) {
+    let mut columns: Vec<String> = Vec::new();
+    for row in rows {
+        for key in row.as_object().into_iter().flat_map(|m| m.keys()) {
+            if columns.len() >= FILE_PROFILE_COLUMNS {
+                break;
+            }
+            if !columns.contains(key) {
+                columns.push(key.clone());
+            }
+        }
+    }
+    columns.sort();
+    let fields = columns
+        .iter()
+        .map(|column| {
+            let attr = attrs.iter().find(|a| &a.logicalname == column);
+            let numeric = rows
+                .iter()
+                .filter_map(|r| r.get(column))
+                .find(|v| !v.is_null())
+                .is_some_and(Value::is_number);
+            let kind = if numeric {
+                scan::FieldKind::Number
+            } else {
+                scan::FieldKind::Text
+            };
+            let mut stats = scan::FieldStats::new(kind);
+            if kind == scan::FieldKind::Text {
+                stats = stats.with_patterns(patterns::PatternStats::new(
+                    attr.and_then(|a| attome_field::format_matcher(a.options.as_ref())),
+                    column.contains("name"),
+                ));
+            }
+            for row in rows {
+                let text = match row.get(column) {
+                    None | Some(Value::Null) => None,
+                    Some(Value::String(s)) => Some(s.clone()),
+                    Some(other) => Some(other.to_string()),
+                };
+                stats.push(text.as_deref());
+            }
+            stats.finish(column, shape_of, attr.is_some_and(is_labelled))
+        })
+        .collect();
+    (columns.len(), fields)
 }
 
 /// L6-T4: writes this profile's label proposals, counts only. An open
@@ -437,6 +739,9 @@ pub async fn process(
     payload: attome_core::jobs::DataProfilePayload,
 ) -> Result<(), AppError> {
     let profile_id = payload.profile_id;
+    if let Some(import_job) = payload.import_job_id {
+        return process_file(state, profile_id, &payload.entity_logicalname, import_job).await;
+    }
     let (_, entity_name, attrs, _) =
         match entity_crud::resolve_entity(state, &payload.entity_logicalname).await {
             Ok(v) => v,
@@ -628,6 +933,7 @@ pub fn routes() -> Router<EngineState> {
             post(enqueue_profile).get(list_profiles),
         )
         .route("/api/v1/admin/data/profile/{id}", get(get_profile))
+        .route("/api/v1/data/profile:file", post(enqueue_file_profile))
         .route(
             "/api/v1/admin/data/label-proposals",
             get(list_label_proposals),
@@ -637,7 +943,13 @@ pub fn routes() -> Router<EngineState> {
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(enqueue_profile, list_profiles, get_profile, list_label_proposals))]
+#[openapi(paths(
+    enqueue_profile,
+    list_profiles,
+    get_profile,
+    list_label_proposals,
+    enqueue_file_profile
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

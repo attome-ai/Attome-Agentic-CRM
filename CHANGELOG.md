@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Profile a staged import before applying it (L6-T6): `POST /api/v1/data/profile:file` profiles an
+  import's staged rows in a job with the entity profile's statistics, shapes and masking. Data
+  profiles are now readable with the new `metadata.read` privilege, not only `system.admin`, for
+  entities the reader may read and without the sensitive attributes they may not.
 - Master-data side tables (L1-T2): making an entity master creates its `<entity>__contribution`
   (what each source system sent, unique per source and external id, attached, held or detached)
   and `<entity>__provenance` (which contribution and rule each golden attribute came from, and

@@ -119,6 +119,7 @@ pub async fn after_run(
     let snapshots: Vec<(Uuid, Value)> = sqlx::query_as(
         "SELECT id, fields FROM data_profile \
           WHERE entity_logicalname = $1 AND status = 'completed' AND NOT is_deleted \
+            AND import_job_ref IS NULL \
           ORDER BY completed_at DESC, id DESC LIMIT 2",
     )
     .bind(entity)
@@ -280,6 +281,7 @@ pub async fn schedule_sweep(state: &EngineState) -> Result<SweepSummary, AppErro
                 entity_logicalname: entity.clone(),
                 user_id: admin,
                 full_scan: false,
+                import_job_id: None,
             }),
         )
         .await

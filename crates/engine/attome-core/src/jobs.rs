@@ -1705,6 +1705,9 @@ pub struct DataProfilePayload {
     /// L6-T2: read every row instead of a sample of about 100,000.
     #[serde(default)]
     pub full_scan: bool,
+    /// L6-T6: profile this import's staged rows instead of the table.
+    #[serde(default)]
+    pub import_job_id: Option<Uuid>,
 }
 
 /// M12 — applies one fixed built-in transform (`trim`/`upper`/`lower`/
@@ -2204,6 +2207,7 @@ mod tests {
                 entity_logicalname: "contact".to_string(),
                 user_id: Uuid::now_v7(),
                 full_scan: false,
+                import_job_id: None,
             })
             .is_batch()
         );
@@ -2464,6 +2468,7 @@ mod tests {
             entity_logicalname: "contact".to_string(),
             user_id: Uuid::now_v7(),
             full_scan: true,
+            import_job_id: None,
         }));
     }
 
