@@ -14,6 +14,15 @@
 //! `approval_request` (action type `approval_process`, regarding the record,
 //! `payload.process_id`), resolved, decided, escalated and timed out exactly
 //! like every other.
+//!
+//! M9-T4: the request page reads `GET /api/v1/approvals/{id}`: what is
+//! asked, by whom, why (the submitter's `reason`), the attribute changes a
+//! held change carries (from, to), every decision so far, and whether the
+//! caller may decide now. An administrator, the requester, anyone who
+//! decided it, an eligible approver, and anyone who may read the record it
+//! is about see it; anyone else gets 404. A record's history panel reads
+//! `GET /api/v1/approvals/regarding/{entity}/{record_id}`, for whoever may
+//! read the record.
 
 use attome_approval::ApprovalPlan;
 use attome_audit::AuditOperation;
@@ -430,7 +439,14 @@ async fn delete_process(
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct SubmitBody {
     pub record_id: Uuid,
+    /// M9-T4: why the record is submitted, shown to the approvers (at most
+    /// 2000 characters).
+    #[serde(default)]
+    pub reason: Option<String>,
 }
+
+/// The longest submission reason, in characters.
+const REASON_MAX: usize = 2000;
 
 /// What a submission filed.
 #[derive(Debug, Serialize, ToSchema)]
@@ -520,6 +536,16 @@ async fn submit(
     }
     let plan: ApprovalPlan = serde_json::from_value(process.plan.clone())
         .map_err(|e| AppError::internal(format!("stored approval process plan: {e}")))?;
+    let reason = body
+        .reason
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty());
+    if reason.is_some_and(|r| r.chars().count() > REASON_MAX) {
+        return Err(AppError::Validation(format!(
+            "reason is at most {REASON_MAX} characters"
+        )));
+    }
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
@@ -558,6 +584,7 @@ async fn submit(
         "process_name": process.name,
         "entity": process.entity_logicalname,
         "record_id": body.record_id,
+        "reason": reason,
     });
     let backstop_ttl = attome_audit::approval::plan_backstop_ttl(&plan);
     let request = attome_approval::submit_with_plan_regarding_in_tx(
@@ -701,6 +728,304 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/approval-processes/requests/{request_id}/recall",
             post(recall),
         )
+        .route("/api/v1/approvals/{id}", get(get_request))
+        .route(
+            "/api/v1/approvals/regarding/{entity}/{record_id}",
+            get(list_regarding),
+        )
+}
+
+/// M9-T4: one attribute a request would change.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ChangedAttribute {
+    pub attribute: String,
+    /// The value when the request was opened.
+    pub from: Value,
+    /// The value approval writes.
+    pub to: Value,
+}
+
+/// M9-T4: one decision on a request.
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct DecisionEntry {
+    pub approver_id: Uuid,
+    pub approver_name: Option<String>,
+    /// Who acted, when a delegate decided for `approver_id`.
+    pub decided_by: Option<Uuid>,
+    pub step: i32,
+    /// `approved` or `rejected`.
+    pub decision: String,
+    pub comment: Option<String>,
+    pub decided_at: DateTime<Utc>,
+}
+
+/// M9-T4: what the request page shows.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApprovalDetail {
+    pub id: Uuid,
+    pub action_type: String,
+    /// The approval process's name, when the request came from one.
+    pub title: Option<String>,
+    pub status: String,
+    /// The current step (zero-based) of `step_count`.
+    pub step: i32,
+    pub step_count: i32,
+    pub requested_by: Uuid,
+    pub requested_by_name: Option<String>,
+    pub requested_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub executed_at: Option<DateTime<Utc>>,
+    pub row_version: i64,
+    /// Why it was asked, in the requester's words.
+    pub reason: Option<String>,
+    pub regarding_entity: Option<String>,
+    pub regarding_id: Option<Uuid>,
+    /// The attribute changes a held change carries, by name.
+    pub changes: Vec<ChangedAttribute>,
+    #[schema(value_type = Object)]
+    pub payload: Value,
+    /// Whether the caller may approve or reject it now.
+    pub can_decide: bool,
+    pub decisions: Vec<DecisionEntry>,
+}
+
+/// M9-T4: one request in a record's approval history.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApprovalHistoryItem {
+    pub id: Uuid,
+    pub action_type: String,
+    pub title: Option<String>,
+    pub status: String,
+    pub requested_by: Uuid,
+    pub requested_by_name: Option<String>,
+    pub requested_at: DateTime<Utc>,
+    pub executed_at: Option<DateTime<Utc>>,
+    /// The attributes a held change carries, by name.
+    pub changed_attributes: Vec<String>,
+}
+
+/// The attribute changes of a held change's payload, by name.
+fn changes_of(payload: &Value) -> Vec<ChangedAttribute> {
+    let Some(changes) = payload.get("changes").and_then(Value::as_object) else {
+        return Vec::new();
+    };
+    let previous = payload.get("previous").and_then(Value::as_object);
+    let mut out: Vec<ChangedAttribute> = changes
+        .iter()
+        .map(|(attribute, to)| ChangedAttribute {
+            attribute: attribute.clone(),
+            from: previous
+                .and_then(|p| p.get(attribute))
+                .cloned()
+                .unwrap_or(Value::Null),
+            to: to.clone(),
+        })
+        .collect();
+    out.sort_by(|a, b| a.attribute.cmp(&b.attribute));
+    out
+}
+
+fn text_of(payload: &Value, key: &str) -> Option<String> {
+    payload.get(key).and_then(Value::as_str).map(str::to_owned)
+}
+
+/// Display names of `ids`.
+async fn user_names(
+    state: &EngineState,
+    ids: &[Uuid],
+) -> Result<std::collections::HashMap<Uuid, String>, AppError> {
+    let rows: Vec<(Uuid, String)> =
+        sqlx::query_as("SELECT id, user_name FROM user_account WHERE id = ANY($1)")
+            .bind(ids)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(rows.into_iter().collect())
+}
+
+/// Whether the caller may read the record `entity`/`record_id`.
+async fn may_read_record(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    entity: &str,
+    record_id: Uuid,
+) -> bool {
+    let Ok((entity_id, ..)) = attome_records::entity_crud::resolve_entity(state, entity).await
+    else {
+        return false;
+    };
+    attome_records::entity_crud::require_record_access(
+        state,
+        ctx,
+        entity_id,
+        entity,
+        record_id,
+        RecordAction::Read,
+    )
+    .await
+    .is_ok()
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/approvals/{id}",
+    tag = "approvals",
+    operation_id = "get_approval_request_detail",
+    description = "The approval request page (M9-T4): what is asked, by whom, why, the attribute changes it carries, every decision so far, and whether the caller may decide now. Visible to an administrator, the requester, anyone who decided it, an eligible approver, and anyone who may read the record it is about.",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "The request", body = ApprovalDetail),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such request, or the caller may not see it", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_request(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApprovalDetail>, AppError> {
+    let request = attome_approval::get(&state.base.db, id).await?;
+    let decisions: Vec<DecisionEntry> = sqlx::query_as(
+        "SELECT g.approver_id, u.user_name AS approver_name, g.decided_by, g.step, \
+                g.decision, g.comment, g.decided_at \
+           FROM approval_grant g \
+           LEFT JOIN user_account u ON u.id = g.approver_id \
+          WHERE g.request_id = $1 \
+          ORDER BY g.decided_at, g.id",
+    )
+    .bind(id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let can_decide = request.status == attome_approval::ApprovalStatus::Pending
+        && crate::my_work_approvals::is_eligible(&state, &ctx, &request).await?;
+    let decided = decisions
+        .iter()
+        .any(|d| d.approver_id == ctx.user_id || d.decided_by == Some(ctx.user_id));
+    let visible = ctx.is_admin
+        || request.requested_by == ctx.user_id
+        || decided
+        || can_decide
+        || match (&request.regarding_entity, request.regarding_id) {
+            (Some(entity), Some(record_id)) => {
+                may_read_record(&state, &ctx, entity, record_id).await
+            }
+            _ => false,
+        };
+    if !visible {
+        return Err(AppError::NotFound);
+    }
+    let names = user_names(&state, &[request.requested_by]).await?;
+    let step_count = request
+        .plan
+        .as_ref()
+        .map_or(1, |p| i32::try_from(p.steps.len()).unwrap_or(i32::MAX));
+    Ok(Json(ApprovalDetail {
+        id: request.id,
+        title: text_of(&request.payload, "process_name"),
+        reason: text_of(&request.payload, "reason"),
+        changes: changes_of(&request.payload),
+        action_type: request.action_type,
+        status: request.status.to_string(),
+        step: request.step,
+        step_count,
+        requested_by: request.requested_by,
+        requested_by_name: names.get(&request.requested_by).cloned(),
+        requested_at: request.requested_at,
+        expires_at: request.expires_at,
+        executed_at: request.executed_at,
+        row_version: request.row_version,
+        regarding_entity: request.regarding_entity,
+        regarding_id: request.regarding_id,
+        payload: request.payload,
+        can_decide,
+        decisions,
+    }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/approvals/regarding/{entity}/{record_id}",
+    tag = "approvals",
+    operation_id = "list_approvals_regarding_record",
+    description = "A record's approval history (M9-T4), newest first, for whoever may read the record.",
+    params(("entity" = String, Path), ("record_id" = Uuid, Path), OnePageQuery),
+    responses(
+        (status = 200, description = "The record's approval requests", body = PaginatedResponse<ApprovalHistoryItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such record, or the caller may not read it", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_regarding(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path((entity, record_id)): Path<(String, Uuid)>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<ApprovalHistoryItem>>, AppError> {
+    if !may_read_record(&state, &ctx, &entity, record_id).await {
+        return Err(AppError::NotFound);
+    }
+    let w = page.window();
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        action_type: String,
+        status: String,
+        requested_by: Uuid,
+        requested_at: DateTime<Utc>,
+        executed_at: Option<DateTime<Utc>>,
+        payload: Value,
+    }
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT id, action_type, status, requested_by, requested_at, executed_at, payload \
+           FROM approval_request \
+          WHERE regarding_entity = $1 AND regarding_id = $2 \
+          ORDER BY requested_at DESC, id DESC LIMIT $3 OFFSET $4",
+    )
+    .bind(&entity)
+    .bind(record_id)
+    .bind(w.page_size)
+    .bind(w.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM approval_request WHERE regarding_entity = $1 AND regarding_id = $2",
+    )
+    .bind(&entity)
+    .bind(record_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut requesters: Vec<Uuid> = rows.iter().map(|r| r.requested_by).collect();
+    requesters.sort_unstable();
+    requesters.dedup();
+    let names = user_names(&state, &requesters).await?;
+    let items = rows
+        .into_iter()
+        .map(|r| ApprovalHistoryItem {
+            title: text_of(&r.payload, "process_name"),
+            changed_attributes: changes_of(&r.payload)
+                .into_iter()
+                .map(|c| c.attribute)
+                .collect(),
+            requested_by_name: names.get(&r.requested_by).cloned(),
+            id: r.id,
+            action_type: r.action_type,
+            status: r.status,
+            requested_by: r.requested_by,
+            requested_at: r.requested_at,
+            executed_at: r.executed_at,
+        })
+        .collect();
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        w.page,
+        w.page_size,
+    )))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -711,7 +1036,9 @@ pub fn routes() -> Router<EngineState> {
     update_process,
     delete_process,
     submit,
-    recall
+    recall,
+    get_request,
+    list_regarding
 ))]
 struct ApiDocFragment;
 
@@ -722,6 +1049,22 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn approval_request_page_lists_changes_by_name_with_their_old_values() {
+        let payload = serde_json::json!({
+            "changes": { "discount": 25, "amount": 900 },
+            "previous": { "discount": "15" },
+        });
+        let changes = changes_of(&payload);
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0].attribute, "amount");
+        assert_eq!(changes[0].from, Value::Null);
+        assert_eq!(changes[1].attribute, "discount");
+        assert_eq!(changes[1].from, serde_json::json!("15"));
+        assert_eq!(changes[1].to, serde_json::json!(25));
+        assert!(changes_of(&serde_json::json!({ "process_id": "x" })).is_empty());
+    }
 
     #[test]
     fn approval_process_entry_condition_admits_matching_records() {

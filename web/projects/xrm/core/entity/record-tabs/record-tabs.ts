@@ -4,7 +4,8 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
  * The generic "about this record" tabs every entity form can carry beside its
  * own field tabs: attached documents, communications, notes, tags, consent
  * activities (tasks and phone calls, U2), the relationship explorer, and
- * (U3/U6, D-601) the record's timeline and field-level change history.
+ * (U3/U6, D-601) the record's timeline and field-level change history, and
+ * (M9-T4) the approval requests about the record.
  * `EntityFormComponent` pioneered them;
  * `recordTabDefs` + `RecordTabPanelsComponent` let a hand-written
  * `EngineFormBase` subclass (the service ticket form, U14) include the same set,
@@ -12,11 +13,12 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
  */
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
-  | 'timeline' | 'history';
+  | 'timeline' | 'history' | 'approvals';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
   'documents', 'communications', 'notes', 'activities', 'tags', 'consent', 'relationships', 'timeline', 'history',
+  'approvals',
 ];
 
 const ICONS: Record<RecordTabId, string> = {
@@ -29,6 +31,7 @@ const ICONS: Record<RecordTabId, string> = {
   relationships:  'las la-project-diagram',
   timeline:       'las la-stream',
   history:        'las la-history',
+  approvals:      'las la-user-check',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -41,6 +44,7 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   relationships:  'xrmForm.tabs.relationships',
   timeline:       'xrmForm.tabs.timeline',
   history:        'xrmForm.tabs.history',
+  approvals:      'xrmForm.tabs.approvals',
 };
 
 /**

@@ -34,6 +34,7 @@ import { TagsPanelComponent } from '../tags/tags-panel.component';
  * `EntityFormComponent`'s template.
  */
 type RecordActivityModule = typeof import('@attome/xrm/core/entity/record-activity');
+type ApprovalsModule = typeof import('@attome/xrm/core/approvals');
 
 @Component({
   selector: 'xrm-record-tab-panels',
@@ -67,6 +68,11 @@ export class RecordTabPanelsComponent {
   /** Inputs for whichever record-activity panel is showing. */
   readonly activityInputs = computed(() => ({ entityName: this.entityName(), recordId: this.recordId() }));
 
+  /** M9-T4: the approvals entry point, once the Approvals tab has asked for it. */
+  readonly approvals = signal<ApprovalsModule | null>(null);
+  readonly approvalsLoadFailed = signal(false);
+  private approvalsRequested = false;
+
   constructor() {
     effect(() => {
       const tab = this.activeTab();
@@ -75,6 +81,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/core/entity/record-activity').then(
           m => this.activity.set(m),
           () => this.activityLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'approvals' && this.recordId() && !this.approvalsRequested) {
+        this.approvalsRequested = true;
+        import('@attome/xrm/core/approvals').then(
+          m => this.approvals.set(m),
+          () => this.approvalsLoadFailed.set(true),
         );
       }
     });

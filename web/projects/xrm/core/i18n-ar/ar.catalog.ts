@@ -149,11 +149,12 @@ export const xrmAr = {
     // U3/U6 (D-601) — انظر en.catalog.ts
     saveBeforeTimeline: 'احفظ السجل لعرض الخط الزمني.',
     saveBeforeHistory: 'احفظ السجل لعرض سجل التغييرات.',
+    saveBeforeApprovals: 'احفظ السجل لعرض موافقاته.',
     tabs: {
       details: 'التفاصيل',
       documents: 'المستندات', communications: 'المراسلات', notes: 'الملاحظات', activities: 'الأنشطة',
       tags: 'الوسوم', consent: 'الموافقة', relationships: 'العلاقات',
-      timeline: 'الخط الزمني', history: 'سجل التغييرات',
+      timeline: 'الخط الزمني', history: 'سجل التغييرات', approvals: 'الموافقات',
     },
     entity: {
       document: 'مستند', note: 'ملاحظة', organization: 'مؤسسة', privilege: 'صلاحية',
@@ -2164,6 +2165,38 @@ export const xrmAr = {
   },
 
   // ── U15 — صندوق الموافقات الخاص بالمعتمِد ──
+  // M9-T4: صفحة طلب الموافقة وسجل موافقات السجل.
+  approvalRequest: {
+    loading: 'جارٍ تحميل الطلب…',
+    requestedBy: 'مقدّم الطلب',
+    record: 'السجل',
+    step: 'الخطوة',
+    stepOf: '{step} من {count}',
+    expires: 'ينتهي',
+    why: 'السبب',
+    noReason: 'لم يُذكر سبب.',
+    changes: 'ما الذي سيتغير',
+    attribute: 'الحقل',
+    from: 'الآن',
+    to: 'بعد الموافقة',
+    history: 'السجل',
+    submitted: 'قدّمه {who}',
+    executed: 'نُفّذ',
+    decision: { approved: 'وافق عليه {who}', rejected: 'رفضه {who}' },
+    comment: 'تعليق (اختياري)',
+    approve: 'موافقة',
+    reject: 'رفض',
+    status: {
+      pending: 'بانتظار القرار', approved: 'تمت الموافقة', rejected: 'مرفوض', expired: 'منتهي',
+      executed: 'تم', executing: 'قيد التنفيذ', cancelled: 'ملغى',
+      invalidated: 'لم يعد صالحًا', recalled: 'مسحوب',
+    },
+  },
+  approvalHistory: {
+    none: 'لا توجد موافقات لهذا السجل.',
+    error: 'تعذّر تحميل الموافقات.',
+    more: 'عرض أحدث {shown} من {total}.',
+  },
   myApprovals: {
     title: 'موافقاتي',
     subtitle: 'طلبات بانتظار قرارك. لا يُنفَّذ شيء قبل الموافقة عليه.',

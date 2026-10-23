@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Approval request page (M9-T4): `GET /api/v1/approvals/{id}` returns what is asked, by whom, why
+  (the new optional `reason` on `POST /api/v1/approval-processes/{id}/submit`), the attribute
+  changes as from → to, every decision, and whether the caller may decide. It is visible to an
+  administrator, the requester, anyone who decided it, an eligible approver, and anyone who may
+  read the record. `GET /api/v1/approvals/regarding/{entity}/{record_id}` lists a record's
+  requests. The web app has the page at `/approvals/requests/:id` and an Approvals tab on every
+  record form.
 - Approval on change (M9-T2): an approval process may start on `change` with `watched_attributes`.
   An update that changes a watched attribute, on a record meeting the entry condition (judged on
   the record as the update leaves it, e.g. `discount > 20`), keeps the stored value, writes the

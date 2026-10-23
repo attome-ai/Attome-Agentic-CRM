@@ -123,3 +123,21 @@
     }
   </div>
 }
+
+@if (has('approvals')) {
+  <div [id]="panelId('approvals')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('approvals')" [hidden]="activeTab() !== 'approvals'"
+       data-testid="approvals-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'approvals') {
+        @if (approvals(); as m) {
+          <ng-container *ngComponentOutlet="m.ApprovalHistoryPanelComponent; inputs: activityInputs()" />
+        } @else if (approvalsLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'approvalHistory.error' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeApprovals' | translate }}</p>
+    }
+  </div>
+}

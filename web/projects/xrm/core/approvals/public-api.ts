@@ -9,6 +9,11 @@ export type {
 // U15 — the approver's own inbox (any signed-in user; not the admin queue).
 export { MyApprovalsPageComponent } from './my-approvals/my-approvals-page.component';
 export { MyApprovalsService, DECISION_COMMENT_MAX } from './services/my-approvals.service';
+// M9-T4 — the request page and a record's approval history.
+export { ApprovalRequestPageComponent, showValue } from './request-page/request-page.component';
+export type { ApprovalDetail, ChangedAttribute, DecisionEntry } from './request-page/request-page.component';
+export { ApprovalHistoryPanelComponent, APPROVAL_HISTORY_PAGE_SIZE } from './record-history/approval-history-panel.component';
+export type { ApprovalHistoryItem } from './record-history/approval-history-panel.component';
 export type {
   MyWorkItem, MyWorkAction, MyWorkPage, ApprovalDecision, ApprovalDecisionResponse,
 } from './services/my-approvals.service';

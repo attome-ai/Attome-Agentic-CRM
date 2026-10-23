@@ -170,13 +170,14 @@ export const xrmEn = {
     // U3/U6 (D-601) — the record timeline and history tabs.
     saveBeforeTimeline: 'Save the record to see its timeline.',
     saveBeforeHistory: 'Save the record to see its change history.',
+    saveBeforeApprovals: 'Save the record to see its approvals.',
     tabs: {
       // The generated entity forms' own "Details" tab and section
       // (scripts/bundle-to-form-component.mjs, SYSTEM-CHANGES.md Topic 14).
       details: 'Details',
       documents: 'Documents', communications: 'Communications', notes: 'Notes', activities: 'Activities',
       tags: 'Tags', consent: 'Consent', relationships: 'Relationships',
-      timeline: 'Timeline', history: 'History',
+      timeline: 'Timeline', history: 'History', approvals: 'Approvals',
     },
     entity: {
       document: 'Document', note: 'Note', organization: 'Organization', privilege: 'Privilege',
@@ -2242,6 +2243,38 @@ export const xrmEn = {
   },
 
   // ── U15 (basic-units-10-10 §6.3): the approver's own inbox ──
+  // M9-T4: the approval request page and a record's approval history.
+  approvalRequest: {
+    loading: 'Loading the request…',
+    requestedBy: 'Requested by',
+    record: 'Record',
+    step: 'Step',
+    stepOf: '{step} of {count}',
+    expires: 'Expires',
+    why: 'Why',
+    noReason: 'No reason was given.',
+    changes: 'What would change',
+    attribute: 'Field',
+    from: 'Now',
+    to: 'After approval',
+    history: 'History',
+    submitted: 'Submitted by {who}',
+    executed: 'Carried out',
+    decision: { approved: 'Approved by {who}', rejected: 'Rejected by {who}' },
+    comment: 'Comment (optional)',
+    approve: 'Approve',
+    reject: 'Reject',
+    status: {
+      pending: 'Waiting', approved: 'Approved', rejected: 'Rejected', expired: 'Expired',
+      executed: 'Done', executing: 'Being carried out', cancelled: 'Cancelled',
+      invalidated: 'No longer valid', recalled: 'Recalled',
+    },
+  },
+  approvalHistory: {
+    none: 'No approvals for this record.',
+    error: 'The approvals could not be loaded.',
+    more: 'Showing the latest {shown} of {total}.',
+  },
   myApprovals: {
     title: 'My approvals',
     subtitle: 'Requests waiting for your decision. Nothing runs until it is approved.',

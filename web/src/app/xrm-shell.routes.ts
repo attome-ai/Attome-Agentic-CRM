@@ -622,6 +622,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/core/approvals').then(m => m.ApprovalQueueListComponent),
           },
           {
+            // M9-T4: one request: what is asked, by whom, why, and the decision.
+            path: 'approvals/requests/:id',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/core/approvals').then(m => m.ApprovalRequestPageComponent),
+          },
+          {
             // D-421 / M10 (Approval & Governance)
             path: 'approvals/policies',
             canActivate: [authGuard],
