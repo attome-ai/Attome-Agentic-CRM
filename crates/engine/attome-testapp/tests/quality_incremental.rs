@@ -161,3 +161,72 @@ fn only_changed_record_rescored_and_rescan_resumes() {
         );
     });
 }
+
+/// L2-T7: an entity whose overall score fell sharply alerts the steward of
+/// its data domain, once however often the daily job runs.
+// feature: L2
+#[test]
+fn drop_alerts_steward_once_per_day() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app, "crm").await;
+        let steward = attome_testapp::seed_user(app.db(), "quality-steward")
+            .await
+            .id;
+        let domain: Uuid = sqlx::query_scalar(
+            "INSERT INTO data_domain (name, owner_layer) VALUES ($1, 'customer') RETURNING id",
+        )
+        .bind(format!("Quality domain {}", Uuid::now_v7().simple()))
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO governance_role (domain_ref, user_id, role) VALUES ($1, $2, 'steward')",
+        )
+        .bind(domain)
+        .bind(steward)
+        .execute(app.db())
+        .await
+        .unwrap();
+        sqlx::query("UPDATE entity_info SET domain_ref = $1 WHERE logicalname = 'account'")
+            .bind(domain)
+            .execute(app.db())
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO quality_snapshot (entity, dimension, day, score) VALUES \
+                 ('account', 'overall', CURRENT_DATE - 1, 95), \
+                 ('account', 'overall', CURRENT_DATE, 72) \
+             ON CONFLICT (entity, dimension, day) DO UPDATE SET score = EXCLUDED.score",
+        )
+        .execute(app.db())
+        .await
+        .unwrap();
+        sqlx::query(
+            "DELETE FROM quality_alert_sent WHERE entity = 'account' AND day = CURRENT_DATE",
+        )
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        for _ in 0..3 {
+            attome_api::quality::alerts::after_snapshot(
+                &app.state,
+                &app.state.base.config.notification,
+            )
+            .await
+            .expect("alerts");
+        }
+        let sent: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM notification_dispatch \
+              WHERE recipient_user_ref = $1 AND subject LIKE 'Data quality: account%'",
+        )
+        .bind(steward)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(sent, 1, "one alert a day to the steward");
+    });
+}

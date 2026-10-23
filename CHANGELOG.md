@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Steward quality alerts (L2-T7): after the daily snapshot an entity below its target, or whose
+  overall score fell more than `quality.drop_alert_points` (10) since yesterday, alerts its domain's
+  stewards (else owners, compliance administrators, or one full administrator) once a day, naming
+  the issues' main source; the alert to every `system.admin` holder is gone (migration 0235).
 - Administration areas (Q12-T1): twelve privileges `admin.users`, `admin.roles`, `admin.security`,
   `admin.data_model`, `admin.automation`, `admin.ai`, `admin.integrations`, `admin.communication`,
   `admin.reports`, `admin.compliance`, `admin.audit` and `admin.deployment` (platform changeset 0071),

@@ -425,6 +425,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(2000),
         ),
+        // L2-T7: a sudden drop in an entity's overall quality score.
+        SettingDescriptor::new(
+            "quality.drop_alert_points",
+            "How many points an entity's overall data quality score must fall since yesterday \
+         for its stewards to be alerted, besides falling below its target (L2-T7).",
+            || json!({"type": "number", "minimum": 0, "maximum": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(10),
+        ),
         SettingDescriptor::new(
             "quality.max_issues_per_entity",
             "The most data quality issue rows one entity gets in a scoring run, so one entity \

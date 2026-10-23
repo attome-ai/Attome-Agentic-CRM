@@ -184,7 +184,8 @@ pub struct SnapshotStats {
 /// as records change (`crate::quality::incremental`); this rescores only
 /// the entities with a timeliness target (their scores age with no change),
 /// writes the day's `quality_snapshot` from every entity's latest scores,
-/// and raises the threshold alerts once a day.
+/// and alerts the stewards of entities below target or dropping
+/// (`crate::quality::alerts`, L2-T7).
 pub async fn run_snapshot(
     state: &EngineState,
     notification_cfg: &NotificationSection,
@@ -231,42 +232,8 @@ pub async fn run_snapshot(
     .await
     .map_err(AppError::internal)?;
     stats.snapshot_rows = latest.len();
-    let thresholds: HashMap<String, f64> =
-        sqlx::query_as("SELECT entity, threshold::float8 FROM quality_target")
-            .fetch_all(db)
-            .await
-            .map_err(AppError::internal)?
-            .into_iter()
-            .collect();
-    for (entity, dimension, score, fail_count, sample_size) in latest {
-        let (name, alert) = if dimension == OVERALL {
-            let threshold = thresholds
-                .get(&entity)
-                .copied()
-                .unwrap_or(crate::quality::dimensions::DEFAULT_THRESHOLD);
-            (OVERALL, score < threshold)
-        } else {
-            match crate::quality::dimensions::Dimension::parse(&dimension) {
-                Some(d) => (d.as_str(), score <= SCORE_ALERT_THRESHOLD),
-                None => continue,
-            }
-        };
-        if alert {
-            dispatch_score_alert(
-                db,
-                notification_cfg,
-                &entity,
-                &DimensionAlert {
-                    dimension: name,
-                    score,
-                    fail_count,
-                    sample_size,
-                },
-            )
-            .await;
-            stats.alerts_sent += 1;
-        }
-    }
+    // L2-T7: one alert per entity per day, to its stewards.
+    stats.alerts_sent = crate::quality::alerts::after_snapshot(state, notification_cfg).await?;
     Ok(stats)
 }
 
@@ -763,12 +730,13 @@ async fn dispatch_score_alert(
     entity_name: &str,
     alert: &DimensionAlert,
 ) {
-    let recipients = match admin_recipients(db).await {
+    // L2-T7: the entity's stewards, not every full administrator.
+    let recipients = match crate::quality::alerts::recipients(db, entity_name).await {
         Ok(r) => r,
         Err(e) => {
             tracing::error!(
                 error = %e,
-                "data quality sweep: failed to resolve admin recipients for a threshold alert"
+                "data quality sweep: failed to resolve the stewards for a threshold alert"
             );
             return;
         }
