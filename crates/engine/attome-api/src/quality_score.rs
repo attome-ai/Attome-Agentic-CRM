@@ -284,6 +284,9 @@ pub(crate) async fn score_entity(
         .await?;
     }
 
+    // L2-T4: new open issues go to the domain steward or the record owner.
+    crate::quality::routing::assign_open(db, meta).await?;
+
     // L2-T2: validity, consistency and timeliness over a sample of recent
     // records, then the weighted overall score against the threshold.
     score_rules_and_overall(

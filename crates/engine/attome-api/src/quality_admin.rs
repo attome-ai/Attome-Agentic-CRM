@@ -12,20 +12,29 @@
 //! No M27 metric-adapter wiring and no Angular dashboard page yet — both
 //! explicitly deferred to a later pass; this is the minimal read surface the
 //! M51 alert this job raises already links to (`/admin/data/quality`).
+//!
+//! L2-T4: issues carry an owner (the domain steward or the record owner,
+//! `crate::quality::routing`) and a due date; the owner moves an issue
+//! through its statuses (`PATCH .../issues/{id}`, a reason to accept);
+//! `metadata.read` holders list the issues of records they may read; and
+//! rules and targets (weights, threshold, timeliness, record scoring, issue
+//! due days) are authored here, each change a Configuration security event.
 
+use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_audit::{
     AuditCategory, AuditEvent, AuditOperation, AuditRequestContext, AuditSource, audit_service,
 };
 use attome_core::EngineState;
 use attome_records::entity_crud;
-use attome_server::authz::{Admin, Authorized};
+use attome_security::SecurityContextExt;
+use attome_server::authz::{Admin, Authorized, Privilege, SelfService};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
-    routing::{get, post},
+    routing::{get, patch, post, put},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -201,7 +210,8 @@ async fn score_history(
 // ── Issues ───────────────────────────────────────────────────────────────
 
 const ISSUE_COLUMNS: &str = "id, entity_logicalname, period, dimension, record_id, \
-     field_logicalname, related_record_id, detail, status, detected_at, resolved_at";
+     field_logicalname, related_record_id, detail, status, detected_at, resolved_at, \
+     owner_id, due_at, accepted_reason";
 
 #[derive(sqlx::FromRow, Serialize, ToSchema)]
 struct QualityIssueView {
@@ -216,22 +226,29 @@ struct QualityIssueView {
     status: String,
     detected_at: DateTime<Utc>,
     resolved_at: Option<DateTime<Utc>>,
+    /// L2-T4: who works the issue.
+    owner_id: Option<Uuid>,
+    due_at: Option<DateTime<Utc>>,
+    accepted_reason: Option<String>,
 }
 
 #[derive(Deserialize, IntoParams)]
 struct ListIssuesQuery {
     entity: Option<String>,
     dimension: Option<String>,
-    /// `"open"` (default view for the steward queue) or `"resolved"`. Omit
-    /// for every status.
+    /// `open`, `in_progress`, `fixed`, `accepted` or `resolved`. Omit for
+    /// every status.
     status: Option<String>,
+    /// L2-T4: only the issues this person owns.
+    owner_id: Option<Uuid>,
     /// One-based: page 1 is the first page.
     page: Option<i64>,
     page_size: Option<i64>,
 }
 
-/// `GET /api/v1/admin/data/quality/issues` — `system.admin` only. Defaults
-/// to no status filter left to the caller; a UI should request
+/// `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
+/// administrator sees every issue; anyone else the issues of entities they
+/// may read, without the records they may not read. A UI requests
 /// `status=open` for the steward queue view.
 #[utoipa::path(
     get,
@@ -248,16 +265,27 @@ struct ListIssuesQuery {
 )]
 async fn list_issues(
     State(state): State<EngineState>,
-    _ctx: Authorized<Admin>,
+    ctx: Authorized<Privilege<crate::data_profile_admin::MetadataRead>>,
     Query(q): Query<ListIssuesQuery>,
 ) -> Result<Json<PaginatedResponse<QualityIssueView>>, AppError> {
     if let Some(s) = &q.status
-        && !["open", "resolved"].contains(&s.as_str())
+        && !crate::quality::routing::STATUSES.contains(&s.as_str())
     {
-        return Err(AppError::Validation(
-            "status must be one of: open, resolved".into(),
-        ));
+        return Err(AppError::Validation(format!(
+            "status must be one of: {}",
+            crate::quality::routing::STATUSES.join(", ")
+        )));
     }
+    // L2-T4: the entities the caller may read (every one for an admin).
+    let readable: Option<Vec<String>> = (!ctx.is_admin).then(|| {
+        state
+            .entities
+            .load()
+            .iter()
+            .filter(|m| ctx.require(&m.logicalname, "read").is_ok())
+            .map(|m| m.logicalname.clone())
+            .collect()
+    });
     if let Some(d) = &q.dimension
         && !DIMENSIONS.contains(&d.as_str())
     {
@@ -276,6 +304,8 @@ async fn list_issues(
           WHERE ($1::text IS NULL OR entity_logicalname = $1) \
             AND ($2::text IS NULL OR dimension = $2) \
             AND ($3::text IS NULL OR status = $3) \
+            AND ($6::text[] IS NULL OR entity_logicalname = ANY($6)) \
+            AND ($7::uuid IS NULL OR owner_id = $7) \
           ORDER BY detected_at DESC OFFSET $4 LIMIT $5"
     ))
     .bind(&q.entity)
@@ -283,19 +313,56 @@ async fn list_issues(
     .bind(&q.status)
     .bind(offset)
     .bind(page_size)
+    .bind(&readable)
+    .bind(q.owner_id)
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    // L2-T4: an issue about a record the caller may not read is not shown.
+    let items = if ctx.is_admin {
+        items
+    } else {
+        let mut kept = Vec::with_capacity(items.len());
+        for item in items {
+            let entity_id = state
+                .entities
+                .load()
+                .get(&item.entity_logicalname)
+                .map(|m| m.entity_id);
+            let Some(entity_id) = entity_id else {
+                continue;
+            };
+            match entity_crud::require_record_access(
+                &state,
+                &ctx,
+                entity_id,
+                &item.entity_logicalname,
+                item.record_id,
+                attome_security::RecordAction::Read,
+            )
+            .await
+            {
+                Ok(()) => kept.push(item),
+                Err(AppError::Forbidden | AppError::NotFound) => {}
+                Err(e) => return Err(e),
+            }
+        }
+        kept
+    };
 
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM quality_issue \
           WHERE ($1::text IS NULL OR entity_logicalname = $1) \
             AND ($2::text IS NULL OR dimension = $2) \
-            AND ($3::text IS NULL OR status = $3)",
+            AND ($3::text IS NULL OR status = $3) \
+            AND ($4::text[] IS NULL OR entity_logicalname = ANY($4)) \
+            AND ($5::uuid IS NULL OR owner_id = $5)",
     )
     .bind(&q.entity)
     .bind(&q.dimension)
     .bind(&q.status)
+    .bind(&readable)
+    .bind(q.owner_id)
     .fetch_one(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -388,6 +455,676 @@ async fn resolve_issue(
     Ok(StatusCode::NO_CONTENT)
 }
 
+// ── L2-T4: issue workflow ────────────────────────────────────────────────
+
+/// A status change of one issue.
+#[derive(Deserialize, ToSchema)]
+struct UpdateIssueBody {
+    /// `open`, `in_progress`, `fixed`, `accepted` or `resolved`.
+    status: String,
+    /// Why the issue is accepted as it is; required for `accepted`.
+    accepted_reason: Option<String>,
+}
+
+/// The caller may work `owner`'s issue on `entity`: an administrator, or the
+/// issue's owner while they may still read the entity.
+fn require_issue_editor(
+    ctx: &attome_server::security::SecurityContext,
+    owner: Option<Uuid>,
+    entity: &str,
+) -> Result<(), AppError> {
+    if ctx.is_admin {
+        return Ok(());
+    }
+    if owner == Some(ctx.user_id) && ctx.require(entity, "read").is_ok() {
+        Ok(())
+    } else {
+        Err(AppError::Forbidden)
+    }
+}
+
+/// `PATCH /api/v1/admin/data/quality/issues/{id}`: the issue's owner (or an
+/// administrator) moves it through its statuses; accepting needs a reason.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/data/quality/issues/{id}",
+    operation_id = "quality_issue_update",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    request_body = UpdateIssueBody,
+    responses(
+        (status = 204, description = "The issue's status changed"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Neither the issue's owner nor an administrator", body = ErrorResponse),
+        (status = 404, description = "Issue not found", body = ErrorResponse),
+        (status = 422, description = "Unknown status, or accepted without a reason", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
+)]
+async fn update_issue(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateIssueBody>,
+) -> Result<StatusCode, AppError> {
+    crate::quality::routing::check_change(&body.status, body.accepted_reason.as_deref())
+        .map_err(AppError::Validation)?;
+    let row: Option<(String, Option<Uuid>)> =
+        sqlx::query_as("SELECT entity_logicalname, owner_id FROM quality_issue WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let (entity_logicalname, owner) = row.ok_or(AppError::NotFound)?;
+    require_issue_editor(&ctx, owner, &entity_logicalname)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let changed = sqlx::query(
+        "UPDATE quality_issue SET status = $2, \
+                accepted_reason = CASE WHEN $2 = 'accepted' THEN $3 ELSE NULL END, \
+                resolved_at = CASE WHEN $2 IN ('fixed', 'accepted', 'resolved') \
+                                   THEN COALESCE(resolved_at, now()) END \
+          WHERE id = $1",
+    )
+    .bind(id)
+    .bind(&body.status)
+    .bind(body.accepted_reason.as_deref().map(str::trim))
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if changed == 0 {
+        return Err(AppError::NotFound);
+    }
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Entity,
+                entity_name: Some(entity_logicalname),
+                record_id: Some(id),
+                operation: AuditOperation::Update,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("quality_issue_status".to_owned()),
+                event_comment: Some(body.status.clone()),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ── L2-T4: rules and targets ─────────────────────────────────────────────
+
+const RULE_COLUMNS: &str = "id, entity, attribute, dimension, expression, severity, weight::float8 AS weight, enabled, row_version";
+
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+struct QualityRuleView {
+    id: Uuid,
+    entity: String,
+    attribute: Option<String>,
+    dimension: String,
+    expression: String,
+    severity: String,
+    weight: f64,
+    enabled: bool,
+    row_version: i64,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ListRulesQuery {
+    entity: Option<String>,
+    /// One-based: page 1 is the first page.
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// The dimensions a rule measures.
+const RULE_DIMENSIONS: &[&str] = &["validity", "consistency"];
+const SEVERITIES: &[&str] = &["info", "warning", "error"];
+
+#[derive(Deserialize, ToSchema)]
+struct CreateRuleBody {
+    entity: String,
+    attribute: Option<String>,
+    /// `validity` or `consistency`.
+    dimension: String,
+    /// A condition each record must hold, e.g. `amount >= 0`.
+    expression: String,
+    severity: Option<String>,
+    weight: Option<f64>,
+    enabled: Option<bool>,
+}
+
+#[derive(Deserialize, ToSchema)]
+struct UpdateRuleBody {
+    expression: Option<String>,
+    severity: Option<String>,
+    weight: Option<f64>,
+    enabled: Option<bool>,
+    /// The version the change was made against.
+    row_version: i64,
+}
+
+fn check_rule_parts(
+    expression: Option<&str>,
+    severity: Option<&str>,
+    weight: Option<f64>,
+) -> Result<(), AppError> {
+    if let Some(e) = expression {
+        attome_workflow::condition::check_expression(e)
+            .map_err(|m| AppError::Validation(format!("expression: {m}")))?;
+    }
+    if let Some(s) = severity
+        && !SEVERITIES.contains(&s)
+    {
+        return Err(AppError::Validation(
+            "severity must be one of: info, warning, error".into(),
+        ));
+    }
+    if let Some(w) = weight
+        && !(w.is_finite() && w >= 0.0)
+    {
+        return Err(AppError::Validation(
+            "weight is a number of 0 or more".into(),
+        ));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn config_event(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    actor: Uuid,
+    operation: AuditOperation,
+    table: &'static str,
+    record: Option<Uuid>,
+    name: &'static str,
+    comment: String,
+) -> Result<(), AppError> {
+    write_security_event(
+        tx,
+        &audit_service(state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            operation,
+            actor,
+            table,
+            record,
+        )
+        .named(name)
+        .comment(comment),
+    )
+    .await
+    .map(|_| ())
+}
+
+/// `GET /api/v1/admin/data/quality/rules` — `system.admin` only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/quality/rules",
+    operation_id = "quality_rules_list",
+    tag = "admin",
+    params(ListRulesQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<QualityRuleView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_rules(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<ListRulesQuery>,
+) -> Result<Json<PaginatedResponse<QualityRuleView>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+    let items: Vec<QualityRuleView> = sqlx::query_as(&format!(
+        "SELECT {RULE_COLUMNS} FROM quality_rule WHERE ($1::text IS NULL OR entity = $1) \
+          ORDER BY entity, id OFFSET $2 LIMIT $3"
+    ))
+    .bind(&q.entity)
+    .bind(offset)
+    .bind(page_size)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM quality_rule WHERE ($1::text IS NULL OR entity = $1)",
+    )
+    .bind(&q.entity)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
+/// `POST /api/v1/admin/data/quality/rules` — `system.admin` only. The
+/// expression is checked as the shared condition evaluator reads it.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/quality/rules",
+    operation_id = "quality_rule_create",
+    tag = "admin",
+    request_body = CreateRuleBody,
+    responses(
+        (status = 201, description = "The rule", body = QualityRuleView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Unknown entity, attribute or dimension, or a bad expression", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Create)])))),
+)]
+async fn create_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<CreateRuleBody>,
+) -> Result<(StatusCode, Json<QualityRuleView>), AppError> {
+    if !RULE_DIMENSIONS.contains(&body.dimension.as_str()) {
+        return Err(AppError::Validation(
+            "dimension must be one of: validity, consistency".into(),
+        ));
+    }
+    check_rule_parts(
+        Some(&body.expression),
+        body.severity.as_deref(),
+        body.weight,
+    )?;
+    let (_, entity_name, attrs, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
+    if let Some(a) = &body.attribute
+        && !attrs.iter().any(|x| &x.logicalname == a)
+    {
+        return Err(AppError::Validation(format!(
+            "attribute '{a}' does not exist on this entity"
+        )));
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let rule: QualityRuleView = sqlx::query_as(&format!(
+        "INSERT INTO quality_rule (entity, attribute, dimension, expression, severity, weight, enabled) \
+         VALUES ($1, $2, $3, $4, COALESCE($5, 'warning'), COALESCE($6, 1)::numeric, COALESCE($7, true)) \
+         RETURNING {RULE_COLUMNS}"
+    ))
+    .bind(&entity_name)
+    .bind(&body.attribute)
+    .bind(&body.dimension)
+    .bind(body.expression.trim())
+    .bind(&body.severity)
+    .bind(body.weight)
+    .bind(body.enabled)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    config_event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        AuditOperation::Create,
+        "quality_rule",
+        Some(rule.id),
+        "quality.rule_created",
+        format!("{entity_name} {}: {}", rule.dimension, rule.expression),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok((StatusCode::CREATED, Json(rule)))
+}
+
+/// `PATCH /api/v1/admin/data/quality/rules/{id}` — `system.admin` only;
+/// `row_version` must match.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/data/quality/rules/{id}",
+    operation_id = "quality_rule_update",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    request_body = UpdateRuleBody,
+    responses(
+        (status = 200, description = "The rule", body = QualityRuleView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Rule not found", body = ErrorResponse),
+        (status = 409, description = "The rule changed since that version", body = ErrorResponse),
+        (status = 422, description = "A bad expression, severity or weight", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn update_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateRuleBody>,
+) -> Result<Json<QualityRuleView>, AppError> {
+    check_rule_parts(
+        body.expression.as_deref(),
+        body.severity.as_deref(),
+        body.weight,
+    )?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let rule: Option<QualityRuleView> = sqlx::query_as(&format!(
+        "UPDATE quality_rule SET expression = COALESCE($2, expression), \
+                severity = COALESCE($3, severity), weight = COALESCE($4::numeric, weight), \
+                enabled = COALESCE($5, enabled), row_version = row_version + 1 \
+          WHERE id = $1 AND row_version = $6 RETURNING {RULE_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(body.expression.as_deref().map(str::trim))
+    .bind(&body.severity)
+    .bind(body.weight)
+    .bind(body.enabled)
+    .bind(body.row_version)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(rule) = rule else {
+        let exists: bool =
+            sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM quality_rule WHERE id = $1)")
+                .bind(id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(AppError::internal)?;
+        return Err(if exists {
+            AppError::VersionConflict
+        } else {
+            AppError::NotFound
+        });
+    };
+    config_event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        AuditOperation::Update,
+        "quality_rule",
+        Some(id),
+        "quality.rule_updated",
+        format!("{} {}: {}", rule.entity, rule.dimension, rule.expression),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(rule))
+}
+
+/// `DELETE /api/v1/admin/data/quality/rules/{id}` — `system.admin` only.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/data/quality/rules/{id}",
+    operation_id = "quality_rule_delete",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Rule not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::HardDelete)])))),
+)]
+async fn delete_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let gone: Option<(String, String)> =
+        sqlx::query_as("DELETE FROM quality_rule WHERE id = $1 RETURNING entity, expression")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    let (entity, expression) = gone.ok_or(AppError::NotFound)?;
+    config_event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        AuditOperation::HardDelete,
+        "quality_rule",
+        Some(id),
+        "quality.rule_deleted",
+        format!("{entity}: {expression}"),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+struct QualityTargetView {
+    entity: String,
+    /// Dimension name to weight in the overall score.
+    #[schema(value_type = Object)]
+    dimension_weights: serde_json::Value,
+    threshold: f64,
+    timeliness_days: Option<i32>,
+    record_scoring: bool,
+    issue_sla_days: Option<i32>,
+}
+
+const TARGET_COLUMNS: &str = "entity, dimension_weights, threshold::float8 AS threshold, \
+     timeliness_days, record_scoring, issue_sla_days";
+
+#[derive(Deserialize, ToSchema)]
+struct PutTargetBody {
+    /// Dimension name to weight (0 or more); unset dimensions weigh 1.
+    #[schema(value_type = Option<Object>)]
+    dimension_weights: Option<serde_json::Value>,
+    /// The overall score the entity should keep, 0 to 100 (default 70).
+    threshold: Option<f64>,
+    /// Records changed longer ago than this many days are not timely.
+    timeliness_days: Option<i32>,
+    /// Keep a score per record.
+    record_scoring: Option<bool>,
+    /// Days an issue is due in (default 7).
+    issue_sla_days: Option<i32>,
+}
+
+fn check_target(body: &PutTargetBody) -> Result<(), AppError> {
+    if let Some(w) = &body.dimension_weights {
+        let map = w
+            .as_object()
+            .ok_or_else(|| AppError::Validation("dimension_weights is an object".into()))?;
+        for (dimension, weight) in map {
+            if crate::quality::dimensions::Dimension::parse(dimension).is_none() {
+                return Err(AppError::Validation(format!(
+                    "dimension_weights: '{dimension}' is not a dimension"
+                )));
+            }
+            if !weight.as_f64().is_some_and(|x| x.is_finite() && x >= 0.0) {
+                return Err(AppError::Validation(format!(
+                    "dimension_weights.{dimension} is a number of 0 or more"
+                )));
+            }
+        }
+    }
+    if let Some(t) = body.threshold
+        && !(0.0..=100.0).contains(&t)
+    {
+        return Err(AppError::Validation("threshold is 0 to 100".into()));
+    }
+    for (name, days) in [
+        ("timeliness_days", body.timeliness_days),
+        ("issue_sla_days", body.issue_sla_days),
+    ] {
+        if days.is_some_and(|d| d <= 0) {
+            return Err(AppError::Validation(format!("{name} is at least 1")));
+        }
+    }
+    Ok(())
+}
+
+/// `GET /api/v1/admin/data/quality/targets` — `system.admin` only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/quality/targets",
+    operation_id = "quality_targets_list",
+    tag = "admin",
+    params(ListRulesQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<QualityTargetView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_targets(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<ListRulesQuery>,
+) -> Result<Json<PaginatedResponse<QualityTargetView>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+    let items: Vec<QualityTargetView> = sqlx::query_as(&format!(
+        "SELECT {TARGET_COLUMNS} FROM quality_target WHERE ($1::text IS NULL OR entity = $1) \
+          ORDER BY entity OFFSET $2 LIMIT $3"
+    ))
+    .bind(&q.entity)
+    .bind(offset)
+    .bind(page_size)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM quality_target WHERE ($1::text IS NULL OR entity = $1)",
+    )
+    .bind(&q.entity)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
+/// `PUT /api/v1/admin/data/quality/targets/{entity}` — `system.admin` only.
+/// Sets the entity's weights, threshold, timeliness, record scoring and
+/// issue due days; an absent field keeps its value (or default).
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/data/quality/targets/{entity}",
+    operation_id = "quality_target_put",
+    tag = "admin",
+    params(("entity" = String, Path)),
+    request_body = PutTargetBody,
+    responses(
+        (status = 200, description = "The target", body = QualityTargetView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Unknown entity or dimension, or a value out of range", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn put_target(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(entity): Path<String>,
+    Json(body): Json<PutTargetBody>,
+) -> Result<Json<QualityTargetView>, AppError> {
+    check_target(&body)?;
+    let (_, entity_name, _, _) = entity_crud::resolve_entity(&state, &entity).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let target: QualityTargetView = sqlx::query_as(&format!(
+        "INSERT INTO quality_target (entity, dimension_weights, threshold, timeliness_days, \
+                                     record_scoring, issue_sla_days) \
+         VALUES ($1, COALESCE($2, '{{}}'::jsonb), COALESCE($3::numeric, 70), $4, \
+                 COALESCE($5, false), $6) \
+         ON CONFLICT (entity) DO UPDATE SET \
+             dimension_weights = COALESCE($2, quality_target.dimension_weights), \
+             threshold = COALESCE($3::numeric, quality_target.threshold), \
+             timeliness_days = COALESCE($4, quality_target.timeliness_days), \
+             record_scoring = COALESCE($5, quality_target.record_scoring), \
+             issue_sla_days = COALESCE($6, quality_target.issue_sla_days) \
+         RETURNING {TARGET_COLUMNS}"
+    ))
+    .bind(&entity_name)
+    .bind(&body.dimension_weights)
+    .bind(body.threshold)
+    .bind(body.timeliness_days)
+    .bind(body.record_scoring)
+    .bind(body.issue_sla_days)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    config_event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        AuditOperation::Update,
+        "quality_target",
+        None,
+        "quality.target_set",
+        format!("{entity_name}: threshold {:.0}", target.threshold),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(target))
+}
+
+/// `DELETE /api/v1/admin/data/quality/targets/{entity}` — `system.admin`
+/// only; the entity reverts to the defaults.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/data/quality/targets/{entity}",
+    operation_id = "quality_target_delete",
+    tag = "admin",
+    params(("entity" = String, Path)),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No target for that entity", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::HardDelete)])))),
+)]
+async fn delete_target(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(entity): Path<String>,
+) -> Result<StatusCode, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let gone = sqlx::query("DELETE FROM quality_target WHERE entity = $1")
+        .bind(&entity)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
+    if gone == 0 {
+        return Err(AppError::NotFound);
+    }
+    config_event(
+        &mut tx,
+        &state,
+        ctx.user_id,
+        AuditOperation::HardDelete,
+        "quality_target",
+        None,
+        "quality.target_deleted",
+        entity,
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/data/quality/scores", get(list_scores))
@@ -400,6 +1137,23 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/data/quality/issues/{id}/resolve",
             post(resolve_issue),
         )
+        .route(
+            "/api/v1/admin/data/quality/issues/{id}",
+            patch(update_issue),
+        )
+        .route(
+            "/api/v1/admin/data/quality/rules",
+            get(list_rules).post(create_rule),
+        )
+        .route(
+            "/api/v1/admin/data/quality/rules/{id}",
+            patch(update_rule).delete(delete_rule),
+        )
+        .route("/api/v1/admin/data/quality/targets", get(list_targets))
+        .route(
+            "/api/v1/admin/data/quality/targets/{entity}",
+            put(put_target).delete(delete_target),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -408,7 +1162,20 @@ pub fn routes() -> Router<EngineState> {
 /// are module-private — the crate's `openapi()` merges every fragment back
 /// into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_scores, score_history, list_issues, resolve_issue))]
+#[openapi(paths(
+    list_scores,
+    score_history,
+    list_issues,
+    resolve_issue,
+    update_issue,
+    list_rules,
+    create_rule,
+    update_rule,
+    delete_rule,
+    list_targets,
+    put_target,
+    delete_target
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

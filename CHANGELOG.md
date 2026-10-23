@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Quality issue routing and authoring (L2-T4): new open issues go to the domain steward or the
+  record owner, due in the target's `issue_sla_days` (7; migration 0236); `PATCH
+  /api/v1/admin/data/quality/issues/{id}` moves an issue through open, in progress, fixed,
+  accepted (with a reason) and resolved; `metadata.read` holders list the issues of records they may
+  read; quality rules and targets get list, create, update and delete routes.
 - Master data contributions (L1-T4): `attome_records::entity_crud::master::ingest` stores a source
   system's version of a record, holds it when it fails field validation, attaches a valid one to its
   golden record (by its A29 external-id link, or a new record) and queues `MasterRebuild`, which

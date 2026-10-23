@@ -5640,6 +5640,68 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"from": "2026-01-01T00:00:00Z"})),
             )
         }
+        // L2-T4: quality rules and targets.
+        "POST /api/v1/admin/data/quality/rules" => request(
+            "POST",
+            "/api/v1/admin/data/quality/rules",
+            t,
+            Some(json!({
+                "entity": fx.entity,
+                "dimension": "validity",
+                "expression": "title != null",
+            })),
+        ),
+        "PATCH /api/v1/admin/data/quality/rules/{id}" => {
+            let rule = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/data/quality/rules",
+                Some(json!({"entity": fx.entity, "dimension": "validity", "expression": "title != null"})),
+            )
+            .await;
+            request(
+                "PATCH",
+                &format!("/api/v1/admin/data/quality/rules/{}", id_of(&rule)),
+                t,
+                Some(json!({"enabled": false, "row_version": rule["row_version"]})),
+            )
+        }
+        "DELETE /api/v1/admin/data/quality/rules/{id}" => {
+            let rule = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/data/quality/rules",
+                Some(json!({"entity": fx.entity, "dimension": "consistency", "expression": "title != null"})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/data/quality/rules/{}", id_of(&rule)),
+                t,
+                None,
+            )
+        }
+        "PUT /api/v1/admin/data/quality/targets/{entity}" => request(
+            "PUT",
+            &format!("/api/v1/admin/data/quality/targets/{}", fx.entity),
+            t,
+            Some(json!({"threshold": 80, "issue_sla_days": 5})),
+        ),
+        "DELETE /api/v1/admin/data/quality/targets/{entity}" => {
+            admin(
+                fx,
+                "PUT",
+                &format!("/api/v1/admin/data/quality/targets/{}", fx.entity),
+                Some(json!({"threshold": 75})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/data/quality/targets/{}", fx.entity),
+                t,
+                None,
+            )
+        }
         // L5-T5: hand-documented lineage links.
         "POST /api/v1/lineage/manual-links" => request(
             "POST",
