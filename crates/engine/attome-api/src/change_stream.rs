@@ -233,6 +233,7 @@ async fn audit(
 #[utoipa::path(
     get,
     path = "/api/v1/change-stream/subscriptions",
+    operation_id = "change_stream_list_subscriptions",
     tag = "integration",
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<Subscription>),
@@ -263,6 +264,7 @@ async fn list_subscriptions(
 #[utoipa::path(
     post,
     path = "/api/v1/change-stream/subscriptions",
+    operation_id = "change_stream_create_subscription",
     tag = "integration",
     request_body = SubscriptionBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Create)])))),
@@ -328,6 +330,7 @@ async fn create_subscription(
 #[utoipa::path(
     patch,
     path = "/api/v1/change-stream/subscriptions/{id}",
+    operation_id = "change_stream_update_subscription",
     tag = "integration",
     params(("id" = Uuid, Path)),
     request_body = SubscriptionPatch,
@@ -405,6 +408,7 @@ async fn update_subscription(
 #[utoipa::path(
     delete,
     path = "/api/v1/change-stream/subscriptions/{id}",
+    operation_id = "change_stream_delete_subscription",
     tag = "integration",
     params(("id" = Uuid, Path), RowVersionQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
@@ -892,6 +896,7 @@ async fn own_subscription(
 #[utoipa::path(
     get,
     path = "/api/v1/change-stream/{subscription}/events",
+    operation_id = "change_stream_read_events",
     tag = "integration",
     params(("subscription" = Uuid, Path), ReadQuery),
     responses(
@@ -938,6 +943,7 @@ pub struct SseQuery {
 #[utoipa::path(
     get,
     path = "/api/v1/change-stream/{subscription}/sse",
+    operation_id = "change_stream_stream_events",
     tag = "integration",
     params(("subscription" = Uuid, Path), SseQuery),
     responses(
@@ -1058,6 +1064,7 @@ pub struct ErasureConfirmations {
 #[utoipa::path(
     post,
     path = "/api/v1/change-stream/{subscription}/erasure-confirmations",
+    operation_id = "change_stream_confirm_erasures",
     tag = "integration",
     params(("subscription" = Uuid, Path)),
     request_body = ErasureConfirmationBody,

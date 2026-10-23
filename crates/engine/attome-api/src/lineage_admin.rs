@@ -46,6 +46,7 @@ pub struct WalkQuery {
 #[utoipa::path(
     get,
     path = "/api/v1/lineage/{kind}/{ref}",
+    operation_id = "lineage_walk",
     tag = "admin",
     params(
         ("kind" = String, Path, description = "`entity`, or a definition kind"),
@@ -120,6 +121,7 @@ pub struct CompareQuery {
 #[utoipa::path(
     get,
     path = "/api/v1/lineage/compare",
+    operation_id = "lineage_compare",
     tag = "admin",
     params(CompareQuery),
     responses(
@@ -142,6 +144,7 @@ async fn compare(
 #[utoipa::path(
     get,
     path = "/api/v1/lineage/cleanup",
+    operation_id = "lineage_cleanup",
     tag = "admin",
     responses(
         (status = 200, description = "Dangling edges, cycles and unused attributes", body = Cleanup),

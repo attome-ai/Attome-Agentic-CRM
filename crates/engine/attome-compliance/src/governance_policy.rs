@@ -172,6 +172,7 @@ fn check_role(role: &str) -> Result<(), AppError> {
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/domains/{id}/roles",
+    operation_id = "governance_list_roles",
     tag = "admin",
     params(("id" = Uuid, Path)),
     responses(
@@ -208,6 +209,7 @@ async fn list_roles(
 #[utoipa::path(
     put,
     path = "/api/v1/admin/governance/domains/{id}/roles",
+    operation_id = "governance_put_role",
     tag = "admin",
     params(("id" = Uuid, Path)),
     request_body = GovernanceRole,
@@ -267,6 +269,7 @@ async fn put_role(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/governance/domains/{id}/roles",
+    operation_id = "governance_delete_role",
     tag = "admin",
     params(("id" = Uuid, Path), RoleQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
@@ -480,6 +483,7 @@ async fn readable_policy(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/policies",
+    operation_id = "governance_list_policies",
     tag = "admin",
     params(PolicyListQuery),
     responses(
@@ -525,6 +529,7 @@ async fn list_policies(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/governance/policies",
+    operation_id = "governance_create_policy",
     tag = "admin",
     request_body = CreatePolicyBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Create)])))),
@@ -598,6 +603,7 @@ pub async fn create(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/policies/{id}",
+    operation_id = "governance_get_policy",
     tag = "admin",
     params(("id" = Uuid, Path)),
     responses(
@@ -622,6 +628,7 @@ async fn get_policy(
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/governance/policies/{id}",
+    operation_id = "governance_update_policy",
     tag = "admin",
     params(("id" = Uuid, Path)),
     request_body = UpdatePolicyBody,
@@ -706,6 +713,7 @@ async fn update_policy(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/governance/policies/{id}",
+    operation_id = "governance_delete_policy",
     tag = "admin",
     params(("id" = Uuid, Path), RowVersionQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
@@ -822,6 +830,7 @@ pub fn exception_plan(approvers: &[Uuid]) -> attome_approval::ApprovalPlan {
 #[utoipa::path(
     post,
     path = "/api/v1/admin/governance/policies/{id}/exceptions",
+    operation_id = "governance_request_exception",
     tag = "admin",
     params(("id" = Uuid, Path)),
     request_body = ExceptionBody,
@@ -940,6 +949,7 @@ async fn load_exception(state: &EngineState, id: Uuid) -> Result<PolicyException
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/policies/{id}/exceptions",
+    operation_id = "governance_list_exceptions",
     tag = "admin",
     params(("id" = Uuid, Path)),
     responses(
@@ -1150,6 +1160,7 @@ pub async fn entity_definition_hash(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/governance/certifications",
+    operation_id = "governance_certify",
     tag = "admin",
     request_body = CertifyBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
@@ -1220,6 +1231,7 @@ async fn certify(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/governance/certifications",
+    operation_id = "governance_get_certification",
     tag = "admin",
     params(CertificationQuery),
     responses(
