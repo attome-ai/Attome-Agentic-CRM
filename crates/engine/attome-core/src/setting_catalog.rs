@@ -737,7 +737,7 @@ fn personal_settings() -> Vec<SettingDescriptor> {
         ),
         SettingDescriptor::new(
             "notification.quiet_hours",
-            "Your quiet hours, in your own time zone, as {\"start\": \"22:00\", \"end\": \"07:00\"}: low and normal priority notifications skip push and SMS then (in-app and email still arrive). Empty: no quiet hours (M15-T1).",
+            "Your quiet hours, in your own time zone, as {\"start\": \"22:00\", \"end\": \"07:00\"}: low and normal priority notifications sent then wait until they end; high and urgent ones arrive at once. Empty: no quiet hours (M15-T1/T2).",
             || {
                 json!({
                     "type": "object",
@@ -751,6 +751,14 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             PERSONAL,
             false,
             || json!({}),
+        ),
+        SettingDescriptor::new(
+            "notification.digest",
+            "How low-priority notifications reach you: off (each on its own), hourly or daily (one message at 08:00 your time listing them all) (M15-T2).",
+            || json!({"type": "string", "enum": ["off", "hourly", "daily"]}),
+            PERSONAL,
+            false,
+            || json!("off"),
         ),
         SettingDescriptor::new(
             "mail_capture.enabled",

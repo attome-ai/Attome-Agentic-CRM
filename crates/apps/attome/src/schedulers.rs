@@ -113,6 +113,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // M15-T2: held notifications (quiet hours, digests), every five minutes.
+    crate::jobs::spawn_notification_queue_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(300),
+    );
     // M5-T4: dead-letter retention and group alerts, hourly.
     crate::jobs::spawn_dead_letter_sweep_scheduler(
         db.clone(),

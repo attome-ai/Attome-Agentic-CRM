@@ -279,6 +279,20 @@ pub(crate) async fn template_channels(
     }))
 }
 
+/// M15-T2: the template's subject (else its text) for (`key`, `locale`)
+/// with `vars` merged, for a digest line; `None` when no such template.
+pub(crate) async fn render_summary(
+    conn: &mut sqlx::PgConnection,
+    key: &str,
+    locale: &str,
+    vars: &HashMap<String, String>,
+) -> Result<Option<String>, AppError> {
+    Ok(load_template(conn, key, locale)
+        .await?
+        .and_then(|tpl| tpl.subject.or(tpl.body_text))
+        .map(|text| apply_variables(&text, vars)))
+}
+
 /// Looks up the template row for (template_key, locale), falling back to the
 /// "en" locale if the requested one has no row -- bilingual support (F164)
 /// degrades to the base locale rather than failing the whole dispatch.

@@ -2820,6 +2820,7 @@ const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
 /// Z1-T11: integration OAuth tokens renewed before expiry.
 const DEDUP_KEY_OAUTH_REFRESH: &str = "integration-oauth-refresh";
 const DEDUP_KEY_DEAD_LETTER_SWEEP: &str = "dead-letter-sweep";
+const DEDUP_KEY_NOTIFICATION_QUEUE: &str = "notification-queue-sweep";
 /// D15-T2: the personal mail capture (a registered job type).
 const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
 /// J2-T2: the shared mailbox routing (a registered job type).
@@ -2920,6 +2921,11 @@ pub const SECURITY_BULK_ACCESS: attome_jobs::JobType = attome_jobs::JobType {
 /// `attome_api::model_admin::option_merge::MergePayload`).
 pub const OPTION_SET_MERGE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::model_admin::option_merge::MERGE_JOB, 1);
+
+/// M15-T2: every five minutes, held notifications that are due (quiet hours
+/// over, digest slot reached) are sent (no payload).
+pub const NOTIFICATION_QUEUE_SWEEP: attome_jobs::JobType =
+    attome_jobs::JobType::new("notification_queue_sweep", 1);
 
 /// M12-T1: a schedule slot's flow runs over a view's records, as a batch
 /// (payload `attome_workflow::schedule_trigger::RecordSchedulePayload`).
@@ -3171,6 +3177,20 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            NOTIFICATION_QUEUE_SWEEP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let counts = attome_notification::notify::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if counts.quiet_sent + counts.digests_sent > 0 {
+                    tracing::info!(?counts, "notification queue: sent held notifications");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -4284,6 +4304,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == CALENDAR_SYNC.name => DEDUP_KEY_CALENDAR_SYNC,
         EngineJob::Registered(job) if job.name == OAUTH_REFRESH.name => DEDUP_KEY_OAUTH_REFRESH,
+        EngineJob::Registered(job) if job.name == NOTIFICATION_QUEUE_SWEEP.name => {
+            DEDUP_KEY_NOTIFICATION_QUEUE
+        }
         EngineJob::Registered(job) if job.name == DEAD_LETTER_SWEEP.name => {
             DEDUP_KEY_DEAD_LETTER_SWEEP
         }
@@ -4755,6 +4778,25 @@ pub fn spawn_secret_age_reminder_scheduler(db: DbPool, interval: std::time::Dura
         job,
         DEDUP_KEY_SECRET_AGE_REMINDER,
         "secret age reminder",
+    );
+}
+
+/// M15-T2: every five minutes, the held-notification sweep.
+pub fn spawn_notification_queue_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(NOTIFICATION_QUEUE_SWEEP.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "notification queue sweep: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_NOTIFICATION_QUEUE,
+        "notification queue sweep",
     );
 }
 

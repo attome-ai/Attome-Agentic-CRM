@@ -184,12 +184,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
-- One notify API (M15-T1): `attome_notification::notify::notify(state, Notify {recipient, kind, data,
-  priority, route})` sends the template `kind` with `data` as its variables through the dispatch
-  engine (mutes and channel outcomes as before). New personal setting `notification.quiet_hours`
-  (`{"start": "22:00", "end": "07:00"}`, the person's own time zone): low and normal priority skip
-  push and SMS then. A high or urgent push without email falls back to email when unread after
-  5 minutes.
+- One notify API with digests and quiet hours (M15-T1, M15-T2):
+  `attome_notification::notify::notify(state, Notify {recipient, kind, data, priority, route})` sends
+  the template `kind` with `data` as its variables through the dispatch engine (mutes and channel
+  outcomes as before). Personal settings `notification.quiet_hours` (`{"start": "22:00", "end":
+  "07:00"}` in the person's own time zone): low and normal priority notifications sent then wait
+  until they end; and `notification.digest` (`off`, `hourly`, `daily` at 08:00): low-priority ones
+  are collected into one in-app and email message. Held notifications live in
+  `notification_queue_item` (migration 0207) until the five-minute `notification_queue_sweep` sends
+  them. A high or urgent push without email falls back to email when unread after 5 minutes.
 - Scheduled flows over records (M12-T1): a schedule trigger with `for_each_record_of: "<view id>"`
   starts, per slot, a batch job (`workflow_record_schedule`) that pages the view 100 ids at a time
   (read as the flow's publisher) and starts one run per record, with the record as the run's
