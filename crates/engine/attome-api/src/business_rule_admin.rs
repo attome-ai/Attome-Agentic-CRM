@@ -1027,6 +1027,12 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/validation/stats",
             get(crate::validation_stats::validation_stats),
         )
+        // O9-T1: rule-change and flow-change scenarios.
+        .route(
+            "/api/v1/scenarios/{id}/simulations",
+            post(crate::validation_simulation::run_scenario)
+                .get(crate::validation_simulation::list_scenario),
+        )
 }
 
 /// This file's slice of the workspace OpenAPI document.
@@ -1043,6 +1049,8 @@ pub fn routes() -> Router<EngineState> {
     explain_rules,
     crate::validation_simulation::simulate_rule,
     crate::validation_simulation::cleanup_queue,
+    crate::validation_simulation::run_scenario,
+    crate::validation_simulation::list_scenario,
     crate::validation_stats::validation_stats
 ))]
 struct ApiDocFragment;

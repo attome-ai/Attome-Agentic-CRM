@@ -1164,7 +1164,21 @@ async fn replay_version(
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
     Json(body): Json<ReplayRequest>,
 ) -> Result<Json<ReplayReport>, AppError> {
-    let last = body.last.unwrap_or(10);
+    Ok(Json(
+        replay(&state, definition_id, version_id, body.last).await?,
+    ))
+}
+
+/// M4-T3: replays `version_id` of the flow over its `last` (default 10)
+/// latest finished runs and reports every node whose outcome differs.
+/// Nothing is written. O9-T1 stores the report as a flow-change scenario.
+pub async fn replay(
+    state: &EngineState,
+    definition_id: Uuid,
+    version_id: Uuid,
+    last: Option<i64>,
+) -> Result<ReplayReport, AppError> {
+    let last = last.unwrap_or(10);
     if !(1..=MAX_REPLAY_RUNS).contains(&last) {
         return Err(AppError::Validation(format!(
             "last must be between 1 and {MAX_REPLAY_RUNS}"
@@ -1219,10 +1233,10 @@ async fn replay_version(
             .and_then(|id| run.node_data.get(id))
             .cloned()
             .unwrap_or(run.context);
-        let module_steps = dry_run_module_steps(&state, &graph, &payload).await;
+        let module_steps = dry_run_module_steps(state, &graph, &payload).await;
         let decisions = approval_decisions_of(&run.node_data);
         let (draft_status, trace) =
-            run_simulation_with(&state, &graph, payload, &decisions, &module_steps);
+            run_simulation_with(state, &graph, payload, &decisions, &module_steps);
         let differences = compare_runs(&real, &trace);
         runs.push(ReplayedRun {
             instance_id: run.id,
@@ -1233,7 +1247,7 @@ async fn replay_version(
         });
     }
     let differing = runs.iter().filter(|r| !r.differences.is_empty()).count() as i64;
-    Ok(Json(ReplayReport { runs, differing }))
+    Ok(ReplayReport { runs, differing })
 }
 
 pub fn routes() -> Router<EngineState> {

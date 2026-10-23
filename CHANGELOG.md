@@ -188,6 +188,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Rule-change and flow-change scenarios (O9-T1): `POST /api/v1/scenarios/{id}/simulations` runs the
+  A3 business-rule preview (`rule_change`: the stored records the rule would refuse) or the M4 replay
+  of a flow version (`flow_change`: the past runs that would go differently) and stores the result
+  against the scenario (migration 0240); `GET` on the same path lists them, newest first, with how
+  many records or runs each affects.
 - Golden-record changes for subscribers (L1-T7): a master-data rebuild that changes a golden record
   writes a `master.golden_changed` change event naming the changed attributes, in the rebuild's own
   transaction. An event subscription can name its `external_system` (migration 0239), and its webhook

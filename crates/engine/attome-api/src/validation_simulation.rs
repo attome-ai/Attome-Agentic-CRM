@@ -14,6 +14,13 @@
 //! (`GET /api/v1/admin/business-rules/{id}/cleanup`). The scan is a durable
 //! job, never the publish request: a full scan of a large table does not
 //! belong on the request thread.
+//!
+//! O9-T1: a scenario can hold rule-change and flow-change runs.
+//! `POST /api/v1/scenarios/{id}/simulations` runs this preview for a rule
+//! (`rule_change`: the records it would refuse) or the M4 replay of a flow
+//! version (`flow_change`: the past runs that would go differently) and
+//! stores the result against the scenario (`scenario_simulation`, migration
+//! 0240); `GET` on the same path lists them, newest first, to compare.
 
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized};
@@ -21,9 +28,10 @@ use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json,
     extract::{Path, Query, State},
+    http::StatusCode,
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -338,9 +346,268 @@ pub(crate) async fn cleanup_queue(
     }))
 }
 
+// ── O9-T1: rule-change and flow-change scenarios ─────────────────────────
+
+/// What a scenario simulation runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScenarioKind {
+    RuleChange,
+    FlowChange,
+}
+
+impl ScenarioKind {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "rule_change" => Some(Self::RuleChange),
+            "flow_change" => Some(Self::FlowChange),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::RuleChange => "rule_change",
+            Self::FlowChange => "flow_change",
+        }
+    }
+}
+
+/// A rule-change or flow-change run for a scenario.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ScenarioSimulationBody {
+    /// `rule_change` or `flow_change`.
+    pub kind: String,
+    /// The business rule (`rule_change`) or the flow definition
+    /// (`flow_change`).
+    pub subject_id: Uuid,
+    /// `flow_change`: the version to replay.
+    pub version_id: Option<Uuid>,
+    /// `flow_change`: how many of the flow's latest finished runs, 1 to 50
+    /// (default 10).
+    pub last: Option<i64>,
+}
+
+/// One stored scenario simulation.
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct ScenarioSimulation {
+    pub id: Uuid,
+    pub scenario_id: Uuid,
+    /// `rule_change` or `flow_change`.
+    pub kind: String,
+    pub subject_id: Uuid,
+    pub subject_version_id: Option<Uuid>,
+    /// Records the rule would refuse, or past runs that would go
+    /// differently.
+    pub affected: i64,
+    /// The first affected records (rule) or the differing runs (flow).
+    pub affected_ids: Vec<Uuid>,
+    /// The full simulation result.
+    #[schema(value_type = Object)]
+    pub result: Value,
+    pub created_by: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+/// What a rule simulation affects: the refused records. Pure.
+pub fn rule_affected(simulation: &Simulation) -> (i64, Vec<Uuid>) {
+    (
+        i64::try_from(simulation.failing).unwrap_or(i64::MAX),
+        simulation.failing_ids.clone(),
+    )
+}
+
+/// What a flow replay affects: the runs that would go differently. Pure.
+pub fn flow_affected(report: &attome_workflow::simulate::ReplayReport) -> (i64, Vec<Uuid>) {
+    let ids: Vec<Uuid> = report
+        .runs
+        .iter()
+        .filter(|r| !r.differences.is_empty())
+        .map(|r| r.instance_id)
+        .collect();
+    (report.differing, ids)
+}
+
+async fn require_scenario(state: &EngineState, id: Uuid) -> Result<(), AppError> {
+    if state.entities.load().get("dashboard_scenario").is_none() {
+        return Err(AppError::NotFound);
+    }
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM dashboard_scenario WHERE id = $1 AND is_active)",
+    )
+    .bind(id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if exists {
+        Ok(())
+    } else {
+        Err(AppError::NotFound)
+    }
+}
+
+/// Runs a rule-change or flow-change simulation and stores it against the
+/// scenario.
+pub async fn run_scenario_simulation(
+    state: &EngineState,
+    actor: Uuid,
+    scenario: Uuid,
+    body: &ScenarioSimulationBody,
+) -> Result<ScenarioSimulation, AppError> {
+    let kind = ScenarioKind::parse(body.kind.trim())
+        .ok_or_else(|| AppError::Validation("kind is rule_change or flow_change".into()))?;
+    require_scenario(state, scenario).await?;
+    let (affected, affected_ids, result, version) = match kind {
+        ScenarioKind::RuleChange => {
+            let simulation = simulate(state, body.subject_id).await?;
+            let (affected, ids) = rule_affected(&simulation);
+            let result = serde_json::to_value(&simulation).map_err(AppError::internal)?;
+            (affected, ids, result, None)
+        }
+        ScenarioKind::FlowChange => {
+            let version = body.version_id.ok_or_else(|| {
+                AppError::Validation("a flow_change names the version_id to replay".into())
+            })?;
+            let report =
+                attome_workflow::simulate::replay(state, body.subject_id, version, body.last)
+                    .await?;
+            let (affected, ids) = flow_affected(&report);
+            let result = serde_json::to_value(&report).map_err(AppError::internal)?;
+            (affected, ids, result, Some(version))
+        }
+    };
+    sqlx::query_as(
+        "INSERT INTO scenario_simulation \
+             (scenario_id, kind, subject_id, subject_version_id, affected, affected_ids, \
+              result, created_by) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+         RETURNING id, scenario_id, kind, subject_id, subject_version_id, affected, \
+                   affected_ids, result, created_by, created_at",
+    )
+    .bind(scenario)
+    .bind(kind.as_str())
+    .bind(body.subject_id)
+    .bind(version)
+    .bind(affected)
+    .bind(&affected_ids)
+    .bind(&result)
+    .bind(actor)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/scenarios/{id}/simulations",
+    operation_id = "scenario_simulation_run",
+    tag = "dashboard",
+    params(("id" = Uuid, Path, description = "The scenario")),
+    request_body = ScenarioSimulationBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "The simulation, stored against the scenario", body = ScenarioSimulation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such scenario, rule, flow or version", body = ErrorResponse),
+        (status = 422, description = "Unknown kind, a flow change without its version, or last out of range", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Runs a rule-change or flow-change simulation for a scenario.
+///
+/// `rule_change` previews a business rule over the stored records (the
+/// records it would refuse); `flow_change` replays a flow version over the
+/// flow's latest finished runs (the runs that would go differently). The
+/// result is stored against the scenario; nothing else is written.
+pub(crate) async fn run_scenario(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ScenarioSimulationBody>,
+) -> Result<(StatusCode, Json<ScenarioSimulation>), AppError> {
+    let stored = run_scenario_simulation(&state, ctx.user_id, id, &body).await?;
+    Ok((StatusCode::CREATED, Json(stored)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/scenarios/{id}/simulations",
+    operation_id = "scenario_simulation_list",
+    tag = "dashboard",
+    params(("id" = Uuid, Path, description = "The scenario"), OnePageQuery),
+    responses(
+        (status = 200, description = "The scenario's simulations, newest first", body = PaginatedResponse<ScenarioSimulation>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+/// Lists a scenario's rule-change and flow-change simulations.
+///
+/// Newest first, each with how many records or runs it affects, so runs of
+/// the same rule or flow can be compared.
+pub(crate) async fn list_scenario(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<ScenarioSimulation>>, AppError> {
+    let window = page.window();
+    let total: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM scenario_simulation WHERE scenario_id = $1")
+            .bind(id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let items: Vec<ScenarioSimulation> = sqlx::query_as(
+        "SELECT id, scenario_id, kind, subject_id, subject_version_id, affected, affected_ids, \
+                result, created_by, created_at \
+           FROM scenario_simulation WHERE scenario_id = $1 \
+          ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
+    )
+    .bind(id)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse {
+        items,
+        total,
+        page: window.page,
+        page_size: window.page_size,
+        warnings: Vec::new(),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scenario_rule_change_affects_the_refused_records() {
+        let simulation = Simulation {
+            rule_id: Uuid::nil(),
+            checked: 10,
+            failing: 2,
+            unknown: 0,
+            failing_ids: vec![Uuid::from_u128(1), Uuid::from_u128(2)],
+            truncated: false,
+        };
+        assert_eq!(
+            rule_affected(&simulation),
+            (2, vec![Uuid::from_u128(1), Uuid::from_u128(2)])
+        );
+        assert_eq!(
+            ScenarioKind::parse("rule_change"),
+            Some(ScenarioKind::RuleChange)
+        );
+        assert_eq!(
+            ScenarioKind::parse("flow_change").map(ScenarioKind::as_str),
+            Some("flow_change")
+        );
+        assert_eq!(ScenarioKind::parse("price_change"), None);
+    }
 
     #[test]
     fn validation_simulation_counts_three_failing_of_a_hundred() {
