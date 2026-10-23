@@ -85879,6 +85879,67 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/security/csp-report": {
+      "post": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Report a Content-Security-Policy violation",
+        "description": "Q21-T2: browsers send CSP violation reports here, in the legacy\n`application/csp-report` format or the Reporting API's\n`application/reports+json`. Public and rate-limited; grouped by\ndirective and blocked source; nothing is stored.",
+        "operationId": "report_csp_violation",
+        "requestBody": {
+          "description": "A browser's CSP violation report",
+          "content": {
+            "application/csp-report": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Received"
+          },
+          "413": {
+            "description": "Larger than 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many reports from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "browser reports: CSP violations a page saw, counted and logged, nothing stored",
+          "reason": "telemetry",
+          "via": null
+        },
+        "x-body-limit": 16384,
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "consent_capture",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/service-catalog": {
       "get": {
         "tags": [
@@ -174915,6 +174976,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -174967,6 +175029,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

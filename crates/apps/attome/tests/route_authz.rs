@@ -192,6 +192,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "Q20-T3: a signed proof-of-work challenge for a sign-in or sign-up that has no session yet; it reads no data and stores nothing. Bypass-listed.",
     ),
     (
+        "POST",
+        "/api/v1/security/csp-report",
+        "Q21-T2 CSP violation reports: browsers send them with no credential. It reads only the report body (16 KiB at most), counts it by directive and logs the blocked source's scheme and host; nothing is stored and nothing is returned. Bypass-listed by an exact match and rate-limited per address.",
+    ),
+    (
         "GET",
         "/api/v1/shared-files/{token}",
         "K1-T1 external file share: the 32-byte random token, stored only as its SHA-256, is the credential for one stored file. Bypass-listed and rate-limited (portal_status); expiry, revocation, the download limit and a required password are checked inside the handler, and each download is audited.",

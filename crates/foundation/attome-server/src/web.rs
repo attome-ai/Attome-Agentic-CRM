@@ -86,9 +86,52 @@ fn content_type(path: &Path) -> &'static str {
     }
 }
 
+/// Q21-T2: the nonce one page's inline scripts carry. [`serve_web`] puts it
+/// on the `index.html` response; the security headers layer reads it and
+/// names it in that response's `script-src`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CspNonce(pub String);
+
+/// A fresh 128-bit nonce, base64.
+fn new_nonce() -> String {
+    use base64::Engine as _;
+    base64::engine::general_purpose::STANDARD.encode(rand::random::<[u8; 16]>())
+}
+
+/// `html` with `nonce` on Angular's root element (`ngCspNonce`, which Angular
+/// puts on the styles and scripts it adds) and on every `<script>` tag that
+/// has none.
+fn with_nonce(html: &str, nonce: &str) -> String {
+    let html = html.replacen("<app-root", &format!("<app-root ngCspNonce=\"{nonce}\""), 1);
+    let mut out = String::with_capacity(html.len() + 64);
+    let mut rest = html.as_str();
+    while let Some(at) = rest.find("<script") {
+        let (before, tag) = rest.split_at(at);
+        out.push_str(before);
+        let end = tag.find('>').unwrap_or(tag.len());
+        let head = &tag[..end];
+        if head.contains("nonce=") {
+            out.push_str(head);
+        } else {
+            out.push_str("<script");
+            out.push_str(&format!(" nonce=\"{nonce}\""));
+            out.push_str(&head["<script".len()..]);
+        }
+        rest = &tag[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 async fn file_response(path: &Path, method: &Method) -> Option<Response> {
-    let bytes = tokio::fs::read(path).await.ok()?;
+    let mut bytes = tokio::fs::read(path).await.ok()?;
     let is_index = path.file_name().is_some_and(|name| name == "index.html");
+    let nonce = is_index.then(new_nonce);
+    if let Some(nonce) = &nonce
+        && let Ok(html) = std::str::from_utf8(&bytes)
+    {
+        bytes = with_nonce(html, nonce).into_bytes();
+    }
     let cache = if is_index {
         "no-cache"
     } else {
@@ -99,20 +142,22 @@ async fn file_response(path: &Path, method: &Method) -> Option<Response> {
     } else {
         Body::from(bytes)
     };
-    Some(
-        (
-            StatusCode::OK,
-            [
-                (
-                    header::CONTENT_TYPE,
-                    HeaderValue::from_static(content_type(path)),
-                ),
-                (header::CACHE_CONTROL, HeaderValue::from_static(cache)),
-            ],
-            body,
-        )
-            .into_response(),
+    let mut response = (
+        StatusCode::OK,
+        [
+            (
+                header::CONTENT_TYPE,
+                HeaderValue::from_static(content_type(path)),
+            ),
+            (header::CACHE_CONTROL, HeaderValue::from_static(cache)),
+        ],
+        body,
     )
+        .into_response();
+    if let Some(nonce) = nonce {
+        response.extensions_mut().insert(CspNonce(nonce));
+    }
+    Some(response)
 }
 
 /// The middleware: the web app for its own paths, the API for the rest.
@@ -148,6 +193,27 @@ pub async fn serve_web(State(root): State<WebRoot>, request: Request, next: Next
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Q21-T2: a page gets a fresh nonce on its root element and on each
+    /// script without one.
+    #[test]
+    fn csp_nonce_is_put_on_the_page() {
+        let html = r#"<html><head><script>boot()</script><script nonce="x" src="a.js"></script></head><body><app-root></app-root><script src="main.js"></script></body></html>"#;
+        let page = with_nonce(html, "N1");
+        assert!(page.contains(r#"<app-root ngCspNonce="N1">"#), "{page}");
+        assert!(
+            page.contains(r#"<script nonce="N1">boot()</script>"#),
+            "{page}"
+        );
+        assert!(page.contains(r#"<script nonce="x" src="a.js">"#), "{page}");
+        assert!(
+            page.contains(r#"<script nonce="N1" src="main.js">"#),
+            "{page}"
+        );
+        let (a, b) = (new_nonce(), new_nonce());
+        assert_ne!(a, b);
+        assert_eq!(a.len(), 24, "16 bytes, base64");
+    }
 
     #[test]
     fn server_paths_are_left_to_the_api() {

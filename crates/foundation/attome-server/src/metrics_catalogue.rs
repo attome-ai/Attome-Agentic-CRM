@@ -416,6 +416,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمر أقدم حدث لم يقرأه كل مستهلك لموجز التغييرات.",
     },
     MetricInfo {
+        name: "csp_violations_total",
+        kind: "counter",
+        unit: "reports",
+        en: "Content-Security-Policy violations browsers reported, by directive.",
+        ar: "مخالفات سياسة أمان المحتوى التي أبلغت عنها المتصفحات، حسب التوجيه.",
+    },
+    MetricInfo {
         name: "db_bloat_dead_tuples",
         kind: "gauge",
         unit: "rows",

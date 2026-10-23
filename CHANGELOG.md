@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Content-Security-Policy nonces and reports (Q21-T2): each web app page is served with a fresh
+  128-bit nonce, on Angular's `ngCspNonce` and the page's scripts, and its `script-src` names it;
+  every page policy adds `object-src 'none'` and reports violations to the new public, rate-limited
+  `POST /api/v1/security/csp-report` (counted as `csp_violations_total{directive}`, nothing
+  stored). `style-src` still allows inline styles while Angular needs them.
 - Keyset cursors are signed (Z14-T5). **Breaking:** every `next_cursor` a list returns is now an opaque
   signed value; send it back verbatim. A cursor the deployment did not issue, a tampered one or a bare
   row id (what the entity list, AI evidence and others sent before) is `400 invalid_cursor`; start

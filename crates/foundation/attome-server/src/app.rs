@@ -42,7 +42,10 @@ where
     S: Clone + Send + Sync + 'static,
     AppState: axum::extract::FromRef<S>,
 {
-    Router::new().route("/version", get(health::version))
+    Router::new()
+        .route("/version", get(health::version))
+        // Q21-T2: CSP violation reports (public, bypass-listed).
+        .merge(crate::csp_report::routes())
 }
 
 /// Orchestrator probes (`GET /health` and `GET /health/ready`) — no middleware, and NOT part of

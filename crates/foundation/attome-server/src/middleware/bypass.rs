@@ -9,6 +9,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/branding/public",
     // B13-T4: published logos, favicons and fonts, served inert; no user data.
     "/api/v1/branding/asset",
+    // Q21-T2: browsers report CSP violations with no credential; counted
+    // and logged, nothing stored.
+    "/api/v1/security/csp-report",
     // Z6-T1: local-disk storage links, the stand-in for presigned bucket
     // URLs; the HMAC-signed link (method, key, expiry) is the credential.
     "/api/v1/storage/local",

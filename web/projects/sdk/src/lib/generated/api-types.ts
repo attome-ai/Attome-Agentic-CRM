@@ -16111,6 +16111,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/security/csp-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a Content-Security-Policy violation
+         * @description Q21-T2: browsers send CSP violation reports here, in the legacy
+         *     `application/csp-report` format or the Reporting API's
+         *     `application/reports+json`. Public and rate-limited; grouped by
+         *     directive and blocked source; nothing is stored.
+         */
+        post: operations["report_csp_violation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service-catalog": {
         parameters: {
             query?: never;
@@ -98491,6 +98514,47 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    report_csp_violation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A browser's CSP violation report */
+        requestBody: {
+            content: {
+                "application/csp-report": string;
+            };
+        };
+        responses: {
+            /** @description Received */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Larger than 16 KiB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many reports from this address */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -32,6 +32,7 @@ metrics.workspace                     = true
 metrics-exporter-prometheus.workspace = true
 opentelemetry.workspace               = true
 reqwest.workspace                     = true
+rand.workspace                        = true
 serde.workspace                       = true
 serde_json.workspace                  = true
 sha2.workspace                        = true
@@ -43,12 +44,12 @@ tower-http.workspace                  = true
 tracing.workspace                     = true
 tracing-opentelemetry.workspace       = true
 tracing-subscriber.workspace          = true
+url.workspace                         = true
 utoipa.workspace                      = true
 uuid.workspace                        = true
 
 [dev-dependencies]
 attome-testkit = { workspace = true, features = ["app-config"] }
-rand.workspace           = true
 
 [lints]
 workspace = true

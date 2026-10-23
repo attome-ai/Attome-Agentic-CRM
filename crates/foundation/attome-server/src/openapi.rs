@@ -152,6 +152,7 @@ pub fn tag_module(mut doc: utoipa::openapi::OpenApi, module: &str) -> utoipa::op
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = RootDoc::openapi();
     doc.merge(crate::health::openapi_fragment());
+    doc.merge(crate::csp_report::openapi_fragment());
     doc
 }
 

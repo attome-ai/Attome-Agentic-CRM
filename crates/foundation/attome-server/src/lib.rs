@@ -5,6 +5,8 @@ pub mod app;
 pub mod authz;
 pub mod builder;
 pub mod capability;
+/// Q21-T2: the CSP violation report endpoint.
+mod csp_report;
 /// AB7-T8: the deploy and restart history.
 pub mod deploy_event;
 pub mod health;

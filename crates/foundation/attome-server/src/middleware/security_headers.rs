@@ -5,12 +5,18 @@
 //! `AppConfig.security.hsts_max_age_secs`/`hsts_include_subdomains`),
 //! applied to every response this process serves.
 //!
-//! The plan's design keeps this policy in lockstep with the Angular SPA's
-//! own page-level CSP (`deploy/frontend/nginx.conf`, a separate nginx
-//! process that serves the built static files — this Rust process never
-//! renders HTML) rather than treating the two as independent surfaces, so
-//! the two policy strings should be changed together; see that file's
-//! header comment.
+//! This process serves the web app itself (`crate::web`), so this is the
+//! page policy too; there is no separate web server's policy to keep in
+//! step.
+//!
+//! **Q21-T2: nonces and reports.** Each `index.html` response carries a fresh
+//! 128-bit nonce (`crate::web::CspNonce`), on Angular's `ngCspNonce` and on
+//! the page's own `<script>` tags, and that response's `script-src` names it.
+//! Every page policy sends violation reports to
+//! `POST /api/v1/security/csp-report` (`report-uri`, and `report-to csp`
+//! through `Reporting-Endpoints`). `style-src` keeps `'unsafe-inline'` while
+//! Angular's component styles need it;
+//! `style_src_still_allows_inline_while_angular_needs_it` tracks it.
 //!
 //! **Correction versus the plan's literal §4(d) policy string.** The plan
 //! states "No third-party host appears in any directive — the whole point
@@ -36,7 +42,21 @@ use axum::{extract::Request, http::HeaderValue, middleware::Next, response::Resp
 pub(crate) const CSP_POLICY: &str = "default-src 'self'; script-src 'self' https://accounts.google.com; \
      style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; \
      connect-src 'self'; frame-src https://accounts.google.com; \
-     frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+     frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; \
+     report-uri /api/v1/security/csp-report; report-to csp";
+
+/// Q21-T2: where browsers send CSP violation reports.
+pub const CSP_REPORT_PATH: &str = "/api/v1/security/csp-report";
+
+/// Q21-T2: the page policy for a response whose inline scripts carry
+/// `nonce`.
+pub(crate) fn policy_with_nonce(nonce: &str) -> String {
+    CSP_POLICY.replacen(
+        "script-src 'self'",
+        &format!("script-src 'self' 'nonce-{nonce}'"),
+        1,
+    )
+}
 
 /// Q21-T3: browser features a page may use. The app is one page for every
 /// route, so the features its own screens need (camera for scanning, B15;
@@ -158,10 +178,21 @@ pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: 
     let surface = surface_for(req.uri().path());
     let embeddable = is_cross_origin_resource(req.uri().path());
     let mut response = next.run(req).await;
+    let nonce = response
+        .extensions()
+        .get::<crate::web::CspNonce>()
+        .map(|n| n.0.clone());
     let headers = response.headers_mut();
     match surface {
         Surface::App | Surface::Portal => {
-            headers.insert(values.csp_header_name, values.csp);
+            let csp = nonce
+                .and_then(|n| HeaderValue::from_str(&policy_with_nonce(&n)).ok())
+                .unwrap_or(values.csp);
+            headers.insert(values.csp_header_name, csp);
+            headers.insert(
+                "reporting-endpoints",
+                HeaderValue::from_static("csp=\"/api/v1/security/csp-report\""),
+            );
             headers.insert(
                 "permissions-policy",
                 HeaderValue::from_static(PAGE_PERMISSIONS_POLICY),
@@ -200,6 +231,73 @@ mod tests {
     use super::*;
     use axum::{Router, http::StatusCode, routing::get};
     use tower::ServiceExt;
+
+    /// Q21-T2: a page served with a nonce gets it in its `script-src`, and
+    /// every page policy reports violations.
+    #[tokio::test]
+    async fn csp_header_carries_the_page_nonce() {
+        let app = Router::new()
+            .route(
+                "/",
+                get(|| async {
+                    let mut response = StatusCode::OK.into_response();
+                    response
+                        .extensions_mut()
+                        .insert(crate::web::CspNonce("abc123+/=".into()));
+                    response
+                }),
+            )
+            .route("/plain", get(|| async { StatusCode::OK }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                security_headers(values(true), req, next)
+            }));
+        use axum::response::IntoResponse as _;
+        let response = app.clone().oneshot(get_request()).await.unwrap();
+        let csp = response.headers()["content-security-policy"]
+            .to_str()
+            .unwrap();
+        assert!(csp.contains("script-src 'self' 'nonce-abc123+/='"), "{csp}");
+        assert!(csp.contains("object-src 'none'"), "{csp}");
+        assert!(
+            csp.contains("report-uri /api/v1/security/csp-report"),
+            "{csp}"
+        );
+        assert_eq!(
+            response.headers()["reporting-endpoints"],
+            "csp=\"/api/v1/security/csp-report\""
+        );
+
+        let plain = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/plain")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let csp = plain.headers()["content-security-policy"].to_str().unwrap();
+        assert!(!csp.contains("nonce-"), "no nonce without a page: {csp}");
+    }
+
+    /// Q21-T2: `'unsafe-inline'` stays in `style-src` only while Angular's
+    /// component styles need it. When the app moves to nonce-only styles,
+    /// remove it from `CSP_POLICY` and invert this test.
+    #[test]
+    fn style_src_still_allows_inline_while_angular_needs_it() {
+        let style = CSP_POLICY
+            .split(';')
+            .map(str::trim)
+            .find(|d| d.starts_with("style-src"))
+            .expect("a style-src directive");
+        assert_eq!(style, "style-src 'self' 'unsafe-inline'");
+        let script = CSP_POLICY
+            .split(';')
+            .map(str::trim)
+            .find(|d| d.starts_with("script-src"))
+            .expect("a script-src directive");
+        assert!(!script.contains("unsafe-inline"), "{script}");
+    }
 
     fn app_with(values: SecurityHeaderValues) -> Router {
         Router::new()
