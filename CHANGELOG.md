@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data profile patterns (L6-T3). Each text field also reports its ten most common value shapes
+  with their share (digits `9`, Latin `A`, Arabic `ع`), the share matching its declared format
+  (`options.pattern`), and Arabic-aware counts: Arabic, Latin or mixed script; Eastern or Western
+  digits; values with diacritics; Hijri or Gregorian dates; and name parts (1 to 5 or more) for
+  name fields.
 - Agent permission test runs (AH7-T2). `attome_ai::permission_test::run` resolves an agent
   definition as a session start does and puts every generated case through the gate, executing
   nothing; entity cases also check the owner's read of the entity. A case fails when the gate

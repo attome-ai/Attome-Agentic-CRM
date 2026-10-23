@@ -9,7 +9,9 @@
 //! median, percentiles, a ten-bucket histogram and IQR outliers; date
 //! range; text length spread. The scan runs under a statement timeout.
 //! A labelled attribute (personal, special category, masked) keeps only the
-//! shapes of its values, as before (L6-T1).
+//! shapes of its values, as before (L6-T1). L6-T3: a text attribute also
+//! reports its pattern shapes, the share matching its declared format and
+//! the Arabic-aware measures (`super::patterns`).
 
 use std::collections::HashMap;
 
@@ -70,6 +72,7 @@ pub struct FieldStats {
     lengths: Vec<usize>,
     min_text: Option<String>,
     max_text: Option<String>,
+    patterns: Option<super::patterns::PatternStats>,
 }
 
 impl FieldStats {
@@ -85,7 +88,14 @@ impl FieldStats {
             lengths: Vec::new(),
             min_text: None,
             max_text: None,
+            patterns: None,
         }
+    }
+
+    /// L6-T3: also counts shapes and Arabic measures of every value.
+    pub fn with_patterns(mut self, patterns: super::patterns::PatternStats) -> Self {
+        self.patterns = Some(patterns);
+        self
     }
 
     /// Adds one row's value (its text form, `None` for SQL null).
@@ -97,6 +107,9 @@ impl FieldStats {
         };
         if value.trim().is_empty() {
             self.blanks += 1;
+        }
+        if let Some(patterns) = &mut self.patterns {
+            patterns.push(value);
         }
         if let Some(count) = self.counts.get_mut(value) {
             *count += 1;
@@ -177,6 +190,9 @@ impl FieldStats {
                 });
             }
             _ => {}
+        }
+        if let Some(patterns) = self.patterns.take() {
+            out["patterns"] = patterns.finish();
         }
         out
     }

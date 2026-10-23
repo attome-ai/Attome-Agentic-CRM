@@ -39,6 +39,9 @@ use attome_records::entity_mutation::sql_cast;
 /// L6-T2: the one sampled scan.
 mod scan;
 
+/// L6-T3: pattern shapes and Arabic-aware measures.
+mod patterns;
+
 /// How long the profile scan may run.
 const SCAN_TIMEOUT: &str = "120s";
 
@@ -353,7 +356,18 @@ async fn one_scan(
 
     let mut stats: Vec<scan::FieldStats> = attrs
         .iter()
-        .map(|a| scan::FieldStats::new(scan::FieldKind::of_cast(sql_cast(a))))
+        .map(|a| {
+            let kind = scan::FieldKind::of_cast(sql_cast(a));
+            let stats = scan::FieldStats::new(kind);
+            if kind == scan::FieldKind::Text {
+                stats.with_patterns(patterns::PatternStats::new(
+                    attome_field::format_matcher(a.options.as_ref()),
+                    a.logicalname.contains("name"),
+                ))
+            } else {
+                stats
+            }
+        })
         .collect();
     if attrs.is_empty() {
         return Ok((0, stats));

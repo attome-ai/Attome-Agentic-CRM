@@ -399,6 +399,18 @@ fn validate_multi_file(value: &Value) -> Result<(), AppError> {
     Ok(())
 }
 
+/// L6-T3: a checker of an attribute's declared format (`options.pattern`,
+/// the same anchored full match writes are held to), for profiling; `None`
+/// without a pattern or with one that does not compile.
+pub fn format_matcher(options: Option<&Value>) -> Option<Box<dyn Fn(&str) -> bool + Send + Sync>> {
+    let pattern = options?
+        .get("pattern")?
+        .as_str()
+        .filter(|p| !p.is_empty())?;
+    let re = compiled_pattern(pattern).ok()?;
+    Some(Box::new(move |s: &str| re.is_match(s)))
+}
+
 /// F012: `pattern` is always anchored full-match, even if the caller didn't
 /// write `^`/`$` themselves — a mask describes the whole field's shape, not a
 /// substring, so an unanchored `\d{3}` would wrongly accept "abc123def".
