@@ -1361,6 +1361,13 @@ async fn dispatch_platform_job(
             if added > 0 {
                 tracing::info!(added, "default team: members added to new deals");
             }
+            // D24-T4: and new leads get the account their work email's
+            // domain matches, as a suggestion.
+            let suggested =
+                attome_sales::enrichment::domain::sweep_new_leads(&attome_state).await?;
+            if suggested > 0 {
+                tracing::info!(suggested, "lead domain: accounts suggested for new leads");
+            }
         }
         EngineJob::AiFollowupRuleRun { rule_id } => {
             let found = attome_ai::followup_routes::run_rule(&attome_state, rule_id).await?;

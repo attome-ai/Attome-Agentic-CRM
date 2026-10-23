@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Lead domain match (D24-T4): a new lead with a work email at a known company's domain gets that
+  account as `suggested_account_ref` (CRM pack changeset 0004), off the change feed, without any
+  provider call; the enrichment runner skips records already known this way.
 - Connector and map flow nodes (S14-T1): a `connector` node calls an operation of an integration
   system's connector definition (a GET reads every record, any other method sends the wired body
   with the run's effect key as `Idempotency-Key`), and a `map` node reshapes JSON by a mapping

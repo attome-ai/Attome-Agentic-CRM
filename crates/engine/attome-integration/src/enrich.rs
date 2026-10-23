@@ -17,8 +17,13 @@
 //! once spent, the run stops calling that provider and reports the records
 //! it skipped. A record already holding a pending proposal for a field from
 //! the same source is not asked again for it (the proposal is updated).
+//!
+//! D24-T4: the caller passes the records already known here (a lead whose
+//! work email's domain is an existing account's,
+//! `attome_sales::enrichment::domain::known_before_provider`); they are
+//! skipped before any call is spent on them.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -171,15 +176,19 @@ pub struct RunSummary {
     pub proposals: usize,
     /// Records not asked because the provider's budget was spent.
     pub over_budget: Vec<Uuid>,
+    /// D24-T4: records not asked because they are already known here.
+    pub known: Vec<Uuid>,
 }
 
 /// Asks `source` about each of `records` (id, current values) of `entity`
-/// while its budget lasts, and stores the proposals. Writes no record.
+/// while its budget lasts, and stores the proposals. Writes no record. A
+/// record in `known` is skipped without a call.
 pub async fn run(
     db: &attome_db::DbPool,
     source: &dyn EnrichmentSource,
     entity: &str,
     records: &[(Uuid, Value)],
+    known: &HashSet<Uuid>,
     daily_limit: u32,
 ) -> Result<RunSummary, AppError> {
     let provider = source.name().to_owned();
@@ -197,6 +206,10 @@ pub async fn run(
     );
     let mut summary = RunSummary::default();
     for (id, record) in records {
+        if known.contains(id) {
+            summary.known.push(*id);
+            continue;
+        }
         if !budget.try_spend(&provider) {
             summary.over_budget.push(*id);
             continue;

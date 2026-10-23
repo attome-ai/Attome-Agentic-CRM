@@ -1,0 +1,62 @@
+{
+  "author": "packs",
+  "checksum": "sha256:4a786e98b157cc2b3d4c2e5200eec45a6058b750594b20418afbc98f05907f85",
+  "closed_at": "2026-10-23T00:00:00Z",
+  "description": "Lead domain match (D24-T4): a suggested account on lead, set from the work email's domain when it matches an existing account's email domain, before any enrichment provider is asked.",
+  "format": "attome-changeset/v1",
+  "id": "01a168f8-3b95-7308-a780-404542e41e3d",
+  "layer": "product",
+  "name": "crm-lead-domain-match",
+  "opened_at": "2026-10-23T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Suggested Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "suggested_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead",
+        "field": "suggested_account_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحساب المقترح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.suggested_account_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 4,
+  "title": "Pack: suggested account on lead from the email domain"
+}
