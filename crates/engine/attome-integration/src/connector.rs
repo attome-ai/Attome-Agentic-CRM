@@ -20,6 +20,8 @@ use serde_json::Value;
 use crate::system::IntegrationSystem;
 
 pub mod adapters;
+/// S14-T1: a connector operation as a flow step.
+pub mod flow;
 /// S12-T1: declarative connector definitions and their runtime.
 pub mod sdk;
 

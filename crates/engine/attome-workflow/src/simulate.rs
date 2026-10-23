@@ -620,6 +620,24 @@ fn simulate_node(
         NodeType::AgentStep => simulate_agent_step(node, input),
         NodeType::Route => Ok(simulate_route(node, approval_decisions)),
         NodeType::ModuleStep => simulate_module_step(state, node, module_steps),
+        // S14-T1: a dry run calls nothing; a map is pure, so it maps for real.
+        NodeType::Connector => {
+            let (system, operation) = scheduler::connector_target(node)?;
+            Ok(SimOutcome::Succeeded {
+                output: serde_json::json!({
+                    "would_call": true,
+                    "system": system,
+                    "operation": operation,
+                    "params": input.get("params").cloned().unwrap_or(Value::Null),
+                    "body": input.get("body").cloned().unwrap_or(Value::Null),
+                }),
+                would_have: Some(format!("would call {operation} of {system}")),
+            })
+        }
+        NodeType::Map => Ok(SimOutcome::Succeeded {
+            output: scheduler::map_output(node, input)?,
+            would_have: None,
+        }),
     }
 }
 

@@ -1541,7 +1541,86 @@ async fn execute_node(
         NodeType::ModuleStep => {
             execute_module_step(state, ctx, instance, node, input, fired, round).await
         }
+        NodeType::Connector => execute_connector(state, instance, node, input, fired, round).await,
+        NodeType::Map => execute_map(node, input),
     }
+}
+
+/// S14-T1: a connector node's system and operation.
+pub(crate) fn connector_target(node: &GraphNode) -> Result<(&str, &str), AppError> {
+    fn named<'a>(
+        node: &GraphNode,
+        key: &str,
+        value: Option<&'a Value>,
+    ) -> Result<&'a str, AppError> {
+        value
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| {
+                AppError::Validation(format!("connector node {:?} names no {key}", node.id))
+            })
+    }
+    Ok((
+        named(node, "system", node.config.get("system"))?,
+        named(node, "operation", node.config.get("operation"))?,
+    ))
+}
+
+/// S14-T1: calls the connector operation (`attome_integration::connector::flow`).
+/// Fired-marked like a webhook, so a replay after the call does not call
+/// again; the effect key goes as the call's `Idempotency-Key` for the
+/// window before the checkpoint.
+async fn execute_connector(
+    state: &EngineState,
+    instance: &InstanceRow,
+    node: &GraphNode,
+    input: &Value,
+    fired: &mut HashSet<String>,
+    round: i32,
+) -> Result<NodeOutcome, AppError> {
+    if fired.contains(&fired_key(&node.id, round)) {
+        return Ok(NodeOutcome::Succeeded {
+            output: serde_json::json!({ "skipped_replay": true }),
+        });
+    }
+    let (system, operation) = connector_target(node)?;
+    if !state.modules.load().has(attome_modules::MODULE_INTEGRATION) {
+        return Err(AppError::Validation(format!(
+            "connector node {:?} needs the integration module, which this deployment is not licensed for",
+            node.id
+        )));
+    }
+    let params = input.get("params").cloned().unwrap_or(Value::Null);
+    let body = input.get("body").filter(|b| !b.is_null());
+    let key = effect_key(instance.id, &node.id, round);
+    let output = attome_integration::connector::flow::run_named(
+        state,
+        system,
+        operation,
+        &params,
+        body,
+        Some(&key),
+    )
+    .await?;
+    fired.insert(fired_key(&node.id, round));
+    Ok(NodeOutcome::Succeeded { output })
+}
+
+/// S14-T1: maps the wired `in` by `config.mapping` (each element of the
+/// list at `config.each`, when set). The dry run maps for real too.
+pub(crate) fn map_output(node: &GraphNode, input: &Value) -> Result<Value, AppError> {
+    let mapping = node.config.get("mapping").cloned().unwrap_or(Value::Null);
+    let each = node.config.get("each").and_then(Value::as_str);
+    let value = input.get("in").cloned().unwrap_or(Value::Null);
+    crate::map::apply(&mapping, each, &value)
+        .map_err(|message| AppError::Validation(format!("map node {:?}: {message}", node.id)))
+}
+
+fn execute_map(node: &GraphNode, input: &Value) -> Result<NodeOutcome, AppError> {
+    Ok(NodeOutcome::Succeeded {
+        output: map_output(node, input)?,
+    })
 }
 
 /// The instance's correlated record, for module steps and kind guards.

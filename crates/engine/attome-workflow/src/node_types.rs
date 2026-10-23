@@ -118,6 +118,15 @@ pub enum NodeType {
     /// runs completed, failed or were cancelled. The list may hold at most
     /// `limits.workflow.max_loop_items` items.
     ForEach,
+    /// S14-T1: calls an operation of a connector — an endpoint of the
+    /// integration system `config.system` (its `config.sdk` definition,
+    /// S12-T1), named by `config.operation`. The wired `params` fill the
+    /// endpoint's path; a write sends the wired `body`. Output: the records
+    /// a read returns or the answer a write gets.
+    Connector,
+    /// S14-T1: reshapes JSON by a mapping definition (`crate::map`), the
+    /// step between two connectors of a system-to-system flow. Pure.
+    Map,
 }
 
 /// M1-T4: the output port every node except a trigger may wire. When the
@@ -127,7 +136,7 @@ pub enum NodeType {
 pub const ON_ERROR_PORT: &str = "on_error";
 
 impl NodeType {
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 21] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -147,6 +156,8 @@ impl NodeType {
         Self::Assign,
         Self::ModuleStep,
         Self::ForEach,
+        Self::Connector,
+        Self::Map,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -170,6 +181,8 @@ impl NodeType {
             Self::Assign => "assign",
             Self::ModuleStep => "module_step",
             Self::ForEach => "for_each",
+            Self::Connector => "connector",
+            Self::Map => "map",
         }
     }
 
@@ -211,9 +224,12 @@ impl NodeType {
             // same shape as a notification or a webhook call, and checked
             // against `fired_side_effects` before firing for the same
             // reason: a crash-replay must not open a second session.
-            Self::SendNotification | Self::Webhook | Self::AgentStep | Self::ModuleStep => {
-                SideEffect::FiredSideEffectsMarker
-            }
+            // S14-T1: a connector call leaves the deployment like a webhook.
+            Self::SendNotification
+            | Self::Webhook
+            | Self::AgentStep
+            | Self::ModuleStep
+            | Self::Connector => SideEffect::FiredSideEffectsMarker,
             // `Route` reads and classifies only — `route.classify` is
             // Read-tier/Read-effect (`node_capabilities_agree_with_side_effect_classification`
             // pins this against `capability()` below), so a crash-replay
@@ -229,7 +245,8 @@ impl NodeType {
             | Self::Split
             | Self::Join
             | Self::Route
-            | Self::DuplicateCheck => SideEffect::None,
+            | Self::DuplicateCheck
+            | Self::Map => SideEffect::None,
         }
     }
 
@@ -293,6 +310,11 @@ impl NodeType {
             Self::Assign => &[("record_id", PortType::RecordId, true)],
             Self::ModuleStep => &[("input", PortType::Json, false)],
             Self::ForEach => &[("items", PortType::Json, true)],
+            Self::Connector => &[
+                ("params", PortType::Json, false),
+                ("body", PortType::Json, false),
+            ],
+            Self::Map => &[("in", PortType::Any, true)],
         }
     }
 
@@ -347,6 +369,8 @@ impl NodeType {
             Self::Assign => &[("record", PortType::RecordId)],
             Self::ModuleStep => &[("output", PortType::Json)],
             Self::ForEach => &[("out", PortType::Json)],
+            Self::Connector => &[("result", PortType::Json)],
+            Self::Map => &[("out", PortType::Json)],
         }
     }
 
@@ -377,7 +401,8 @@ impl NodeType {
         match self {
             // Reads and pure evaluation. Nothing leaves the process.
             // A15-T9: `DuplicateCheck` reads the record and the match keys.
-            Self::Trigger | Self::Condition | Self::DuplicateCheck => NodeCapability {
+            // S14-T1: `Map` only reshapes its input.
+            Self::Trigger | Self::Condition | Self::DuplicateCheck | Self::Map => NodeCapability {
                 risk: RiskTier::Read,
                 effect: Effect::Read,
                 retry: RetryClass::Idempotent,
@@ -398,6 +423,18 @@ impl NodeType {
             // required rather than claiming idempotence it does not have.
             Self::SendNotification | Self::Webhook => NodeCapability {
                 risk: RiskTier::Consequential,
+                effect: Effect::External,
+                retry: RetryClass::RequiresKey,
+            },
+            // S14-T1: leaves the deployment too, but only to an endpoint of an
+            // integration system an administrator registered (its URL, its
+            // operations and its credential), never to a URL the graph names:
+            // `Reversible`, so a sync between two systems runs unattended
+            // without an Approval on every path, while the fired marker and
+            // the effect key (sent as `Idempotency-Key`) keep a replay from
+            // writing twice.
+            Self::Connector => NodeCapability {
+                risk: RiskTier::Reversible,
                 effect: Effect::External,
                 retry: RetryClass::RequiresKey,
             },
@@ -774,6 +811,7 @@ mod tests {
             NodeType::Webhook,
             NodeType::AgentStep,
             NodeType::ModuleStep,
+            NodeType::Connector,
         ] {
             assert_ne!(t.side_effect(), SideEffect::None, "{t}");
         }
@@ -787,6 +825,7 @@ mod tests {
             NodeType::Split,
             NodeType::Join,
             NodeType::Route,
+            NodeType::Map,
         ] {
             assert_eq!(t.side_effect(), SideEffect::None, "{t}");
         }
@@ -888,7 +927,7 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 19, "the node set is closed (I-5)");
+        assert_eq!(NodeType::ALL.len(), 21, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type
@@ -989,5 +1028,35 @@ mod tests {
         assert_eq!(t.side_effect(), SideEffect::None);
         assert_eq!(t.input_ports(), &[("items", PortType::Json, true)]);
         assert_eq!(t.output_ports(), &[("out", PortType::Json)]);
+    }
+
+    /// S14-T1's two nodes, pinned: a connector call is an external,
+    /// fired-marked effect below the Approval bar; a map is pure.
+    #[test]
+    fn connector_nodes_are_pinned() {
+        use attome_ai::descriptor::{Effect, RetryClass, RiskTier};
+        let c = NodeType::Connector;
+        assert_eq!(NodeType::parse("connector"), Some(c));
+        assert_eq!(c.side_effect(), SideEffect::FiredSideEffectsMarker);
+        assert_eq!(c.capability().risk, RiskTier::Reversible);
+        assert_eq!(c.capability().effect, Effect::External);
+        assert_eq!(c.capability().retry, RetryClass::RequiresKey);
+        assert!(!c.is_branching() && !c.is_wait_capable() && !c.is_cacheable());
+        assert_eq!(
+            c.input_ports(),
+            &[
+                ("params", PortType::Json, false),
+                ("body", PortType::Json, false)
+            ]
+        );
+        assert_eq!(c.output_ports(), &[("result", PortType::Json)]);
+
+        let m = NodeType::Map;
+        assert_eq!(NodeType::parse("map"), Some(m));
+        assert_eq!(m.side_effect(), SideEffect::None);
+        assert_eq!(m.capability().effect, Effect::Read);
+        assert!(!m.is_branching() && !m.is_wait_capable());
+        assert_eq!(m.input_ports(), &[("in", PortType::Any, true)]);
+        assert_eq!(m.output_ports(), &[("out", PortType::Json)]);
     }
 }

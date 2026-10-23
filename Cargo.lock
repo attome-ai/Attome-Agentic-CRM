@@ -2286,6 +2286,7 @@ dependencies = [
  "attome-config",
  "attome-core",
  "attome-db",
+ "attome-integration",
  "attome-jobs",
  "attome-marketing",
  "attome-metadata",

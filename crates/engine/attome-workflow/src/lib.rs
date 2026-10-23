@@ -13,6 +13,8 @@ pub mod instance_admin;
 pub mod instance_control;
 /// L5-T2: a flow's lineage edges.
 pub mod lineage_source;
+/// S14-T1: the `map` node's transform.
+pub mod map;
 pub mod model;
 pub mod node_types;
 pub mod retention;

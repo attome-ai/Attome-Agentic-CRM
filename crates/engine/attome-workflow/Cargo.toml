@@ -17,6 +17,7 @@ attome-audit.workspace        = true
 attome-config.workspace       = true
 attome-core.workspace         = true
 attome-db.workspace           = true
+attome-integration.workspace  = true
 attome-jobs.workspace         = true
 attome-metadata.workspace     = true
 attome-modules.workspace      = true

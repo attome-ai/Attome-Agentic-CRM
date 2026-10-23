@@ -680,6 +680,63 @@ impl<'a> Runtime<'a> {
             self.definition.name
         )))
     }
+
+    /// S14-T1: one call of `endpoint` with a JSON `body` (a create or an
+    /// update in the outside system), within the rate limit and the retry
+    /// policy. The answer's JSON, `null` when it has no body. A key, when
+    /// given, goes as `Idempotency-Key`, so the outside system can drop a
+    /// retried write it already made.
+    pub async fn call(
+        &mut self,
+        endpoint: &str,
+        params: &BTreeMap<String, String>,
+        body: Option<&Value>,
+        idempotency_key: Option<&str>,
+    ) -> Result<Value, AppError> {
+        let e = self
+            .definition
+            .endpoints
+            .get(endpoint)
+            .ok_or_else(|| AppError::Validation(format!("no endpoint {endpoint}")))?
+            .clone();
+        let query: Vec<(String, String)> = e
+            .query
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        let url = with_query(
+            &format!(
+                "{}{}",
+                self.definition.base_url.trim_end_matches('/'),
+                fill_path(&e.path, params)?
+            ),
+            &query,
+        );
+        let mut headers = self.auth_headers().await?;
+        if let Some(key) = idempotency_key {
+            headers.push(("Idempotency-Key".into(), key.to_owned()));
+        }
+        let body = match body {
+            Some(b) => {
+                headers.push(("Content-Type".into(), "application/json".into()));
+                Some(serde_json::to_string(b).map_err(AppError::internal)?)
+            }
+            None => None,
+        };
+        let answer = self
+            .send_with_retry(Request {
+                method: e.method.clone(),
+                url,
+                headers,
+                body,
+            })
+            .await?;
+        if answer.body.trim().is_empty() {
+            return Ok(Value::Null);
+        }
+        serde_json::from_str(&answer.body)
+            .map_err(|_| AppError::internal(format!("{} answered no JSON", self.definition.name)))
+    }
 }
 
 /// Runs `endpoint` of `definition` once over `transport`.
@@ -736,6 +793,49 @@ mod tests {
                 .map(|r| r.url.clone())
                 .collect()
         }
+    }
+
+    #[tokio::test]
+    async fn connector_sdk_call_sends_the_body_and_the_key() {
+        let def: Definition = serde_json::from_value(json!({
+            "name": "shop",
+            "base_url": "https://shop.example",
+            "auth": { "kind": "bearer" },
+            "endpoints": { "create": { "method": "POST", "path": "/customers/{group}" } }
+        }))
+        .unwrap();
+        let mock = Mock {
+            answers: Mutex::new(vec![Response {
+                status: 201,
+                headers: vec![],
+                body: r#"{"id":"c-7"}"#.into(),
+            }]),
+            seen: Mutex::new(vec![]),
+        };
+        let params = BTreeMap::from([("group".to_owned(), "vip one".to_owned())]);
+        let answer = Runtime::new(&def, &mock, Some(Secret::new("tok")))
+            .call(
+                "create",
+                &params,
+                Some(&json!({"name": "Sara"})),
+                Some("run:1"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(answer, json!({"id": "c-7"}));
+        let seen = mock.seen.lock().unwrap();
+        assert_eq!(seen[0].url, "https://shop.example/customers/vip%20one");
+        assert_eq!(seen[0].body.as_deref(), Some(r#"{"name":"Sara"}"#));
+        assert!(
+            seen[0]
+                .headers
+                .contains(&("Idempotency-Key".into(), "run:1".into()))
+        );
+        assert!(
+            seen[0]
+                .headers
+                .contains(&("Authorization".into(), "Bearer tok".into()))
+        );
     }
 
     impl Transport for Mock {

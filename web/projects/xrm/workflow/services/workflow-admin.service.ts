@@ -147,6 +147,12 @@ export const NODE_TYPES: NodeTypeSpec[] = [
   // M1-T4: run a flow once per batch of up to 100 items, then go on.
   { type: 'for_each', label: 'For Each', inputs: [{ name: 'items', portType: 'json', required: true }],
     outputs: [{ name: 'out', portType: 'json' }] },
+  // S14-T1: call an operation of a connector, and reshape JSON between two.
+  { type: 'connector', label: 'Connector Call',
+    inputs: [{ name: 'params', portType: 'json' }, { name: 'body', portType: 'json' }],
+    outputs: [{ name: 'result', portType: 'json' }] },
+  { type: 'map', label: 'Map Fields', inputs: [{ name: 'in', portType: 'any', required: true }],
+    outputs: [{ name: 'out', portType: 'json' }] },
 ];
 
 // M10-T3: read by `scheduler::wait_until` and `scheduler::wait_base` for
@@ -365,6 +371,21 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
       hint: 'The registered step key, such as marketing.send_email.' },
     { key: 'config', label: 'Step settings', kind: 'json' },
     { key: 'retry_after_seconds', label: 'Retry a blocked step after (seconds)', kind: 'number', default: 3600 },
+  ],
+  // scheduler::connector_target (S14-T1)
+  connector: [
+    { key: 'system', label: 'Integration system', kind: 'text', required: true,
+      hint: 'The name of an active integration system with a connector definition (config.sdk).' },
+    { key: 'operation', label: 'Operation', kind: 'text', required: true,
+      hint: 'An endpoint of its definition. A GET reads every record; any other method sends the body.' },
+  ],
+  // scheduler::map_output (S14-T1)
+  map: [
+    { key: 'mapping', label: 'Mapping', kind: 'json', required: true,
+      hint: 'Target field to source: "/pointer", {"from": "/pointer", "default": v} or {"value": v}. '
+          + 'A dotted target (address.city) builds nested objects.' },
+    { key: 'each', label: 'Map each element of', kind: 'text',
+      hint: 'Optional JSON pointer to a list in the input (/records); maps every element.' },
   ],
   // scheduler::join_mode_and_threshold
   join: [

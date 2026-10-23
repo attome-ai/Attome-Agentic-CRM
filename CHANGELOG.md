@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Connector and map flow nodes (S14-T1): a `connector` node calls an operation of an integration
+  system's connector definition (a GET reads every record, any other method sends the wired body
+  with the run's effect key as `Idempotency-Key`), and a `map` node reshapes JSON by a mapping
+  definition, so one flow moves data between two outside systems.
 - Data residency map (R7-T1): `residency.allowed_regions` and `residency.components` declare where
   data may live and where each component (database, cache, storage, backup, audit anchor, AI,
   email, traces) holds it, falling back to the component's own region (an S3 bucket's) or

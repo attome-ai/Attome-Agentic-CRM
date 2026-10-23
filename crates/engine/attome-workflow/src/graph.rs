@@ -207,6 +207,15 @@ pub fn validate(graph: &Graph) -> Result<String, ValidationError> {
                 )));
             }
         }
+        // S14-T1: a connector names its system and operation; a map's
+        // mapping is well formed.
+        if node_type == NodeType::Connector {
+            crate::scheduler::connector_target(node).map_err(|e| ValidationError(e.to_string()))?;
+        }
+        if node_type == NodeType::Map {
+            crate::map::check(node.config.get("mapping"), node.config.get("each"))
+                .map_err(|message| ValidationError(format!("map node {:?}: {message}", node.id)))?;
+        }
         // Z11-T15: a Condition's expression parses at publish.
         if node_type == NodeType::Condition
             && let Some(expression) = crate::condition::expression_of(&node.config)
