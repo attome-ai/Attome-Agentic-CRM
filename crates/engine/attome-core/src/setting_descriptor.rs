@@ -241,6 +241,9 @@ pub fn area(key: &str) -> &'static str {
         Some("compliance") => "security",
         Some("email" | "mail_capture" | "voice" | "service" | "marketing") => "channels",
         Some("scan") => "data",
+        Some("i18n") => "general",
+        Some("notification") => "channels",
+        Some("approval" | "jobs") => "operations",
         _ => "other",
     }
 }
@@ -438,6 +441,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "records.bulk_actions" => {
             "التعديلات الجماعية المحفوظة للشخص حسب الكيان: لكل منها اسم وعمليات تُعاد من نافذة التعديل الجماعي."
+        }
+        "jobs.quiet_windows" => {
+            "ساعات هادئة بتوقيت النشر، مثل [{\"start\": \"08:00\", \"end\": \"18:00\"}]: لا تبدأ فيها الأعمال المجدولة الثقيلة (تشغيل تدفق على سجلات عرض، وتسليم التقارير) وتبدأ عند انتهائها مرة واحدة."
         }
         "approval.email_links" => {
             "هل يتلقى الموافقون على كل خطوة من طلب موافقة معلّق رسالة بريد فيها رابط يُستخدم مرة واحدة إلى الطلب."

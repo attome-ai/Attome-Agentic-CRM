@@ -611,6 +611,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/integration').then(m => m.WebhookSubscriptionsComponent),
           },
           {
+            // M12-T3: every schedule in one place.
+            path: 'jobs/schedules',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.SchedulesComponent),
+          },
+          {
             path: 'jobs/dead-letters',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.DeadLetterInboxComponent),

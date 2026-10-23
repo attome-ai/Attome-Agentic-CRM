@@ -305,6 +305,32 @@ fn limit_settings() -> Vec<SettingDescriptor> {
 /// B5-T3: record settings.
 fn records_settings() -> Vec<SettingDescriptor> {
     vec![
+        // M12-T3: hours heavy scheduled work waits out.
+        SettingDescriptor::new(
+            "jobs.quiet_windows",
+            "Quiet windows in the deployment's time, as [{\"start\": \"08:00\", \"end\": \"18:00\"}] \
+             (an end before the start runs past midnight): heavy scheduled work (a flow run over \
+             a view's records, a report delivery) does not start in one, and starts once when \
+             it closes (M12-T3).",
+            || {
+                json!({
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "type": "object",
+                        "required": ["start", "end"],
+                        "properties": {
+                            "start": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                            "end": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                        },
+                        "additionalProperties": false,
+                    },
+                })
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // M9-T3: emailed approval links.
         SettingDescriptor::new(
             "approval.email_links",

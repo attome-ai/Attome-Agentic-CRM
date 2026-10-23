@@ -64,12 +64,21 @@ const SELECT_SCHEDULE: &str = "SELECT id, report_ref, run_as, rrule, created_at,
 /// Ticks every active schedule's ledger entry; each occurrence that came due
 /// is claimed once and enqueued as a `ReportScheduleFire`.
 pub async fn sweep(state: &EngineState) -> Result<SweepStats, AppError> {
-    let rows: Vec<ScheduleRow> =
-        sqlx::query_as(&format!("{SELECT_SCHEDULE} WHERE is_active = true"))
-            .fetch_all(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
     let mut stats = SweepStats::default();
+    // M12-T3: a delivery is heavy work; due ones wait out a quiet window
+    // and fire once it closes.
+    if attome_core::quiet_window::quiet_now(state) {
+        return Ok(stats);
+    }
+    // M12-T3: a paused schedule is skipped until it is resumed.
+    let rows: Vec<ScheduleRow> = sqlx::query_as(&format!(
+        "{SELECT_SCHEDULE} WHERE is_active = true AND NOT EXISTS \
+           (SELECT 1 FROM schedule_pause p WHERE p.kind = 'report' \
+             AND p.target = report_schedule.id::text)"
+    ))
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
     for row in rows {
         let created = row.created_at.unwrap_or_else(Utc::now);
         let schedule = match schedule_of(&row.rrule, created) {

@@ -413,6 +413,31 @@ pub fn latest_slot(
     (slot >= earliest).then_some(slot)
 }
 
+/// M12-T3: the first slot after `now` (local, to the minute), looking at
+/// most eight days ahead.
+pub fn next_slot(spec: &ScheduleSpec, now: NaiveDateTime) -> Option<NaiveDateTime> {
+    let now = now.with_second(0)?.with_nanosecond(0)?;
+    match spec {
+        ScheduleSpec::EveryMinutes(n) => {
+            let n = i64::from(*n);
+            let minutes = now.and_utc().timestamp() / 60;
+            let next = minutes - minutes.rem_euclid(n) + n;
+            Some(DateTime::from_timestamp(next * 60, 0)?.naive_utc())
+        }
+        ScheduleSpec::Cron(expr) => {
+            let mut at = now + Duration::minutes(1);
+            let last = now + Duration::days(8);
+            while at <= last {
+                if expr.matches(at) {
+                    return Some(at);
+                }
+                at += Duration::minutes(1);
+            }
+            None
+        }
+    }
+}
+
 #[derive(sqlx::FromRow)]
 struct ScheduleEntry {
     definition_version_id: Uuid,
@@ -441,11 +466,16 @@ pub async fn run_due_at(
            JOIN workflow_definition_version v ON v.id = t.definition_version_id \
            JOIN workflow_definition d ON d.id = v.definition_id \
           WHERE t.role = 'entry' AND t.match_type = 'schedule' \
-            AND v.status = 'published' AND d.is_active AND NOT d.is_deleted",
+            AND v.status = 'published' AND d.is_active AND NOT d.is_deleted \
+            AND NOT EXISTS (SELECT 1 FROM schedule_pause p WHERE p.kind = 'flow' \
+                             AND p.target = d.id::text || ':' || t.node_id)",
     )
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    // M12-T3: a slot over a view's records is heavy work; it waits out a
+    // quiet window unclaimed and starts once the window closes.
+    let quiet = attome_core::quiet_window::quiet_now(state);
 
     let offset = *now.offset();
     let local_now = now.naive_local();
@@ -473,6 +503,9 @@ pub async fn run_due_at(
             .published_at
             .map(|at| at.with_timezone(&offset).naive_local())
             .unwrap_or(local_now - Duration::minutes(LOOKBACK_MINUTES));
+        if quiet && record_view(&node.config).is_some() {
+            continue;
+        }
         let Some(slot_local) = latest_slot(&spec, local_now, floor) else {
             continue;
         };
@@ -703,5 +736,26 @@ mod schedule_trigger_tests {
             record_run_key(version, "t", slot + Duration::days(1), record)
         );
         assert_ne!(key, record_run_key(version, "t", slot, Uuid::now_v7()));
+    }
+
+    #[test]
+    fn schedules_next_slot_follows_the_schedule() {
+        let at = |s: &str| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").unwrap();
+        let every = ScheduleSpec::EveryMinutes(15);
+        assert_eq!(
+            next_slot(&every, at("2026-10-23 10:07")),
+            Some(at("2026-10-23 10:15"))
+        );
+        assert_eq!(
+            next_slot(&every, at("2026-10-23 10:15")),
+            Some(at("2026-10-23 10:30"))
+        );
+        let weekday_nine =
+            parse_schedule(&serde_json::json!({ "schedule": { "cron": "0 9 * * 1-5" } })).unwrap();
+        // 2026-10-23 is a Friday: the next weekday 09:00 is Monday the 26th.
+        assert_eq!(
+            next_slot(&weekday_nine, at("2026-10-23 10:00")),
+            Some(at("2026-10-26 09:00"))
+        );
     }
 }

@@ -5051,6 +5051,38 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({})),
             )
         }
+        // M12-T3: pausing and resuming a schedule.
+        "POST /api/v1/admin/schedules/{kind}/{id}/pause" => {
+            let def = workflow_definition(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/schedules/flow/{}:trigger/pause", id_of(&def)),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/schedules/{kind}/{id}/resume" => {
+            let def = workflow_definition(fx).await;
+            admin(
+                fx,
+                "POST",
+                &format!(
+                    "/api/v1/admin/schedules/flow/{}:resume_trigger/pause",
+                    id_of(&def)
+                ),
+                None,
+            )
+            .await;
+            request(
+                "POST",
+                &format!(
+                    "/api/v1/admin/schedules/flow/{}:resume_trigger/resume",
+                    id_of(&def)
+                ),
+                t,
+                None,
+            )
+        }
         // ── workflow (audit-10-10 Phase 3.7 part G) ─────────────────────────
         "POST /api/v1/workflow/definitions" => {
             let logicalname = format!("audit_emit_wf_{}", Uuid::now_v7().simple());

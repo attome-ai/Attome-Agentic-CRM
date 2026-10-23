@@ -177,6 +177,8 @@ const BASELINE: &[&str] = &[
     // the packs in this crate's changeset ledger.
     "sbom_admin",
     "schema",
+    // M12-T3: one list over flow, report and platform schedules.
+    "schedules_admin",
     "seed_support",
     "service_public",
     "settings_admin",

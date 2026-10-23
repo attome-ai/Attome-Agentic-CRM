@@ -63,6 +63,7 @@ pub mod quiet_scope;
 /// L7-T2: the channel and flow run an engine write came from, read by the
 /// change-feed writers.
 pub mod provenance_scope;
+pub mod quiet_window;
 /// C11 B5 (P-5) — the runtime AI switch's read side: `config AND runtime`,
 /// failing closed, consulted by every AI surface.
 pub mod ai_runtime_switch;

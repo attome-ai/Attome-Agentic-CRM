@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- One schedules screen (M12-T3). `GET /api/v1/admin/schedules` lists flow schedule triggers, report
+  deliveries and the platform's own schedulers (read-only) with next and last run, owner and
+  paused state. `POST /api/v1/admin/schedules/{kind}/{id}/pause|resume` pauses a flow or report
+  schedule; both write a Configuration event (migration 0214, `schedule_pause`). The new
+  `jobs.quiet_windows` setting holds heavy scheduled work (a flow over a view's records, a report
+  delivery) until a window closes. The web app has the screen at `/xrm/jobs/schedules`.
+- Fix: `notification.*`, `i18n.*` and `approval.*` settings now have a console area.
 - Approve or reject from email (M9-T3). Every minute, the approvers of each pending request step
   (eligible as for My Work) are emailed a one-time link to `/approval-link`, with the token in the
   URL fragment. The token is single-use, per approver and step, stored only as a peppered HMAC,
