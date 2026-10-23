@@ -56,6 +56,8 @@ pub mod nl_query;
 pub mod ops_slo;
 /// L6-T8: profile.summary, profile.explain.
 pub mod profile;
+/// L2-T9: quality.explain_drop, quality.record_score, quality.propose_rules.
+pub mod quality;
 pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
@@ -112,6 +114,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(adapt_flow_template::descriptor());
     all.extend(lineage::descriptors());
     all.extend(profile::descriptors());
+    all.extend(quality::descriptors());
     all.extend(governance::descriptors());
     all.extend(identity_assist::descriptors());
     all.push(extract_document::descriptor());
@@ -190,6 +193,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(adapt_flow_template::FlowTemplateAdapt));
     all.extend(lineage::executors());
     all.extend(profile::executors());
+    all.extend(quality::executors());
     all.extend(governance::executors());
     all.extend(identity_assist::executors());
     all.push(Box::new(extract_document::DocumentExtract));

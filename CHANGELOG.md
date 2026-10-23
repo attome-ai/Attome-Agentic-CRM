@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data quality agent tools (L2-T9): `quality.explain_drop` (each dimension's change since the day
+  before, the biggest fall, and the open issues' sources and attributes), `quality.record_score`
+  (a record's score and failed checks against its target) and `quality.propose_rules` (measure-only
+  rule drafts from the newest profile, with the rows each would fail). All read-only.
 - Steward quality alerts (L2-T7): after the daily snapshot an entity below its target, or whose
   overall score fell more than `quality.drop_alert_points` (10) since yesterday, alerts its domain's
   stewards (else owners, compliance administrators, or one full administrator) once a day, naming

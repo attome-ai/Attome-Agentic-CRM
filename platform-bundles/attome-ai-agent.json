@@ -45,6 +45,7 @@
               "model.relationship.describe", "model.reply_template.describe", "model.reply_template.edit",
               "model.reply_template.list", "model.rule.describe", "model.state_model.describe", "model.tour.describe", "model.tour.edit", "model.tour.list",
               "model.component.describe", "model.component.edit", "model.component.list", "model.flow_template.describe", "model.flow_template.edit", "model.flow_template.list", "model.page.describe", "model.page.edit", "model.page.list", "model.record_template.describe", "model.record_template.edit", "model.record_template.list", "model.stage_process.describe", "model.stage_process.edit", "model.stage_process.list", "model.survey.describe", "model.survey.edit", "model.survey.list", "ops.report", "ops.slo_health", "profile.explain", "profile.summary",
+              "quality.explain_drop", "quality.propose_rules", "quality.record_score",
               "query.execute", "query.plan", "record.ai_field", "record.assign", "record.bulk.delete",
               "record.bulk.preview", "record.bulk.status", "record.bulk.update", "record.classify", "record.create",
               "record.delete", "record.deleted", "record.get", "record.restore", "record.schema", "record.summarize",
