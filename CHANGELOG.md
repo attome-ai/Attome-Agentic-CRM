@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Stage bar and stage metrics (M7-T2, M7-T3). `GET /api/v1/stage-processes/for/{entity}` returns an
+  entity's published stage process. Record forms of an entity with a `stage` show a stage bar: the
+  stages, the current one, its checklist, and a button per allowed next stage that names the
+  required fields still empty. `GET /api/v1/stage-processes/{id}/metrics` (administrators) gives,
+  per stage, records entered, left and current, mean and p90 time in stage, and drop-off. A new
+  record's first stage is now recorded as a move.
 - Stage processes (M7-T1): a new `stage_process` metadata kind holds an entity's ordered stages,
   each with required attributes, a checklist and allowed next stages. Publishing the first one
   gives the entity `stage` and `stage_entered_at` (stamped on every change). A new record starts

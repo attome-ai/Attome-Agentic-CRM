@@ -180,6 +180,8 @@ const BASELINE: &[&str] = &[
     // M12-T3: one list over flow, report and platform schedules.
     "schedules_admin",
     "seed_support",
+    // M7-T2/T3: stage processes read for forms and measured from stage_move.
+    "stage_process_api",
     "service_public",
     "settings_admin",
     // AA9-T6: the limits registry spans every engine (rate classes, bulk,

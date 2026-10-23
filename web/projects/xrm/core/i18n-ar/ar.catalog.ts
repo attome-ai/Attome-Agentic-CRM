@@ -414,6 +414,13 @@ export const xrmAr = {
     kinds: { value: 'قيمة', error: 'خطأ' },
     errors: { validation: 'تحقق', forbidden: 'ممنوع', conflict: 'تعارض', not_found: 'غير موجود', other: 'أخرى' },
   },
+  // M7-T2: شريط المراحل في نموذج السجل.
+  stageBar: {
+    label: 'المراحل',
+    checklist: 'قائمة التحقق لهذه المرحلة',
+    moveTo: 'الانتقال إلى {stage}',
+    missing: 'املأ أولًا: {fields}',
+  },
   // M12-T3: كل الجداول في مكان واحد.
   schedules: {
     title: 'الجداول',

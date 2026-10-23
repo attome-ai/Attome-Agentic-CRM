@@ -229,6 +229,7 @@ mod schema;
 mod seed_support;
 mod service_public;
 pub mod schedules_admin;
+pub mod stage_process_api;
 pub mod settings_admin;
 /// `pub` for the service reconcile API (`reconcile_sidebar_item` & co.,
 /// P-environment-promotion §5 step 13) — the handlers stay module-private.

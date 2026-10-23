@@ -11,7 +11,8 @@
 //! (`AppError::FieldValidation`, code `required_for_stage`). Each move an
 //! update makes is recorded in `stage_move` (migration 0215) in the write's
 //! own transaction: record, from, to, who, when, and the reason the request
-//! gave in its `Attome-Stage-Reason` header.
+//! gave in its `Attome-Stage-Reason` header. A create records its first
+//! stage as a move from no stage.
 //!
 //! Only entities whose attributes include `stage` pay the process lookup,
 //! and on update only writes that name it.
@@ -111,8 +112,17 @@ fn stage_of(value: Option<&Value>) -> Option<&str> {
     value.and_then(Value::as_str).filter(|s| !s.is_empty())
 }
 
-/// The create body, with the first stage when it names none; `None` when it
-/// needs no change. Refuses a stage the record does not qualify for.
+/// What a create under a stage process starts with.
+#[derive(Debug, Default)]
+pub struct StageStart {
+    /// The create body with the first stage filled in, when it named none.
+    pub body: Option<serde_json::Map<String, Value>>,
+    /// The stage the record starts in, to record once it has an id.
+    pub stage: Option<String>,
+}
+
+/// Fills the first stage when a create names none, and refuses a stage the
+/// record does not qualify for.
 pub async fn guard_create(
     tx: &mut Transaction<'_, Postgres>,
     state: &EngineState,
@@ -120,22 +130,22 @@ pub async fn guard_create(
     attrs: &[AttrInfo],
     obj: &serde_json::Map<String, Value>,
     mode: MutationMode,
-) -> Result<Option<serde_json::Map<String, Value>>, AppError> {
+) -> Result<StageStart, AppError> {
     if !enforced(mode) || !attrs.iter().any(|a| a.logicalname == STAGE_ATTRIBUTE) {
-        return Ok(None);
+        return Ok(StageStart::default());
     }
     let Some(entity_id) = state.entities.load().get(entity_name).map(|m| m.entity_id) else {
-        return Ok(None);
+        return Ok(StageStart::default());
     };
     let Some(process) = process_of(tx, entity_id).await? else {
-        return Ok(None);
+        return Ok(StageStart::default());
     };
     let mut body = None;
     let to = match stage_of(obj.get(STAGE_ATTRIBUTE)) {
         Some(to) => to.to_owned(),
         None => {
             let Some(first) = stage_process::initial_stage(&process) else {
-                return Ok(None);
+                return Ok(StageStart::default());
             };
             let mut filled = obj.clone();
             filled.insert(STAGE_ATTRIBUTE.into(), Value::String(first.to_owned()));
@@ -145,7 +155,34 @@ pub async fn guard_create(
     };
     stage_process::check_move(&process, None, &to, body.as_ref().unwrap_or(obj))
         .map_err(refusal)?;
-    Ok(body)
+    Ok(StageStart {
+        body,
+        stage: Some(to),
+    })
+}
+
+/// Records the stage a new record started in (from no stage), so time in
+/// the first stage is measured too (M7-T3).
+pub async fn record_start(
+    tx: &mut Transaction<'_, Postgres>,
+    entity_name: &str,
+    record_id: Uuid,
+    stage: &str,
+    actor: Option<Uuid>,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO stage_move (entity_logicalname, record_id, from_stage, to_stage, moved_by, reason) \
+         VALUES ($1, $2, NULL, $3, $4, $5)",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .bind(stage)
+    .bind(actor)
+    .bind(reason())
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
 }
 
 /// Checks an update that names the stage, and records the move.

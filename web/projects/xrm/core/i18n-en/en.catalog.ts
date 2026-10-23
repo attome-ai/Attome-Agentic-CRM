@@ -480,6 +480,13 @@ export const xrmEn = {
     kinds: { value: 'A value', error: 'An error' },
     errors: { validation: 'Validation', forbidden: 'Forbidden', conflict: 'Conflict', not_found: 'Not found', other: 'Other' },
   },
+  // M7-T2: the stage bar on a record form.
+  stageBar: {
+    label: 'Stages',
+    checklist: 'Checklist for this stage',
+    moveTo: 'Move to {stage}',
+    missing: 'Fill in first: {fields}',
+  },
   // M12-T3: every schedule in one place.
   schedules: {
     title: 'Schedules',

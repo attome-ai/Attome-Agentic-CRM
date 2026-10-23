@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, contentChildren, inject, input } from '@angular/core';
-import { TranslatePipe } from '@attome/base';
+import { LangService, TranslatePipe } from '@attome/base';
 import { XRM_FIELD_POLICY, XrmFieldPolicy } from '../../business-rules/field-policy';
 import { ConflictDialogComponent } from '../../conflict-dialog/conflict-dialog.component';
 import { PendingTimersComponent } from '../../pending-timers/pending-timers.component';
@@ -13,6 +13,7 @@ import { RemindMeComponent } from '../../reminders/remind-me.component';
 import { FollowButtonComponent } from '../../follow-button/follow-button.component';
 import { RecordTagsComponent } from '../../record-tags/record-tags.component';
 import { RecordAncestorsComponent } from '../../record-tree/record-ancestors.component';
+import { StageBarComponent } from '../../stage-bar/stage-bar.component';
 import { EngineFormBase } from '../xrm-form.base';
 import { XrmTabDirective } from './xrm-tab.directive';
 
@@ -62,6 +63,7 @@ import { XrmTabDirective } from './xrm-tab.directive';
     NgTemplateOutlet, TranslatePipe, DuplicateBannerComponent, PredictionBannerComponent,
     RecordChangedBannerComponent, ConflictDialogComponent, PendingTimersComponent,
     RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent, FollowButtonComponent, RecordTagsComponent,
+    StageBarComponent,
   ],
   styleUrls: ['../../../../styles/xrm-form.css', './xrm-base-form.component.css'],
   templateUrl: './xrm-base-form.component.html',
@@ -100,6 +102,20 @@ export class XrmBaseFormComponent {
     const declared = new Set(this.form().tabs().map(t => t.id));
     return this.tabTemplates().filter(t => declared.has(t.xrmTab()));
   });
+
+  private readonly lang = inject(LangService);
+
+  /** M7-T2: the entity holds a stage (it has a published stage process). */
+  readonly hasStage = computed(() => (this.form().schema()?.fields ?? []).some(f => f.name === 'stage'));
+  readonly arabic = computed(() => this.lang.current() === 'ar');
+
+  /** M7-T2: a next stage chosen on the stage bar; saving the form moves it. */
+  chooseStage(code: string): void {
+    const control = this.form().form().get('stage');
+    if (!control) return;
+    control.setValue(code);
+    control.markAsDirty();
+  }
 
   /** U7 Phase A — the one record the header's Assign/Share act on. */
   readonly accessRecordIds = computed<readonly string[]>(() => {

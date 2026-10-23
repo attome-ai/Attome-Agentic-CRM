@@ -157,6 +157,16 @@ const MAX_BARE_RECORD_SCOPED: usize = 6;
 /// route silently pre-authorizes whatever later claims that path.
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
+        "POST",
+        "/api/v1/approvals/email-link",
+        "M9-T3: the single-use emailed link token (peppered HMAC, one approver, one request step, 72 h) is the credential; it reads only the request that link names and uses nothing. Bypass-listed.",
+    ),
+    (
+        "POST",
+        "/api/v1/approvals/email-link/decide",
+        "M9-T3: the same link token, used once, decides only its own request step as its own approver through the decide route's path (eligibility and separation of duties checked there); a high-risk request is refused. Bypass-listed.",
+    ),
+    (
         "GET",
         "/api/v1/status/confirm",
         "H8-T1: a static page with one button for the token it was given; it reads nothing and changes nothing (a mail scanner fetching the link confirms nothing). Bypass-listed.",

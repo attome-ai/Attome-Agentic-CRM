@@ -33,6 +33,11 @@
         @if (f.isEdit() && f.id(); as tagRecordId) {
           <xrm-record-tags [entity]="f.name()" [recordId]="tagRecordId" />
         }
+        <!-- M7-T2 — the record's stage process. -->
+        @if (hasStage()) {
+          <xrm-stage-bar [entityName]="f.name()" [values]="f.recordValue()" [arabic]="arabic()"
+                         [disabled]="readOnly()" (choose)="chooseStage($event)" />
+        }
       </div>
       <div class="xf-actions">
         <ng-content select="[xrmHeaderActions]" />

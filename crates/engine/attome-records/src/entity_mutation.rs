@@ -1860,14 +1860,15 @@ pub async fn create_one_as(
     // M7-T1: a record of an entity with a stage process starts in a stage
     // whose required attributes it fills (the first one when it names none).
     let staged;
-    let obj =
-        match crate::stage_move::guard_create(tx, state, entity_name, attrs, obj, mode).await? {
-            Some(map) => {
-                staged = map;
-                &staged
-            }
-            None => obj,
-        };
+    let stage_start =
+        crate::stage_move::guard_create(tx, state, entity_name, attrs, obj, mode).await?;
+    let obj = match stage_start.body {
+        Some(map) => {
+            staged = map;
+            &staged
+        }
+        None => obj,
+    };
 
     // M07 Phase 1 (D-406): if this entity is governed by an attome-state model,
     // the created record must land in the model's initial_state -- either
@@ -2093,6 +2094,11 @@ pub async fn create_one_as(
         &change_payload(attrs, None, Some(&row)),
     )
     .await?;
+    // M7-T1: the stage the record starts in, as its first move.
+    if let Some(stage) = &stage_start.stage {
+        crate::stage_move::record_start(tx, entity_name, record_id, stage, stamp.created_by)
+            .await?;
+    }
 
     // B4-T3: the tags the rules that hold add or remove.
     if let Some(pipeline) = &rules {
