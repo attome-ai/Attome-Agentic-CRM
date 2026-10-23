@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Replay a flow version over recent runs (M4-T3):
+  `POST /api/v1/workflow/definitions/{id}/versions/{version_id}/replay {last}` (1–50, default 10)
+  runs each of the flow's latest finished runs' trigger input and approval decisions through the
+  simulation of that version and lists, per run, every node whose outcome differs from what really
+  happened. Nothing is written.
 - Webhook subscriptions screen (M13-T4) at `/xrm/webhooks`: create (the signing secret shown once,
   also in Standard Webhooks form) and edit subscriptions (target, payload shape, ordered, on/off),
   see a paused subscription's reason, read the delivery log, send a test event

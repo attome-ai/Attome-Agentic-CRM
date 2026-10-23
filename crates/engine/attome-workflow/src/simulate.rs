@@ -1014,17 +1014,226 @@ fn simulate_for_each(node: &GraphNode, input: &Value) -> Result<SimOutcome, AppE
     })
 }
 
-pub fn routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/workflow/definitions/{id}/versions/{version_id}/simulate",
-        post(simulate_version),
+/// M4-T3: how many recent runs a draft is replayed over at most.
+pub const MAX_REPLAY_RUNS: i64 = 50;
+
+/// M4-T3: the request: how many of the flow's latest finished runs.
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+pub struct ReplayRequest {
+    /// 1 to 50; default 10.
+    pub last: Option<i64>,
+}
+
+/// One node whose outcome differs between a real run and the draft.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, utoipa::ToSchema)]
+pub struct NodeDifference {
+    pub node_id: String,
+    /// The node's status in the real run; `None` when it never ran there
+    /// (or the draft added it).
+    pub real: Option<String>,
+    /// The node's status in the draft's simulation; `None` when the draft
+    /// never reached it (or removed it).
+    pub draft: Option<String>,
+}
+
+/// One real run replayed through the draft.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct ReplayedRun {
+    pub instance_id: Uuid,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub real_status: String,
+    /// The simulation's status: `completed`, `would_wait` or `failed`.
+    pub draft_status: String,
+    pub differences: Vec<NodeDifference>,
+}
+
+/// M4-T3: the replay report.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct ReplayReport {
+    pub runs: Vec<ReplayedRun>,
+    /// Runs with at least one difference.
+    pub differing: i64,
+}
+
+/// The nodes whose outcome differs: every node either side settled, with
+/// the real run's `pending`/`running` read as not settled. Sorted by node id.
+pub fn compare_runs(
+    real: &HashMap<String, String>,
+    draft: &[SimulateNodeTrace],
+) -> Vec<NodeDifference> {
+    let settled = |status: &str| !matches!(status, "pending" | "running");
+    let draft_status: HashMap<&str, &str> = draft
+        .iter()
+        .filter(|t| !t.node_id.is_empty())
+        .map(|t| (t.node_id.as_str(), t.status.as_str()))
+        .collect();
+    let mut ids: Vec<&str> = real
+        .iter()
+        .filter(|(_, s)| settled(s))
+        .map(|(id, _)| id.as_str())
+        .chain(draft_status.keys().copied())
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    ids.into_iter()
+        .filter_map(|id| {
+            let r = real.get(id).map(String::as_str).filter(|s| settled(s));
+            let d = draft_status.get(id).copied();
+            (r != d).then(|| NodeDifference {
+                node_id: id.to_owned(),
+                real: r.map(str::to_owned),
+                draft: d.map(str::to_owned),
+            })
+        })
+        .collect()
+}
+
+/// The approval decisions a real run took, as the simulation reads them.
+fn approval_decisions_of(node_data: &Value) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    if let Some(map) = node_data.as_object() {
+        for (node_id, output) in map {
+            if let Some(decision) = output.get("decision").and_then(Value::as_str) {
+                let taken = if decision == "approved" {
+                    "approved"
+                } else {
+                    "rejected"
+                };
+                out.insert(node_id.clone(), taken.to_owned());
+            }
+        }
+    }
+    out
+}
+
+#[derive(sqlx::FromRow)]
+struct RecentRun {
+    id: Uuid,
+    started_at: chrono::DateTime<chrono::Utc>,
+    status: String,
+    context: Value,
+    node_data: Value,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/workflow/definitions/{id}/versions/{version_id}/replay",
+    tag = "workflow",
+    operation_id = "workflow_replay_draft",
+    description = "Replays a version over the flow's latest finished runs (M4-T3): each run's trigger input and approval decisions go through the simulation of this version, and every node whose outcome differs from what the run really did is reported. Nothing is written.",
+    params(
+        ("id" = Uuid, Path),
+        ("version_id" = Uuid, Path),
+    ),
+    request_body = ReplayRequest,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "M4-T3: replays a draft through the D-431 simulation only; it reads past runs and writes nothing.",
+    )))),
+    responses(
+        (status = 200, description = "Success", body = ReplayReport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Not found", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn replay_version(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<ReplayRequest>,
+) -> Result<Json<ReplayReport>, AppError> {
+    let last = body.last.unwrap_or(10);
+    if !(1..=MAX_REPLAY_RUNS).contains(&last) {
+        return Err(AppError::Validation(format!(
+            "last must be between 1 and {MAX_REPLAY_RUNS}"
+        )));
+    }
+    let graph_json: Value = sqlx::query_scalar(
+        "SELECT graph FROM workflow_definition_version WHERE id = $1 AND definition_id = $2",
     )
+    .bind(version_id)
+    .bind(definition_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let graph = Graph::parse(&graph_json)
+        .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
+    let trigger_id = graph
+        .nodes
+        .iter()
+        .find(|n| NodeType::parse(&n.node_type) == Some(NodeType::Trigger))
+        .map(|n| n.id.clone());
+
+    let recent: Vec<RecentRun> = sqlx::query_as(
+        "SELECT i.id, i.started_at, i.status, i.context, i.node_data \
+           FROM workflow_instance i \
+           JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+          WHERE v.definition_id = $1 AND i.status IN ('completed', 'failed', 'cancelled') \
+          ORDER BY i.started_at DESC LIMIT $2",
+    )
+    .bind(definition_id)
+    .bind(last)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let mut runs = Vec::with_capacity(recent.len());
+    for run in recent {
+        let real: HashMap<String, String> = sqlx::query_as::<_, (String, String)>(
+            "SELECT DISTINCT ON (node_id) node_id, status FROM workflow_node_run \
+              WHERE instance_id = $1 ORDER BY node_id, round DESC",
+        )
+        .bind(run.id)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .into_iter()
+        .collect();
+        // The trigger's real output is the run's input; an older run kept
+        // only its start context.
+        let payload = trigger_id
+            .as_deref()
+            .and_then(|id| run.node_data.get(id))
+            .cloned()
+            .unwrap_or(run.context);
+        let module_steps = dry_run_module_steps(&state, &graph, &payload).await;
+        let decisions = approval_decisions_of(&run.node_data);
+        let (draft_status, trace) =
+            run_simulation_with(&state, &graph, payload, &decisions, &module_steps);
+        let differences = compare_runs(&real, &trace);
+        runs.push(ReplayedRun {
+            instance_id: run.id,
+            started_at: run.started_at,
+            real_status: run.status,
+            draft_status,
+            differences,
+        });
+    }
+    let differing = runs.iter().filter(|r| !r.differences.is_empty()).count() as i64;
+    Ok(Json(ReplayReport { runs, differing }))
+}
+
+pub fn routes() -> Router<EngineState> {
+    Router::new()
+        .route(
+            "/api/v1/workflow/definitions/{id}/versions/{version_id}/simulate",
+            post(simulate_version),
+        )
+        .route(
+            "/api/v1/workflow/definitions/{id}/versions/{version_id}/replay",
+            post(replay_version),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document; merged upward by `attome_workflow::openapi()`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(simulate_version))]
+#[openapi(paths(simulate_version, replay_version))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -1064,5 +1273,76 @@ mod reading_tests {
             pick_fields(None, &["stage".into()]),
             serde_json::json!({ "stage": null })
         );
+    }
+}
+
+#[cfg(test)]
+mod replay_tests {
+    use super::*;
+
+    fn trace(node_id: &str, status: &str) -> SimulateNodeTrace {
+        SimulateNodeTrace {
+            node_id: node_id.into(),
+            node_type: "wait".into(),
+            status: status.into(),
+            taken_port: None,
+            output: Value::Null,
+            would_have: None,
+            error: None,
+        }
+    }
+
+    #[test]
+    fn replay_reports_only_the_nodes_whose_outcome_changed() {
+        let real: HashMap<String, String> = [
+            ("t", "succeeded"),
+            ("approve", "succeeded"),
+            ("notify", "skipped"),
+            ("late", "pending"),
+        ]
+        .into_iter()
+        .map(|(a, b)| (a.to_owned(), b.to_owned()))
+        .collect();
+        let draft = vec![
+            trace("t", "succeeded"),
+            trace("approve", "succeeded"),
+            trace("notify", "succeeded"),
+            trace("new_step", "succeeded"),
+        ];
+        let diff = compare_runs(&real, &draft);
+        assert_eq!(
+            diff,
+            vec![
+                NodeDifference {
+                    node_id: "new_step".into(),
+                    real: None,
+                    draft: Some("succeeded".into()),
+                },
+                NodeDifference {
+                    node_id: "notify".into(),
+                    real: Some("skipped".into()),
+                    draft: Some("succeeded".into()),
+                },
+            ],
+            "a real run's pending node is not a difference"
+        );
+        assert!(
+            compare_runs(&real, &draft[..2])
+                .iter()
+                .any(|d| d.node_id == "notify" && d.draft.is_none())
+        );
+    }
+
+    #[test]
+    fn replay_takes_the_real_runs_approval_decisions() {
+        let node_data = serde_json::json!({
+            "a": { "decision": "approved" },
+            "b": { "decision": "expired" },
+            "t": { "record_id": "x" },
+        });
+        let decisions = approval_decisions_of(&node_data);
+        assert_eq!(decisions.get("a").map(String::as_str), Some("approved"));
+        assert_eq!(decisions.get("b").map(String::as_str), Some("rejected"));
+        assert!(!decisions.contains_key("t"));
     }
 }
