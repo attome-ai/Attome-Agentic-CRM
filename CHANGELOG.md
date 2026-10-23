@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Approval on change (M9-T2): an approval process may start on `change` with `watched_attributes`.
+  An update that changes a watched attribute, on a record meeting the entry condition (judged on
+  the record as the update leaves it, e.g. `discount > 20`), keeps the stored value, writes the
+  rest, and opens an `approval_process.change` request; the response carries `approval_request_id`
+  and `held_attributes`. Approval writes the held values as the requester; rejection leaves the
+  record unchanged; a second change while one is pending is refused (409). Migration 0212.
 - Crawl one intranet host per source (K6-T8): a website source's `allow_host` (exact host name,
   audited when set) may resolve to a private address through the same guarded resolver; a
   metadata address and every other private host stay refused, and each redirect hop is checked

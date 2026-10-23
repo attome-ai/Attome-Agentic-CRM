@@ -465,6 +465,7 @@ pub(super) async fn link_related(
                 new_row: None,
                 cascade_summary: Vec::new(),
                 approval: None,
+                held: None,
                 warnings: Vec::new(),
             },
         )
@@ -609,6 +610,7 @@ pub(super) async fn unlink_related(
                 new_row: None,
                 cascade_summary: Vec::new(),
                 approval: None,
+                held: None,
                 warnings: Vec::new(),
             },
         )

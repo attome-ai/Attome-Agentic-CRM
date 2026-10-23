@@ -100,6 +100,11 @@ pub enum MutationMode {
     /// engine-managed refusal itself, which exists to send callers to that
     /// route. Never reachable from the generic record API.
     EngineManaged,
+    /// M9-T2: applying the change an approved `approval_process.change`
+    /// request held (the request's id). Every check of `Strict` applies
+    /// except the hold itself and the submit lock, so the approved values
+    /// are written once. Only the approval executor uses it.
+    HeldChange(Uuid),
 }
 
 impl MutationMode {
@@ -112,13 +117,18 @@ impl MutationMode {
                 | Self::ApprovalFlow(_)
                 | Self::ClientId(_)
                 | Self::EngineManaged
+                | Self::HeldChange(_)
         )
     }
 
     fn enforce_file_session_ownership(&self) -> bool {
         matches!(
             self,
-            Self::Strict | Self::ApprovedStagedImport | Self::ClientId(_) | Self::EngineManaged
+            Self::Strict
+                | Self::ApprovedStagedImport
+                | Self::ClientId(_)
+                | Self::EngineManaged
+                | Self::HeldChange(_)
         )
     }
 }
@@ -135,6 +145,10 @@ pub struct MutationResult {
     /// `pending_state` instead of the requested state, and this request was
     /// submitted in the same transaction. `None` for every other write.
     pub approval: Option<ApprovalSubmitted>,
+    /// M9-T2: `Some` when this update changed attributes a `change`
+    /// approval process watches: they kept their stored values and wait in
+    /// this request. `None` for every other write.
+    pub held: Option<crate::approval_lock::HeldChange>,
     /// D-791 rule 6: the `warning`-severity business-rule `error` policies
     /// that fired on this (successful) write, in rule display order. The
     /// generic write responses return them; empty for every write without
@@ -619,7 +633,10 @@ pub(crate) fn validate_engine_managed_fields(
     obj: &serde_json::Map<String, Value>,
     mode: MutationMode,
 ) -> Result<(), AppError> {
-    if !matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {
+    if !matches!(
+        mode,
+        MutationMode::Strict | MutationMode::ClientId(_) | MutationMode::HeldChange(_)
+    ) {
         return Ok(());
     }
     for key in obj.keys() {
@@ -1569,7 +1586,7 @@ fn change_counter_values(
         .collect()
 }
 
-async fn fetch_stored_record(
+pub(crate) async fn fetch_stored_record(
     tx: &mut Transaction<'_, Postgres>,
     entity_name: &str,
     record_id: Uuid,
@@ -2095,6 +2112,7 @@ pub async fn create_one_as(
         new_row: Some(row),
         cascade_summary: Vec::new(),
         approval: None,
+        held: None,
         warnings,
     })
 }
@@ -2859,6 +2877,32 @@ pub async fn update_one_as(
     if matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {
         crate::approval_lock::refuse_locked(tx, entity_name, record_id, obj).await?;
     }
+    // M9-T2: a change to an attribute a `change` approval process watches
+    // keeps the stored value and waits in an approval request.
+    let held_body;
+    let mut held = None;
+    let obj = if matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {
+        match crate::approval_lock::hold_watched_changes(
+            tx,
+            state,
+            entity_name,
+            record_id,
+            attrs,
+            obj,
+            modified_by,
+        )
+        .await?
+        {
+            Some((body, change)) => {
+                held_body = body;
+                held = Some(change);
+                &held_body
+            }
+            None => obj,
+        }
+    } else {
+        obj
+    };
     // D-786 follow-up M2: a service principal's email (its marker) is
     // immutable here, in every mode and whoever the caller is.
     if entity_name == "user_account" {
@@ -3147,6 +3191,7 @@ pub async fn update_one_as(
         new_row: Some(new_row),
         cascade_summary: Vec::new(),
         approval,
+        held,
         warnings,
     })
 }
@@ -3925,6 +3970,7 @@ pub async fn delete_one_as(
         new_row: None,
         cascade_summary: policy.cascade_summary,
         approval: None,
+        held: None,
         warnings: Vec::new(),
     })
 }
@@ -4078,6 +4124,7 @@ pub async fn restore_one(
         new_row: Some(new_row),
         cascade_summary,
         approval: None,
+        held: None,
         warnings: Vec::new(),
     })
 }
@@ -4201,6 +4248,7 @@ pub async fn hard_delete_one(
         new_row: None,
         cascade_summary: Vec::new(),
         approval: None,
+        held: None,
         warnings: Vec::new(),
     })
 }

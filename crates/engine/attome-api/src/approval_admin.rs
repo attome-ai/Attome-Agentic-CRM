@@ -166,6 +166,9 @@ fn has_execution_handler(action_type: &str) -> bool {
     KNOWN_ACTION_TYPES.contains(&action_type)
         || action_type.starts_with(attome_ai::approval::ACTION_TYPE_PREFIX)
         || action_type == attome_core::ACTION_STATE_TRANSITION
+        // M9-T2: opened by an approval process from its watched attributes,
+        // never by `gate()`, so not in `KNOWN_ACTION_TYPES` either.
+        || action_type == attome_records::approval_lock::APPROVAL_CHANGE_ACTION
 }
 
 /// The mandatory production approval baseline (closes the follow-up
@@ -1290,6 +1293,62 @@ async fn dispatch_approved(
                     return Ok(Dispatched::Invalidated { reason });
                 }
             }
+        }
+        attome_records::approval_lock::APPROVAL_CHANGE_ACTION => {
+            // M9-T2: the held values are written as the requester, through
+            // the one update path, on the record as it is now. A record
+            // that is gone, or that the requester may no longer update,
+            // invalidates the request.
+            #[derive(serde::Deserialize)]
+            struct HeldChangePayload {
+                entity: String,
+                record_id: Uuid,
+                changes: serde_json::Map<String, Value>,
+            }
+            let payload: HeldChangePayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let row_version = match attome_records::approval_lock::current_row_version(
+                state,
+                &payload.entity,
+                payload.record_id,
+            )
+            .await
+            {
+                Ok(v) => v,
+                Err(AppError::NotFound) => {
+                    return Ok(Dispatched::Invalidated {
+                        reason: "the record of the held change is no longer live",
+                    });
+                }
+                Err(e) => return Err(e),
+            };
+            let ctx = state.base.security.resolve(request.requested_by).await?;
+            let outcome = match attome_records::entity_crud::update_record_for_outcome(
+                state,
+                &ctx,
+                request.requested_by,
+                &payload.entity,
+                payload.record_id,
+                row_version,
+                Value::Object(payload.changes),
+                Some(format!("approved change (approval request {})", request.id)),
+                attome_records::entity_mutation::MutationMode::HeldChange(request.id),
+            )
+            .await
+            {
+                Ok(outcome) => outcome,
+                Err(AppError::NotFound | AppError::Forbidden) => {
+                    return Ok(Dispatched::Invalidated {
+                        reason: "the requester may no longer change the record",
+                    });
+                }
+                Err(e) => return Err(e),
+            };
+            serde_json::json!({
+                "entity": payload.entity,
+                "record_id": payload.record_id,
+                "row_version": outcome.response.row_version(),
+            })
         }
         other => {
             return Err(AppError::internal(format!(

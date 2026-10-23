@@ -48,6 +48,11 @@ pub struct ApprovalProcess {
     pub lock_record: bool,
     /// What may still change while a request is pending.
     pub editable_attributes: Vec<String>,
+    /// M9-T2: `submit` (a person submits the record) or `change` (an
+    /// update that changes a watched attribute is held for approval).
+    pub starts_on: String,
+    /// M9-T2: the attributes a `change` process holds.
+    pub watched_attributes: Vec<String>,
     pub is_active: bool,
     pub row_version: i64,
     pub created_at: DateTime<Utc>,
@@ -55,7 +60,8 @@ pub struct ApprovalProcess {
 }
 
 const COLUMNS: &str = "id, name, entity_logicalname, entry_condition, plan, lock_record, \
-                       editable_attributes, is_active, row_version, created_at, updated_at";
+                       editable_attributes, starts_on, watched_attributes, is_active, \
+                       row_version, created_at, updated_at";
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ApprovalProcessBody {
@@ -68,8 +74,18 @@ pub struct ApprovalProcessBody {
     pub lock_record: bool,
     #[serde(default)]
     pub editable_attributes: Vec<String>,
+    /// M9-T2: `submit` (the default) or `change`.
+    #[serde(default = "default_starts_on")]
+    pub starts_on: String,
+    /// M9-T2: required for a `change` process, empty for `submit`.
+    #[serde(default)]
+    pub watched_attributes: Vec<String>,
     #[serde(default = "default_true")]
     pub is_active: bool,
+}
+
+fn default_starts_on() -> String {
+    "submit".to_owned()
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -114,6 +130,35 @@ fn check_body(state: &EngineState, body: &ApprovalProcessBody) -> Result<(), App
     {
         return Err(AppError::Validation(format!(
             "editable attribute {unknown:?} is not a field of {}",
+            body.entity_logicalname
+        )));
+    }
+    match body.starts_on.as_str() {
+        "submit" if body.watched_attributes.is_empty() => {}
+        "submit" => {
+            return Err(AppError::Validation(
+                "watched_attributes belong to a process that starts on change".into(),
+            ));
+        }
+        "change" if body.watched_attributes.is_empty() => {
+            return Err(AppError::Validation(
+                "a process that starts on change needs at least one watched attribute".into(),
+            ));
+        }
+        "change" => {}
+        _ => {
+            return Err(AppError::Validation(
+                "starts_on is `submit` or `change`".into(),
+            ));
+        }
+    }
+    if let Some(unknown) = body
+        .watched_attributes
+        .iter()
+        .find(|a| !meta.attrs.iter().any(|attr| &attr.logicalname == *a))
+    {
+        return Err(AppError::Validation(format!(
+            "watched attribute {unknown:?} is not a field of {}",
             body.entity_logicalname
         )));
     }
@@ -198,8 +243,8 @@ async fn create_process(
     let row: ApprovalProcess = sqlx::query_as(&format!(
         "INSERT INTO approval_process \
              (id, name, entity_logicalname, entry_condition, plan, lock_record, \
-              editable_attributes, is_active, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING {COLUMNS}"
+              editable_attributes, is_active, created_by, starts_on, watched_attributes) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING {COLUMNS}"
     ))
     .bind(id)
     .bind(body.name.trim())
@@ -215,6 +260,8 @@ async fn create_process(
     .bind(&body.editable_attributes)
     .bind(body.is_active)
     .bind(ctx.user_id)
+    .bind(&body.starts_on)
+    .bind(&body.watched_attributes)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -297,6 +344,7 @@ async fn update_process(
         "UPDATE approval_process \
             SET name = $3, entity_logicalname = $4, entry_condition = $5, plan = $6, \
                 lock_record = $7, editable_attributes = $8, is_active = $9, \
+                starts_on = $10, watched_attributes = $11, \
                 row_version = row_version + 1, updated_at = now() \
           WHERE id = $1 AND row_version = $2 AND NOT is_deleted \
          RETURNING {COLUMNS}"
@@ -315,6 +363,8 @@ async fn update_process(
     .bind(body.lock_record)
     .bind(&body.editable_attributes)
     .bind(body.is_active)
+    .bind(&body.starts_on)
+    .bind(&body.watched_attributes)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -428,6 +478,13 @@ async fn submit(
     let process = load(&state, id).await?;
     if !process.is_active {
         return Err(AppError::NotFound);
+    }
+    if process.starts_on != "submit" {
+        return Err(AppError::Validation(
+            "this process starts on change: it holds changes to its watched attributes, and \
+             records are not submitted to it"
+                .into(),
+        ));
     }
     let entity_id = state
         .entities

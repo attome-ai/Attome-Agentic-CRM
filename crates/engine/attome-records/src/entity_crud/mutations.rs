@@ -978,6 +978,9 @@ pub async fn update_record_for_with_comment(
 pub struct UpdateOutcome {
     pub response: EntityRecordResponse,
     pub approval: Option<crate::entity_mutation::ApprovalSubmitted>,
+    /// M9-T2: the change to watched attributes this update held for
+    /// approval, if any.
+    pub held: Option<crate::approval_lock::HeldChange>,
 }
 
 impl std::fmt::Debug for UpdateOutcome {
@@ -1057,7 +1060,7 @@ pub async fn update_record_for_outcome(
     // serialization failure, as for a create. The row-version check is in
     // `update_one`, so a retry checks the version again: a real version
     // conflict is a 409 `version_conflict`, never retried.
-    let (row, approval, warnings) = {
+    let (row, approval, warnings, held) = {
         let state = &state;
         let attrs = &attrs;
         let entity_name = entity_name.as_str();
@@ -1087,6 +1090,7 @@ pub async fn update_record_for_outcome(
                     .clone()
                     .ok_or_else(|| AppError::internal("update mutation returned no row"))?;
                 let approval = mutation.approval.clone();
+                let held = mutation.held.clone();
                 let warnings = std::mem::take(&mut mutation.warnings);
                 audit_duplicate_skip(&mut tx, state, acting_user_id, entity_name, record_id)
                     .await?;
@@ -1108,6 +1112,18 @@ pub async fn update_record_for_outcome(
                     }),
                     None => event_comment.map(str::to_owned),
                 };
+                // M9-T2: a held change names its request too.
+                if let Some(h) = &held {
+                    let note = format!(
+                        "change to {} held for approval request {}",
+                        h.attributes.join(", "),
+                        h.request_id
+                    );
+                    audit.event_comment = Some(match audit.event_comment.take() {
+                        Some(c) => format!("{c} ({note})"),
+                        None => note,
+                    });
+                }
                 // The diff is computed from the row actually written (the
                 // pending state for a parked transition), not from the
                 // caller's body.
@@ -1151,7 +1167,7 @@ pub async fn update_record_for_outcome(
                         mutation,
                     )
                     .await?;
-                Ok::<_, AppError>((row, approval, warnings))
+                Ok::<_, AppError>((row, approval, warnings, held))
             },
         )
         .await?
@@ -1160,10 +1176,24 @@ pub async fn update_record_for_outcome(
     crate::duplicate_check::write_match_keys(&state, &entity_name, record_id, obj).await;
     let lookups = resolve_lookup_meta(&state, ctx, &row, &attrs).await;
     let response = build_response(entity_id, row, &attrs, lookups, ctx, &entity_name)
-        .with_approval_request_id(approval.as_ref().map(|a| a.request_id))
+        .with_approval_request_id(
+            approval
+                .as_ref()
+                .map(|a| a.request_id)
+                .or(held.as_ref().map(|h| h.request_id)),
+        )
+        .with_held_attributes(
+            held.as_ref()
+                .map(|h| h.attributes.clone())
+                .unwrap_or_default(),
+        )
         .with_warnings(warnings)
         .with_duplicates(duplicates, hidden_duplicates);
-    Ok(UpdateOutcome { response, approval })
+    Ok(UpdateOutcome {
+        response,
+        approval,
+        held,
+    })
 }
 
 /// Reconciles `attome_document` rows mirroring `entity_name`/`record_id`'s own

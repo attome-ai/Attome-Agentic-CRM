@@ -60,6 +60,12 @@ pub struct EntityRecordResponse {
     /// those stay byte-identical.
     #[serde(skip_serializing_if = "Option::is_none")]
     approval_request_id: Option<Uuid>,
+    /// M9-T2: the attributes this update asked to change that an approval
+    /// process watches. They keep their stored values (visible in `data`)
+    /// until `approval_request_id` is approved. Omitted when nothing was
+    /// held.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    held_attributes: Vec<String>,
     /// D-791 rule 6: the `warning`-severity business-rule `error` policies
     /// that fired on this create, update or upsert — the write succeeded;
     /// the form shows them. Omitted when there are none (and on reads), so
@@ -136,6 +142,9 @@ pub struct MinimalRecord {
     /// As on the full record: present only when the write was held for approval.
     #[serde(skip_serializing_if = "Option::is_none")]
     approval_request_id: Option<Uuid>,
+    /// As on the full record: the attributes held for approval (M9-T2).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    held_attributes: Vec<String>,
     /// As on the full record: business-rule warnings that fired.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     warnings: Vec<crate::business_rules::RuleWarning>,
@@ -167,6 +176,7 @@ pub(super) fn write_response(
                 id: record.id,
                 row_version: record.row_version,
                 approval_request_id: record.approval_request_id,
+                held_attributes: record.held_attributes,
                 warnings: record.warnings,
                 duplicate_warnings: record.duplicate_warnings,
                 hidden_duplicates: record.hidden_duplicates,
@@ -343,6 +353,12 @@ impl EntityRecordResponse {
     /// See the `approval_request_id` field.
     pub(crate) fn with_approval_request_id(mut self, id: Option<Uuid>) -> Self {
         self.approval_request_id = id;
+        self
+    }
+
+    /// See the `held_attributes` field.
+    pub(crate) fn with_held_attributes(mut self, attributes: Vec<String>) -> Self {
+        self.held_attributes = attributes;
         self
     }
 
@@ -572,6 +588,7 @@ pub(super) fn build_response(
         lookups,
         labels: None,
         approval_request_id: None,
+        held_attributes: Vec::new(),
         warnings: Vec::new(),
         duplicate_warnings: Vec::new(),
         hidden_duplicates: 0,
