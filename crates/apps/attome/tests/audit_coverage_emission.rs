@@ -5429,6 +5429,41 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 request("DELETE", &path, t, None)
             }
         }
+        // M5-T2: the dead-letter inbox, driven through its flow-trigger
+        // source; the trigger's own replay and discard write the events.
+        "POST /api/v1/admin/dead-letters/{source}/{id}/replay"
+        | "POST /api/v1/admin/dead-letters/{source}/{id}/discard"
+        | "POST /api/v1/admin/dead-letters/groups/replay" => {
+            let event_id = Uuid::now_v7();
+            let entity = uniq("no_such_entity");
+            sqlx::query(
+                "INSERT INTO workflow_trigger_failure                      (event_id, entity_logicalname, record_id, operation, last_error,                       dead_lettered_at)                  VALUES ($1, $2, $3, 'create', 'emission test', now())",
+            )
+            .bind(event_id)
+            .bind(&entity)
+            .bind(Uuid::now_v7())
+            .execute(&fx.base.db)
+            .await
+            .expect("insert throwaway workflow trigger dead letter");
+            let item = format!("/api/v1/admin/dead-letters/flow_trigger/{event_id}");
+            if key.ends_with("/groups/replay") {
+                request(
+                    "POST",
+                    "/api/v1/admin/dead-letters/groups/replay",
+                    t,
+                    Some(json!({"cause_group": format!("flow_trigger:{entity}.create:other")})),
+                )
+            } else if key.ends_with("/discard") {
+                request(
+                    "POST",
+                    &format!("{item}/discard"),
+                    t,
+                    Some(json!({"reason": "emission test"})),
+                )
+            } else {
+                request("POST", &format!("{item}/replay"), t, None)
+            }
+        }
         "POST /api/v1/admin/legal-holds" => request(
             "POST",
             "/api/v1/admin/legal-holds",

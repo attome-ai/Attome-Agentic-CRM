@@ -528,6 +528,12 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                crate::dead_letter_inbox::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 crate::email_admin::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),
                     attome_security::strict_authz::strict_authz,

@@ -99,6 +99,8 @@ pub mod data_export;
 pub mod data_mapping_admin;
 /// M12 — data profiling admin surface + job. `pub` only for `process`.
 pub mod data_profile_admin;
+/// M5-T2: one inbox over every dead-letter source.
+pub mod dead_letter_inbox;
 /// Y9-T2: the OpenAPI document of this deployment's own entities.
 pub mod deployment_openapi;
 /// D-432 / M13 (Master Data Management, scoped to dedup + survivorship

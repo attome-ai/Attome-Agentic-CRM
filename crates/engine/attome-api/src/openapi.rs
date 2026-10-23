@@ -118,6 +118,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
             "core",
         ),
         (crate::jobs_admin::openapi_fragment(), "core"),
+        (crate::dead_letter_inbox::openapi_fragment(), "core"),
         (crate::email_admin::openapi_fragment(), "core"),
         (crate::license_admin::openapi_fragment(), "core"),
         (crate::approval_admin::openapi_fragment(), "core"),

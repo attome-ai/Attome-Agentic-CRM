@@ -119,6 +119,9 @@ const BASELINE: &[&str] = &[
     "data_export",
     "data_mapping_admin",
     "data_profile_admin",
+    // M5-T2: the dead-letter inbox composes the sources of attome-jobs (in
+    // jobs_admin), attome-workflow and attome-events; no one engine owns them.
+    "dead_letter_inbox",
     // Y9-T2: the deployment's OpenAPI document reads every engine's live
     // registry at once, which is composition.
     "deployment_openapi",

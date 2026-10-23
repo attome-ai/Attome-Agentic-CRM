@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Dead-letter inbox (M5-T2): `GET /api/v1/admin/dead-letters/groups` (dead letters of every source
+  grouped by cause, largest first), `GET /api/v1/admin/dead-letters?source=&group=`,
+  `POST /api/v1/admin/dead-letters/{source}/{id}/replay`, `POST .../{source}/{id}/discard` (a reason
+  is required and kept on the audit event) and `POST /api/v1/admin/dead-letters/groups/replay`,
+  which replays the group's oldest item at once as a preview and, when it goes through, queues the
+  rest as a batch job (`dead_letter_group_replay`) at `rate_per_minute` (default 60, at most 600).
+  Its progress and cancel are `GET /api/v1/jobs/{id}` and `POST /api/v1/jobs/{id}/cancel`.
 - One dead-letter shape for every source (M5-T1): `attome_core::dead_letter::DeadLetterSource`
   (list, count, get, replay, discard with a reason) over `DeadLetter {source, id, step, error_kind,
   cause_group, message, first_seen, attempts, payload_ref}`, implemented for background jobs (fast

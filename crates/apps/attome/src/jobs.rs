@@ -2920,6 +2920,16 @@ pub const SECURITY_BULK_ACCESS: attome_jobs::JobType = attome_jobs::JobType {
 pub const OPTION_SET_MERGE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::model_admin::option_merge::MERGE_JOB, 1);
 
+/// M5-T2: a dead-letter group replayed at a set pace, as the person who
+/// started it (payload `attome_api::dead_letter_inbox::GroupReplayPayload`).
+/// One attempt: a replay that fails part-way leaves the rest in the dead
+/// letters, and a retried job would replay items a second time.
+pub const DEAD_LETTER_GROUP_REPLAY: attome_jobs::JobType = attome_jobs::JobType {
+    lane: attome_jobs::Lane::Batch,
+    max_attempts: 1,
+    ..attome_jobs::JobType::new(attome_api::dead_letter_inbox::GROUP_REPLAY_JOB, 1)
+};
+
 /// D13-T3: territory realignment, run as the person who asked (payload
 /// `{"user_id"}`).
 pub const TERRITORY_REALIGN: attome_jobs::JobType =
@@ -3148,6 +3158,15 @@ pub fn register_job_types() {
                 secret_age_reminder(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DEAD_LETTER_GROUP_REPLAY,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::dead_letter_inbox::GroupReplayPayload = job.payload()?;
+                attome_api::dead_letter_inbox::run_group_replay(&state, payload).await
             },
         ) {
             tracing::error!(%error, "job type registration failed");
