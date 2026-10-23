@@ -751,6 +751,11 @@ pub async fn set_entity_master_data(
     }
     if row.is_master == settings.is_master && row.hub_style == settings.hub_style {
         attome_db::tx::commit(tx).await?;
+        // L1-T2: an entity already master still gets any side table it lacks.
+        if settings.is_master {
+            attome_metadata::provision::master::ensure_master_tables(db, entity_logicalname)
+                .await?;
+        }
         return Ok(false);
     }
     recording.check_owner(parse_layer(&row.owner_layer)?)?;
@@ -786,6 +791,11 @@ pub async fn set_entity_master_data(
             .await?;
     }
     attome_db::tx::commit(tx).await?;
+    // L1-T2: a master entity's contribution and provenance tables, after the
+    // metadata commit (DDL runs under its own bounded lock timeout).
+    if settings.is_master {
+        attome_metadata::provision::master::ensure_master_tables(db, entity_logicalname).await?;
+    }
     Ok(true)
 }
 

@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Master-data side tables (L1-T2): making an entity master creates its `<entity>__contribution`
+  (what each source system sent, unique per source and external id, attached, held or detached)
+  and `<entity>__provenance` (which contribution and rule each golden attribute came from, and
+  who pinned it) tables, idempotently.
 - Six data-quality dimensions (L2-T2): the daily sweep now also scores validity and consistency
   (the entity's `quality_rule` conditions, through the shared rule evaluator, over its 1,000 most
   recent records) and timeliness (`quality_target.timeliness_days`), and writes a weighted
