@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/approvals/email-link/decide",
+        "needs an emailed one-time link, whose secret exists only in the mail; attome-api's approval_email_decision test issues one and checks the Approved event the decision writes (the self-service decide route's path, which this test drives)",
+    ),
+    (
         "POST /api/v1/einvoice/devices",
         "needs e-invoicing on and the billing pack's seller settings, which this harness does not set; attome-testapp's einvoice_devices test drives it and its Credential event",
     ),

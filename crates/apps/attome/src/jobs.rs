@@ -2820,6 +2820,8 @@ const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
 /// Z1-T11: integration OAuth tokens renewed before expiry.
 const DEDUP_KEY_OAUTH_REFRESH: &str = "integration-oauth-refresh";
 const DEDUP_KEY_DEAD_LETTER_SWEEP: &str = "dead-letter-sweep";
+/// M9-T3: approval request steps mailed to their approvers.
+const DEDUP_KEY_APPROVAL_EMAIL_LINKS: &str = "approval-email-links";
 const DEDUP_KEY_NOTIFICATION_QUEUE: &str = "notification-queue-sweep";
 /// D15-T2: the personal mail capture (a registered job type).
 const DEDUP_KEY_MAIL_CAPTURE: &str = "mail-capture";
@@ -2933,6 +2935,11 @@ pub const WORKFLOW_RECORD_SCHEDULE: attome_jobs::JobType = attome_jobs::JobType 
     lane: attome_jobs::Lane::Batch,
     ..attome_jobs::JobType::new(attome_workflow::schedule_trigger::RECORD_SCHEDULE_JOB, 1)
 };
+
+/// M9-T3: every minute, each pending request step's approvers mailed a
+/// one-time link (no payload).
+pub const APPROVAL_EMAIL_LINKS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::approval_email::SWEEP_JOB, 1);
 
 /// M5-T4: hourly, dead-letter retention and the new / growing group
 /// counters the built-in alerts watch (no payload).
@@ -3201,6 +3208,24 @@ pub fn register_job_types() {
                 let payload: attome_workflow::schedule_trigger::RecordSchedulePayload =
                     job.payload()?;
                 attome_workflow::schedule_trigger::run_record_batch(&state, payload).await
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            APPROVAL_EMAIL_LINKS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let summary = attome_api::approval_email::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if summary.steps > 0 {
+                    tracing::info!(
+                        steps = summary.steps,
+                        links = summary.links,
+                        "approval email links: mailed"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -4310,6 +4335,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == DEAD_LETTER_SWEEP.name => {
             DEDUP_KEY_DEAD_LETTER_SWEEP
         }
+        EngineJob::Registered(job) if job.name == APPROVAL_EMAIL_LINKS.name => {
+            DEDUP_KEY_APPROVAL_EMAIL_LINKS
+        }
         EngineJob::Registered(job) if job.name == MAIL_CAPTURE.name => DEDUP_KEY_MAIL_CAPTURE,
         EngineJob::Registered(job) if job.name == INBOUND_MAIL.name => DEDUP_KEY_INBOUND_MAIL,
         EngineJob::Registered(job) if job.name == CASE_SUMMARY.name => DEDUP_KEY_CASE_SUMMARY,
@@ -4797,6 +4825,25 @@ pub fn spawn_notification_queue_scheduler(db: DbPool, interval: std::time::Durat
         job,
         DEDUP_KEY_NOTIFICATION_QUEUE,
         "notification queue sweep",
+    );
+}
+
+/// M9-T3: every minute, the approval email links.
+pub fn spawn_approval_email_links_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(APPROVAL_EMAIL_LINKS.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "approval email links: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_APPROVAL_EMAIL_LINKS,
+        "approval email links",
     );
 }
 

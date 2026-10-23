@@ -184,6 +184,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Approve or reject from email (M9-T3). Every minute, the approvers of each pending request step
+  (eligible as for My Work) are emailed a one-time link to `/approval-link`, with the token in the
+  URL fragment. The token is single-use, per approver and step, stored only as a peppered HMAC,
+  and expires in 72 hours or with the request. A request whose action type is in the
+  `approval.email_decide_actions` setting (by default approval processes) is decided on that page
+  through the public `POST /api/v1/approvals/email-link/decide`. Any other request's link only
+  opens the signed-in request page. `POST /api/v1/approvals/email-link` reads the request without
+  using the link. A reused link is 409; a wrong or expired one is 401. The `approval.email_links`
+  setting turns the emails off. Migration 0213.
 - Approval request page (M9-T4): `GET /api/v1/approvals/{id}` returns what is asked, by whom, why
   (the new optional `reason` on `POST /api/v1/approval-processes/{id}/submit`), the attribute
   changes as from → to, every decision, and whether the caller may decide. It is visible to an

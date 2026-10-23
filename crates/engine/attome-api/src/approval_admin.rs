@@ -1886,6 +1886,31 @@ enum RequirePlan {
     PlanOnly,
 }
 
+/// M9-T3: decides `id` as `decider_id` (an emailed link's approver) by the
+/// self-service decide route's path; the request's new status.
+pub(crate) async fn decide_as(
+    state: &EngineState,
+    decider_id: Uuid,
+    id: Uuid,
+    decision: &str,
+    row_version: i64,
+    comment: Option<String>,
+) -> Result<String, AppError> {
+    do_decide(
+        state,
+        decider_id,
+        id,
+        DecideBody {
+            decision: decision.to_owned(),
+            row_version,
+            comment,
+        },
+        RequirePlan::PlanOnly,
+    )
+    .await
+    .map(|r| r.status)
+}
+
 /// Shared body of [`decide_approval`] (admin, any request) and
 /// [`decide_approval_eligible`] (any authenticated caller, plan-bearing
 /// requests only). Eligibility for a plan-bearing request is enforced by

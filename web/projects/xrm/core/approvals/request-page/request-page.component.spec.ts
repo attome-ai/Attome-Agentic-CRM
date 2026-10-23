@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { ApiService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -39,13 +39,14 @@ describe('ApprovalRequestPageComponent (M9-T4)', () => {
     TestBed.configureTestingModule({
       imports: [ApprovalRequestPageComponent],
       providers: [
+        provideRouter([]),
         { provide: ApiService, useValue: { get, post } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'r-1' }) } } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],
     });
     const fixture = TestBed.createComponent(ApprovalRequestPageComponent);
+    fixture.componentRef.setInput('id', 'r-1');
     fixture.detectChanges();
     return { fixture, get, post };
   }

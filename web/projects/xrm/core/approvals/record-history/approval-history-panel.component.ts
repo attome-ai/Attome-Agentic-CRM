@@ -34,7 +34,7 @@ export const APPROVAL_HISTORY_PAGE_SIZE = 20;
     <section class="ah">
       @if (error(); as message) { <p class="ah-error" role="alert">{{ message }}</p> }
       @for (r of items(); track r.id) {
-        <a class="ah-item" [routerLink]="['/approvals/requests', r.id]" [attr.data-request]="r.id">
+        <a class="ah-item" [routerLink]="['/xrm/approvals/requests', r.id]" [attr.data-request]="r.id">
           <span class="ah-title">{{ r.title ?? r.action_type }}</span>
           <span class="ah-status" [attr.data-status]="r.status">{{ 'approvalRequest.status.' + r.status | translate }}</span>
           <span class="ah-meta">{{ r.requested_by_name ?? r.requested_by }} · {{ r.requested_at | localDate }}</span>

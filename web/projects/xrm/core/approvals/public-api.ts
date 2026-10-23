@@ -14,6 +14,9 @@ export { ApprovalRequestPageComponent, showValue } from './request-page/request-
 export type { ApprovalDetail, ChangedAttribute, DecisionEntry } from './request-page/request-page.component';
 export { ApprovalHistoryPanelComponent, APPROVAL_HISTORY_PAGE_SIZE } from './record-history/approval-history-panel.component';
 export type { ApprovalHistoryItem } from './record-history/approval-history-panel.component';
+// M9-T3 — the public page an emailed approval link opens.
+export { ApprovalLinkPageComponent } from './email-link/approval-link-page.component';
+export type { ApprovalLinkView } from './email-link/approval-link-page.component';
 export type {
   MyWorkItem, MyWorkAction, MyWorkPage, ApprovalDecision, ApprovalDecisionResponse,
 } from './services/my-approvals.service';

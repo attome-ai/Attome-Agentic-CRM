@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import { DECISION_COMMENT_MAX } from '../services/my-approvals.service';
@@ -64,7 +64,7 @@ export function showValue(value: unknown): string {
   selector: 'xrm-approval-request-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LocalDatePipe, TranslatePipe],
+  imports: [FormsModule, LocalDatePipe, RouterLink, TranslatePipe],
   template: `
     <section class="rq">
       @if (error(); as message) { <p class="rq-error" role="alert">{{ message }}</p> }
@@ -78,7 +78,11 @@ export function showValue(value: unknown): string {
           <dd>{{ d.requested_by_name ?? d.requested_by }} · {{ d.requested_at | localDate }}</dd>
           @if (d.regarding_entity && d.regarding_id) {
             <dt>{{ 'approvalRequest.record' | translate }}</dt>
-            <dd dir="ltr"><code>{{ d.regarding_entity }} / {{ d.regarding_id }}</code></dd>
+            <dd dir="ltr">
+              <a class="rq-record" [routerLink]="['/xrm/entity', d.regarding_entity, 'form']" [queryParams]="{ id: d.regarding_id }">
+                <code>{{ d.regarding_entity }} / {{ d.regarding_id }}</code>
+              </a>
+            </dd>
           }
           <dt>{{ 'approvalRequest.step' | translate }}</dt>
           <dd>{{ 'approvalRequest.stepOf' | translate: { step: d.step + 1, count: d.step_count } }}</dd>
@@ -172,7 +176,9 @@ export function showValue(value: unknown): string {
 })
 export class ApprovalRequestPageComponent implements OnInit {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
+
+  /** The request id, bound from the route's `:id`. */
+  readonly id = input('');
 
   readonly detail = signal<ApprovalDetail | null>(null);
   readonly error = signal<string | null>(null);
@@ -186,10 +192,6 @@ export class ApprovalRequestPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-  }
-
-  private id(): string {
-    return this.route.snapshot.paramMap.get('id') ?? '';
   }
 
   load(): void {

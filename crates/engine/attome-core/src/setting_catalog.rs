@@ -305,6 +305,26 @@ fn limit_settings() -> Vec<SettingDescriptor> {
 /// B5-T3: record settings.
 fn records_settings() -> Vec<SettingDescriptor> {
     vec![
+        // M9-T3: emailed approval links.
+        SettingDescriptor::new(
+            "approval.email_links",
+            "Whether the approvers of each step of a pending approval request get an email \
+             with a one-time link to it (M9-T3).",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(true),
+        ),
+        SettingDescriptor::new(
+            "approval.email_decide_actions",
+            "Approval action types low-risk enough to approve or reject straight from the \
+             emailed link; any other request's link opens the request page, which needs \
+             sign-in (M9-T3).",
+            || json!({"type": "array", "items": {"type": "string", "minLength": 1}, "maxItems": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(["approval_process", "approval_process.change"]),
+        ),
         SettingDescriptor::new(
             "records.bulk_edit_approval_count",
             "A bulk edit changing more records than this waits on an approval before it runs; \

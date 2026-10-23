@@ -111,6 +111,15 @@ export const routes: Routes = [
     loadComponent: () => import('@attome/xrm/portal/booking').then(m => m.BookPageComponent),
   },
   {
+    // M9-T3: the page an emailed approval link opens; the token is in the
+    // fragment. Public, no session; ahead of the Content Management
+    // catch-all below.
+    path: 'approval-link',
+    providers: [provideXrmI18n()],
+    canActivate: [layerCatalogsReady],
+    loadComponent: () => import('@attome/xrm/core/approvals').then(m => m.ApprovalLinkPageComponent),
+  },
+  {
     // K4-T1: the signer's page an emailed signing link opens. Public, no
     // session; ahead of the Content Management catch-all below.
     path: 'esign/:token',

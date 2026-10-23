@@ -118,6 +118,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(300),
     );
+    // M9-T3: approvers mailed a one-time link to each pending step, every minute.
+    crate::jobs::spawn_approval_email_links_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
     // M5-T4: dead-letter retention and group alerts, hourly.
     crate::jobs::spawn_dead_letter_sweep_scheduler(
         db.clone(),

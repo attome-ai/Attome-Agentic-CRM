@@ -805,7 +805,7 @@ pub struct ApprovalHistoryItem {
 }
 
 /// The attribute changes of a held change's payload, by name.
-fn changes_of(payload: &Value) -> Vec<ChangedAttribute> {
+pub(crate) fn changes_of(payload: &Value) -> Vec<ChangedAttribute> {
     let Some(changes) = payload.get("changes").and_then(Value::as_object) else {
         return Vec::new();
     };

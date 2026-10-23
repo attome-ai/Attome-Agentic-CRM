@@ -2270,6 +2270,18 @@ export const xrmEn = {
       invalidated: 'No longer valid', recalled: 'Recalled',
     },
   },
+  approvalLink: {
+    title: 'Approval request',
+    invalid: 'This link is not complete. Open it again from the email.',
+    once: 'This link works once, for you only, until {date}.',
+    signIn: 'This request needs you to sign in before you decide it.',
+    open: 'Sign in and open the request',
+    done: {
+      approved: 'Approved. Thank you.', rejected: 'Rejected. Thank you.',
+      pending: 'Approved. The request moves to its next step.', executed: 'Approved and carried out.',
+      executing: 'Approved; it is being carried out.', invalidated: 'Recorded, but the request is no longer valid.',
+    },
+  },
   approvalHistory: {
     none: 'No approvals for this record.',
     error: 'The approvals could not be loaded.',

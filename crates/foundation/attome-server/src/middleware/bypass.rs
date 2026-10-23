@@ -38,6 +38,11 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/auth/reset-request",
     "/api/v1/auth/reset-confirm",
     "/api/v1/auth/verify-email/confirm",
+    // M9-T3: an emailed approval link, opened by an approver who need not
+    // be signed in; the single-use token in the body is the credential, and
+    // only a low-risk request can be decided with it.
+    "/api/v1/approvals/email-link",
+    "/api/v1/approvals/email-link/decide",
     // P2.8 step 7 (D-069): all four are reached by a caller who, by
     // definition, has no session cookie yet — password login only got as
     // far as a short-lived `pending_token` (distinct claims shape from

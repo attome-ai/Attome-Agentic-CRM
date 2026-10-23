@@ -558,6 +558,9 @@ impl EngineSystem {
                     attome_security::strict_authz::strict_authz,
                 )),
             )
+            // M9-T3: the emailed approval links; public, the token is the
+            // credential (both paths are in `EXACT_BYPASS_PATHS`).
+            .merge(crate::approval_email::routes())
             .merge(
                 // D-421 / M10 (Approval & Governance)
                 crate::approval_policy_admin::routes().layer(middleware::from_fn_with_state(

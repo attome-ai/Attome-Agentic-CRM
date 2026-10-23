@@ -266,10 +266,6 @@ async fn json_of(resp: axum::response::Response) -> serde_json::Value {
     serde_json::from_slice(&bytes).unwrap()
 }
 
-/// Seeds `n` dead-lettered jobs of one made-up variant with one error, so
-/// they form one group of their own; answers the variant and the ids,
-/// oldest first.
-
 fn patch(uri: &str, cookie: &str, row_version: i64, body: serde_json::Value) -> Request<Body> {
     Request::builder()
         .method("PATCH")
