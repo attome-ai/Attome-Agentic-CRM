@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Identity agent assists (Q2-T5), administrators only and read-only: `identity.broker_steps` reads
+  SAML metadata (at most 256 KB, no DTD or entities processed, no signature trusted) and returns
+  Keycloak brokering steps with the entity id, sign-on URL and certificate SHA-256 filled in;
+  `identity.explain_signin_failure` lists the last 20 failed sign-ins with plain reasons.
 - Odoo and SAP Business One connectors (S12-T2): customers, products, sales orders and invoices
   are pulled into `account`, `product`, `order` and `invoice` records keyed by the ERP's id
   (Odoo JSON-RPC `search_read` by offset; the SAP B1 Service Layer with its session cookie and

@@ -450,6 +450,7 @@ dependencies = [
  "attome-types",
  "attome-workforce",
  "axum",
+ "base64 0.23.1",
  "chrono",
  "chrono-tz",
  "fred",
