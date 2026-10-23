@@ -287,6 +287,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // D7-T3: new deals get their owner's default team, every minute.
     crate::jobs::spawn_sales_default_team_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // L2-T3: quality scores for changed records, every minute.
+    crate::jobs::spawn_quality_incremental_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
     // Q10-T6: role grants past their end date, hourly.
     crate::jobs::spawn_role_grant_expiry_scheduler(
         db.clone(),

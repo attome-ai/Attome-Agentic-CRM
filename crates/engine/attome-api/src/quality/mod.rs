@@ -3,3 +3,5 @@
 //! (`crate::quality_score`) measures them.
 
 pub mod dimensions;
+/// L2-T3: scoring as records change, and the resumable rescan.
+pub mod incremental;

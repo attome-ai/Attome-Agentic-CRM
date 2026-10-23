@@ -733,6 +733,7 @@ const INTERNAL_PREFIXES: &[&str] = &[
     "attome-search/",
     "mdm/",
     "catalog/",
+    "quality/",
     "attome-service/",
     "attome-sales/",
     "attome-commission/",

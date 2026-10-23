@@ -496,6 +496,14 @@ pub enum EngineJob {
     /// D7-T3: gives new deals their owner's default team, off the change
     /// feed. Bare unit variant.
     SalesDefaultTeamSweep,
+    /// L2-T3: scores the records that changed since the last tick, off the
+    /// change feed, and queues a rescan of entities whose rules changed.
+    /// Bare unit variant.
+    QualityIncrementalSweep,
+    /// L2-T3: rescores one entity's records after `after` (keyset, one
+    /// batch); the next batch is a new job carrying the last id reached, so
+    /// a restart resumes there.
+    QualityRescan { entity: String, after: Option<Uuid> },
     /// F10-T3: writes commission credits for won deals, off the change
     /// feed. Bare unit variant.
     CommissionCreditSweep,
@@ -1010,6 +1018,7 @@ impl EngineJob {
             | Self::RunDataStep { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
+            | Self::QualityRescan { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1076,6 +1085,7 @@ impl EngineJob {
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
+            | Self::QualityIncrementalSweep
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
@@ -1186,6 +1196,7 @@ impl EngineJob {
             EngineJob::WorkflowEntityTriggerDispatch => "WorkflowEntityTriggerDispatch",
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
+            EngineJob::QualityRescan { .. } => "QualityRescan",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
             EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
             EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
@@ -1225,6 +1236,7 @@ impl EngineJob {
             EngineJob::MarketingSweep => "MarketingSweep",
             EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
             EngineJob::SalesDefaultTeamSweep => "SalesDefaultTeamSweep",
+            EngineJob::QualityIncrementalSweep => "QualityIncrementalSweep",
             EngineJob::CommissionCreditSweep => "CommissionCreditSweep",
             EngineJob::BillingRequestSweep => "BillingRequestSweep",
             EngineJob::BillingScheduleRun => "BillingScheduleRun",
@@ -1378,6 +1390,7 @@ impl EngineJob {
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
+            | Self::QualityIncrementalSweep
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
@@ -1438,6 +1451,7 @@ impl EngineJob {
             Self::RewrapSecrets { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
+            | Self::QualityRescan { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1543,6 +1557,7 @@ impl EngineJob {
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
+            | Self::QualityIncrementalSweep
             | Self::CommissionCreditSweep
             | Self::BillingRequestSweep
             | Self::BillingScheduleRun
@@ -1615,6 +1630,7 @@ impl EngineJob {
             | Self::ValidationCleanupScan { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
+            | Self::QualityRescan { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1976,6 +1992,11 @@ mod tests {
         assert_round_trips(EngineJob::MarketingSweep);
         assert_round_trips(EngineJob::RoleGrantExpiry);
         assert_round_trips(EngineJob::SalesDefaultTeamSweep);
+        assert_round_trips(EngineJob::QualityIncrementalSweep);
+        assert_round_trips(EngineJob::QualityRescan {
+            entity: "account".into(),
+            after: Some(Uuid::now_v7()),
+        });
         assert_round_trips(EngineJob::CommissionCreditSweep);
         assert_round_trips(EngineJob::BillingRequestSweep);
         assert_round_trips(EngineJob::BillingScheduleRun);

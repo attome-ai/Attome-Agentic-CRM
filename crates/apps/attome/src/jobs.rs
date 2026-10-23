@@ -1788,16 +1788,24 @@ async fn dispatch_platform_job(
         // M14 Phase 1 (Data Quality) — see this variant's doc comment in
         // attome_jobs::job. Needs the full `EngineState` (the entity metadata
         // registry snapshot + the runtime pool), not just the runtime pool.
+        // L2-T3: scoring runs as records change; the daily job writes the
+        // snapshot and the alerts.
         EngineJob::DataQualityScoreSweep => {
             let stats =
-                attome_api::quality_score::run_sweep(&attome_state, &config.notification).await?;
-            tracing::info!(
-                entities_scored = stats.entities_scored,
-                scores_written = stats.scores_written,
-                issues_written = stats.issues_written,
-                alerts_sent = stats.alerts_sent,
-                "data quality score sweep: run complete"
-            );
+                attome_api::quality_score::run_snapshot(&attome_state, &config.notification)
+                    .await?;
+            tracing::info!(?stats, "data quality daily snapshot: run complete");
+        }
+        EngineJob::QualityIncrementalSweep => {
+            let stats = attome_api::quality::incremental::tick(&attome_state).await?;
+            if stats != attome_api::quality::incremental::TickStats::default() {
+                tracing::info!(?stats, "data quality incremental: tick complete");
+            }
+        }
+        EngineJob::QualityRescan { entity, after } => {
+            let next = attome_api::quality::incremental::rescan_step(&attome_state, &entity, after)
+                .await?;
+            tracing::info!(%entity, ?after, ?next, "data quality rescan: batch complete");
         }
         // M25 Phase 1 (Report, D-440) — see this variant's doc comment in
         // attome_jobs::job. Needs the full `EngineState` for `query_exec`,
@@ -2784,6 +2792,7 @@ const DEDUP_KEY_SEGMENT_REFRESH_DUE: &str = "segment-refresh-due";
 const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
 const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
+const DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP: &str = "quality-incremental-sweep";
 const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
 const DEDUP_KEY_BILLING_REQUEST_SWEEP: &str = "billing-request-sweep";
 const DEDUP_KEY_BILLING_SCHEDULE_RUN: &str = "billing-schedule-run";
@@ -4336,6 +4345,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::MarketingSweep => DEDUP_KEY_MARKETING_SWEEP,
         EngineJob::RoleGrantExpiry => DEDUP_KEY_ROLE_GRANT_EXPIRY,
         EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
+        EngineJob::QualityIncrementalSweep => DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP,
         EngineJob::CommissionCreditSweep => DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
         EngineJob::BillingRequestSweep => DEDUP_KEY_BILLING_REQUEST_SWEEP,
         EngineJob::BillingScheduleRun => DEDUP_KEY_BILLING_SCHEDULE_RUN,
@@ -5709,6 +5719,17 @@ pub fn spawn_billing_overdue_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::BillingOverdueSweep,
         DEDUP_KEY_BILLING_OVERDUE_SWEEP,
         "billing overdue",
+    );
+}
+
+/// L2-T3: every minute, quality scores for the records that changed.
+pub fn spawn_quality_incremental_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::QualityIncrementalSweep,
+        DEDUP_KEY_QUALITY_INCREMENTAL_SWEEP,
+        "data quality incremental",
     );
 }
 

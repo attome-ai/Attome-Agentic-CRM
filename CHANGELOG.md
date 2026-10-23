@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Incremental data quality (L2-T3): entities are scored as their records change, off the change
+  feed (every minute), with per-record scores when `quality_target.record_scoring` is on; a change
+  to an entity's rules, weights, threshold or required attributes queues a resumable keyset rescan
+  (migration 0234). The daily job now writes the snapshot and alerts only; the issue caps are the
+  settings `quality.max_issues_per_run` (2000) and `quality.max_issues_per_entity` (200).
 - Source-system rank survivorship (L1-T3): a `source_system_rank` rule ranks source systems per
   attribute (`config.ranks`), breaks ties by recency or completeness and can skip unvalidated
   contributions; `survivorship_rule.config` (migration 0233) holds it, and the admin API accepts it.

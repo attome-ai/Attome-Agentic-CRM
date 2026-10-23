@@ -1,5 +1,8 @@
-//! M14 Phase 1 (Data Quality) — the scoring engine `EngineJob::
-//! DataQualityScoreSweep` (`crates/server/src/jobs.rs`) calls once/day.
+//! M14 Phase 1 (Data Quality) — the scoring engine. Since L2-T3 an entity
+//! is scored as its records change (`crate::quality::incremental`, which
+//! calls [`score_entity`]); `EngineJob::DataQualityScoreSweep` writes the
+//! daily snapshot and alerts ([`run_snapshot`]); [`run_sweep`] still scores
+//! every entity at once on request.
 //! Two dimensions, neither needing M45's not-yet-authorable `kind=quality`
 //! custom-rule mechanism (see the module plan's scope note):
 //!
@@ -81,9 +84,9 @@ struct DimensionAlert {
     sample_size: i64,
 }
 
-struct EntityOutcome {
+pub(crate) struct EntityOutcome {
     scores_written: usize,
-    issues_written: i64,
+    pub(crate) issues_written: i64,
     alerts: Vec<DimensionAlert>,
 }
 
@@ -91,7 +94,7 @@ struct EntityOutcome {
 /// Matches the sweep's own once/day cadence, so a period always represents
 /// one calendar day's answer; a re-run within the same day is the
 /// idempotent-upsert case documented above, not a new period.
-fn today_period() -> String {
+pub(crate) fn today_period() -> String {
     Utc::now().date_naive().format("%Y-%m-%d").to_string()
 }
 
@@ -132,10 +135,12 @@ pub async fn run_sweep(
         issues_written: 0,
         alerts_sent: 0,
     };
-    let mut issue_budget = MAX_ISSUES_PER_RUN;
+    // L2-T3: the caps are settings (defaults the two constants).
+    let caps = crate::quality::incremental::caps(state);
+    let mut issue_budget = caps.per_run;
 
     for meta in &entities {
-        let entity_budget = issue_budget.clamp(0, MAX_ISSUES_PER_ENTITY);
+        let entity_budget = issue_budget.clamp(0, caps.per_entity);
         match score_entity(&state.base.db, meta, &period, entity_budget).await {
             Ok(outcome) => {
                 stats.entities_scored += 1;
@@ -167,7 +172,105 @@ pub async fn run_sweep(
     Ok(stats)
 }
 
-async fn score_entity(
+/// L2-T3: what the daily job did.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SnapshotStats {
+    pub snapshot_rows: usize,
+    pub timeliness_rescored: usize,
+    pub alerts_sent: usize,
+}
+
+/// L2-T3: the daily job (`EngineJob::DataQualityScoreSweep`). Scoring runs
+/// as records change (`crate::quality::incremental`); this rescores only
+/// the entities with a timeliness target (their scores age with no change),
+/// writes the day's `quality_snapshot` from every entity's latest scores,
+/// and raises the threshold alerts once a day.
+pub async fn run_snapshot(
+    state: &EngineState,
+    notification_cfg: &NotificationSection,
+) -> Result<SnapshotStats, AppError> {
+    let db = &state.base.db;
+    let mut stats = SnapshotStats::default();
+    let period = today_period();
+    let caps = crate::quality::incremental::caps(state);
+    let timely: Vec<String> =
+        sqlx::query_scalar("SELECT entity FROM quality_target WHERE timeliness_days IS NOT NULL")
+            .fetch_all(db)
+            .await
+            .map_err(AppError::internal)?;
+    let mut budget = caps.per_run;
+    for entity in timely {
+        let Some(meta) = state.entities.load().get(&entity).cloned() else {
+            continue;
+        };
+        match score_entity(db, &meta, &period, budget.clamp(0, caps.per_entity)).await {
+            Ok(outcome) => {
+                budget = (budget - outcome.issues_written).max(0);
+                stats.timeliness_rescored += 1;
+            }
+            Err(e) => {
+                tracing::warn!(%entity, error = %e, "quality snapshot: timeliness rescoring failed")
+            }
+        }
+    }
+
+    let latest: Vec<(String, String, f64, i64, i64)> = sqlx::query_as(
+        "WITH latest AS ( \
+             SELECT DISTINCT ON (entity_logicalname, dimension) \
+                    entity_logicalname, dimension, score::float8 AS score, fail_count, sample_size \
+               FROM quality_score \
+              ORDER BY entity_logicalname, dimension, computed_at DESC \
+         ), written AS ( \
+             INSERT INTO quality_snapshot (entity, dimension, day, score) \
+             SELECT entity_logicalname, dimension, CURRENT_DATE, score FROM latest \
+             ON CONFLICT (entity, dimension, day) DO UPDATE SET score = EXCLUDED.score \
+         ) \
+         SELECT entity_logicalname, dimension, score, fail_count, sample_size FROM latest",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    stats.snapshot_rows = latest.len();
+    let thresholds: HashMap<String, f64> =
+        sqlx::query_as("SELECT entity, threshold::float8 FROM quality_target")
+            .fetch_all(db)
+            .await
+            .map_err(AppError::internal)?
+            .into_iter()
+            .collect();
+    for (entity, dimension, score, fail_count, sample_size) in latest {
+        let (name, alert) = if dimension == OVERALL {
+            let threshold = thresholds
+                .get(&entity)
+                .copied()
+                .unwrap_or(crate::quality::dimensions::DEFAULT_THRESHOLD);
+            (OVERALL, score < threshold)
+        } else {
+            match crate::quality::dimensions::Dimension::parse(&dimension) {
+                Some(d) => (d.as_str(), score <= SCORE_ALERT_THRESHOLD),
+                None => continue,
+            }
+        };
+        if alert {
+            dispatch_score_alert(
+                db,
+                notification_cfg,
+                &entity,
+                &DimensionAlert {
+                    dimension: name,
+                    score,
+                    fail_count,
+                    sample_size,
+                },
+            )
+            .await;
+            stats.alerts_sent += 1;
+        }
+    }
+    Ok(stats)
+}
+
+pub(crate) async fn score_entity(
     db: &DbPool,
     meta: &EntityMeta,
     period: &str,

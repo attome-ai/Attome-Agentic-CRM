@@ -415,6 +415,25 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(true),
         ),
+        // L2-T3: the quality scoring's issue caps.
+        SettingDescriptor::new(
+            "quality.max_issues_per_run",
+            "The most data quality issue rows one scoring run writes across all entities \
+         (L2-T3). Scores are written regardless; only the issue detail is capped.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 1000000}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(2000),
+        ),
+        SettingDescriptor::new(
+            "quality.max_issues_per_entity",
+            "The most data quality issue rows one entity gets in a scoring run, so one entity \
+         cannot use the whole run's issues (L2-T3).",
+            || json!({"type": "integer", "minimum": 0, "maximum": 1000000}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(200),
+        ),
         // L5-T6: the lineage graph's OpenLineage export.
         SettingDescriptor::new(
             "lineage.export_enabled",
