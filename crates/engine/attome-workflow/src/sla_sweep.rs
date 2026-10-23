@@ -68,6 +68,30 @@ pub async fn sweep(state: &EngineState) -> Result<u64, AppError> {
         resumed += 1;
     }
 
+    // M10-T3: an event wait whose `timeout_seconds` passed resumes with
+    // `timed_out` and takes its `timeout` port.
+    let timed_out: Vec<ScheduleWait> = sqlx::query_as::<_, ScheduleWait>(
+        "SELECT node_run_id, instance_id, node_id, condition FROM workflow_trigger_index \
+         WHERE role = 'wait' AND match_type = 'entity_event' AND resume_at < NOW() \
+           AND node_run_id IS NOT NULL \
+         LIMIT $1",
+    )
+    .bind(SWEEP_BATCH_SIZE)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for wait in timed_out {
+        crate::scheduler::resume_node(
+            state,
+            wait.instance_id,
+            &wait.node_id,
+            wait.node_run_id,
+            serde_json::json!({ "timed_out": true }),
+        )
+        .await?;
+        resumed += 1;
+    }
+
     let pending_approvals: Vec<SignalWait> = sqlx::query_as::<_, SignalWait>(
         "SELECT node_run_id, instance_id, node_id, condition FROM workflow_trigger_index \
          WHERE role = 'wait' AND match_type = 'signal' \

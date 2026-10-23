@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Business-time waits and event-wait timeouts (M10-T3): `wait` and `wait_for_event` nodes take
+  `business_time` (count only the working hours of `calendar_id`, else the deployment's default
+  calendar, skipping its holidays) and `relative_to` (count from a date field of the wired record
+  instead of now). `wait_for_event` takes `timeout_seconds` and gains a `timeout` port: when the time
+  passes before the event, the sweep resumes it with `{"timed_out": true}` and the run goes down
+  `timeout` instead of `event`.
 - Flow simulation reads real data (M4-T1): `POST /api/v1/workflow/definitions/{id}/versions/{version_id}/simulate`
   takes `read_record: {entity, id}`, read as the person simulating (record access and field grants
   apply) and handed to the trigger as `{entity, record_id, record}`. Each update step's trace now

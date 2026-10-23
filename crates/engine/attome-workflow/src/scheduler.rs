@@ -321,6 +321,17 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
             mark_untaken_branch(&graph, &node.id, taken_port, &mut node_runs);
         }
     }
+    // M10-T3: a resumed `wait_for_event` took `event` or `timeout`, the same
+    // asynchronous branch as an approval's.
+    for node in &graph.nodes {
+        if NodeType::parse(&node.node_type) != Some(NodeType::WaitForEvent)
+            || node_runs.get(&node.id).map(|nr| nr.status.as_str()) != Some("succeeded")
+        {
+            continue;
+        }
+        let taken_port = wait_for_event_taken_port(node_data.get(&node.id));
+        mark_untaken_branch(&graph, &node.id, taken_port, &mut node_runs);
+    }
 
     // `Arc`, not owned: `execute_route` (M33 Phase 1) needs an owned
     // `Arc<SecurityContext>` to build an `attome_ai::ActionContext` for a
@@ -1507,8 +1518,8 @@ async fn execute_node(
         }
         NodeType::Webhook => execute_webhook(instance, node, input, fired, round).await,
         NodeType::Approval => execute_approval(state, instance, node, input).await,
-        NodeType::Wait => Ok(execute_wait(node)),
-        NodeType::WaitForEvent => Ok(execute_wait_for_event(node)),
+        NodeType::Wait => execute_wait(state, node, input).await,
+        NodeType::WaitForEvent => execute_wait_for_event(state, node, input).await,
         NodeType::SubWorkflow => execute_sub_workflow(state, instance, node, input).await,
         NodeType::ForEach => execute_for_each(state, instance, node, input).await,
         // Plain passthrough — the fan-out itself is just "more than one
@@ -2812,7 +2823,83 @@ async fn execute_route(
     }
 }
 
-fn execute_wait(node: &GraphNode) -> NodeOutcome {
+/// M10-T3: when a wait of `seconds` that starts at `base` ends: on the
+/// business calendar (`business_time`; `calendar_id`, else the deployment's
+/// default) or by the clock.
+async fn wait_until(
+    state: &EngineState,
+    node: &GraphNode,
+    base: DateTime<Utc>,
+    seconds: i64,
+) -> Result<DateTime<Utc>, AppError> {
+    let duration = chrono::Duration::try_seconds(seconds.max(0))
+        .ok_or_else(|| AppError::Validation(format!("node {:?}: the wait is too long", node.id)))?;
+    if !node
+        .config
+        .get("business_time")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Ok(base + duration);
+    }
+    let calendar_id = match node.config.get("calendar_id").and_then(Value::as_str) {
+        Some(raw) => Some(Uuid::parse_str(raw).map_err(|_| {
+            AppError::Validation(format!("node {:?}: calendar_id is not an id", node.id))
+        })?),
+        None => attome_core::calendar::default_calendar_id(&state.base.db).await?,
+    };
+    let Some(calendar_id) = calendar_id else {
+        return Err(AppError::Validation(format!(
+            "node {:?} waits in business time but names no calendar and the deployment has no default",
+            node.id
+        )));
+    };
+    let loaded = attome_core::calendar::load_calendar(&state.base.db, calendar_id)
+        .await?
+        .map_err(|e| {
+            AppError::Validation(format!("node {:?}: calendar unusable: {e:?}", node.id))
+        })?;
+    loaded
+        .calendar
+        .add_business_duration(base, duration)
+        .map_err(|e| AppError::Validation(format!("node {:?}: {e}", node.id)))
+}
+
+/// M10-T3: the time a wait counts from: the record field named by
+/// `config.relative_to` in the wired input (`in.<field>`, or
+/// `in.record.<field>` for a trigger that carries the record), else `now`.
+pub(crate) fn wait_base(config: &Value, input: &Value, now: DateTime<Utc>) -> DateTime<Utc> {
+    let Some(field) = config.get("relative_to").and_then(Value::as_str) else {
+        return now;
+    };
+    let wired = input.get("in");
+    wired
+        .and_then(|v| v.get(field))
+        .or_else(|| {
+            wired
+                .and_then(|v| v.get("record"))
+                .and_then(|r| r.get(field))
+        })
+        .and_then(Value::as_str)
+        .and_then(|raw| {
+            DateTime::parse_from_rfc3339(raw)
+                .map(|d| d.with_timezone(&Utc))
+                .ok()
+                .or_else(|| {
+                    chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d")
+                        .ok()
+                        .and_then(|d| d.and_hms_opt(0, 0, 0))
+                        .map(|d| d.and_utc())
+                })
+        })
+        .unwrap_or(now)
+}
+
+async fn execute_wait(
+    state: &EngineState,
+    node: &GraphNode,
+    input: &Value,
+) -> Result<NodeOutcome, AppError> {
     let resume_at = if let Some(iso) = node.config.get("resume_at").and_then(Value::as_str) {
         DateTime::parse_from_rfc3339(iso)
             .ok()
@@ -2823,32 +2910,64 @@ fn execute_wait(node: &GraphNode) -> NodeOutcome {
             .get("delay_seconds")
             .and_then(Value::as_i64)
             .unwrap_or(0);
-        Some(Utc::now() + chrono::Duration::seconds(seconds))
+        let base = wait_base(&node.config, input, Utc::now());
+        Some(wait_until(state, node, base, seconds).await?)
     };
-    NodeOutcome::Waiting {
+    Ok(NodeOutcome::Waiting {
         match_type: "schedule",
         entity_logicalname: None,
         condition: None,
         resume_at,
         eventual_output: Value::Null,
-    }
+    })
 }
 
-fn execute_wait_for_event(node: &GraphNode) -> NodeOutcome {
+/// M10-T3: with `config.timeout_seconds` (in business time when
+/// `business_time`), the wait also ends when that time passes; the sweep
+/// then resumes it with `{"timed_out": true}` and the node takes its
+/// `timeout` port instead of `event`.
+async fn execute_wait_for_event(
+    state: &EngineState,
+    node: &GraphNode,
+    input: &Value,
+) -> Result<NodeOutcome, AppError> {
     let entity_logicalname = node
         .config
         .get("entity_logicalname")
         .and_then(Value::as_str)
         .map(str::to_string);
     let condition = node.config.get("condition").cloned();
-    NodeOutcome::Waiting {
+    let resume_at = match node.config.get("timeout_seconds").and_then(Value::as_i64) {
+        Some(seconds) => {
+            let base = wait_base(&node.config, input, Utc::now());
+            Some(wait_until(state, node, base, seconds).await?)
+        }
+        None => None,
+    };
+    Ok(NodeOutcome::Waiting {
         match_type: "entity_event",
         entity_logicalname,
         condition,
-        resume_at: None,
+        resume_at,
         eventual_output: Value::Null,
+    })
+}
+
+/// M10-T3: the port a resumed `wait_for_event` takes.
+pub(crate) fn wait_for_event_taken_port(output: Option<&Value>) -> &'static str {
+    if output
+        .and_then(|v| v.get("timed_out"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        "timeout"
+    } else {
+        "event"
     }
 }
+
+/// M1-T4: the largest batch a for-each hands one run.
+pub(crate) const MAX_FOR_EACH_BATCH: usize = 100;
 
 /// §8 risk ("sub-workflow recursion... an ancestor definition, infinite
 /// nesting"): a runtime depth cap, not a static publish-time ancestry-graph
@@ -2866,9 +2985,6 @@ fn execute_wait_for_event(node: &GraphNode) -> NodeOutcome {
 /// `admin.rs`'s publish-time direct-self-reference check catches the most
 /// common authoring mistake (a definition pointing at itself) immediately;
 /// this catches every other cycle length, plus simple runaway fan-out.
-/// M1-T4: the largest batch a for-each hands one run.
-pub(crate) const MAX_FOR_EACH_BATCH: usize = 100;
-
 async fn execute_sub_workflow(
     state: &EngineState,
     instance: &InstanceRow,
@@ -3682,5 +3798,46 @@ mod for_each_tests {
             ready_nodes(&graph, &runs, &data),
             vec!["handler".to_owned()]
         );
+    }
+}
+
+#[cfg(test)]
+mod business_wait_tests {
+    //! M10-T3: what a wait counts from and which port a timed-out event
+    //! wait takes. The calendar arithmetic itself (holidays, weekends) is
+    //! `attome_calendar::BusinessCalendar::add_business_duration`'s, tested
+    //! there.
+    use super::*;
+
+    fn at(raw: &str) -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339(raw)
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn business_wait_counts_from_the_named_record_field() {
+        let now = at("2026-10-23T09:00:00Z");
+        let config = serde_json::json!({ "relative_to": "due_date" });
+        let direct = serde_json::json!({ "in": { "due_date": "2026-11-01T08:00:00Z" } });
+        assert_eq!(wait_base(&config, &direct, now), at("2026-11-01T08:00:00Z"));
+        let nested = serde_json::json!({ "in": { "record": { "due_date": "2026-11-02" } } });
+        assert_eq!(wait_base(&config, &nested, now), at("2026-11-02T00:00:00Z"));
+        let missing = serde_json::json!({ "in": {} });
+        assert_eq!(wait_base(&config, &missing, now), now);
+        assert_eq!(wait_base(&serde_json::json!({}), &direct, now), now);
+    }
+
+    #[test]
+    fn business_wait_for_event_times_out_down_its_own_port() {
+        assert_eq!(
+            wait_for_event_taken_port(Some(&serde_json::json!({ "timed_out": true }))),
+            "timeout"
+        );
+        assert_eq!(
+            wait_for_event_taken_port(Some(&serde_json::json!({ "record_id": "x" }))),
+            "event"
+        );
+        assert_eq!(wait_for_event_taken_port(None), "event");
     }
 }

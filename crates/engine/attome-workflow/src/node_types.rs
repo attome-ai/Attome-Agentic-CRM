@@ -321,7 +321,8 @@ impl NodeType {
             // the way `Condition`'s does.
             Self::Approval => &[("approved", PortType::Any), ("rejected", PortType::Any)],
             Self::Wait => &[("out", PortType::Any)],
-            Self::WaitForEvent => &[("event", PortType::Json)],
+            // M10-T3: `timeout` when `config.timeout_seconds` passed first.
+            Self::WaitForEvent => &[("event", PortType::Json), ("timeout", PortType::Json)],
             Self::SubWorkflow => &[("output", PortType::Json)],
             Self::Webhook => &[("response", PortType::Json)],
             Self::Split => &[("out", PortType::Any)],
@@ -462,7 +463,11 @@ impl NodeType {
     pub fn is_branching(self) -> bool {
         matches!(
             self,
-            Self::Condition | Self::Approval | Self::Route | Self::DuplicateCheck
+            Self::Condition
+                | Self::Approval
+                | Self::Route
+                | Self::DuplicateCheck
+                | Self::WaitForEvent
         )
     }
 }

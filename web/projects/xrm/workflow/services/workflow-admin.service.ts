@@ -121,7 +121,7 @@ export const NODE_TYPES: NodeTypeSpec[] = [
     outputs: [{ name: 'approved', portType: 'any' }, { name: 'rejected', portType: 'any' }] },
   { type: 'wait', label: 'Wait / Delay', inputs: [{ name: 'in', portType: 'any' }], outputs: [{ name: 'out', portType: 'any' }] },
   { type: 'wait_for_event', label: 'Wait for Event', inputs: [{ name: 'in', portType: 'any' }],
-    outputs: [{ name: 'event', portType: 'json' }] },
+    outputs: [{ name: 'event', portType: 'json' }, { name: 'timeout', portType: 'json' }] },
   { type: 'sub_workflow', label: 'Sub-Workflow', inputs: [{ name: 'input', portType: 'json' }],
     outputs: [{ name: 'output', portType: 'json' }] },
   { type: 'webhook', label: 'Webhook / HTTP Call', inputs: [{ name: 'body', portType: 'json' }],
@@ -147,6 +147,17 @@ export const NODE_TYPES: NodeTypeSpec[] = [
   // M1-T4: run a flow once per batch of up to 100 items, then go on.
   { type: 'for_each', label: 'For Each', inputs: [{ name: 'items', portType: 'json', required: true }],
     outputs: [{ name: 'out', portType: 'json' }] },
+];
+
+// M10-T3: read by `scheduler::wait_until` and `scheduler::wait_base` for
+// both waits.
+const BUSINESS_TIME_FIELDS: NodeConfigField[] = [
+  { key: 'business_time', label: 'Count business time only', kind: 'bool', default: false,
+    hint: 'Counts only the working hours of the calendar below.' },
+  { key: 'calendar_id', label: 'Calendar', kind: 'text',
+    hint: 'Calendar id. Blank uses the deployment default calendar.' },
+  { key: 'relative_to', label: 'Count from field', kind: 'text',
+    hint: 'A date field of the wired record. Blank counts from now.' },
 ];
 
 export function nodeTypeSpec(type: string): NodeTypeSpec | undefined {
@@ -312,9 +323,13 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
     { key: 'delay_seconds', label: 'Delay (seconds)', kind: 'number', default: 0 },
     { key: 'resume_at', label: 'Resume at', kind: 'text',
       hint: 'RFC-3339 UTC timestamp. When set it overrides the delay entirely.' },
+    ...BUSINESS_TIME_FIELDS,
   ],
   // scheduler::execute_wait_for_event
   wait_for_event: [
+    { key: 'timeout_seconds', label: 'Time out after (seconds)', kind: 'number',
+      hint: 'Optional. When it passes first, the node takes its "timeout" port.' },
+    ...BUSINESS_TIME_FIELDS,
     { key: 'entity_logicalname', label: 'Entity', kind: 'entity',
       hint: 'Blank waits on any entity event.' },
     // Unlike the trigger's, this condition IS evaluated —
@@ -417,6 +432,8 @@ export interface SimulateRequestBody {
   trigger_payload?: unknown;
   /** node id -> "approved" | "rejected", for any `approval` node the run reaches. */
   approval_decisions?: Record<string, string>;
+  /** M4-T1: a real record to run against, read with the caller's access. */
+  read_record?: { entity: string; id: string };
 }
 
 export interface SimulateNodeTrace {

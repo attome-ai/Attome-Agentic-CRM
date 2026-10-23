@@ -26,6 +26,8 @@ const EXECUTOR_TO_NODE_TYPE: Record<string, string[]> = {
   execute_approval:          ['approval'],
   execute_wait:              ['wait'],
   execute_wait_for_event:    ['wait_for_event'],
+  wait_until:                ['wait', 'wait_for_event'],
+  wait_base:                 ['wait', 'wait_for_event'],
   execute_sub_workflow:      ['sub_workflow'],
   execute_for_each:          ['for_each'],
   for_each_batch_size:       ['for_each'],
