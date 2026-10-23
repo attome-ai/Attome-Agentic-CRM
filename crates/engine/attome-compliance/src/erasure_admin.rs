@@ -145,6 +145,9 @@ async fn erase_record(
 /// path) and `approval_admin::execute_approved` (the approved-and-executed
 /// path) call the exact same code — one execution path per action, same
 /// convention as every other wired flow.
+/// L7-T6: the change event an erasure writes.
+pub const ERASED_EVENT: &str = "record.erased";
+
 pub async fn do_erase_record(
     state: &EngineState,
     actor_id: Uuid,
@@ -230,6 +233,16 @@ pub async fn do_erase_record(
     };
 
     audit_service.write_in_tx(&mut tx, event).await?;
+    // L7-T6: consumers holding a copy erase it too (a purge; the event names
+    // the entity and id only, never a value).
+    attome_core::change_feed::emit_named(
+        &mut tx,
+        &logicalname,
+        record_id,
+        attome_core::change_feed::ChangeOperation::Purge,
+        ERASED_EVENT,
+    )
+    .await?;
 
     tx.commit().await.map_err(AppError::internal)?;
     // R2-T1: outside the database, so a restore cannot bring it back.

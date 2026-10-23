@@ -34,7 +34,7 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::errors;
-use super::model::{ChangesetStatus, Layer, Origin, RecordedOp, RecordingMode};
+use super::model::{ChangesetStatus, Layer, Op, Origin, RecordedOp, RecordingMode};
 use super::store::LOG_WATERMARK_SQL;
 
 /// Everything the recorder needs to know about an admin request. Built by
@@ -181,6 +181,12 @@ impl Recording {
     /// changed nothing must not call this ("exactly one operation per
     /// change").
     pub async fn record(&self, tx: &mut Tx<'_>, op: RecordedOp) -> Result<(), AppError> {
+        // L7-T6: a schema change made by an admin request or a changeset
+        // apply is a `schema.changed` event for change-stream subscribers,
+        // in the same transaction. Boot seeds are not.
+        if !matches!(self, Self::Seed) {
+            write_schema_event(tx, &op).await?;
+        }
         let Self::Request(req) = self else {
             return Ok(());
         };
@@ -478,4 +484,44 @@ mod tests {
         assert_eq!(Recording::Seed.stamp().ok(), Some(Layer::Platform));
         assert!(Recording::Seed.check_owner(Layer::Project).is_ok());
     }
+}
+
+/// L7-T6: the schema operations a change stream reports.
+pub const SCHEMA_EVENT_OPS: &[Op] = &[
+    Op::CreateEntity,
+    Op::UpdateEntity,
+    Op::RetireEntity,
+    Op::AddField,
+    Op::UpdateField,
+    Op::RenameField,
+    Op::ChangeFieldType,
+    Op::AddChoiceValue,
+    Op::RemoveChoiceValue,
+    Op::DeleteField,
+];
+
+/// L7-T6: writes `op` to `schema_change_event` (migration 0225) when it
+/// changes an entity or attribute: the entity, the operation, the attribute,
+/// never a value.
+async fn write_schema_event(tx: &mut Tx<'_>, op: &RecordedOp) -> Result<(), AppError> {
+    if !SCHEMA_EVENT_OPS.contains(&op.op) {
+        return Ok(());
+    }
+    let Some(entity) = op.target.get("entity").and_then(serde_json::Value::as_str) else {
+        return Ok(());
+    };
+    let field = op.target.get("field").and_then(serde_json::Value::as_str);
+    sqlx::query(
+        "INSERT INTO schema_change_event (entity_logicalname, change, object_kind, object_ref, field) \
+         VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(entity)
+    .bind(op.op.as_str())
+    .bind(op.object_kind)
+    .bind(op.object_ref)
+    .bind(field)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
 }

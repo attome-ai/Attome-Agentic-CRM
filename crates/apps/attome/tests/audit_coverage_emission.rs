@@ -2624,6 +2624,50 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 ),
             )
         }
+        "POST /api/v1/change-stream/{subscription}/erasure-confirmations" => {
+            // The admin is the client's service user, so its token is the
+            // subscription's identity.
+            let client = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    "/api/v1/admin/s2s/clients",
+                    Some(json!({
+                        "client_id": uniq("client"),
+                        "name": "erasure confirmation client",
+                        "service_user_ref": fx.admin_id,
+                    })),
+                )
+                .await,
+            );
+            let sub = admin(
+                fx,
+                "POST",
+                "/api/v1/change-stream/subscriptions",
+                Some(
+                    json!({"name": uniq("stream"), "client_ref": client, "entities": [fx.entity]}),
+                ),
+            )
+            .await;
+            let event: Uuid = sqlx::query_scalar(
+                "INSERT INTO entity_change_event (entity_logicalname, record_id, operation, event_name) \
+                 VALUES ($1, $2, 'purge', 'record.erased') RETURNING id",
+            )
+            .bind(&fx.entity)
+            .bind(fx.record_id)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("an erasure event");
+            request(
+                "POST",
+                &format!(
+                    "/api/v1/change-stream/{}/erasure-confirmations",
+                    id_of(&sub)
+                ),
+                t,
+                Some(json!({"event_ids": [event]})),
+            )
+        }
         "PATCH /api/v1/change-stream/subscriptions/{id}" => {
             let sub = change_stream_fixture(fx).await;
             request(

@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Erasure and schema events on the change stream (L7-T6): an erasure writes a `purge` change event
+  named `record.erased` (entity and id only), and a schema change made by an admin request or a
+  changeset apply is a `schema.<op>` event (entity and attribute names) for the entity's
+  subscribers. `POST /api/v1/change-stream/{subscription}/erasure-confirmations` records that a
+  subscriber erased its copies, as evidence.
 - Agent lineage tools (L5-T8): `lineage.downstream`, `lineage.upstream` and `lineage.impact` read
   the lineage graph and the impact engine as the person the agent acts for; an agent proposing a
   schema change is told to call `lineage.impact` first.

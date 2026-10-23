@@ -60,7 +60,9 @@ const SSE_PAGE: i64 = 100;
 const SSE_POLL: Duration = Duration::from_secs(2);
 const SSE_LIFETIME: Duration = Duration::from_secs(15 * 60);
 const PAYLOADS: &[&str] = &["id", "changes", "record"];
-const OPERATIONS: &[&str] = &["create", "update", "delete", "restore", "merge"];
+const OPERATIONS: &[&str] = &[
+    "create", "update", "delete", "restore", "merge", "purge", "schema",
+];
 
 // ── Subscriptions ───────────────────────────────────────────────────────
 
@@ -161,7 +163,7 @@ fn check(
         .find(|o| !OPERATIONS.contains(&o.as_str()))
     {
         return Err(AppError::Validation(format!(
-            "{op:?} is not an operation (create, update, delete, restore, merge)"
+            "{op:?} is not an operation (create, update, delete, restore, merge, purge, schema)"
         )));
     }
     if !PAYLOADS.contains(&payload) {
@@ -624,12 +626,22 @@ pub async fn read(
     let mut exhausted = false;
     while (events.len() as i64) < limit && scanned < limit * SCAN_FACTOR {
         let batch = (limit - events.len() as i64).max(1);
+        // L7-T6: schema changes to the subscribed entities interleave with
+        // their record events in commit order.
         let rows: Vec<FeedRow> = sqlx::query_as(
             "SELECT id, entity_logicalname, record_id, operation, event_name, created_at, \
                     changed_attributes, commit_xid::text::bigint \
-               FROM entity_change_event \
-              WHERE entity_logicalname = ANY($4) \
-                AND (commit_xid > $1::text::xid8 \
+               FROM ( \
+                 SELECT id, entity_logicalname, record_id, operation, event_name, created_at, \
+                        changed_attributes, commit_xid \
+                   FROM entity_change_event WHERE entity_logicalname = ANY($4) \
+                 UNION ALL \
+                 SELECT id, entity_logicalname, COALESCE(object_ref, id), 'schema', \
+                        'schema.' || change, created_at, \
+                        CASE WHEN field IS NULL THEN '{}'::text[] ELSE ARRAY[field] END, commit_xid \
+                   FROM schema_change_event WHERE entity_logicalname = ANY($4) \
+               ) f \
+              WHERE (commit_xid > $1::text::xid8 \
                      OR (commit_xid = $1::text::xid8 AND id > $2)) \
                 AND commit_xid < pg_snapshot_xmin(pg_current_snapshot()) \
               ORDER BY commit_xid, id \
@@ -660,7 +672,7 @@ pub async fn read(
             };
             let ids: Vec<Uuid> = rows
                 .iter()
-                .filter(|r| &r.1 == entity && r.3 != "delete")
+                .filter(|r| &r.1 == entity && !ids_only(&r.3))
                 .map(|r| r.2)
                 .collect();
             if !ids.is_empty() {
@@ -682,7 +694,7 @@ pub async fn read(
             if !passes_filters(sub, &operation, &changed) {
                 continue;
             }
-            let deleted = operation == "delete";
+            let deleted = ids_only(&operation);
             if !deleted
                 && !visible
                     .get(&entity)
@@ -707,7 +719,7 @@ pub async fn read(
                 continue;
             }
             let record = record.map(|data| strip(data, shown));
-            let changed_attributes = (sub.payload != "id").then(|| {
+            let changed_attributes = (sub.payload != "id" || operation == "schema").then(|| {
                 changed
                     .iter()
                     .filter(|c| {
@@ -741,6 +753,12 @@ pub async fn read(
         events,
         next_cursor: seal(position),
     }))
+}
+
+/// A delete, an erasure (`purge`, `record.erased`) or a schema change is
+/// sent with ids only: there is no record to read, or nothing of it to show.
+pub fn ids_only(operation: &str) -> bool {
+    matches!(operation, "delete" | "purge" | "schema")
 }
 
 /// Keeps only the attributes a subscriber may be shown (and the system
@@ -945,6 +963,99 @@ async fn stream_events(
         .into_response())
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ErasureConfirmationBody {
+    /// The `record.erased` events this subscriber has erased its copies for.
+    pub event_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ErasureConfirmations {
+    /// Events newly confirmed (an already confirmed one is not counted again).
+    pub confirmed: u64,
+}
+
+/// Confirms erased copies.
+///
+/// L7-T6: the subscription's identity confirms it erased its copy of each
+/// erased record (`record.erased` events of its entities); the confirmations
+/// are kept as evidence of the erasure's reach.
+#[utoipa::path(
+    post,
+    path = "/api/v1/change-stream/{subscription}/erasure-confirmations",
+    tag = "integration",
+    params(("subscription" = Uuid, Path)),
+    request_body = ErasureConfirmationBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Confirmed", body = ErasureConfirmations),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such subscription for the caller", body = ErrorResponse),
+        (status = 422, description = "An id that is not an erasure of the subscription's entities", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn confirm_erasures(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ErasureConfirmationBody>,
+) -> Result<Json<ErasureConfirmations>, AppError> {
+    let sub = own_subscription(&state, &ctx, id).await?;
+    if body.event_ids.is_empty() || body.event_ids.len() > 1000 {
+        return Err(AppError::Validation("event_ids holds 1 to 1000 ids".into()));
+    }
+    let erased: Vec<(Uuid, String, Uuid)> = sqlx::query_as(
+        "SELECT id, entity_logicalname, record_id FROM entity_change_event \
+          WHERE id = ANY($1) AND event_name = $2 AND entity_logicalname = ANY($3)",
+    )
+    .bind(&body.event_ids)
+    .bind(attome_compliance::erasure_admin::ERASED_EVENT)
+    .bind(&sub.entities)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if erased.len() != body.event_ids.iter().collect::<HashSet<_>>().len() {
+        return Err(AppError::Validation(
+            "every id is a record.erased event of the subscription's entities".into(),
+        ));
+    }
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let mut confirmed = 0;
+    for (event_id, entity, record_id) in &erased {
+        confirmed += sqlx::query(
+            "INSERT INTO change_stream_erasure_confirmation \
+                 (subscription_ref, event_id, entity_logicalname, record_id, confirmed_by) \
+             VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+        )
+        .bind(id)
+        .bind(event_id)
+        .bind(entity)
+        .bind(record_id)
+        .bind(ctx.user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
+    }
+    write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Security,
+            AuditOperation::Update,
+            ctx.user_id,
+            "change_stream_subscription",
+            Some(id),
+        )
+        .named("change_stream.erasure_confirmed")
+        .comment(format!("{confirmed} erased copies confirmed")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(ErasureConfirmations { confirmed }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -973,7 +1084,8 @@ pub fn routes() -> Router<EngineState> {
         update_subscription,
         delete_subscription,
         read_events,
-        stream_events
+        stream_events,
+        confirm_erasures
     ),
     components(schemas(
         Subscription,

@@ -513,3 +513,160 @@ fn urlencode(raw: &str) -> String {
         })
         .collect()
 }
+
+/// L7-T6: an erasure reaches the subscriber as an ids-only `record.erased`
+/// purge, a new attribute as a `schema.add_field` event, and the
+/// subscriber's erasure confirmation is kept once.
+#[test]
+fn erasure_and_schema_events_delivered() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_user(&system).await;
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let app = full_app(system);
+        let entity = entity_with_title(&app, &admin_cookie, "cse").await;
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE logicalname = $1")
+                .bind(&entity)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+
+        let service_user = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO user_account (id, user_name, email, is_active) \
+             VALUES ($1, $2, $2 || '@test.invalid', true)",
+        )
+        .bind(service_user)
+        .bind(format!("change-stream-erasure-{service_user}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+             SELECT uuidv7(), $1, id, true, now() FROM privilege WHERE key = $2",
+        )
+        .bind(service_user)
+        .bind(format!("{entity}.read"))
+        .execute(&db)
+        .await
+        .unwrap();
+        let (_, client) = send(
+            &app,
+            json_request(
+                "POST",
+                "/api/v1/admin/s2s/clients".into(),
+                &admin_cookie,
+                serde_json::json!({
+                    "client_id": format!("cse-{}", Uuid::now_v7().simple()),
+                    "name": "erasure stream client",
+                    "service_user_ref": service_user,
+                }),
+            ),
+        )
+        .await;
+        let (status, sub) = send(
+            &app,
+            json_request(
+                "POST",
+                "/api/v1/change-stream/subscriptions".into(),
+                &admin_cookie,
+                serde_json::json!({ "name": "erasure feed", "client_ref": client["id"], "entities": [entity] }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{sub}");
+        let sub_id = sub["id"].as_str().unwrap().to_owned();
+        let identity = session_cookie(service_user);
+        let (_, start) = send(
+            &app,
+            get(format!("/api/v1/change-stream/{sub_id}/events"), &identity),
+        )
+        .await;
+        let cursor = start["next_cursor"].as_str().unwrap().to_owned();
+
+        let record = create(&app, &admin_cookie, &entity, "to be erased").await;
+        let record_id: Uuid = record["id"].as_str().unwrap().parse().unwrap();
+        attome_compliance::erasure_admin::do_erase_record(
+            &state,
+            service_user,
+            entity.clone(),
+            record_id,
+        )
+        .await
+        .expect("erase");
+        let (status, body) = send(
+            &app,
+            json_request(
+                "POST",
+                format!("/api/v1/admin/entities/{entity_id}/fields"),
+                &admin_cookie,
+                serde_json::json!({ "logicalname": "notes", "name": "Notes", "field_type": "text" }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+
+        let mut events = Vec::new();
+        for _ in 0..20 {
+            let (status, page) = send(
+                &app,
+                get(
+                    format!(
+                        "/api/v1/change-stream/{sub_id}/events?cursor={}&limit=50",
+                        urlencode(&cursor)
+                    ),
+                    &identity,
+                ),
+            )
+            .await;
+            assert_eq!(status, StatusCode::OK, "{page}");
+            events = page["events"].as_array().unwrap().clone();
+            if events.iter().any(|e| e["operation"] == "schema") {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+        let erased = events
+            .iter()
+            .find(|e| e["event_name"] == "record.erased")
+            .unwrap_or_else(|| panic!("no erasure event: {events:?}"));
+        assert_eq!(erased["operation"], "purge");
+        assert_eq!(erased["record_id"], record_id.to_string());
+        assert!(
+            erased.get("record").is_none(),
+            "an erasure carries no values"
+        );
+        let schema = events
+            .iter()
+            .find(|e| e["operation"] == "schema")
+            .unwrap_or_else(|| panic!("no schema event: {events:?}"));
+        assert_eq!(schema["event_name"], "schema.add_field");
+        assert_eq!(schema["changed_attributes"], serde_json::json!(["notes"]));
+
+        let erased_id = erased["event_id"].as_str().unwrap().to_owned();
+        for expected in [1, 0] {
+            let (status, body) = send(
+                &app,
+                json_request(
+                    "POST",
+                    format!("/api/v1/change-stream/{sub_id}/erasure-confirmations"),
+                    &identity,
+                    serde_json::json!({ "event_ids": [erased_id] }),
+                ),
+            )
+            .await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            assert_eq!(body["confirmed"], expected, "a confirmation is kept once");
+        }
+        let kept: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM change_stream_erasure_confirmation WHERE subscription_ref = $1::uuid",
+        )
+        .bind(&sub_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(kept, 1);
+    })
+}
