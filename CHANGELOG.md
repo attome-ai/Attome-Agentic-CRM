@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Financial statements (W5-T3): `GET /api/v1/ledger/statements/trial-balance`, `/profit-and-loss`
+  (date range) and `/balance-sheet` (as of a date) sum the posted entry lines per account in exact
+  decimals; the trial balance ties debits to credits and the balance sheet ties assets to
+  liabilities, equity and current earnings. Reading takes `gl_entry.read`.
 - Enrichment runner (L9-T1): `attome_integration::enrich` asks a configured source about records
   within its provider's daily budget and stores field proposals with their source and fetch time
   (`enrichment_proposal`); empty fields get `fill` proposals, filled ones that differ `review`

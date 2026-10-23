@@ -10,6 +10,8 @@
 pub mod intercompany;
 pub mod model;
 pub mod posting;
+/// W5-T3: trial balance, profit and loss, balance sheet.
+pub mod statements;
 
 pub use model::LedgerModel;
 
@@ -22,5 +24,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 45;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = posting::openapi_fragment();
     doc.merge(intercompany::openapi_fragment());
+    doc.merge(statements::openapi_fragment());
     doc
 }
