@@ -188,6 +188,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Page SEO audit on save (E13-T7): with `content.seo_audit` on, saving a content page audits its
+  draft after the save commits (never blocking it): missing or badly sized title and description,
+  duplicates within the space, one H1, heading order, images without alt text, thin content, links
+  to noindex pages and unpublished translations. The findings replace the page's
+  `content_seo_finding` rows and set `seo_score` (100 less 15 per error and 5 per warning). Topic
+  cluster gaps (a cluster page not linking to its pillar, a pillar linking to none) are a pure check;
+  broken links, render time and the mobile layout are applied once that evidence is recorded.
 - Access review screen (Q11-T1): **Security → Access reviews** (`/xrm/admin/security/access-reviews`)
   lists the campaigns with their progress, opens a campaign's accesses (all, or only those the
   signed-in reviewer reviews), keeps or revokes each with a reason, and exports the campaign's

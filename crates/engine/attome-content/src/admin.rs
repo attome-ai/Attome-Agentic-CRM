@@ -447,6 +447,8 @@ async fn update_page(
     .await?;
 
     tx.commit().await.map_err(AppError::internal)?;
+    // E13-T7: the page audit, after the save and never blocking it.
+    crate::seo::audit::audit_after_save(&state, &ctx, &page).await;
     Ok(Json(page))
 }
 
