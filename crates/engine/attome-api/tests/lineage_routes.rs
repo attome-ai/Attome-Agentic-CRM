@@ -416,3 +416,149 @@ fn downstream_upstream_compare_and_hidden_counts() {
         assert_eq!(status, StatusCode::FORBIDDEN);
     })
 }
+
+/// L5-T5: a steward's link is a `hand` edge with who documented it and why,
+/// a node the graph walks to, and audited on the way in and out.
+#[test]
+fn manual_link_is_marked_hand_and_audited() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_user(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+        let entity: String = sqlx::query_scalar(
+            "SELECT logicalname::text FROM entity_info WHERE COALESCE(is_active, true) \
+              ORDER BY logicalname LIMIT 1",
+        )
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        let name = format!("ERP {}", Uuid::now_v7().simple());
+
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/lineage/manual-links".into(),
+                &admin_cookie,
+                serde_json::json!({
+                    "from_kind": "system",
+                    "system_name": name,
+                    "system_kind": "connector",
+                    "direction": "inbound",
+                    "to_entity": entity,
+                    "edge_kind": "writes",
+                    "note": "nightly customer export",
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let made = body_json(resp).await;
+        let id = Uuid::parse_str(made["id"].as_str().unwrap()).unwrap();
+        assert!(
+            made["from"].as_str().unwrap().starts_with("system:"),
+            "{made}"
+        );
+
+        let (confidence, note, documented_by): (String, Option<String>, Option<Uuid>) =
+            sqlx::query_as(
+                "SELECT confidence, note, documented_by FROM metadata_reference WHERE id = $1",
+            )
+            .bind(id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+        assert_eq!(confidence, "hand");
+        assert_eq!(note.as_deref(), Some("nightly customer export"));
+        assert!(documented_by.is_some());
+        let audited: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM audit_header \
+              WHERE record_id = $1 AND event_name = 'lineage.manual_link_added'",
+        )
+        .bind(id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(audited, 1);
+
+        // The system is a node: walking up from the entity reaches it.
+        let (status, up) = get_json(
+            &app,
+            format!("/api/v1/lineage/entity/{entity}?direction=up&depth=1"),
+            &admin_cookie,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{up}");
+        assert!(
+            keys(&up).contains(&made["from"].as_str().unwrap().to_owned()),
+            "{up}"
+        );
+
+        // No note: refused.
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/lineage/manual-links".into(),
+                &admin_cookie,
+                serde_json::json!({
+                    "from_kind": "system", "system_name": name, "to_entity": entity,
+                    "edge_kind": "writes", "note": " ",
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        // Someone who is neither an administrator nor a steward: refused.
+        let plain = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO user_account (id, user_name, email, is_active) \
+             VALUES ($1, $2, $2 || '@test.invalid', true)",
+        )
+        .bind(plain)
+        .bind(format!("lineage-manual-{plain}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "DELETE",
+                format!("/api/v1/lineage/manual-links/{id}"),
+                &session_cookie(plain),
+                Value::Null,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+        let resp = app
+            .clone()
+            .oneshot(json_request(
+                "DELETE",
+                format!("/api/v1/lineage/manual-links/{id}"),
+                &admin_cookie,
+                Value::Null,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+        let left: i64 = sqlx::query_scalar("SELECT count(*) FROM metadata_reference WHERE id = $1")
+            .bind(id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+        assert_eq!(left, 0);
+        let removed: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM audit_header \
+              WHERE record_id = $1 AND event_name = 'lineage.manual_link_removed'",
+        )
+        .bind(id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(removed, 1);
+    })
+}

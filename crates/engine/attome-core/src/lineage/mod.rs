@@ -18,6 +18,8 @@ pub mod capture;
 pub mod graph;
 /// L5-T3: the impact engine.
 pub mod impact;
+/// L5-T5: hand-documented links and outside systems.
+pub mod manual;
 
 use attome_types::AppError;
 use serde_json::Value;
@@ -166,7 +168,8 @@ pub async fn write_edges(
               edge_kind, confidence, valid_from, valid_to) \
          SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
                 edge_kind, confidence, graph_version, $3 \
-           FROM metadata_reference WHERE from_kind = $1 AND from_ref = $2",
+           FROM metadata_reference \
+          WHERE from_kind = $1 AND from_ref = $2 AND confidence <> 'hand'",
     )
     .bind(from_kind)
     .bind(from_ref)
@@ -174,12 +177,16 @@ pub async fn write_edges(
     .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
-    sqlx::query("DELETE FROM metadata_reference WHERE from_kind = $1 AND from_ref = $2")
-        .bind(from_kind)
-        .bind(from_ref)
-        .execute(&mut **tx)
-        .await
-        .map_err(AppError::internal)?;
+    // L5-T5: a steward's hand-documented links outlive the republish.
+    sqlx::query(
+        "DELETE FROM metadata_reference \
+          WHERE from_kind = $1 AND from_ref = $2 AND confidence <> 'hand'",
+    )
+    .bind(from_kind)
+    .bind(from_ref)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
     for edge in merge(edges) {
         sqlx::query(
             "INSERT INTO metadata_reference \

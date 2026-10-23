@@ -5640,6 +5640,42 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"from": "2026-01-01T00:00:00Z"})),
             )
         }
+        // L5-T5: hand-documented lineage links.
+        "POST /api/v1/lineage/manual-links" => request(
+            "POST",
+            "/api/v1/lineage/manual-links",
+            t,
+            Some(json!({
+                "from_kind": "system",
+                "system_name": uniq("erp"),
+                "system_kind": "connector",
+                "direction": "inbound",
+                "to_entity": fx.entity,
+                "edge_kind": "writes",
+                "note": "nightly customer feed",
+            })),
+        ),
+        "DELETE /api/v1/lineage/manual-links/{id}" => {
+            let link = admin(
+                fx,
+                "POST",
+                "/api/v1/lineage/manual-links",
+                Some(json!({
+                    "from_kind": "system",
+                    "system_name": uniq("erp"),
+                    "to_entity": fx.entity,
+                    "edge_kind": "writes",
+                    "note": "to be removed",
+                })),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/lineage/manual-links/{}", id_of(&link)),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/admin/governance/domains" => request(
             "POST",
             "/api/v1/admin/governance/domains",

@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Hand-documented lineage links (L5-T5): `POST /api/v1/lineage/manual-links` records an outside
+  system (connector, events, import, warehouse, source) or a missed definition use feeding or reading
+  an entity, marked `hand` with who documented it and why; `DELETE .../manual-links/{id}` removes
+  one. Administrators or the entity domain's owners and stewards; both audited. A definition's
+  republish keeps its hand links.
 - OpenLineage export (L5-T6): `GET /api/v1/lineage/export/openlineage` (administrators, off unless
   `lineage.export_enabled`) returns one OpenLineage `RunEvent` per definition, with the entities it
   reads and writes as datasets; names only, audited as an export.
