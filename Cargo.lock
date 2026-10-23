@@ -2135,7 +2135,11 @@ dependencies = [
 name = "attome-storage"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "attome-config",
+ "attome-outbound",
+ "bytes",
+ "futures-util",
  "hex",
  "hmac 0.12.1",
  "http",

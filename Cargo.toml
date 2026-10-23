@@ -163,6 +163,7 @@ apalis        = { version = "0.7.4", default-features = false, features = ["limi
 apalis-sql    = { version = "0.7.4", default-features = false, features = ["postgres"] }
 arc-swap      = "1"
 argon2        = "0.6"
+async-trait   = "0.1"
 axum          = { version = "0.8", features = ["macros"] }
 axum-prometheus = "0.10.1"
 base64        = "0.23"

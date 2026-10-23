@@ -2333,6 +2333,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Object storage and mail sends go through the outbound layer (AB6-T4): the services
+  `object_storage` and `smtp` each have a breaker, bulkheads and one retry budget, so an outage fails
+  fast instead of every request waiting out its timeout. A cloud store's own retries are off; a GET,
+  HEAD, list page, delete or overwriting PUT is retried up to three attempts, never a create-only
+  PUT, a rename or a multipart upload. A mail send is retried only when it carries its delivery row.
 - A deal's amount is locked while it has lines (D6-T4): a staff write of `opportunity.amount`
   answers `field_locked`; the lines set it.
 - Lists and entity schemas revalidate (AA7-T11): the web app remembers the last answer to each

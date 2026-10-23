@@ -35,8 +35,14 @@ use crate::{StorageError, local::LinkSigner};
 // The retry values equal object_store 0.14's defaults: stating them here
 // changes no behaviour, it makes the policy visible. Change them only with
 // measured evidence of real object sizes and transfer times.
+//
+// AB6-T4: a cloud store's own retries are off (`S3_MAX_RETRIES` is not used
+// for server-side traffic): every call goes through `crate::outbound`, which
+// retries idempotent calls within the `object_storage` service's budget, so a
+// failing store is not retried twice over. The presign-only client keeps the
+// policy above; it signs locally and never retries anything.
 const S3_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-const S3_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+pub(crate) const S3_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const S3_MAX_RETRIES: usize = 10;
 const S3_RETRY_TIMEOUT: Duration = Duration::from_secs(180);
 
@@ -137,10 +143,13 @@ pub async fn create_storage_client_for(
     target: S3Target<'_>,
     label: &str,
 ) -> Result<StorageClient, StorageError> {
-    let inner = Arc::new(build_s3(&target, target.endpoint)?);
+    let s3 = Arc::new(build_s3(&target, target.endpoint)?);
+    let inner: Arc<dyn ObjectStore> = Arc::new(crate::outbound::Guarded::new(Arc::new(
+        build_s3_with(&target, target.endpoint, no_retries())?,
+    )));
     let (signer, public_store): (Arc<dyn Signer>, Option<Arc<dyn ObjectStore>>) =
         if target.public_endpoint.is_empty() {
-            (inner.clone(), None)
+            (s3, None)
         } else {
             let public = Arc::new(build_s3(&target, target.public_endpoint)?);
             (public.clone(), Some(public))
@@ -192,14 +201,14 @@ fn create_azure_client(settings: &AzureStorageSettings) -> Result<StorageClient,
         .with_container_name(&settings.container)
         .with_access_key(settings.access_key.expose())
         .with_client_options(client_options(endpoint.starts_with("http://"), true))
-        .with_retry(retry_config());
+        .with_retry(no_retries());
     if !endpoint.is_empty() {
         builder = builder.with_endpoint(endpoint.to_owned());
     }
     let store: Arc<MicrosoftAzure> = Arc::new(builder.build()?);
     info!(account = %settings.account, container = %settings.container, "azure storage ready");
     Ok(StorageClient {
-        inner: store.clone(),
+        inner: Arc::new(crate::outbound::Guarded::new(store.clone())),
         presign: Presign::Store(store),
         public_store: None,
         bucket: settings.container.clone(),
@@ -214,12 +223,12 @@ fn create_gcs_client(settings: &GcsStorageSettings) -> Result<StorageClient, Sto
             .with_bucket_name(&settings.bucket)
             .with_service_account_key(settings.service_account_key.expose())
             .with_client_options(client_options(false, true))
-            .with_retry(retry_config())
+            .with_retry(no_retries())
             .build()?,
     );
     info!(bucket = %settings.bucket, "gcs storage ready");
     Ok(StorageClient {
-        inner: store.clone(),
+        inner: Arc::new(crate::outbound::Guarded::new(store.clone())),
         presign: Presign::Store(store),
         public_store: None,
         bucket: settings.bucket.clone(),
@@ -245,6 +254,15 @@ fn retry_config() -> RetryConfig {
     }
 }
 
+/// AB6-T4: the store's own retry layer off; `crate::outbound` retries.
+fn no_retries() -> RetryConfig {
+    RetryConfig {
+        backoff: BackoffConfig::default(),
+        max_retries: 0,
+        retry_timeout: S3_REQUEST_TIMEOUT,
+    }
+}
+
 /// One `AmazonS3` for `target`'s bucket, region and credentials, pointed at
 /// `endpoint`. An empty endpoint selects AWS S3 proper.
 ///
@@ -253,6 +271,14 @@ fn retry_config() -> RetryConfig {
 /// `verify_ssl` only decides whether HTTPS certificates are verified;
 /// `verify_ssl = true` never turns an `http://` endpoint into HTTPS.
 fn build_s3(target: &S3Target<'_>, endpoint: &str) -> Result<AmazonS3, StorageError> {
+    build_s3_with(target, endpoint, retry_config())
+}
+
+fn build_s3_with(
+    target: &S3Target<'_>,
+    endpoint: &str,
+    retry: RetryConfig,
+) -> Result<AmazonS3, StorageError> {
     let mut builder = AmazonS3Builder::new()
         .with_region(target.region)
         .with_bucket_name(target.bucket)
@@ -262,7 +288,7 @@ fn build_s3(target: &S3Target<'_>, endpoint: &str) -> Result<AmazonS3, StorageEr
             endpoint.starts_with("http://"),
             target.verify_ssl,
         ))
-        .with_retry(retry_config());
+        .with_retry(retry);
 
     // RustFS / MinIO: custom endpoint. Path-style addressing
     // (`{endpoint}/{bucket}/{key}`) is object_store's default for it.
@@ -373,13 +399,10 @@ mod tests {
                 .expect("client construction is local, no network access");
 
         assert!(client.public_store.is_none());
-        let Presign::Store(signer) = &client.presign else {
-            panic!("an S3 client signs its own URLs");
-        };
-        assert!(std::ptr::eq(
-            Arc::as_ptr(signer) as *const (),
-            data_ptr(client.store())
-        ));
+        assert!(
+            matches!(client.presign, Presign::Store(_)),
+            "an S3 client signs its own URLs"
+        );
     }
 
     #[tokio::test]

@@ -30,6 +30,55 @@ const SMTP_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 /// reached (BEM-0.3), so a stall we had to cut off is never retried.
 const SEND_DEADLINE: Duration = Duration::from_secs(120);
 
+/// AB6-T4: the mail provider (the SMTP relay or an HTTP provider) as one
+/// outbound service, so an outage opens its breaker instead of every send
+/// waiting out its own timeout. Its per-attempt timeout sits a second past
+/// [`SEND_DEADLINE`], so the whole-send deadline always fires first and a
+/// stall stays `SendError::Unknown`, never retried.
+fn smtp_service() -> attome_outbound::Service {
+    attome_outbound::Service::new(
+        "smtp",
+        attome_outbound::Policy {
+            timeout: SEND_DEADLINE + Duration::from_secs(1),
+            ..attome_outbound::Policy::default()
+        },
+    )
+}
+
+static SMTP: std::sync::LazyLock<attome_outbound::Service> = std::sync::LazyLock::new(smtp_service);
+
+/// AB6-T4: only a transient refusal (a 4xx, a refused or dropped
+/// connection) may succeed on a second try; a permanent, config or unknown
+/// outcome is never retried.
+impl attome_outbound::Retryable for SendError {
+    fn retryable(&self) -> bool {
+        matches!(self, SendError::Transient { .. })
+    }
+}
+
+/// AB6-T4: a send is retried within one call only when it carries its
+/// outbox row (`delivery_id`), which the job that sent it settles once; a
+/// send without one is tried once, since a second copy is worse than a
+/// visible failure.
+fn retry_safe(msg: &EmailMessage) -> bool {
+    msg.delivery_id.is_some()
+}
+
+/// What an outbound refusal means for the delivery.
+fn from_outbound(error: attome_outbound::OutboundError<SendError>) -> SendError {
+    match error {
+        attome_outbound::OutboundError::Failed(error) => error,
+        attome_outbound::OutboundError::Open { .. } | attome_outbound::OutboundError::Busy => {
+            SendError::Transient {
+                message: error.to_string(),
+            }
+        }
+        attome_outbound::OutboundError::Timeout => SendError::Unknown {
+            message: "the mail provider did not answer in time".into(),
+        },
+    }
+}
+
 /// `email.tls_mode` values `attome-config` accepts
 /// (`sections/observability.rs`).
 const TLS_MODE_IMPLICIT: &str = "implicit";
@@ -526,8 +575,16 @@ async fn send_in_span(
         to: &to,
         original_to: catch_all(cfg).map(|_| msg.to.as_str()),
     };
+    let idempotent = retry_safe(&msg);
     let attempt = async {
-        let id = provider.send(&outgoing).await?;
+        let id = attome_outbound::call(
+            &SMTP,
+            attome_outbound::CallClass::Background,
+            idempotent,
+            || provider.send(&outgoing),
+        )
+        .await
+        .map_err(from_outbound)?;
         tracing::debug!(provider = provider.name(), provider_message_id = ?id.0, "email: provider id");
         Ok::<(), SendError>(())
     };
@@ -588,6 +645,59 @@ mod tests {
             communication_id: None,
             attachments: Vec::new(),
         }
+    }
+
+    /// AB6-T4: a transient refusal is retried only for a send that carries
+    /// its outbox row; one without is tried once.
+    #[tokio::test]
+    async fn smtp_send_not_retried_without_message_id() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let attempts = AtomicU32::new(0);
+        let service = smtp_service();
+        let fail = || {
+            attempts.fetch_add(1, Ordering::SeqCst);
+            async {
+                Err::<(), _>(SendError::Transient {
+                    message: "421 try later".into(),
+                })
+            }
+        };
+        let mut msg = test_message();
+        assert!(!retry_safe(&msg));
+        let result = attome_outbound::call(
+            &service,
+            attome_outbound::CallClass::Background,
+            retry_safe(&msg),
+            fail,
+        )
+        .await;
+        assert!(matches!(
+            from_outbound(result.unwrap_err()),
+            SendError::Transient { .. }
+        ));
+        assert_eq!(
+            attempts.load(Ordering::SeqCst),
+            1,
+            "never retried without an outbox id"
+        );
+
+        msg.delivery_id = Some(uuid::Uuid::now_v7());
+        attempts.store(0, Ordering::SeqCst);
+        let _ = attome_outbound::call(
+            &service,
+            attome_outbound::CallClass::Background,
+            retry_safe(&msg),
+            fail,
+        )
+        .await;
+        assert!(attempts.load(Ordering::SeqCst) > 1, "retried with one");
+
+        let permanent = SendError::Permanent {
+            code: "550".into(),
+            message: "no such user".into(),
+            recipient_attributable: true,
+        };
+        assert!(!attome_outbound::Retryable::retryable(&permanent));
     }
 
     /// F4-T13: files go out as a mixed message after the body; a file that

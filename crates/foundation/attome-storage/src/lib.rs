@@ -103,6 +103,8 @@ mod error;
 pub mod health;
 mod local;
 pub mod mirror;
+/// AB6-T4: object store calls through `attome_outbound`.
+mod outbound;
 mod presign;
 #[cfg(test)]
 mod test_support;
