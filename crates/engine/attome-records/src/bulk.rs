@@ -2062,10 +2062,16 @@ pub async fn process(
         raw_records,
         user_id,
     );
+    // L7-T2: a bulk job's change events carry the `job` channel.
+    let provenance = attome_core::provenance_scope::Provenance {
+        channel: attome_core::provenance_scope::JOB_CHANNEL,
+        run_id: None,
+    };
     if quiet {
-        attome_core::quiet_scope::quiet(work).await
+        attome_core::provenance_scope::scope(provenance, attome_core::quiet_scope::quiet(work))
+            .await
     } else {
-        work.await
+        attome_core::provenance_scope::scope(provenance, work).await
     }
 }
 

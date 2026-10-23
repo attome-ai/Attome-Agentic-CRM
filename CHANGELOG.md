@@ -174,7 +174,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ### Added
 - Change events say where a change came from (L7-T2): `entity_change_event` gains `channel`
-  (`flow`, `job`, or NULL for an ordinary request) and `flow_run_id` (migration 0203). Every write a
+  (`flow` for a workflow pass, `job` for a bulk job, NULL for an ordinary request) and `flow_run_id` (migration 0203). Every write a
   workflow pass makes carries `channel = 'flow'` and the instance id, so a subscriber can skip a
   flow's echo of its own update.
 - Background jobs that run in chunks slow down while the node is busy (AA10-T6): every five seconds
