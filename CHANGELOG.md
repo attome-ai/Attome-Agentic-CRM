@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- `flow_template.adapt` agent tool (M6-T2). It proposes how a published flow template's parameters
+  map to this deployment: an entity per entity parameter (by shared words in names and labels), an
+  attribute of it per attribute parameter (numbers and currency preferred for amount-like ones),
+  and defaults for text and number parameters. Users are left unresolved. It returns the proposed
+  `args`, alternatives, the unresolved parameters, and the instantiate route to confirm with. It
+  writes nothing.
 - Record passages for retrieval (N15-T2). A second change-feed consumer
   (`attome-search/record-chunks`) runs on the search drain's tick. It chunks long text and
   rich-text fields (400 characters or more), timeline items (notes, communications, activities)
