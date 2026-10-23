@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Agent permission test runs (AH7-T2). `attome_ai::permission_test::run` resolves an agent
+  definition as a session start does and puts every generated case through the gate, executing
+  nothing; entity cases also check the owner's read of the entity. A case fails when the gate
+  lets through what must be refused or executes what needs approval. Runs are stored in
+  `ai_permission_test_run` (migration 0219).
 - Inbound hooks acknowledge fast (M14-T3). A verified call is written to the hook's inbox
   (`inbound_hook_event`, unique by event id) with a processing job, and answered 202 with its
   `event_id`. A duplicate delivery is acknowledged with `duplicate: true` and processed once. With
