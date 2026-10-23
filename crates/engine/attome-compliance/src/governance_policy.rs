@@ -409,6 +409,7 @@ const POLICY_COLUMNS: &str =
     "id, domain_ref, name_en, name_ar, body_en, body_ar, version, row_version";
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = GovernanceCreatePolicyBody)]
 pub struct CreatePolicyBody {
     pub domain_ref: Uuid,
     pub name_en: String,
@@ -423,6 +424,7 @@ pub struct CreatePolicyBody {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = GovernanceUpdatePolicyBody)]
 pub struct UpdatePolicyBody {
     pub row_version: i64,
     pub name_en: Option<String>,

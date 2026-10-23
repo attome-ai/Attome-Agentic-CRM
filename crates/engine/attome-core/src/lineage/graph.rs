@@ -144,6 +144,7 @@ pub struct Node {
 
 /// An edge as a walk reports it: `from` uses `to`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, utoipa::ToSchema)]
+#[schema(as = LineageGraphEdge)]
 pub struct GraphEdge {
     pub from: String,
     pub to: String,

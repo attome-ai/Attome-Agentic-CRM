@@ -39,6 +39,7 @@ pub const HOOKED_KINDS: &[&str] = &["query", "workflow"];
 
 /// What a draft change does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, utoipa::ToSchema)]
+#[schema(as = LineageChangeKind)]
 #[serde(rename_all = "snake_case")]
 pub enum ChangeKind {
     DeleteAttribute,

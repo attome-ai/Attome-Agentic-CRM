@@ -67,6 +67,7 @@ const OPERATIONS: &[&str] = &[
 // ── Subscriptions ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow, ToSchema)]
+#[schema(as = ChangeStreamSubscription)]
 pub struct Subscription {
     pub id: Uuid,
     pub name: String,
