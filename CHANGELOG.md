@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Notification delivery settings on the Notifications page (M15-T3): beside the grid of kinds by
+  channels, a person chooses how low-priority notifications arrive (each on its own, hourly or daily
+  summary) and their quiet hours. English and Arabic.
 - One notify API with digests and quiet hours (M15-T1, M15-T2):
   `attome_notification::notify::notify(state, Notify {recipient, kind, data, priority, route})` sends
   the template `kind` with `data` as its variables through the dispatch engine (mutes and channel

@@ -11,6 +11,33 @@
   <p class="error-msg" role="alert" data-testid="notification-prefs-error">{{ message }}</p>
 }
 
+<section class="np-delivery" data-testid="notification-prefs-delivery">
+  <h3>{{ 'notificationPrefs.delivery.title' | translate }}</h3>
+  <label>
+    {{ 'notificationPrefs.delivery.digest' | translate }}
+    <select [(ngModel)]="digest" data-testid="notification-prefs-digest">
+      @for (mode of digestModes; track mode) {
+        <option [value]="mode">{{ 'notificationPrefs.delivery.digestModes.' + mode | translate }}</option>
+      }
+    </select>
+  </label>
+  <fieldset>
+    <legend>{{ 'notificationPrefs.delivery.quietHours' | translate }}</legend>
+    <label>
+      {{ 'notificationPrefs.delivery.quietStart' | translate }}
+      <input type="time" [(ngModel)]="quietStart" data-testid="notification-prefs-quiet-start" />
+    </label>
+    <label>
+      {{ 'notificationPrefs.delivery.quietEnd' | translate }}
+      <input type="time" [(ngModel)]="quietEnd" data-testid="notification-prefs-quiet-end" />
+    </label>
+    <p class="np-footnote">{{ 'notificationPrefs.delivery.quietHint' | translate }}</p>
+  </fieldset>
+  <button type="button" class="btn-primary" (click)="saveDelivery()" [disabled]="savingDelivery()">
+    {{ 'notificationPrefs.delivery.save' | translate }}
+  </button>
+</section>
+
 @if (loading()) {
   <p class="state-msg">{{ 'notificationPrefs.loading' | translate }}</p>
 } @else if (rows().length === 0) {

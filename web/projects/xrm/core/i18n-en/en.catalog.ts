@@ -2314,6 +2314,17 @@ export const xrmEn = {
     },
   },
   notificationPrefs: {
+    delivery: {
+      title: 'Delivery',
+      digest: 'Low-priority notifications',
+      digestModes: { off: 'Each on its own', hourly: 'One summary every hour', daily: 'One summary a day at 08:00' },
+      quietHours: 'Quiet hours',
+      quietStart: 'From',
+      quietEnd: 'Until',
+      quietHint: 'In your own time zone. During quiet hours, low and normal priority notifications wait until they end; urgent ones still arrive. Leave both empty for no quiet hours.',
+      save: 'Save delivery settings',
+      saved: 'Delivery settings saved.',
+    },
     title: 'Notifications',
     subtitle: 'Choose how you are told about each kind of notification. Turning a channel off only stops that channel.',
     loading: 'Loading your notification settings…',

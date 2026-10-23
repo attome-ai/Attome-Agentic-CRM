@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { LangService } from '@attome/base';
+import { ApiService, LangService } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationPreferences, NotificationPreferencesService } from './notification-preferences.service';
-import { NotificationPreferencesPageComponent } from './notification-preferences-page.component';
+import { NotificationPreferencesPageComponent, quietHoursValue } from './notification-preferences-page.component';
 
 function doc(items: NotificationPreferences['items'] = []): NotificationPreferences {
   return { categories: ['sla_warning', 'reminder'], channels: ['in_app', 'email', 'sms', 'push', 'chat'], items };
@@ -12,13 +12,22 @@ function doc(items: NotificationPreferences['items'] = []): NotificationPreferen
 
 describe('NotificationPreferencesPageComponent', () => {
   let svc: { load: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+  let api: { get: ReturnType<typeof vi.fn>; put: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     svc = { load: vi.fn(), save: vi.fn() };
+    api = {
+      get: vi.fn(() => of({ items: [
+        { key: 'notification.digest', value: 'daily' },
+        { key: 'notification.quiet_hours', value: { start: '22:00', end: '07:00' } },
+      ] })),
+      put: vi.fn(() => of({})),
+    };
     TestBed.configureTestingModule({
       imports: [NotificationPreferencesPageComponent],
       providers: [
         { provide: NotificationPreferencesService, useValue: svc },
+        { provide: ApiService, useValue: api },
         {
           provide: LangService,
           useValue: {
@@ -95,5 +104,27 @@ describe('NotificationPreferencesPageComponent', () => {
     svc.load.mockReturnValue(throwError(() => err));
     const { q } = render();
     expect(q('notification-prefs-error')?.textContent).toContain('Internal server error');
+  });
+
+  it('M15-T3: shows and saves the digest and quiet hours', () => {
+    svc.load.mockReturnValue(of(doc()));
+    const { fixture } = render();
+    const component = fixture.componentInstance;
+    expect(component.digest).toBe('daily');
+    expect(component.quietStart).toBe('22:00');
+    component.digest = 'hourly';
+    component.quietEnd = '06:30';
+    component.saveDelivery();
+    expect(api.put).toHaveBeenCalledWith('/api/v1/settings/me/notification.digest', { value: 'hourly' });
+    expect(api.put).toHaveBeenCalledWith('/api/v1/settings/me/notification.quiet_hours', {
+      value: { start: '22:00', end: '06:30' },
+    });
+  });
+
+  it('M15-T3: clears quiet hours unless both times are set', () => {
+    expect(quietHoursValue('22:00', '')).toEqual({});
+    expect(quietHoursValue('22:00', '22:00')).toEqual({});
+    expect(quietHoursValue('25:00', '07:00')).toEqual({});
+    expect(quietHoursValue('22:00', '07:00')).toEqual({ start: '22:00', end: '07:00' });
   });
 });
