@@ -121,6 +121,11 @@ struct ExportStatusResponse {
     download_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     expires_in_secs: Option<u64>,
+    /// L7-T5: a change-stream cursor that continues from the export's own
+    /// snapshot: reading a subscription from it yields exactly the changes
+    /// the export did not see.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream_token: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -132,6 +137,7 @@ struct ExportRow {
     row_count: Option<i64>,
     object_key: Option<String>,
     error: Option<String>,
+    stream_token: Option<String>,
 }
 
 /// The permission-filtered query plan for one export: the final column list
@@ -589,7 +595,8 @@ async fn export_status(
 ) -> Result<Json<ExportStatusResponse>, AppError> {
     let (_, entity_name, _, _) = entity_crud::resolve_entity(&state, &entity_input).await?;
     let row: Option<ExportRow> = sqlx::query_as(
-        "SELECT id, entity_logicalname, format, status, row_count, object_key, error \
+        "SELECT id, entity_logicalname, format, status, row_count, object_key, error, \
+                stream_token \
            FROM data_export \
           WHERE id = $1 AND entity_logicalname = $2 AND is_deleted = false \
             AND (created_by = $3 OR $4)",
@@ -625,6 +632,7 @@ async fn export_status(
         error: row.error,
         download_url,
         expires_in_secs,
+        stream_token: row.stream_token,
     }))
 }
 
@@ -732,6 +740,12 @@ pub async fn process(
     let path = ObjectPath::parse(&object_key)
         .map_err(|e| AppError::internal(format!("invalid export object key: {e}")))?;
 
+    // L7-T5: the snapshot of a statement before the export's, kept only
+    // when the export reads no row (its statement then names no snapshot).
+    let pre_snapshot: Option<String> = sqlx::query_scalar("SELECT pg_current_snapshot()::text")
+        .fetch_one(state.base.long_pool(&state.base.db))
+        .await
+        .ok();
     let result = match payload.format.as_str() {
         "json" => {
             run_query_and_stream(state, &table, &select_list, &plan, &path, None, |row| {
@@ -781,13 +795,16 @@ pub async fn process(
         }
     };
 
-    let (row_count, checksum) = match result {
+    let (row_count, checksum, snapshot) = match result {
         Ok(v) => v,
         Err(e) => {
             mark_failed(state, export_id, &format!("export failed: {e}")).await?;
             return Ok(());
         }
     };
+    let stream_token = snapshot
+        .or(pre_snapshot)
+        .and_then(|snap| crate::change_stream::export_token(&snap).ok());
 
     // D-062 / audit plan 3.6: the `completed` transition (which is what makes
     // the file downloadable) and its Entity+Export audit event commit in one
@@ -817,8 +834,16 @@ pub async fn process(
         snapshot_json: None,
     };
 
-    if let Err(e) =
-        complete_export(state, export_id, row_count, &object_key, &checksum, event).await
+    if let Err(e) = complete_export(
+        state,
+        export_id,
+        row_count,
+        &object_key,
+        &checksum,
+        stream_token.as_deref(),
+        event,
+    )
+    .await
     {
         // Record the failure durably so a row whose retries run out never
         // sits in `running` holding one of the caller's
@@ -847,19 +872,22 @@ async fn complete_export(
     row_count: i64,
     object_key: &str,
     checksum: &str,
+    stream_token: Option<&str>,
     event: AuditEvent,
 ) -> Result<(), AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     sqlx::query(
         "UPDATE data_export \
             SET status = 'completed', row_count = $2, object_key = $3, checksum = $4, \
-                completed_at = NOW(), updated_at = NOW(), row_version = row_version + 1 \
+                stream_token = $5, completed_at = NOW(), updated_at = NOW(), \
+                row_version = row_version + 1 \
           WHERE id = $1",
     )
     .bind(export_id)
     .bind(row_count)
     .bind(object_key)
     .bind(checksum)
+    .bind(stream_token)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -893,16 +921,19 @@ async fn run_query_and_stream(
     path: &ObjectPath,
     header_line: Option<String>,
     render: impl Fn(Value) -> String + Send + Sync + 'static,
-) -> Result<(i64, String), AppError> {
+) -> Result<(i64, String, Option<String>), AppError> {
     use futures_util::StreamExt;
 
+    // L7-T5: every row carries its statement's snapshot, the one the export
+    // reads in.
     let sql = format!(
-        "SELECT row_to_json(xexp)::text FROM (SELECT {select_list} FROM {table} t {} \
+        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
+           FROM (SELECT {select_list} FROM {table} t {} \
          ORDER BY t.id ASC LIMIT {}) xexp",
         plan.where_sql,
         MAX_EXPORT_ROWS + 1,
     );
-    let mut q = sqlx::query_scalar::<_, String>(&sql);
+    let mut q = sqlx::query_as::<_, (String, String)>(&sql);
     for p in &plan.params {
         q = q.bind(p.clone());
     }
@@ -912,8 +943,15 @@ async fn run_query_and_stream(
 
     let row_counter = std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0));
     let counter_for_map = row_counter.clone();
-    let rendered = row_stream.map(move |item: Result<String, sqlx::Error>| {
-        item.and_then(|raw| {
+    let snapshot = std::sync::Arc::new(std::sync::Mutex::new(None::<String>));
+    let snapshot_for_map = snapshot.clone();
+    let rendered = row_stream.map(move |item: Result<(String, String), sqlx::Error>| {
+        item.and_then(|(raw, snap)| {
+            if let Ok(mut kept) = snapshot_for_map.lock()
+                && kept.is_none()
+            {
+                *kept = Some(snap);
+            }
             serde_json::from_str::<Value>(&raw)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))
                 .map(|value| {
@@ -941,7 +979,8 @@ async fn run_query_and_stream(
              after the request was accepted) — re-run the export with a narrower filter"
         )));
     }
-    Ok((row_count, checksum))
+    let snapshot = snapshot.lock().ok().and_then(|mut s| s.take());
+    Ok((row_count, checksum, snapshot))
 }
 
 /// `xlsx` cannot be produced line-by-line — a workbook is one zip archive
@@ -961,7 +1000,7 @@ async fn export_xlsx(
     state: &EngineState,
     query: XlsxQuery<'_>,
     dates: &DatePresentation,
-) -> Result<(i64, String), AppError> {
+) -> Result<(i64, String, Option<String>), AppError> {
     let XlsxQuery {
         table,
         select_list,
@@ -970,16 +1009,17 @@ async fn export_xlsx(
         path,
     } = query;
     let sql = format!(
-        "SELECT row_to_json(xexp)::text FROM (SELECT {select_list} FROM {table} t {} \
+        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
+           FROM (SELECT {select_list} FROM {table} t {} \
          ORDER BY t.id ASC LIMIT {}) xexp",
         plan.where_sql,
         MAX_EXPORT_ROWS + 1,
     );
-    let mut q = sqlx::query_scalar::<_, String>(&sql);
+    let mut q = sqlx::query_as::<_, (String, String)>(&sql);
     for p in &plan.params {
         q = q.bind(p.clone());
     }
-    let rows: Vec<String> = q
+    let rows: Vec<(String, String)> = q
         .fetch_all(state.base.long_pool(&state.base.db))
         .await
         .map_err(AppError::internal)?;
@@ -991,9 +1031,10 @@ async fn export_xlsx(
     }
 
     let row_count = rows.len() as i64;
+    let snapshot = rows.first().map(|(_, snap)| snap.clone());
     let values = rows
         .into_iter()
-        .map(|raw| serde_json::from_str::<Value>(&raw).map(|row| dates.apply(row)))
+        .map(|(raw, _)| serde_json::from_str::<Value>(&raw).map(|row| dates.apply(row)))
         .collect::<Result<Vec<Value>, _>>()
         .map_err(AppError::internal)?;
     let buffer = attome_report::render::render_xlsx_with(

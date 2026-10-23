@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Export-to-stream handover (L7-T5): a completed export's status carries `stream_token`, a
+  change-stream cursor built from the export statement's own snapshot. Reading a subscription
+  from it yields exactly the changes the export did not see: nothing is lost or doubled.
 - Erasure and schema events on the change stream (L7-T6): an erasure writes a `purge` change event
   named `record.erased` (entity and id only), and a schema change made by an admin request or a
   changeset apply is a `schema.<op>` event (entity and attribute names) for the entity's

@@ -670,3 +670,143 @@ fn erasure_and_schema_events_delivered() {
         assert_eq!(kept, 1);
     })
 }
+
+/// L7-T5: a stream read from an export's token has no gap and no double:
+/// a change committed before the export's snapshot is not sent, a change
+/// still in progress when the snapshot was taken is sent once, and so is
+/// one made after.
+#[test]
+fn export_token_handover_has_no_gap() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_user(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+        let entity = entity_with_title(&app, &admin_cookie, "csx").await;
+        let service_user = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO user_account (id, user_name, email, is_active) \
+             VALUES ($1, $2, $2 || '@test.invalid', true)",
+        )
+        .bind(service_user)
+        .bind(format!("change-stream-export-{service_user}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+             SELECT uuidv7(), $1, id, true, now() FROM privilege WHERE key = $2",
+        )
+        .bind(service_user)
+        .bind(format!("{entity}.read"))
+        .execute(&db)
+        .await
+        .unwrap();
+        let (_, client) = send(
+            &app,
+            json_request(
+                "POST",
+                "/api/v1/admin/s2s/clients".into(),
+                &admin_cookie,
+                serde_json::json!({
+                    "client_id": format!("csx-{}", Uuid::now_v7().simple()),
+                    "name": "export handover client",
+                    "service_user_ref": service_user,
+                }),
+            ),
+        )
+        .await;
+        let (status, sub) = send(
+            &app,
+            json_request(
+                "POST",
+                "/api/v1/change-stream/subscriptions".into(),
+                &admin_cookie,
+                serde_json::json!({ "name": "handover", "client_ref": client["id"], "entities": [entity] }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{sub}");
+        let sub_id = sub["id"].as_str().unwrap().to_owned();
+        let identity = session_cookie(service_user);
+
+        // Before the export's snapshot: in the export, not in the stream.
+        let record = create(&app, &admin_cookie, &entity, "exported").await;
+        let record_id: Uuid = record["id"].as_str().unwrap().parse().unwrap();
+
+        // A write still running when the export's snapshot is taken.
+        let mut during = db.begin().await.unwrap();
+        let during_id: Uuid = sqlx::query_scalar(
+            "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
+             VALUES ($1, $2, 'update') RETURNING id",
+        )
+        .bind(&entity)
+        .bind(record_id)
+        .fetch_one(&mut *during)
+        .await
+        .unwrap();
+        let snapshot: String = sqlx::query_scalar("SELECT pg_current_snapshot()::text")
+            .fetch_one(&db)
+            .await
+            .unwrap();
+        during.commit().await.unwrap();
+        // A write after the export.
+        let after_id: Uuid = sqlx::query_scalar(
+            "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
+             VALUES ($1, $2, 'update') RETURNING id",
+        )
+        .bind(&entity)
+        .bind(record_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+
+        let token = attome_api::change_stream::export_token(&snapshot).unwrap();
+        let mut ids: Vec<String> = Vec::new();
+        let mut next = token.clone();
+        for _ in 0..20 {
+            let (status, page) = send(
+                &app,
+                get(
+                    format!(
+                        "/api/v1/change-stream/{sub_id}/events?cursor={}&limit=50",
+                        urlencode(&next)
+                    ),
+                    &identity,
+                ),
+            )
+            .await;
+            assert_eq!(status, StatusCode::OK, "{page}");
+            ids.extend(
+                page["events"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|e| e["event_id"].as_str().unwrap().to_owned()),
+            );
+            next = page["next_cursor"].as_str().unwrap().to_owned();
+            if ids.len() >= 2 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+        assert_eq!(
+            ids,
+            vec![during_id.to_string(), after_id.to_string()],
+            "the running write and the later one, once each, and not the create the export saw"
+        );
+        // Reading on from the returned cursor repeats nothing.
+        let (_, rest) = send(
+            &app,
+            get(
+                format!(
+                    "/api/v1/change-stream/{sub_id}/events?cursor={}",
+                    urlencode(&next)
+                ),
+                &identity,
+            ),
+        )
+        .await;
+        assert_eq!(rest["events"], serde_json::json!([]), "{rest}");
+    })
+}

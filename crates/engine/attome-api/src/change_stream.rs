@@ -500,28 +500,87 @@ pub enum Read {
 }
 
 fn seal(position: CursorPosition) -> String {
-    attome_types::cursor::seal(&format!(
+    seal_with(position, None)
+}
+
+/// L7-T5: a cursor may carry the snapshot an export read in
+/// (`xmin:xmax:xip,...`); until the position passes the snapshot's `xmax`,
+/// events visible in it (already in the export) are skipped.
+fn seal_with(position: CursorPosition, snapshot: Option<&str>) -> String {
+    let base = format!(
         "cs:{}:{}",
         position.last_commit_xid,
         position
             .last_id
             .map(|id| id.to_string())
             .unwrap_or_default()
-    ))
+    );
+    attome_types::cursor::seal(&match snapshot {
+        Some(snap) => format!("{base}:{snap}"),
+        None => base,
+    })
 }
 
 fn open(sealed: &str) -> Result<CursorPosition, AppError> {
+    open_full(sealed).map(|(position, _)| position)
+}
+
+fn open_full(sealed: &str) -> Result<(CursorPosition, Option<String>), AppError> {
     let raw = attome_types::cursor::open(sealed)?;
     let rest = raw.strip_prefix("cs:").ok_or(AppError::InvalidCursor)?;
-    let (xid, id) = rest.split_once(':').ok_or(AppError::InvalidCursor)?;
-    Ok(CursorPosition {
-        last_commit_xid: xid.parse().map_err(|_| AppError::InvalidCursor)?,
-        last_id: if id.is_empty() {
-            None
-        } else {
-            Some(Uuid::parse_str(id).map_err(|_| AppError::InvalidCursor)?)
+    let mut parts = rest.splitn(3, ':');
+    let xid = parts.next().ok_or(AppError::InvalidCursor)?;
+    let id = parts.next().ok_or(AppError::InvalidCursor)?;
+    let snapshot = parts.next().map(str::to_owned);
+    if let Some(snap) = &snapshot {
+        snapshot_xmax(snap).ok_or(AppError::InvalidCursor)?;
+    }
+    Ok((
+        CursorPosition {
+            last_commit_xid: xid.parse().map_err(|_| AppError::InvalidCursor)?,
+            last_id: if id.is_empty() {
+                None
+            } else {
+                Some(Uuid::parse_str(id).map_err(|_| AppError::InvalidCursor)?)
+            },
         },
-    })
+        snapshot,
+    ))
+}
+
+/// A `pg_snapshot` text's `(xmin, xmax)`, when it is one.
+fn snapshot_bounds(snapshot: &str) -> Option<(i64, i64)> {
+    let mut parts = snapshot.split(':');
+    let xmin: i64 = parts.next()?.parse().ok()?;
+    let xmax: i64 = parts.next()?.parse().ok()?;
+    let xip = parts.next()?;
+    let ok = parts.next().is_none()
+        && xmin <= xmax
+        && xip
+            .split(',')
+            .filter(|x| !x.is_empty())
+            .all(|x| x.parse::<i64>().is_ok_and(|v| v >= xmin && v < xmax));
+    ok.then_some((xmin, xmax))
+}
+
+fn snapshot_xmax(snapshot: &str) -> Option<i64> {
+    snapshot_bounds(snapshot).map(|(_, xmax)| xmax)
+}
+
+/// L7-T5: the change-stream cursor that continues an export read in
+/// `snapshot` (the `pg_current_snapshot()` of the export's own statement):
+/// reading from it yields exactly the changes the export did not see, so
+/// nothing is lost or sent twice.
+pub fn export_token(snapshot: &str) -> Result<String, AppError> {
+    let (xmin, _) = snapshot_bounds(snapshot)
+        .ok_or_else(|| AppError::internal(format!("not a snapshot: {snapshot:?}")))?;
+    Ok(seal_with(
+        CursorPosition {
+            last_commit_xid: xmin - 1,
+            last_id: None,
+        },
+        Some(snapshot),
+    ))
 }
 
 /// Whether an event passes the subscription's operation and attribute
@@ -579,6 +638,7 @@ pub async fn read(
         return Ok(Read::ResyncNeeded("the subscription has ended"));
     }
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    let mut snapshot: Option<String> = None;
     let mut position = match cursor {
         None => {
             let start = horizon(&mut conn).await?;
@@ -588,7 +648,11 @@ pub async fn read(
                 has_more: false,
             }));
         }
-        Some(sealed) => open(sealed)?,
+        Some(sealed) => {
+            let (position, snap) = open_full(sealed)?;
+            snapshot = snap;
+            position
+        }
     };
     // A cursor past events the feed no longer holds cannot resume in order.
     if let Some(last) = position.last_id {
@@ -644,6 +708,8 @@ pub async fn read(
               WHERE (commit_xid > $1::text::xid8 \
                      OR (commit_xid = $1::text::xid8 AND id > $2)) \
                 AND commit_xid < pg_snapshot_xmin(pg_current_snapshot()) \
+                AND ($5::text IS NULL \
+                     OR NOT pg_visible_in_snapshot(commit_xid, $5::text::pg_snapshot)) \
               ORDER BY commit_xid, id \
               LIMIT $3",
         )
@@ -651,6 +717,7 @@ pub async fn read(
         .bind(position.last_id.unwrap_or(Uuid::nil()))
         .bind(batch)
         .bind(&sub.entities)
+        .bind(snapshot.as_deref())
         .fetch_all(&mut *conn)
         .await
         .map_err(AppError::internal)?;
@@ -748,10 +815,18 @@ pub async fn read(
             break;
         }
     }
+    // Past the export snapshot's xmax, nothing more can be visible in it.
+    if snapshot
+        .as_deref()
+        .and_then(snapshot_xmax)
+        .is_some_and(|xmax| position.last_commit_xid >= xmax)
+    {
+        snapshot = None;
+    }
     Ok(Read::Page(StreamPage {
         has_more: !exhausted,
         events,
-        next_cursor: seal(position),
+        next_cursor: seal_with(position, snapshot.as_deref()),
     }))
 }
 
@@ -1146,6 +1221,15 @@ mod tests {
         let back = open(&seal(position)).unwrap();
         assert_eq!(back.last_commit_xid, 42);
         assert_eq!(back.last_id, position.last_id);
+        let token = export_token("100:105:101,103").unwrap();
+        let (position, snapshot) = open_full(&token).unwrap();
+        assert_eq!(position.last_commit_xid, 99, "from the snapshot's xmin");
+        assert_eq!(snapshot.as_deref(), Some("100:105:101,103"));
+        assert!(export_token("100:99:").is_err(), "xmax below xmin");
+        assert!(
+            export_token("100:105:120").is_err(),
+            "an in-progress xid past xmax"
+        );
         let other = attome_types::cursor::seal("42:");
         assert!(
             open(&other).is_err(),
