@@ -10,6 +10,7 @@
 //! externally-tagged variant name is surfaced.
 
 use attome_core::EngineState;
+use attome_core::dead_letter::{DeadLetter, DeadLetterFuture, DeadLetterSource, ReplayOutcome};
 use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, OnePageQuery, PaginatedResponse};
@@ -166,22 +167,60 @@ async fn replay(
             ));
         }
     }
-    // attome-jobs cannot depend on attome-audit (layering, coding-guidelines §1), so
-    // this writes after the base-layer commit rather than inside its transaction
-    // — the same documented D-062 deviation Phase 3 item 3.3 uses for attome-auth.
-    attome_audit::security::SecurityAuditor::from_state(&state)
+    audit_job_replay(&state, ctx.user_id, &id).await?;
+    Ok((StatusCode::OK, Json(ReplayResult { replayed: true })))
+}
+
+/// attome-jobs cannot depend on attome-audit (layering, coding-guidelines §1), so
+/// this writes after the base-layer commit rather than inside its transaction
+/// — the same documented D-062 deviation Phase 3 item 3.3 uses for attome-auth.
+/// The apalis id is not a UUID, so it rides in the comment, not record_id.
+async fn audit_job_replay(state: &EngineState, actor: Uuid, id: &str) -> Result<(), AppError> {
+    attome_audit::security::SecurityAuditor::from_state(state)
         .write(
             attome_audit::security::SecurityEvent::new(
                 attome_audit::security::MandatoryCategory::Configuration,
                 attome_audit::AuditOperation::Execute,
-                ctx.user_id,
+                actor,
                 "base_jobs_dead_letter",
                 None,
             )
-            .named("job.replay"),
+            .named("job.replay")
+            .comment(format!("id={id}")),
         )
-        .await?;
-    Ok((StatusCode::OK, Json(ReplayResult { replayed: true })))
+        .await
+}
+
+/// The discard handler's audit event (same layering note as
+/// [`audit_job_replay`]); M5-T1's inbox adds the operator's reason.
+async fn audit_job_discard(
+    state: &EngineState,
+    actor: Uuid,
+    discarded: &attome_jobs::DiscardedJob,
+    reason: Option<&str>,
+) -> Result<(), AppError> {
+    let mut comment = format!(
+        "id={} queue={} variant={}",
+        discarded.id,
+        discarded.queue,
+        discarded.variant.as_deref().unwrap_or("unknown")
+    );
+    if let Some(reason) = reason {
+        comment.push_str(&format!("; reason: {reason}"));
+    }
+    attome_audit::security::SecurityAuditor::from_state(state)
+        .write(
+            attome_audit::security::SecurityEvent::new(
+                attome_audit::security::MandatoryCategory::Configuration,
+                attome_audit::AuditOperation::HardDelete,
+                actor,
+                "base_jobs_dead_letter",
+                None,
+            )
+            .named("job.discard")
+            .comment(comment),
+        )
+        .await
 }
 
 /// BJB-6c — discards one dead letter: the row is deleted while it is still
@@ -217,28 +256,121 @@ async fn discard(
     else {
         return Err(AppError::Conflict("job is not in a dead-letter state"));
     };
-    // Same layering note as the replay handler: attome-jobs cannot depend on
-    // attome-audit, so the event is written after the base-layer commit (D-062).
-    // The apalis id is not a UUID, so it rides in the comment, not record_id.
-    attome_audit::security::SecurityAuditor::from_state(&state)
-        .write(
-            attome_audit::security::SecurityEvent::new(
-                attome_audit::security::MandatoryCategory::Configuration,
-                attome_audit::AuditOperation::HardDelete,
-                ctx.user_id,
-                "base_jobs_dead_letter",
-                None,
-            )
-            .named("job.discard")
-            .comment(format!(
-                "id={} queue={} variant={}",
-                discarded.id,
-                discarded.queue,
-                discarded.variant.as_deref().unwrap_or("unknown")
-            )),
-        )
-        .await?;
+    audit_job_discard(&state, ctx.user_id, &discarded, None).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// M5-T1: background jobs as a [`DeadLetterSource`], one per queue. Step is
+/// the job variant; the payload is never exposed (some variants carry live
+/// tokens), so there is no payload reference.
+#[derive(Debug, Clone, Copy)]
+pub struct JobDeadLetters {
+    /// The batch queue rather than the fast one.
+    pub batch: bool,
+}
+
+impl JobDeadLetters {
+    fn name(self) -> &'static str {
+        if self.batch { "batch_jobs" } else { "jobs" }
+    }
+
+    fn item(self, row: attome_jobs::DeadLetterJobRow) -> DeadLetter {
+        DeadLetter::new(
+            self.name(),
+            row.id.clone(),
+            attome_jobs::job_variant_tag(&row.job).map(str::to_string),
+            row.last_error.as_deref(),
+            row.done_at.unwrap_or(row.run_at),
+            row.attempts,
+            None,
+        )
+    }
+}
+
+impl DeadLetterSource for JobDeadLetters {
+    fn source(&self) -> &'static str {
+        self.name()
+    }
+
+    fn list<'a>(
+        &'a self,
+        state: &'a EngineState,
+        offset: i64,
+        limit: i64,
+    ) -> DeadLetterFuture<'a, Vec<DeadLetter>> {
+        Box::pin(async move {
+            let rows =
+                attome_jobs::list_dead_letter_jobs(&state.base.db, self.batch, offset, limit)
+                    .await
+                    .map_err(AppError::internal)?;
+            Ok(rows.into_iter().map(|row| self.item(row)).collect())
+        })
+    }
+
+    fn count<'a>(&'a self, state: &'a EngineState) -> DeadLetterFuture<'a, i64> {
+        Box::pin(async move {
+            attome_jobs::dead_letter_count(&state.base.db, self.batch)
+                .await
+                .map_err(AppError::internal)
+        })
+    }
+
+    fn get<'a>(
+        &'a self,
+        state: &'a EngineState,
+        id: &'a str,
+    ) -> DeadLetterFuture<'a, Option<DeadLetter>> {
+        Box::pin(async move {
+            let found = attome_jobs::get_dead_letter_job(&state.base.db, id)
+                .await
+                .map_err(AppError::internal)?;
+            Ok(found
+                .filter(|(_, batch)| *batch == self.batch)
+                .map(|(row, _)| self.item(row)))
+        })
+    }
+
+    fn replay<'a>(
+        &'a self,
+        state: &'a EngineState,
+        id: &'a str,
+        actor: Uuid,
+    ) -> DeadLetterFuture<'a, ReplayOutcome> {
+        Box::pin(async move {
+            match attome_jobs::replay_dead_letter_job_checked(&state.base.db, id)
+                .await
+                .map_err(AppError::internal)?
+            {
+                attome_jobs::ReplayOutcome::Replayed => {
+                    audit_job_replay(state, actor, id).await?;
+                    Ok(ReplayOutcome::Replayed)
+                }
+                attome_jobs::ReplayOutcome::NotDeadLettered => Ok(ReplayOutcome::NotDeadLettered),
+                attome_jobs::ReplayOutcome::DedupSlotTaken { .. } => Ok(ReplayOutcome::Refused(
+                    "a live job already holds this job's dedup key",
+                )),
+            }
+        })
+    }
+
+    fn discard<'a>(
+        &'a self,
+        state: &'a EngineState,
+        id: &'a str,
+        actor: Uuid,
+        reason: &'a str,
+    ) -> DeadLetterFuture<'a, bool> {
+        Box::pin(async move {
+            let Some(discarded) = attome_jobs::discard_dead_letter_job(&state.base.db, id)
+                .await
+                .map_err(AppError::internal)?
+            else {
+                return Ok(false);
+            };
+            audit_job_discard(state, actor, &discarded, Some(reason)).await?;
+            Ok(true)
+        })
+    }
 }
 
 /// Z7-T4: a chunked batch job's progress, as `GET /api/v1/jobs/{id}` shows it.
@@ -456,4 +588,28 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dead_letter_sources_jobs_group_by_variant_per_queue() {
+        let row = attome_jobs::DeadLetterJobRow {
+            id: "42".into(),
+            job: serde_json::json!({"version": 1, "variant": "SendEmail", "payload": {}}),
+            attempts: 5,
+            max_attempts: 5,
+            last_error: Some("smtp connection refused".into()),
+            run_at: Utc::now(),
+            done_at: None,
+        };
+        let fast = JobDeadLetters { batch: false }.item(row.clone());
+        assert_eq!(fast.source, "jobs");
+        assert_eq!(fast.error_kind, "connect");
+        assert_eq!(fast.payload_ref, None, "a job payload is never referenced");
+        let batch = JobDeadLetters { batch: true }.item(row);
+        assert_eq!(batch.source, "batch_jobs");
+    }
 }

@@ -96,6 +96,8 @@ pub mod credential_columns;
 pub mod crud;
 pub mod data_definition;
 pub mod data_domain;
+/// M5-T1: one shape for dead letters from every source.
+pub mod dead_letter;
 pub mod defaults_scope;
 /// T6-T3: A/B variants of a feature flag and their recorded outcomes.
 pub mod experiment;

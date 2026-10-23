@@ -4,6 +4,7 @@ pub mod catalog_backfill;
 /// Z11-T15: Condition nodes as V2 rule expressions.
 pub mod condition;
 pub mod dead_letter_admin;
+pub mod dead_letter_source;
 pub mod engine;
 pub mod entity_trigger;
 pub mod escalation;

@@ -642,6 +642,30 @@ pub async fn list_dead_letter_jobs(
     .await
 }
 
+/// One dead-lettered row in either queue, or `None` when `id` names none
+/// (M5-T1, the dead-letter inbox's item view), with `true` for the batch
+/// queue.
+pub async fn get_dead_letter_job(
+    pool: &attome_db::DbPool,
+    id: &str,
+) -> Result<Option<(DeadLetterJobRow, bool)>, sqlx::Error> {
+    #[derive(sqlx::FromRow)]
+    struct WithQueue {
+        #[sqlx(flatten)]
+        row: DeadLetterJobRow,
+        job_type: String,
+    }
+    let found: Option<WithQueue> = sqlx::query_as(attome_db::tagged_sql!(
+        "jobs.queue",
+        "SELECT id, job, attempts, max_attempts, last_error, run_at, done_at, job_type          FROM apalis.jobs WHERE id = $1 AND status = 'Killed' AND job_type = ANY($2)"
+    ))
+    .bind(id)
+    .bind(&[NAMESPACE, NAMESPACE_BATCH][..])
+    .fetch_optional(pool)
+    .await?;
+    Ok(found.map(|f| (f.row, f.job_type == NAMESPACE_BATCH)))
+}
+
 /// BJB-6a (BJB-D6) — what one replay attempt did.
 ///
 /// The two failure modes are deliberately distinct. A row that is not

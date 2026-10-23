@@ -173,6 +173,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- One dead-letter shape for every source (M5-T1): `attome_core::dead_letter::DeadLetterSource`
+  (list, count, get, replay, discard with a reason) over `DeadLetter {source, id, step, error_kind,
+  cause_group, message, first_seen, attempts, payload_ref}`, implemented for background jobs (fast
+  and batch queues, `attome-api`), flow triggers and failed flow runs (`attome-workflow`) and webhook
+  deliveries (`attome-events`). `cause_group` is source + step + a coarse error kind (`timeout`,
+  `connect`, `http_5xx`, …), so items that failed the same way group together. A discarded flow run
+  is cancelled; a discarded webhook delivery is deleted; each replay and discard is audited.
 - Webhook subscriptions choose their body (M13-T1): `payload_shape` on
   `/api/v1/admin/events/subscriptions` is `id` (entity, record, operation, event name), `changes`
   (plus `changes`: each changed attribute the owner may read with its `old` and `new` value, copied

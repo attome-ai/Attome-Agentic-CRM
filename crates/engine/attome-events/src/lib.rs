@@ -43,6 +43,7 @@
 pub mod admin;
 pub mod audit_dispatch;
 pub mod crypto;
+pub mod dead_letter_source;
 pub mod delivery;
 pub mod dispatch;
 pub mod filter;

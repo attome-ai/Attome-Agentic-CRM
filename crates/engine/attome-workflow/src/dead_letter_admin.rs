@@ -273,6 +273,17 @@ pub async fn discard(
     event_id: Uuid,
     actor_user_id: Uuid,
 ) -> Result<(), AppError> {
+    discard_with_reason(state, event_id, actor_user_id, None).await
+}
+
+/// [`discard`] with the operator's reason on the audit event (M5-T1, the
+/// dead-letter inbox requires one).
+pub async fn discard_with_reason(
+    state: &EngineState,
+    event_id: Uuid,
+    actor_user_id: Uuid,
+    reason: Option<&str>,
+) -> Result<(), AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let deleted: Option<(String, Uuid, String)> = sqlx::query_as(
         "DELETE FROM workflow_trigger_failure \
@@ -300,7 +311,10 @@ pub async fn discard(
             Some(event_id),
         )
         .named("workflow_trigger.discard")
-        .comment(format!("{entity} {record_id} {operation}")),
+        .comment(match reason {
+            Some(reason) => format!("{entity} {record_id} {operation}; reason: {reason}"),
+            None => format!("{entity} {record_id} {operation}"),
+        }),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
