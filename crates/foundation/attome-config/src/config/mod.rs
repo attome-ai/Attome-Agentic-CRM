@@ -242,6 +242,11 @@ pub struct AppConfig {
     #[serde(default)]
     pub backup: BackupSection,
 
+    /// R7-T1 — where data may live and where each component holds it; see
+    /// `crate::residency`.
+    #[serde(default)]
+    pub residency: crate::residency::ResidencySection,
+
     /// AB5-T7 — priority load shedding: slots per request class.
     #[serde(default)]
     pub shed: ShedSection,

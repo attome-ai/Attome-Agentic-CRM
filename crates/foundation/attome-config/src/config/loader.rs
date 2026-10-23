@@ -24,6 +24,25 @@ use super::{
 };
 
 impl AppConfig {
+    /// R7-T1 — the residency map: each data-holding component in use, with
+    /// its region and where that came from.
+    pub fn residency_map(&self) -> Vec<crate::residency::Placement> {
+        let s3 = matches!(self.storage.backend, StorageBackend::S3);
+        let facts = crate::residency::Facts {
+            data_region: self.deployment.data_region.as_deref(),
+            storage_remote: !matches!(self.storage.backend, StorageBackend::Local),
+            storage_region: if s3 { &self.storage.s3_region } else { "" },
+            backup_enabled: self.backup.enabled,
+            anchor_s3_region: None,
+        };
+        crate::residency::map(&self.residency, &facts)
+    }
+
+    /// R7-T1 — every component placed outside the allowed regions.
+    pub fn residency_violations(&self) -> Vec<String> {
+        crate::residency::violations(&self.residency, &self.residency_map())
+    }
+
     /// BCF-10 — deserialize with `serde_ignored` watching, returning the config
     /// plus every dropped key path. Split out of `from_file` so a test can
     /// prove unknown-key reporting without a temp file or an env-var dance.
@@ -708,6 +727,14 @@ impl AppConfig {
             && let Some((field, reason)) = self.sovereign_violations().into_iter().next()
         {
             return Err(ConfigError::Insecure { field, reason });
+        }
+        // R7-T1 — a component outside the allowed regions stops boot.
+        let residency = self.residency_violations();
+        if !residency.is_empty() {
+            return Err(ConfigError::Insecure {
+                field: "residency".into(),
+                reason: residency.join("; "),
+            });
         }
         // BCF-3/BCF-D1 — the shipped-template denylist is a production-profile
         // rule: config.example.json deliberately ships throwaway secrets for

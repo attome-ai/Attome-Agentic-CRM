@@ -46,6 +46,8 @@ pub mod fingerprint;
 mod keyring;
 /// AA9-T1 — every limit the platform enforces, with its range.
 pub mod limits;
+/// R7-T1 — the data residency map and its boot check.
+pub mod residency;
 mod net;
 pub mod secret;
 /// Z1-T8 — every secret the configuration holds, without its value.

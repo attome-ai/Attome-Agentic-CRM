@@ -483,6 +483,15 @@ Required.
 | `rate_limit.ipv6_bucket_prefix` | integer | `64` |  | BSV-F16 (B6) — both per-IP limiters bucket an IPv6 client by this prefix length rather than its full /128, because one host usually controls a whole /64 and could otherwise rotate addresses inside it to dodge the limit. IPv4 is always bucketed per address. Range 32..=128; 128 restores per-address buckets. |
 | `rate_limit.pre_auth_rpm` | integer | `1000` |  | Coarse, IP-only limit applied by `pre_auth_rate_limit` — the layer that runs before `s2s_authn`/`authn` so a flood of garbage JWTs/HMAC signatures gets rejected before burning crypto + a Redis denylist/nonce lookup per request. Deliberately looser than `anonymous_rpm` (a blunt pre-crypto backstop, not a business-logic limit) — an unmeasured starting guess; tune against real traffic once available. |
 
+## `residency`
+
+R7-T1 — where data may live and where each component holds it; see `crate::residency`.
+
+| Key | Type | Default | Secret | Description |
+|---|---|---|---|---|
+| `residency.allowed_regions` | array of string | `[]` |  | The regions data may live in; empty for no rule. |
+| `residency.components` | map |  |  | A component's region, overriding what its configuration declares. |
+
 ## `retention`
 
 P-retention-archive-completion — partition archive/drop, entity purge, and legal hold policy. See `RetentionSection`'s doc comment.

@@ -2488,6 +2488,28 @@
       },
       "type": "object"
     },
+    "ResidencySection": {
+      "description": "`residency`.",
+      "properties": {
+        "allowed_regions": {
+          "default": [],
+          "description": "The regions data may live in; empty for no rule.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "components": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "A component's region, overriding what its configuration declares.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "RetentionSection": {
       "description": "P-retention-archive-completion §3a — policy-driven partition archive/drop,\nentity-record purge, and legal hold. Config-driven per D-002's\nsingle-deployment-per-customer model: every field below is one\ndeployment's own `config.json`, never a cross-customer policy table.\n\nEvery window defaults to `None` (\"keep forever\") and `dry_run` defaults\n`true`, so a fresh deployment with no `retention` block behaves exactly as\ntoday — zero automatic archive/drop/purge behavior until an operator\nexplicitly configures a window **and** flips `dry_run` off **and**\napproves a specific proposed action (§3a/§3d/§3e; two independent gates,\nneither sufficient alone).",
       "properties": {
@@ -3316,6 +3338,10 @@
     },
     "rate_limit": {
       "$ref": "#/$defs/RateLimitSection"
+    },
+    "residency": {
+      "$ref": "#/$defs/ResidencySection",
+      "description": "R7-T1 — where data may live and where each component holds it; see\n`crate::residency`."
     },
     "retention": {
       "$ref": "#/$defs/RetentionSection",

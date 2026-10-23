@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data residency map (R7-T1): `residency.allowed_regions` and `residency.components` declare where
+  data may live and where each component (database, cache, storage, backup, audit anchor, AI,
+  email, traces) holds it, falling back to the component's own region (an S3 bucket's) or
+  `deployment.data_region`; boot refuses a component outside the allowed regions or of unknown
+  region.
 - Index advisor (AA3-T1): the daily index sweep counts the attributes views sort and filter on and
   the attributes definitions read (lineage), and on tables over 10,000 rows queues online index
   builds for the most used unindexed ones, at most 15 indexes per table (`index_advice`).
