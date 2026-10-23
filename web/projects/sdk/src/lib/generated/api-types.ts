@@ -976,6 +976,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/approval-processes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_approval_processes"];
+        put?: never;
+        post: operations["create_approval_process"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/approval-processes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_approval_process"];
+        put?: never;
+        post?: never;
+        delete: operations["delete_approval_process"];
+        options?: never;
+        head?: never;
+        patch: operations["update_approval_process"];
+        trace?: never;
+    };
     "/api/v1/admin/approvals": {
         parameters: {
             query?: never;
@@ -2688,6 +2720,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/data/label-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists personal-data label proposals.
+         * @description L6-T4: a profile proposes the `personal` label for an unlabelled text
+         *     attribute when more than 5% of its sampled values look like a Saudi
+         *     national ID, an Iqama, an IBAN, a phone or an email address. Only the
+         *     counts are kept. Nothing is labelled automatically: a builder sets the
+         *     label on the attribute, and the next profile resolves the proposal.
+         */
+        get: operations["list_label_proposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/data/mappings": {
         parameters: {
             query?: never;
@@ -2968,6 +3024,91 @@ export interface paths {
          *     default.
          */
         delete: operations["delete_survivorship_rule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dead-letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Dead letters, newest first, of one source or one group, or of every source (M5-T2). */
+        get: operations["dead_letter_items"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dead-letters/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Dead letters from every source grouped by cause (source, step and error kind), largest group first (M5-T2). */
+        get: operations["dead_letter_groups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dead-letters/groups/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Replays a whole group (M5-T2): the first item at once as a preview; when it goes through, the rest as a batch job at the given rate. */
+        post: operations["dead_letter_group_replay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dead-letters/{source}/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Drops one dead letter, with the reason on its audit event (M5-T2). A flow run is cancelled; every other item is deleted. */
+        post: operations["dead_letter_discard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dead-letters/{source}/{id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Runs one dead letter again (M5-T2). */
+        post: operations["dead_letter_replay"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3861,6 +4002,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/events/subscriptions/{id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends again every delivery the subscription matched since `from` (M13-T4): delivered, failed and dead-lettered ones go back to pending with their attempts reset, at most 10,000. Each keeps its event id, so a receiver that deduplicates on `webhook-id` sees a retry, not a new event. */
+        post: operations["event_subscription_replay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/events/subscriptions/{id}/secret/rotate": {
         parameters: {
             query?: never;
@@ -3871,6 +4029,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["rotate_secret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/events/subscriptions/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Queues one test delivery to the subscription's target (M13-T4): entity `attome_test`, operation `test`, signed like every delivery. Its outcome shows in the delivery log. */
+        post: operations["event_subscription_send_test"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3913,6 +4088,29 @@ export interface paths {
          */
         put: operations["put_feature_flag"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance/certifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads an asset's certification, `stale` when its definition changed. */
+        get: operations["governance_get_certification"];
+        put?: never;
+        /**
+         * Certifies an asset against its current definition.
+         * @description An entity: its domain's owner or steward, or `system.admin` (for an
+         *     entity in no domain, `system.admin` only). Certifying again replaces the
+         *     earlier certification.
+         */
+        post: operations["governance_certify"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4003,6 +4201,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/governance/domains/{id}/governed-change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Turns governed change on or off for a domain.
+         * @description L3-T5: with it on, a changeset apply that changes one of the domain's
+         *     entities or their attributes waits for approval by the domain's owners
+         *     or stewards, with the change's lineage impact attached.
+         */
+        put: operations["governance_put_governed_change"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/governance/domains/{id}/report": {
         parameters: {
             query?: never;
@@ -4014,6 +4234,104 @@ export interface paths {
         get: operations["get_report"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance/domains/{id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists a domain's governance roles. */
+        get: operations["governance_list_roles"];
+        /**
+         * Gives a person a governance role in a domain.
+         * @description The domain's owner or steward, or `system.admin`. Giving a role the
+         *     person already holds changes nothing.
+         */
+        put: operations["governance_put_role"];
+        post?: never;
+        /** Takes a governance role away. */
+        delete: operations["governance_delete_role"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists governance policies.
+         * @description With `domain`, that domain's (the caller holds a role in it, or is
+         *     `system.admin`); without, every domain the caller holds a role in (every
+         *     domain for `system.admin`).
+         */
+        get: operations["governance_list_policies"];
+        put?: never;
+        /**
+         * Writes a governance policy.
+         * @description The domain's owner or steward, or `system.admin`.
+         */
+        post: operations["governance_create_policy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance/policies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads a governance policy. */
+        get: operations["governance_get_policy"];
+        put?: never;
+        post?: never;
+        /**
+         * Removes a governance policy.
+         * @description Refused while it has exceptions; they are its history.
+         */
+        delete: operations["governance_delete_policy"];
+        options?: never;
+        head?: never;
+        /**
+         * Edits a governance policy, raising its version.
+         * @description The domain's owner or steward, or `system.admin`. Send the policy's
+         *     `row_version`.
+         */
+        patch: operations["governance_update_policy"];
+        trace?: never;
+    };
+    "/api/v1/admin/governance/policies/{id}/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists a policy's exceptions. */
+        get: operations["governance_list_exceptions"];
+        put?: never;
+        /**
+         * Asks for an exception to a policy.
+         * @description Anyone with a governance role in the policy's domain, or `system.admin`.
+         *     The exception is stored as `requested` and goes to the domain's owners
+         *     and stewards for approval (the requester excluded).
+         */
+        post: operations["governance_request_exception"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4087,6 +4405,41 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inbound-hooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_inbound_hooks"];
+        put?: never;
+        /** @description Defines an inbound endpoint at /api/v1/hooks/{name} (M14-T1): its authentication (hmac with a preset or custom header and encoding, or bearer), address allow-list, mTLS, required body fields, and handler (create or, by a key attribute, upsert a record, or start a flow, as run_as; an events handler routes by event type). The secret is sealed and never returned. */
+        post: operations["create_inbound_hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inbound-hooks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Removes an inbound hook (M14-T1); its endpoint answers 404 from then on. */
+        delete: operations["delete_inbound_hook"];
+        options?: never;
+        head?: never;
+        /** @description Changes an inbound hook (M14-T1); a new secret rotates it. */
+        patch: operations["update_inbound_hook"];
         trace?: never;
     };
     "/api/v1/admin/integrations/systems": {
@@ -4444,6 +4797,31 @@ export interface paths {
          *     limit with `PUT /api/v1/admin/settings/limits.{key}`.
          */
         get: operations["admin_limits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/lineage/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The impact of a draft change, for the publish preview.
+         * @description L5-T3: every definition downstream of the change in the lineage graph
+         *     (direct uses at depth 1, then what uses those), and the ones it would
+         *     break: a deleted or retyped attribute read, derived from or written by a
+         *     definition no field hook adjusts (dashboards, metrics, model
+         *     definitions). Deleting or retyping the field is refused with the same
+         *     list. Items the caller may not see are counted in `hidden`.
+         */
+        get: operations["lineage_impact"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5365,6 +5743,23 @@ export interface paths {
         get: operations["export_files"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/flow_template/{id}/instantiate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Fills a published flow template with its arguments and answers the graph, or the arguments' issues (M6-T4). Writes nothing; save the graph as a new flow's draft. */
+        post: operations["model_flow_template_instantiate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6438,6 +6833,92 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every schedule in one place (M12-T3): flow schedule triggers, report deliveries and the platform's own schedulers (read-only), with next and last run, owner and whether paused; and the quiet windows heavy schedules wait out. One page holds them all. */
+        get: operations["list_schedules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/schedules/{kind}/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Pauses a flow or report schedule (M12-T3): its sweep skips it until it is resumed. Pausing a paused schedule changes nothing. */
+        post: operations["pause_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/schedules/{kind}/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Resumes a paused flow or report schedule (M12-T3); its next due slot starts as usual. */
+        post: operations["resume_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/scim/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists SCIM tokens (never their secrets). */
+        get: operations["scim_list_tokens"];
+        put?: never;
+        /** Issues a SCIM token for an identity provider. */
+        post: operations["scim_issue_token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/scim/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revokes a SCIM token. */
+        delete: operations["scim_revoke_token"];
         options?: never;
         head?: never;
         patch?: never;
@@ -9044,6 +9525,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/approval-processes/requests/{request_id}/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The requester takes a pending approval-process request back (M9-T1); the record's lock ends with it. */
+        post: operations["recall_approval_process_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approval-processes/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Submits a record to an approval process (M9-T1): the caller must be able to update the record, the record must meet the process's entry condition, and it may have no other pending request of this process. A locking process holds the record until the request is decided or recalled. */
+        post: operations["submit_to_approval_process"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/email-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Reads the request an emailed approval link is for (M9-T3), without using the link: what is asked, by whom, why, the changes, and whether it may be decided on the link's page (`decide_here`) or needs the signed-in request page. Public: the token is the credential. */
+        post: operations["read_approval_email_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/email-link/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Approves or rejects a low-risk request from its emailed link (M9-T3), as the link's approver, by the same path as `POST /api/v1/approvals/{id}/decide`. The link works once; a decision that fails releases it. A high-risk request (its action type not in `approval.email_decide_actions`) is refused: open the request page and sign in. Public: the token is the credential. */
+        post: operations["decide_by_approval_email_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/approvals/out-of-office": {
         parameters: {
             query?: never;
@@ -9067,6 +9616,40 @@ export interface paths {
          *     user's current and future out-of-office delegations.
          */
         delete: operations["delete_out_of_office"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/regarding/{entity}/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A record's approval history (M9-T4), newest first, for whoever may read the record. */
+        get: operations["list_approvals_regarding_record"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The approval request page (M9-T4): what is asked, by whom, why, the attribute changes it carries, every decision so far, and whether the caller may decide now. Visible to an administrator, the requester, anyone who decided it, an eligible approver, and anyone who may read the record it is about. */
+        get: operations["get_approval_request_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11143,6 +11726,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/change-stream/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists change-stream subscriptions. */
+        get: operations["change_stream_list_subscriptions"];
+        put?: never;
+        /**
+         * Subscribes an S2S client to changes.
+         * @description The client reads the stream as its service user, through that user's
+         *     permissions.
+         */
+        post: operations["change_stream_create_subscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/change-stream/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Ends a subscription. */
+        delete: operations["change_stream_delete_subscription"];
+        options?: never;
+        head?: never;
+        /** Changes a subscription. Send its `row_version`. */
+        patch: operations["change_stream_update_subscription"];
+        trace?: never;
+    };
+    "/api/v1/change-stream/{subscription}/erasure-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirms erased copies.
+         * @description L7-T6: the subscription's identity confirms it erased its copy of each
+         *     erased record (`record.erased` events of its entities); the confirmations
+         *     are kept as evidence of the erasure's reach.
+         */
+        post: operations["change_stream_confirm_erasures"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/change-stream/{subscription}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reads a subscription's events after a cursor.
+         * @description Only the subscription's identity reads it. `410 resync_needed` when the
+         *     cursor is older than the change feed keeps, or the subscription ended.
+         */
+        get: operations["change_stream_read_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/change-stream/{subscription}/sse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Streams a subscription's events as server-sent events.
+         * @description Each `change` event's `id` is the cursor after it; reconnect with it.
+         *     A `resync_needed` event ends the stream when the cursor is too old or the
+         *     subscription ended. A connection lasts up to fifteen minutes.
+         */
+        get: operations["change_stream_stream_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/chat/channels": {
         parameters: {
             query?: never;
@@ -12085,6 +12773,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/data/profile:file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Profiles a staged import before it is applied.
+         * @description L6-T6: reads the import's staged rows (as mapped, else as uploaded) in a
+         *     job, with the same statistics, pattern shapes and masking as an entity
+         *     profile, up to 100,000 rows. The import's creator or an administrator,
+         *     holding `metadata.read` and allowed to read the import's entity.
+         */
+        post: operations["data_profile_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{id}/approve": {
         parameters: {
             query?: never;
@@ -12557,6 +13268,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hooks/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A provider's call to a builder-defined endpoint (M14-T1). Public: the hook's own checks are the credential (address allow-list and mTLS, then signature or bearer secret with a timestamp window, then the body's required fields, then a once-only event id). Accepted calls create a record or start a flow as the hook's service user. */
+        post: operations["call_inbound_hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hr/availability": {
         parameters: {
             query?: never;
@@ -12865,6 +13593,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/statements/balance-sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The balance sheet as of a date. */
+        get: operations["ledger_balance_sheet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/statements/profit-and-loss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The profit and loss statement for a date range. */
+        get: operations["ledger_profit_and_loss"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/statements/trial-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The trial balance for a date range. */
+        get: operations["ledger_trial_balance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/limits/me": {
         parameters: {
             query?: never;
@@ -12878,6 +13657,74 @@ export interface paths {
          *     size and the query time limits.
          */
         get: operations["my_limits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists what needs tidying in the lineage graph. */
+        get: operations["lineage_cleanup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compares the lineage graph at two versions. */
+        get: operations["lineage_compare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/export/openlineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exports the lineage graph as OpenLineage events (metadata only). */
+        get: operations["lineage_export_openlineage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/{kind}/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Walks the lineage graph from a node. */
+        get: operations["lineage_walk"];
         put?: never;
         post?: never;
         delete?: never;
@@ -15824,6 +16671,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/quotes/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submits a quote.
+         * @description Checks the quote against the discount policy (`sales.discount_policy`).
+         *     Within every threshold the quote is sent; over one, it goes to the
+         *     approval process the strictest threshold names and stays a draft until
+         *     that process approves it, after which submitting again sends it. Send
+         *     the quote's `row_version` in `If-Match`.
+         */
+        post: operations["post_sales_quote_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/quotes/{id}/versions": {
         parameters: {
             query?: never;
@@ -16954,6 +17825,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stage-processes/for/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The newest published stage process of an entity (M7-T2), for the form's stage bar: its stages in order, each with its required attributes, checklist and next stages. */
+        get: operations["get_entity_stage_process"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stage-processes/{id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Time-in-stage measures of a stage process (M7-T3), from its recorded moves: per stage, records entered, left and in it now, mean and p90 seconds spent before leaving, and drop-off (percent of records that entered and never moved to the next stage in order). */
+        get: operations["get_stage_process_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -17846,6 +18751,23 @@ export interface paths {
          *     `entry` rows are rebuilt in the same transaction (§5 step 6).
          */
         post: operations["publish_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/definitions/{id}/versions/{version_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Replays a version over the flow's latest finished runs (M4-T3): each run's trigger input and approval decisions go through the simulation of this version, and every node whose outcome differs from what the run really did is reported. Nothing is written. */
+        post: operations["workflow_replay_draft"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19636,6 +20558,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scim/v2/Groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists groups (SCIM). */
+        get: operations["scim_list_groups"];
+        put?: never;
+        /** Creates a group (SCIM): a team. */
+        post: operations["scim_create_group"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads a group (SCIM). */
+        get: operations["scim_get_group"];
+        put?: never;
+        post?: never;
+        /** Deletes a group (SCIM): the team is removed and its members leave it. */
+        delete: operations["scim_delete_group"];
+        options?: never;
+        head?: never;
+        /** Patches a group (SCIM): its name and members. */
+        patch: operations["scim_patch_group"];
+        trace?: never;
+    };
+    "/scim/v2/Users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists users (SCIM). */
+        get: operations["scim_list_users"];
+        put?: never;
+        /** Creates a user (SCIM). */
+        post: operations["scim_create_user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads a user (SCIM). */
+        get: operations["scim_get_user"];
+        /** Replaces a user (SCIM). */
+        put: operations["scim_replace_user"];
+        post?: never;
+        /** Deactivates a user (SCIM DELETE): the account stays, inactive. */
+        delete: operations["scim_delete_user"];
+        options?: never;
+        head?: never;
+        /** Patches a user (SCIM): `active` false deactivates the account. */
+        patch: operations["scim_patch_user"];
+        trace?: never;
+    };
     "/version": {
         parameters: {
             query?: never;
@@ -20632,6 +21629,22 @@ export interface components {
             checksum: string;
             ref: string;
         };
+        /** @description A definition downstream of a change. */
+        Affected: {
+            /** @description The edge names the changed attribute (not only its entity). */
+            attribute_level: boolean;
+            confidence: string;
+            /**
+             * Format: int32
+             * @description 1 for a direct use.
+             */
+            depth: number;
+            edge_kind: string;
+            from_kind: string;
+            from_label: string;
+            /** Format: uuid */
+            from_ref: string;
+        };
         /** @description One account's open amounts in one currency, by days past due. */
         AgeingRow: {
             /** Format: uuid */
@@ -21219,6 +22232,61 @@ export interface components {
          * @enum {string}
          */
         ApplyStatus: "planned" | "queued" | "claimed" | "applying" | "succeeded" | "failed" | "adopted";
+        /** @description M9-T4: what the request page shows. */
+        ApprovalDetail: {
+            action_type: string;
+            /** @description Whether the caller may approve or reject it now. */
+            can_decide: boolean;
+            /** @description The attribute changes a held change carries, by name. */
+            changes: components["schemas"]["ChangedAttribute"][];
+            decisions: components["schemas"]["DecisionEntry"][];
+            /** Format: date-time */
+            executed_at?: string | null;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            id: string;
+            payload: Record<string, never>;
+            /** @description Why it was asked, in the requester's words. */
+            reason?: string | null;
+            regarding_entity?: string | null;
+            /** Format: uuid */
+            regarding_id?: string | null;
+            /** Format: date-time */
+            requested_at: string;
+            /** Format: uuid */
+            requested_by: string;
+            requested_by_name?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            status: string;
+            /**
+             * Format: int32
+             * @description The current step (zero-based) of `step_count`.
+             */
+            step: number;
+            /** Format: int32 */
+            step_count: number;
+            /** @description The approval process's name, when the request came from one. */
+            title?: string | null;
+        };
+        /** @description M9-T4: one request in a record's approval history. */
+        ApprovalHistoryItem: {
+            action_type: string;
+            /** @description The attributes a held change carries, by name. */
+            changed_attributes: string[];
+            /** Format: date-time */
+            executed_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            requested_at: string;
+            /** Format: uuid */
+            requested_by: string;
+            requested_by_name?: string | null;
+            status: string;
+            title?: string | null;
+        };
         ApprovalMetrics: {
             approvers: components["schemas"]["ApproverFigures"][];
             backlog: components["schemas"]["Backlog"][];
@@ -21273,6 +22341,50 @@ export interface components {
             row_version: number;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description One approval process. */
+        ApprovalProcess: {
+            /** Format: date-time */
+            created_at: string;
+            /** @description What may still change while a request is pending. */
+            editable_attributes: string[];
+            entity_logicalname: string;
+            /** @description V2 rule text over the record's fields; `null` admits every record. */
+            entry_condition?: string | null;
+            /** Format: uuid */
+            id: string;
+            is_active: boolean;
+            lock_record: boolean;
+            name: string;
+            plan: Record<string, never>;
+            /** Format: int64 */
+            row_version: number;
+            /**
+             * @description M9-T2: `submit` (a person submits the record) or `change` (an
+             *     update that changes a watched attribute is held for approval).
+             */
+            starts_on: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description M9-T2: the attributes a `change` process holds. */
+            watched_attributes: string[];
+        };
+        ApprovalProcessBody: {
+            editable_attributes?: string[];
+            entity_logicalname: string;
+            entry_condition?: string | null;
+            is_active?: boolean;
+            lock_record?: boolean;
+            name: string;
+            plan: components["schemas"]["ApprovalPlan"];
+            /** @description M9-T2: `submit` (the default) or `change`. */
+            starts_on?: string;
+            /** @description M9-T2: required for a `change` process, empty for `submit`. */
+            watched_attributes?: string[];
+        };
+        ApprovalProcessUpdate: components["schemas"]["ApprovalProcessBody"] & {
+            /** Format: int64 */
+            row_version: number;
         };
         ApprovalRequestView: {
             action_type: string;
@@ -21997,6 +23109,19 @@ export interface components {
              */
             same_disk: boolean;
         };
+        /** @description A balance sheet. */
+        BalanceSheet: {
+            assets: components["schemas"]["Line"][];
+            /** @description Assets = liabilities + equity + current earnings. */
+            balanced: boolean;
+            /** @description Income less expenses not yet closed into equity. */
+            current_earnings: string;
+            equity: components["schemas"]["Line"][];
+            liabilities: components["schemas"]["Line"][];
+            total_assets: string;
+            total_equity: string;
+            total_liabilities: string;
+        };
         /** @description The baseline as the screen shows it. */
         BaselineView: {
             /** Format: date-time */
@@ -22431,6 +23556,15 @@ export interface components {
              * @description Seconds until the window closes; `None` when closed.
              */
             remaining_seconds?: number | null;
+        };
+        /** @description A definition a change would break. */
+        Breaking: {
+            change: components["schemas"]["MetadataChange"];
+            edge_kind: string;
+            from_kind: string;
+            from_label: string;
+            /** Format: uuid */
+            from_ref: string;
         };
         BrokenWidgetRef: {
             /**
@@ -23459,6 +24593,23 @@ export interface components {
             /** Format: int64 */
             search_impressions_30d: number;
         };
+        Certification: {
+            asset_kind: string;
+            asset_ref: string;
+            /** Format: date-time */
+            certified_at: string;
+            /** Format: uuid */
+            certified_by?: string | null;
+            definition_hash: string;
+            /** @description `certified`, or `stale` once the definition changed; `revoked`. */
+            status: string;
+        };
+        CertifyBody: {
+            /** @description `entity` today. */
+            asset_kind: string;
+            /** @description The entity's logical name. */
+            asset_ref: string;
+        };
         /** @description A change order. */
         ChangeBody: {
             /** @description The order's new total, as a decimal string. */
@@ -23482,11 +24633,10 @@ export interface components {
             reference: string;
         };
         /**
-         * @description One source this feed aggregates. The wire value (`kind` filter and each
-         *     entry's own `kind` field) is this variant's snake_case name.
+         * @description What a draft change does.
          * @enum {string}
          */
-        ChangeKind: "metadata" | "bundle" | "query" | "workflow" | "dashboard" | "content" | "license" | "security" | "ai" | "settings";
+        ChangeKind: "delete_attribute" | "change_attribute_type" | "rename_attribute" | "other";
         /** @description The plan. */
         ChangePlan: {
             changes: components["schemas"]["ChangePlanEntry"][];
@@ -23537,6 +24687,14 @@ export interface components {
             dry_run?: boolean;
             /** @description `text | number | currency | date | bool | choice | rich_text`. */
             field_type: string;
+        };
+        /** @description M9-T4: one attribute a request would change. */
+        ChangedAttribute: {
+            attribute: string;
+            /** @description The value when the request was opened. */
+            from: unknown;
+            /** @description The value approval writes. */
+            to: unknown;
         };
         ChangesRequest: {
             /** @description The `next_cursor` of the previous call; absent to start from now. */
@@ -23822,6 +24980,15 @@ export interface components {
             personal: number;
             /** Format: int64 */
             sensitive_special_category: number;
+        };
+        /** @description What needs tidying in the graph. */
+        Cleanup: {
+            /** @description Definitions that, through other definitions, depend on themselves. */
+            cycles: string[][];
+            /** @description Edges to an entity or attribute that no longer exists. */
+            dangling: components["schemas"]["GraphEdge"][];
+            /** @description Active attributes no definition uses, as `entity.attribute`. */
+            unused_attributes: string[];
         };
         /** @description One record in a rule's clean-up queue. */
         CleanupItem: {
@@ -24261,6 +25428,16 @@ export interface components {
             name: string;
             /** Format: uuid */
             scenario_id: string;
+        };
+        /** @description The edges added and removed between two versions. */
+        Comparison: {
+            added: components["schemas"]["GraphEdge"][];
+            /** Format: int64 */
+            from: number;
+            removed: components["schemas"]["GraphEdge"][];
+            /** Format: int64 */
+            to: number;
+            truncated: boolean;
         };
         /** @description The whole report: every group matching the filter, plus when it was run. */
         ComparisonReport: {
@@ -25095,11 +26272,13 @@ export interface components {
             view_metadata?: unknown;
         };
         CreatePolicyBody: {
-            action_type: string;
-            condition?: string | null;
-            is_active?: boolean;
-            name: string;
-            plan: components["schemas"]["ApprovalPlan"];
+            body_ar?: string | null;
+            body_en?: string;
+            /** Format: uuid */
+            domain_ref: string;
+            enforcements?: components["schemas"]["Enforcement"][];
+            name_ar?: string | null;
+            name_en: string;
         };
         CreatePositionBody: {
             description?: string | null;
@@ -25263,9 +26442,22 @@ export interface components {
             /** Format: int32 */
             max_attempts?: number | null;
             name: string;
+            /** @description M13-T3: send one record's events one at a time, in order. */
+            ordered?: boolean;
             /** Format: uuid */
             owner_ref: string;
+            /**
+             * @description M13-T1: `id`, `changes` or `full` (the default): what each webhook
+             *     body carries besides the entity, record id and operation.
+             */
+            payload_shape?: string | null;
             retry_class?: string | null;
+            /**
+             * @description M13-T2: a header the target wants on every delivery, e.g.
+             *     `Authorization`; its value is write-only.
+             */
+            target_auth_header?: string | null;
+            target_auth_value?: string | null;
             target_url: string;
         };
         CreateSurvivorshipRuleBody: {
@@ -26063,10 +27255,21 @@ export interface components {
             entity_logicalname: string;
             error?: string | null;
             fields: unknown;
+            full_scan: boolean;
             /** Format: uuid */
             id: string;
+            /**
+             * Format: uuid
+             * @description L6-T6: the import whose staged rows this profile read.
+             */
+            import_job_ref?: string | null;
             /** Format: int64 */
             row_count?: number | null;
+            /**
+             * Format: int64
+             * @description L6-T2: rows the statistics were computed from.
+             */
+            sample_size?: number | null;
             status: string;
         };
         /** @description A run's progress. */
@@ -26140,6 +27343,59 @@ export interface components {
             statement: string;
             /** @description The statement's leading keywords, e.g. `ALTER TABLE`. */
             statement_kind: string;
+        };
+        /** @description One thing that failed for good, in the shape every source shares. */
+        DeadLetter: {
+            /** Format: int32 */
+            attempts: number;
+            /** @description [`cause_group`] of source, step and error kind. */
+            cause_group: string;
+            /** @description [`classify_error`] of the failure text. */
+            error_kind: string;
+            /**
+             * Format: date-time
+             * @description When the work first failed.
+             */
+            first_seen: string;
+            /**
+             * @description The item's id within its source (an `apalis.jobs` id is not a UUID,
+             *     so this is a string for every source).
+             */
+            id: string;
+            /** @description The last failure text, cut to [`MESSAGE_LIMIT`] characters. */
+            message?: string | null;
+            /**
+             * @description Where the payload lives, for a reader with access to its source
+             *     (`workflow_instance:<id>`); never the payload itself, which can hold
+             *     tokens or personal data.
+             */
+            payload_ref?: string | null;
+            /** @description The source's [`DeadLetterSource::source`] name. */
+            source: string;
+            /**
+             * @description What failed inside the source: the job variant, the flow step, the
+             *     trigger's entity and operation, the subscription. `None` when the
+             *     source cannot tell.
+             */
+            step?: string | null;
+        };
+        /** @description One group of items that failed the same way. */
+        DeadLetterGroup: {
+            cause_group: string;
+            /** Format: int64 */
+            count: number;
+            error_kind: string;
+            /**
+             * Format: date-time
+             * @description The oldest and newest first failure in the group.
+             */
+            first_seen: string;
+            /** Format: date-time */
+            last_seen: string;
+            /** @description The newest item's message, as a sample of the group's failure. */
+            sample_message?: string | null;
+            source: string;
+            step?: string | null;
         };
         DeadLetterJobSummary: {
             /** Format: int32 */
@@ -26238,6 +27494,24 @@ export interface components {
          * @enum {string}
          */
         Decision: "confirm" | "dismiss";
+        /** @description M9-T4: one decision on a request. */
+        DecisionEntry: {
+            /** Format: uuid */
+            approver_id: string;
+            approver_name?: string | null;
+            comment?: string | null;
+            /** Format: date-time */
+            decided_at: string;
+            /**
+             * Format: uuid
+             * @description Who acted, when a delegate decided for `approver_id`.
+             */
+            decided_by?: string | null;
+            /** @description `approved` or `rejected`. */
+            decision: string;
+            /** Format: int32 */
+            step: number;
+        };
         DecisionResult: {
             /** Format: uuid */
             contract_id: string;
@@ -26734,6 +28008,10 @@ export interface components {
         };
         /** @enum {string} */
         Direction: "outbound" | "inbound" | "both";
+        DiscardBody: {
+            /** @description Why the dead letter is dropped; kept on the audit event. */
+            reason: string;
+        };
         /**
          * @description One model as the provider reports it. Only the two fields an operator needs
          *     to choose from, deliberately: everything else in a provider's listing
@@ -27263,6 +28541,12 @@ export interface components {
              */
             record_id?: string | null;
         };
+        Enforcement: {
+            /** @description `check`, `label`, `attribute_security`, `retention` or `residency`. */
+            kind: string;
+            /** @description What enforces it: a check's id, a label, an `entity.attribute`, ... */
+            target_ref: string;
+        };
         EnrollResponseBody: {
             otpauth_uri: string;
             secret_base32: string;
@@ -27429,6 +28713,13 @@ export interface components {
             expanded?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * @description M9-T2: the attributes this update asked to change that an approval
+             *     process watches. They keep their stored values (visible in `data`)
+             *     until `approval_request_id` is approved. Omitted when nothing was
+             *     held.
+             */
+            held_attributes?: string[];
             /**
              * Format: int64
              * @description A15-T4: how many more matches the caller may not read. Omitted when 0.
@@ -27623,6 +28914,17 @@ export interface components {
             signers: components["schemas"]["EnvelopeSigner"][];
             status: string;
             title: string;
+        };
+        ErasureConfirmationBody: {
+            /** @description The `record.erased` events this subscriber has erased its copies for. */
+            event_ids: string[];
+        };
+        ErasureConfirmations: {
+            /**
+             * Format: int64
+             * @description Events newly confirmed (an already confirmed one is not counted again).
+             */
+            confirmed: number;
         };
         ErasureDone: {
             /**
@@ -27892,6 +29194,19 @@ export interface components {
             /** Format: uuid */
             user_id?: string | null;
         };
+        ExceptionBody: {
+            /**
+             * Format: date-time
+             * @description When the exception ends once approved; none for no end.
+             */
+            expires_at?: string | null;
+            reason: string;
+            /**
+             * @description What the exception covers (an entity, an `entity.attribute`, a
+             *     record id, ...).
+             */
+            target_ref: string;
+        };
         ExecData: {
             columns: components["schemas"]["ColumnDef"][];
             /**
@@ -28148,6 +29463,12 @@ export interface components {
             /** Format: int64 */
             row_count?: number | null;
             status: string;
+            /**
+             * @description L7-T5: a change-stream cursor that continues from the export's own
+             *     snapshot: reading a subscription from it yields exactly the changes
+             *     the export did not see.
+             */
+            stream_token?: string | null;
         };
         /** @description One kept item, as the caller may see it now. */
         FavouriteItem: {
@@ -28502,6 +29823,13 @@ export interface components {
             /** @description Whether the caller holds it. */
             held_by_me: boolean;
         };
+        FileProfileBody: {
+            /**
+             * Format: uuid
+             * @description The import job whose staged rows to profile.
+             */
+            import_job_id: string;
+        };
         FileVersionResponse: {
             content_type?: string | null;
             /** Format: date-time */
@@ -28850,6 +30178,30 @@ export interface components {
              */
             client_id?: string | null;
         };
+        GovernancePolicy: {
+            body_ar?: string | null;
+            body_en: string;
+            /** Format: uuid */
+            domain_ref: string;
+            enforcements: components["schemas"]["Enforcement"][];
+            /** Format: uuid */
+            id: string;
+            name_ar?: string | null;
+            name_en: string;
+            /** Format: int64 */
+            row_version: number;
+            /**
+             * Format: int32
+             * @description Raised by every edit.
+             */
+            version: number;
+        };
+        GovernanceRole: {
+            /** @description `owner`, `steward`, `deputy`, `custodian` or `consumer`. */
+            role: string;
+            /** Format: uuid */
+            user_id: string;
+        };
         /**
          * @description The governance in effect for a conversation's session — snapshotted when
          *     it started (D-505), shown whatever state the session is now in.
@@ -28873,6 +30225,13 @@ export interface components {
             state: string;
             /** @description Whether the session started downstream of tool-obtained content (I-10). */
             tainted: boolean;
+        };
+        GovernedChange: {
+            /**
+             * @description Changes to the domain's entities wait for its owners' or stewards'
+             *     approval at publish.
+             */
+            governed_change: boolean;
         };
         /** @description One `role_privilege_condition` row. */
         GrantCondition: {
@@ -28919,18 +30278,21 @@ export interface components {
             fields: components["schemas"]["FieldSpec"][];
             public: boolean;
         };
+        /** @description A walk's result. */
+        Graph: {
+            edges: components["schemas"]["GraphEdge"][];
+            /** @description Nodes the caller may not see, counted only. */
+            hidden: number;
+            nodes: components["schemas"]["Node"][];
+            /** @description The walk stopped at [`MAX_NODES`]. */
+            truncated: boolean;
+        };
+        /** @description An edge as a walk reports it: `from` uses `to`. */
         GraphEdge: {
-            /**
-             * @description `"lookup:{field}"`, `"hierarchy:{field}"`, or `"relationship:{type}"`
-             *     — typed by source, per the plan's response contract.
-             */
-            edge_type: string;
-            from_entity: string;
-            /** Format: uuid */
-            from_id: string;
-            to_entity: string;
-            /** Format: uuid */
-            to_id: string;
+            confidence: string;
+            edge_kind: string;
+            from: string;
+            to: string;
         };
         /**
          * @description Whether a turn's answer is grounded in retrieved knowledge. Decided from
@@ -28938,6 +30300,33 @@ export interface components {
          * @enum {string}
          */
         Grounding: "sourced" | "no_sources" | "none";
+        GroupReplayBody: {
+            /** @description The group to replay, from the groups list. */
+            cause_group: string;
+            /**
+             * Format: int32
+             * @description Items per minute after the preview; default 60, at most 600.
+             */
+            rate_per_minute?: number | null;
+        };
+        /** @description What a group replay started. */
+        GroupReplayStarted: {
+            /**
+             * Format: uuid
+             * @description The batch job replaying the rest (`GET /api/v1/jobs/{id}`); `None`
+             *     when the preview was the group's only item.
+             */
+            job_id?: string | null;
+            /** @description The first item, replayed at once. */
+            preview: components["schemas"]["ReplayItemResult"];
+            /**
+             * Format: int64
+             * @description Items the job will replay.
+             */
+            queued: number;
+            /** Format: int32 */
+            rate_per_minute: number;
+        };
         Grouping: {
             bucket?: null | components["schemas"]["DateBucket"];
             field: string;
@@ -29221,6 +30610,20 @@ export interface components {
              */
             owner_layer: string;
         };
+        /** @description What an accepted call did. */
+        HookAccepted: {
+            accepted: boolean;
+            /**
+             * @description The event id was already in the inbox: acknowledged, not processed
+             *     again.
+             */
+            duplicate: boolean;
+            /**
+             * Format: uuid
+             * @description The inbox event the call was written to.
+             */
+            event_id: string;
+        };
         /** @description One hour of activity. */
         HourView: {
             /** Format: int32 */
@@ -29304,6 +30707,13 @@ export interface components {
             /** Format: uuid */
             user_ref: string;
         };
+        /** @description The impact of a set of changes. */
+        ImpactReport: {
+            affected: components["schemas"]["Affected"][];
+            breaking: components["schemas"]["Breaking"][];
+            /** @description Affected definitions the caller may not see, counted only. */
+            hidden: number;
+        };
         /**
          * @description Body of `POST /api/v1/admin/metadata/import`. `mode=plan` reads `bundle`
          *     (+ `allow_retire`); `mode=apply` reads `plan_id`.
@@ -29324,6 +30734,61 @@ export interface components {
             data_source_ref: string;
             /** Format: int64 */
             imported_count: number;
+        };
+        /** @description A hook's definition. */
+        InboundHookBody: {
+            auth: Record<string, never>;
+            handler: Record<string, never>;
+            ip_allow?: string[];
+            is_active?: boolean;
+            name: string;
+            /**
+             * @description M14-T3: a JSON pointer into the body (`/order/id`) whose value orders
+             *     processing; none processes events as they come.
+             */
+            ordering_key?: string | null;
+            require_mtls?: boolean;
+            /**
+             * Format: uuid
+             * @description The service user the handler runs as.
+             */
+            run_as: string;
+            schema?: Record<string, never>;
+            /** @description The shared secret: required to create, a new one rotates it. */
+            secret?: string | null;
+        };
+        /** @description A change to a hook. */
+        InboundHookUpdate: components["schemas"]["InboundHookBody"] & {
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description One inbound hook, as administrators see it. */
+        InboundHookView: {
+            /** @description `{kind, preset?, header?, encoding?, prefix?, timestamp_header?, id_header?}`. */
+            auth: Record<string, never>;
+            /** Format: date-time */
+            created_at: string;
+            handler: Record<string, never>;
+            /** Format: uuid */
+            id: string;
+            ip_allow: string[];
+            is_active: boolean;
+            name: string;
+            /**
+             * @description M14-T3: a JSON pointer into the body; events with the same value are
+             *     processed in arrival order.
+             */
+            ordering_key?: string | null;
+            require_mtls: boolean;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: uuid */
+            run_as: string;
+            /** @description `{required: [field, …]}`. */
+            schema: Record<string, never>;
+            secret_last4?: string | null;
+            /** Format: date-time */
+            updated_at: string;
         };
         /** @description One conversation: the record a mailbox's messages were routed to. */
         InboxConversation: {
@@ -29467,6 +30932,19 @@ export interface components {
             started_at: string;
             status: string;
         };
+        InstantiateRequest: {
+            /** @description The template's arguments by parameter name. */
+            args?: Record<string, never>;
+        };
+        InstantiateResponse: {
+            /** @description The filled graph; empty when `issues` is not. */
+            graph: Record<string, never>;
+            /** @description Why the arguments do not fit, by argument path. */
+            issues: components["schemas"]["IssueView"][];
+            /** Format: uuid */
+            template_id: string;
+            template_name: string;
+        };
         /** @description Both sides, posted. */
         IntercompanyPosted: {
             amount: string;
@@ -29563,6 +31041,13 @@ export interface components {
             code: string;
             message: string;
             path: string;
+        };
+        IssuedScimToken: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The bearer token, shown this once. */
+            token: string;
         };
         /** @description What an item Restore did. */
         ItemRestoreResult: {
@@ -29832,6 +31317,33 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
+        /** @description L6-T4: one label proposal. Counts only, never a matched value. */
+        LabelProposalRow: {
+            attribute: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description `saudi_national_id`, `iqama`, `iban`, `phone` or `email`. */
+            detector: string;
+            entity_logicalname: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            matches: number;
+            /** Format: uuid */
+            profile_ref: string;
+            /** @description The label proposed for a builder to decide on. */
+            proposed_label: string;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            /** Format: int64 */
+            sampled: number;
+            /** Format: double */
+            share_pct: number;
+            /** @description `open` until the profile no longer finds it (`resolved`). */
+            status: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         /** @description One landing page's results over a period. */
         LandingStats: {
             /**
@@ -29996,6 +31508,22 @@ export interface components {
              */
             warning: boolean;
         };
+        /** @description One statement line. */
+        Line: {
+            /** Format: uuid */
+            account_id: string;
+            account_type: string;
+            /**
+             * @description Debits less credits for assets and expenses, credits less debits
+             *     for the others.
+             */
+            balance: string;
+            code: string;
+            credit: string;
+            debit: string;
+            name: string;
+            name_ar?: string | null;
+        };
         /** @description One line as it stood on a date. */
         LineAsOf: {
             change_kind?: string | null;
@@ -30028,6 +31556,20 @@ export interface components {
             /** @description The link to send the payer; shown once. */
             url: string;
         };
+        /** @description A decision through a link. */
+        LinkDecideBody: {
+            /** @description Optional, at most 2000 characters. */
+            comment?: string | null;
+            /** @description `approve` or `reject`. */
+            decision: string;
+            token: string;
+        };
+        /** @description The outcome of a decision through a link. */
+        LinkDecided: {
+            /** Format: uuid */
+            request_id: string;
+            status: string;
+        };
         /** @description What a link is for: an invoice, an order, or an amount for an account. */
         LinkRequest: {
             /**
@@ -30047,6 +31589,23 @@ export interface components {
             invoice_id?: string | null;
             /** Format: uuid */
             order_id?: string | null;
+        };
+        /** @description What a link's page shows. */
+        LinkView: {
+            action_type: string;
+            changes: components["schemas"]["ChangedAttribute"][];
+            /** @description `true`: decide on this page; `false`: open the request page and sign in. */
+            decide_here: boolean;
+            /** Format: date-time */
+            link_expires_at: string;
+            reason?: string | null;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: date-time */
+            requested_at: string;
+            requested_by_name?: string | null;
+            status: string;
+            title?: string | null;
         };
         /** @description An import's state. */
         ListImport: {
@@ -30586,6 +32145,13 @@ export interface components {
             terminal_state?: string | null;
             /** Format: uuid */
             turn_id: string;
+        };
+        /** @description One draft metadata change. */
+        MetadataChange: {
+            /** @description `None` for a change to the entity itself. */
+            attribute?: string | null;
+            entity: string;
+            kind: components["schemas"]["ChangeKind"];
         };
         MetadataManifest: {
             bundles: components["schemas"]["ManifestEntry"][];
@@ -31318,6 +32884,12 @@ export interface components {
         NewRole: {
             name: string;
         };
+        NewScimToken: {
+            /** @description Addresses or CIDRs the IdP calls from; none for any. */
+            ip_allow?: string[];
+            /** @description The identity provider it is for (`Entra ID`, `Okta`, ...). */
+            name: string;
+        };
         /** @description A signer to add. */
         NewSigner: {
             email: string;
@@ -31361,6 +32933,45 @@ export interface components {
             /** @description One entity's logical name; omit for every entity. */
             entity?: string | null;
             reason?: string | null;
+        };
+        /** @description A node as a walk reports it. */
+        Node: {
+            /** Format: int32 */
+            depth: number;
+            key: string;
+            label: string;
+            node: components["schemas"]["NodeRef"];
+            /** @description A definition that uses a personal attribute. */
+            reads_personal: boolean;
+        };
+        /** @description One node whose outcome differs between a real run and the draft. */
+        NodeDifference: {
+            /**
+             * @description The node's status in the draft's simulation; `None` when the draft
+             *     never reached it (or removed it).
+             */
+            draft?: string | null;
+            node_id: string;
+            /**
+             * @description The node's status in the real run; `None` when it never ran there
+             *     (or the draft added it).
+             */
+            real?: string | null;
+        };
+        /** @description A node of the graph. */
+        NodeRef: {
+            /** @description An entity, or one of its attributes. */
+            Data: {
+                attribute?: string | null;
+                entity: string;
+            };
+        } | {
+            /** @description A definition: its kind and id. */
+            Definition: {
+                /** Format: uuid */
+                id: string;
+                kind: string;
+            };
         };
         NodeRefInput: {
             entity: string;
@@ -31722,6 +33333,13 @@ export interface components {
              */
             scope: string;
             title: string;
+        };
+        /** @description The exported events. */
+        OpenLineageExport: {
+            /** @description OpenLineage `RunEvent`s, one per definition. */
+            events: Record<string, never>[];
+            /** @description The graph had more edges than one export reads. */
+            truncated: boolean;
         };
         /** @description One of the requester's open requests, offered when they submit another. */
         OpenRequest: {
@@ -32581,6 +34199,36 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ApprovalHistoryItem: {
+            items: {
+                action_type: string;
+                /** @description The attributes a held change carries, by name. */
+                changed_attributes: string[];
+                /** Format: date-time */
+                executed_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                requested_at: string;
+                /** Format: uuid */
+                requested_by: string;
+                requested_by_name?: string | null;
+                status: string;
+                title?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ApprovalPolicyView: {
             items: {
                 action_type: string;
@@ -32603,6 +34251,46 @@ export interface components {
                 row_version: number;
                 /** Format: date-time */
                 updated_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ApprovalProcess: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** @description What may still change while a request is pending. */
+                editable_attributes: string[];
+                entity_logicalname: string;
+                /** @description V2 rule text over the record's fields; `null` admits every record. */
+                entry_condition?: string | null;
+                /** Format: uuid */
+                id: string;
+                is_active: boolean;
+                lock_record: boolean;
+                name: string;
+                plan: Record<string, never>;
+                /** Format: int64 */
+                row_version: number;
+                /**
+                 * @description M9-T2: `submit` (a person submits the record) or `change` (an
+                 *     update that changes a watched attribute is held for approval).
+                 */
+                starts_on: string;
+                /** Format: date-time */
+                updated_at: string;
+                /** @description M9-T2: the attributes a `change` process holds. */
+                watched_attributes: string[];
             }[];
             /** Format: int64 */
             page: number;
@@ -33790,10 +35478,21 @@ export interface components {
                 entity_logicalname: string;
                 error?: string | null;
                 fields: unknown;
+                full_scan: boolean;
                 /** Format: uuid */
                 id: string;
+                /**
+                 * Format: uuid
+                 * @description L6-T6: the import whose staged rows this profile read.
+                 */
+                import_job_ref?: string | null;
                 /** Format: int64 */
                 row_count?: number | null;
+                /**
+                 * Format: int64
+                 * @description L6-T2: rows the statistics were computed from.
+                 */
+                sample_size?: number | null;
                 status: string;
             }[];
             /** Format: int64 */
@@ -33832,6 +35531,85 @@ export interface components {
                 statement: string;
                 /** @description The statement's leading keywords, e.g. `ALTER TABLE`. */
                 statement_kind: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DeadLetter: {
+            items: {
+                /** Format: int32 */
+                attempts: number;
+                /** @description [`cause_group`] of source, step and error kind. */
+                cause_group: string;
+                /** @description [`classify_error`] of the failure text. */
+                error_kind: string;
+                /**
+                 * Format: date-time
+                 * @description When the work first failed.
+                 */
+                first_seen: string;
+                /**
+                 * @description The item's id within its source (an `apalis.jobs` id is not a UUID,
+                 *     so this is a string for every source).
+                 */
+                id: string;
+                /** @description The last failure text, cut to [`MESSAGE_LIMIT`] characters. */
+                message?: string | null;
+                /**
+                 * @description Where the payload lives, for a reader with access to its source
+                 *     (`workflow_instance:<id>`); never the payload itself, which can hold
+                 *     tokens or personal data.
+                 */
+                payload_ref?: string | null;
+                /** @description The source's [`DeadLetterSource::source`] name. */
+                source: string;
+                /**
+                 * @description What failed inside the source: the job variant, the flow step, the
+                 *     trigger's entity and operation, the subscription. `None` when the
+                 *     source cannot tell.
+                 */
+                step?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DeadLetterGroup: {
+            items: {
+                cause_group: string;
+                /** Format: int64 */
+                count: number;
+                error_kind: string;
+                /**
+                 * Format: date-time
+                 * @description The oldest and newest first failure in the group.
+                 */
+                first_seen: string;
+                /** Format: date-time */
+                last_seen: string;
+                /** @description The newest item's message, as a sample of the group's failure. */
+                sample_message?: string | null;
+                source: string;
+                step?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -34493,6 +36271,13 @@ export interface components {
                     [key: string]: unknown;
                 } | null;
                 /**
+                 * @description M9-T2: the attributes this update asked to change that an approval
+                 *     process watches. They keep their stored values (visible in `data`)
+                 *     until `approval_request_id` is approved. Omitted when nothing was
+                 *     held.
+                 */
+                held_attributes?: string[];
+                /**
                  * Format: int64
                  * @description A15-T4: how many more matches the caller may not read. Omitted when 0.
                  */
@@ -34794,6 +36579,58 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_GovernancePolicy: {
+            items: {
+                body_ar?: string | null;
+                body_en: string;
+                /** Format: uuid */
+                domain_ref: string;
+                enforcements: components["schemas"]["Enforcement"][];
+                /** Format: uuid */
+                id: string;
+                name_ar?: string | null;
+                name_en: string;
+                /** Format: int64 */
+                row_version: number;
+                /**
+                 * Format: int32
+                 * @description Raised by every edit.
+                 */
+                version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_GovernanceRole: {
+            items: {
+                /** @description `owner`, `steward`, `deputy`, `custodian` or `consumer`. */
+                role: string;
+                /** Format: uuid */
+                user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_GrantItem: {
             items: {
                 /** Format: date-time */
@@ -34934,6 +36771,47 @@ export interface components {
                 /** Format: uuid */
                 user_id: string;
                 user_name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_InboundHookView: {
+            items: {
+                /** @description `{kind, preset?, header?, encoding?, prefix?, timestamp_header?, id_header?}`. */
+                auth: Record<string, never>;
+                /** Format: date-time */
+                created_at: string;
+                handler: Record<string, never>;
+                /** Format: uuid */
+                id: string;
+                ip_allow: string[];
+                is_active: boolean;
+                name: string;
+                /**
+                 * @description M14-T3: a JSON pointer into the body; events with the same value are
+                 *     processed in arrival order.
+                 */
+                ordering_key?: string | null;
+                require_mtls: boolean;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: uuid */
+                run_as: string;
+                /** @description `{required: [field, …]}`. */
+                schema: Record<string, never>;
+                secret_last4?: string | null;
+                /** Format: date-time */
+                updated_at: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -35107,6 +36985,46 @@ export interface components {
                  *     the whole.
                  */
                 truncated: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_LabelProposalRow: {
+            items: {
+                attribute: string;
+                /** Format: date-time */
+                created_at: string;
+                /** @description `saudi_national_id`, `iqama`, `iban`, `phone` or `email`. */
+                detector: string;
+                entity_logicalname: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                matches: number;
+                /** Format: uuid */
+                profile_ref: string;
+                /** @description The label proposed for a builder to decide on. */
+                proposed_label: string;
+                /** Format: date-time */
+                resolved_at?: string | null;
+                /** Format: int64 */
+                sampled: number;
+                /** Format: double */
+                share_pct: number;
+                /** @description `open` until the profile no longer finds it (`resolved`). */
+                status: string;
+                /** Format: date-time */
+                updated_at: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -36027,6 +37945,43 @@ export interface components {
                 /** Format: uuid */
                 requested_by?: string | null;
                 status: components["schemas"]["PlanStatus"];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PolicyException: {
+            items: {
+                /** Format: uuid */
+                approval_request_ref?: string | null;
+                /** Format: uuid */
+                approved_by?: string | null;
+                /** Format: date-time */
+                created_at?: string | null;
+                /** Format: date-time */
+                expires_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                policy_id: string;
+                reason: string;
+                /** Format: uuid */
+                requested_by?: string | null;
+                /**
+                 * @description `requested` while its approval waits, then `approved`, `rejected` or
+                 *     `expired`.
+                 */
+                status: string;
+                target_ref: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -36992,6 +38947,45 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ScheduleItem: {
+            items: {
+                /** @description Platform schedulers are read-only. */
+                can_pause: boolean;
+                /**
+                 * @description What pause and resume take: `{definition_id}:{node_id}` for a flow,
+                 *     the schedule id for a report, the scheduler name for the platform.
+                 */
+                id: string;
+                /** @description `flow`, `report` or `platform`. */
+                kind: string;
+                /**
+                 * @description `ok` when the last run succeeded, `running` while it has not, or
+                 *     `null` when unknown.
+                 */
+                last_result?: string | null;
+                /** Format: date-time */
+                last_run_at?: string | null;
+                name: string;
+                /** Format: date-time */
+                next_run_at?: string | null;
+                owner?: string | null;
+                paused: boolean;
+                /** @description The schedule as written: `every 15 min`, a cron or an RRULE. */
+                schedule: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ScheduleSummary: {
             items: {
                 /** Format: uuid */
@@ -37005,6 +38999,31 @@ export interface components {
                 /** Format: int64 */
                 row_version: number;
                 status?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ScimTokenSummary: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                ip_allow: string[];
+                is_active: boolean;
+                /** Format: date-time */
+                last_used_at?: string | null;
+                name: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -37339,6 +39358,49 @@ export interface components {
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_String: {
             items: string[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Subscription: {
+            items: {
+                allow_personal: boolean;
+                changed_attributes?: string[] | null;
+                /**
+                 * Format: uuid
+                 * @description The S2S client (`s2s_client.id`) that reads it.
+                 */
+                client_ref: string;
+                condition?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                entities: string[];
+                /** Format: date-time */
+                expires_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                is_active: boolean;
+                name: string;
+                operations?: string[] | null;
+                /** @description `id`, `changes` or `record`. */
+                payload: string;
+                /** Format: int64 */
+                row_version: number;
+                /**
+                 * Format: uuid
+                 * @description The client's service user, as whom every event is filtered.
+                 */
+                service_user_ref: string;
+            }[];
             /** Format: int64 */
             page: number;
             /** Format: int64 */
@@ -38267,6 +40329,12 @@ export interface components {
         };
         /** @enum {string} */
         PauseReason: "waiting_customer" | "on_hold" | "out_of_scope";
+        /** @description Paused or resumed. */
+        PauseState: {
+            id: string;
+            kind: string;
+            paused: boolean;
+        };
         /** @description What the payment page shows. */
         PayView: {
             /** @description Decimal, as text. */
@@ -38650,6 +40718,29 @@ export interface components {
             type: components["schemas"]["PolicyType"];
             /** @description A `set_value` literal. */
             value?: unknown;
+        };
+        PolicyException: {
+            /** Format: uuid */
+            approval_request_ref?: string | null;
+            /** Format: uuid */
+            approved_by?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            policy_id: string;
+            reason: string;
+            /** Format: uuid */
+            requested_by?: string | null;
+            /**
+             * @description `requested` while its approval waits, then `approved`, `rejected` or
+             *     `expired`.
+             */
+            status: string;
+            target_ref: string;
         };
         /** @enum {string} */
         PolicyType: "hidden" | "disabled" | "error" | "set_value" | "required" | "allowed_values" | "add_tag" | "remove_tag";
@@ -39196,6 +41287,19 @@ export interface components {
         };
         ProfileRequestBody: {
             entity: string;
+            /**
+             * @description L6-T2: read every row; by default a table of more than 100,000 rows
+             *     is sampled.
+             */
+            full_scan?: boolean;
+        };
+        /** @description A profit and loss statement. */
+        ProfitAndLoss: {
+            expenses: components["schemas"]["Line"][];
+            income: components["schemas"]["Line"][];
+            net_income: string;
+            total_expenses: string;
+            total_income: string;
         };
         /**
          * @description `GET /api/v1/program/{id}/summary` — same D-368 read-time-rollup rule as
@@ -39889,6 +41993,16 @@ export interface components {
             entity?: string | null;
             name: string;
         };
+        /** @description M13-T4: what a test send or a replay queued. */
+        QueuedDeliveries: {
+            /**
+             * Format: uuid
+             * @description The test delivery's id (test send only).
+             */
+            delivery_id?: string | null;
+            /** Format: int64 */
+            queued: number;
+        };
         /** @description A customer's decision. */
         QuoteDecision: {
             /** @description `accept` or `reject`. */
@@ -39926,6 +42040,23 @@ export interface components {
             /** Format: int64 */
             row_version: number;
             totals: components["schemas"]["QuoteTotals"];
+        };
+        /** @description What a submission did. */
+        QuoteSubmitted: {
+            approval_process?: string | null;
+            /** Format: uuid */
+            approval_request_id?: string | null;
+            max_line_discount_pct: string;
+            /** Format: uuid */
+            quote_id: string;
+            /**
+             * Format: int64
+             * @description The quote's row version after the call.
+             */
+            row_version: number;
+            /** @description `sent`, or `pending_approval` when it waits for the approval process. */
+            status: string;
+            total_discount_pct: string;
         };
         /** @description The quote's totals from its lines and its own discount percent. Pure. */
         QuoteTotals: {
@@ -40059,6 +42190,10 @@ export interface components {
              * @description Page size, 1-500 (default 500).
              */
             limit?: number | null;
+        };
+        RecallBody: {
+            /** Format: int64 */
+            row_version: number;
         };
         /** @description One recent record, as the caller may see it now. */
         RecentItem: {
@@ -40673,8 +42808,50 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        ReplayBody: {
+            /**
+             * Format: date-time
+             * @description Every delivery matched at or after this time is sent again.
+             */
+            from: string;
+        };
+        /** @description What replaying one item did. */
+        ReplayItemResult: {
+            /** @description `replayed`, `not_dead_lettered` or `refused`. */
+            outcome: string;
+            /** @description Why the source refused, for `refused`. */
+            reason?: string | null;
+        };
+        /** @description M4-T3: the replay report. */
+        ReplayReport: {
+            /**
+             * Format: int64
+             * @description Runs with at least one difference.
+             */
+            differing: number;
+            runs: components["schemas"]["ReplayedRun"][];
+        };
+        /** @description M4-T3: the request: how many of the flow's latest finished runs. */
+        ReplayRequest: {
+            /**
+             * Format: int64
+             * @description 1 to 50; default 10.
+             */
+            last?: number | null;
+        };
         ReplayResult: {
             replayed: boolean;
+        };
+        /** @description One real run replayed through the draft. */
+        ReplayedRun: {
+            differences: components["schemas"]["NodeDifference"][];
+            /** @description The simulation's status: `completed`, `would_wait` or `failed`. */
+            draft_status: string;
+            /** Format: uuid */
+            instance_id: string;
+            real_status: string;
+            /** Format: date-time */
+            started_at: string;
         };
         ReplyRequest: {
             body: string;
@@ -42253,6 +44430,11 @@ export interface components {
             /** @description The build's coverage per day (requirement, before, after). */
             coverage: Record<string, never>;
         };
+        /** @description The list and the quiet windows heavy schedules wait out. */
+        ScheduleList: components["schemas"]["PaginatedResponse_ScheduleItem"] & {
+            /** @description `jobs.quiet_windows`, as `{start, end}` in the deployment's time. */
+            quiet_windows: Record<string, never>;
+        };
         /**
          * @description How a schedule is made.
          * @enum {string}
@@ -42301,6 +44483,17 @@ export interface components {
             error_message?: string | null;
             /** @description `not_requested | queued | claimed | backfilling | altering | succeeded | failed`. */
             status: string;
+        };
+        ScimTokenSummary: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            ip_allow: string[];
+            is_active: boolean;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            name: string;
         };
         ScopeExportResult: {
             checksum: string;
@@ -42440,6 +44633,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             webhook_secret: string;
+            /** @description M13-T2: the new secret in Standard Webhooks form. Shown once. */
+            webhook_secret_standard: string;
         };
         SelectionBody: {
             page_ids: string[];
@@ -43036,6 +45231,12 @@ export interface components {
              */
             would_have?: string | null;
         };
+        /** @description M4-T1: the record a simulation reads. */
+        SimulateRecordRef: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
+        };
         SimulateRequestBody: {
             /**
              * @description `node_id -> "approved" | "rejected"`, consulted by an `Approval` node
@@ -43047,6 +45248,7 @@ export interface components {
             approval_decisions?: {
                 [key: string]: string;
             };
+            read_record?: null | components["schemas"]["SimulateRecordRef"];
             /**
              * @description Fed to the graph's entry `Trigger` node exactly as a real trigger
              *     context would be — see `instance_admin::start_instance_internal`'s
@@ -43507,6 +45709,43 @@ export interface components {
          * @enum {string}
          */
         Stage: "report" | "warn" | "enforce";
+        /** @description One stage's measures. */
+        StageMetric: {
+            /** Format: double */
+            avg_seconds?: number | null;
+            code: string;
+            /** Format: int64 */
+            current: number;
+            /**
+             * Format: double
+             * @description Percent of records that entered and did not move to the next stage
+             *     in order; `null` for the last stage.
+             */
+            drop_off_pct?: number | null;
+            /** Format: int64 */
+            entered: number;
+            label_en: string;
+            /** Format: int64 */
+            left: number;
+            /** Format: double */
+            p90_seconds?: number | null;
+        };
+        /** @description A process's time-in-stage measures. */
+        StageMetrics: {
+            entity: string;
+            /** Format: uuid */
+            process_id: string;
+            stages: components["schemas"]["StageMetric"][];
+        };
+        /** @description A published stage process. */
+        StageProcessView: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The stages, in order, as the process document holds them. */
+            stages: Record<string, never>[];
+        };
         StagedImportResponse: {
             /** Format: int32 */
             failed: number;
@@ -43857,6 +46096,25 @@ export interface components {
             /** Format: uuid */
             split_type_id: string;
         };
+        /** @description One event as the subscriber sees it. */
+        StreamEvent: {
+            /**
+             * @description With `changes` or `record`: the changed attributes the identity may
+             *     read.
+             */
+            changed_attributes?: string[] | null;
+            /** Format: date-time */
+            created_at: string;
+            entity: string;
+            /** Format: uuid */
+            event_id: string;
+            event_name?: string | null;
+            operation: string;
+            /** @description With `record`: the record as the identity reads it now. */
+            record?: Record<string, never> | null;
+            /** Format: uuid */
+            record_id: string;
+        };
         /**
          * @description One frame's `data`: a stored event, as the stream sends it. The frame's SSE
          *     `id` is `ordinal` and its `event` is `type`.
@@ -43880,6 +46138,14 @@ export interface components {
             turn_id?: string | null;
             /** @description One of the nine semantic event types. */
             type: string;
+        };
+        /** @description A page of the stream. */
+        StreamPage: {
+            events: components["schemas"]["StreamEvent"][];
+            /** @description More events may be waiting. */
+            has_more: boolean;
+            /** @description Where the next read resumes. */
+            next_cursor: string;
         };
         StructuredBucket: {
             key: components["schemas"]["BucketKey"];
@@ -43966,6 +46232,32 @@ export interface components {
              */
             total: number;
         };
+        SubmitBody: {
+            /**
+             * @description M9-T4: why the record is submitted, shown to the approvers (at most
+             *     2000 characters).
+             */
+            reason?: string | null;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description A submission's body. */
+        SubmitQuoteBody: {
+            /** @description Why the discount is needed, shown to the approvers. */
+            reason?: string | null;
+        };
+        /** @description What a submission filed. */
+        Submitted: {
+            locked: boolean;
+            /** Format: uuid */
+            request_id: string;
+            /**
+             * Format: int64
+             * @description The request's row version, for a recall.
+             */
+            row_version: number;
+            status: string;
+        };
         Subscription: {
             /** Format: uuid */
             id: string;
@@ -43979,6 +46271,19 @@ export interface components {
             lines: components["schemas"]["LineAsOf"][];
             /** @description The record as the caller reads it. */
             subscription: Record<string, never>;
+        };
+        SubscriptionBody: {
+            allow_personal?: boolean;
+            changed_attributes?: string[] | null;
+            /** Format: uuid */
+            client_ref: string;
+            condition?: string | null;
+            entities: string[];
+            /** Format: date-time */
+            expires_at?: string | null;
+            name: string;
+            operations?: string[] | null;
+            payload?: string;
         };
         /**
          * @description Same shape as `attome-s2s`'s `KeyCreatedResponse` — the plaintext secret is
@@ -43994,6 +46299,11 @@ export interface components {
             kind: string;
             name: string;
             webhook_secret: string;
+            /**
+             * @description M13-T2: the same secret as a Standard Webhooks verifier takes it
+             *     (`whsec_…`), for the `webhook-signature` header. Shown once.
+             */
+            webhook_secret_standard: string;
         };
         SubscriptionDetail: {
             /** Format: date-time */
@@ -44009,11 +46319,23 @@ export interface components {
             /** Format: int32 */
             max_attempts: number;
             name: string;
+            /** @description M13-T3: one record's events are sent one at a time, in order. */
+            ordered: boolean;
             /** Format: uuid */
             owner_ref: string;
+            /**
+             * Format: date-time
+             * @description M13-T3: when and why the endpoint's failures turned it off.
+             */
+            paused_at?: string | null;
+            paused_reason?: string | null;
+            /** @description M13-T1: `id`, `changes` or `full`. */
+            payload_shape: string;
             retry_class: string;
             /** Format: int64 */
             row_version: number;
+            /** @description M13-T2: the target auth header's name; its value is never returned. */
+            target_auth_header?: string | null;
             /**
              * @description Never the secret — see `secret_rotate`'s response for the one place a
              *     plaintext secret is ever returned.
@@ -44033,6 +46355,20 @@ export interface components {
             /** Format: uuid */
             owner_ref: string;
             target_url?: string | null;
+        };
+        SubscriptionPatch: {
+            allow_personal?: boolean | null;
+            changed_attributes?: string[] | null;
+            condition?: string | null;
+            entities?: string[] | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            is_active?: boolean | null;
+            name?: string | null;
+            operations?: string[] | null;
+            payload?: string | null;
+            /** Format: int64 */
+            row_version: number;
         };
         SuggestResponse: {
             items: components["schemas"]["SearchSuggestion"][];
@@ -44891,6 +47227,13 @@ export interface components {
             /** @description `open | addressed | dismissed`. */
             status: string;
         };
+        /** @description A trial balance. */
+        TrialBalance: {
+            balanced: boolean;
+            lines: components["schemas"]["Line"][];
+            total_credit: string;
+            total_debit: string;
+        };
         /** @description One account's totals in a trial balance. */
         TrialBalanceRow: {
             /** Format: uuid */
@@ -45370,10 +47713,12 @@ export interface components {
             view_metadata?: unknown;
         };
         UpdatePolicyBody: {
-            condition?: string | null;
-            is_active?: boolean | null;
-            name?: string | null;
-            plan?: null | components["schemas"]["ApprovalPlan"];
+            body_ar?: string | null;
+            body_en?: string | null;
+            /** @description Replaces the links when given. */
+            enforcements?: components["schemas"]["Enforcement"][] | null;
+            name_ar?: string | null;
+            name_en?: string | null;
             /** Format: int64 */
             row_version: number;
         };
@@ -45496,9 +47841,19 @@ export interface components {
             /** Format: int32 */
             max_attempts?: number | null;
             name?: string | null;
+            /** @description M13-T3: omitting it keeps the current one. */
+            ordered?: boolean | null;
+            /** @description M13-T1: `id`, `changes` or `full`; omitting it keeps the current one. */
+            payload_shape?: string | null;
             retry_class?: string | null;
             /** Format: int64 */
             row_version: number;
+            /**
+             * @description M13-T2: replaces the target's auth header (name and value together);
+             *     an empty name removes it; omitting both keeps it.
+             */
+            target_auth_header?: string | null;
+            target_auth_value?: string | null;
             target_url?: string | null;
         };
         UpdateTemplateBody: {
@@ -46030,8 +48385,20 @@ export interface components {
          */
         WebhookPayload: {
             /**
+             * @description M13-T1: the attributes the write changed that the owner may read, on
+             *     `changes` and `full` shapes; `null` on `id`, when the owner cannot
+             *     read the record, or when the source did not record them.
+             */
+            changed_attributes?: string[] | null;
+            /**
+             * @description M13-T1, `changes` shape only: `{attribute: {old, new}}` for each
+             *     changed attribute the owner may read; a sensitive value is
+             *     `{"ref": true}`.
+             */
+            changes?: Record<string, never> | null;
+            /**
              * @description The record as the subscription's owner may read it now, or `null`
-             *     when they cannot read it or it is gone.
+             *     when they cannot read it or it is gone. `full` shape only.
              */
             data?: Record<string, never> | null;
             /** @description The changed record's entity logical name. */
@@ -46042,6 +48409,11 @@ export interface components {
              *     retry of one event.
              */
             event_id: string;
+            /**
+             * @description M13-T1: the named business event (`sla.breached`, `record.merged`),
+             *     or `null` for an ordinary entity change.
+             */
+            event_name?: string | null;
             /**
              * Format: date-time
              * @description When the change was matched to the subscription.
@@ -49263,6 +51635,273 @@ export interface operations {
             };
             /** @description Policy not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_approval_processes: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every approval process, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ApprovalProcess"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_approval_process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalProcessBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalProcess"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_approval_process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The process */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalProcess"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_approval_process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted; pending requests keep their plan and lock until decided */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_approval_process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalProcessUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalProcess"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -55653,6 +58292,60 @@ export interface operations {
             };
         };
     };
+    list_label_proposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string | null;
+                /** @description `open` (the default) or `resolved`. */
+                status: string | null;
+                /** @description One-based: page 1 is the first page. */
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_LabelProposalRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown status */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_mappings: {
         parameters: {
             query?: never;
@@ -56753,6 +59446,302 @@ export interface operations {
             };
             /** @description Survivorship rule not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dead_letter_items: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Only this source (`jobs`, `batch_jobs`, `flow_trigger`, `flow_run`,
+                 *     `webhook`).
+                 */
+                source: string | null;
+                /** @description Only this group (a `cause_group` from the groups list). */
+                group: string | null;
+                /** @description One-based: page 1 is the first page. */
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dead letters */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeadLetter"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such source */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dead_letter_groups: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeadLetterGroup"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dead_letter_group_replay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupReplayBody"];
+            };
+        };
+        responses: {
+            /** @description The preview went through and the rest is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupReplayStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The preview was refused; nothing was queued */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rate is out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dead_letter_discard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscardBody"];
+            };
+        };
+        responses: {
+            /** @description Discarded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such source or dead letter */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The reason is missing or too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dead_letter_replay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Replayed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayItemResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such source or dead letter */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The source refused the replay; the reason is in the body */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -59911,6 +62900,59 @@ export interface operations {
             };
         };
     };
+    event_subscription_replay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayBody"];
+            };
+        };
+        responses: {
+            /** @description The deliveries are queued again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedDeliveries"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     rotate_secret: {
         parameters: {
             query?: never;
@@ -59929,6 +62971,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SecretRotatedResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    event_subscription_send_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The test delivery is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedDeliveries"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -60051,6 +63142,116 @@ export interface operations {
                 };
             };
             /** @description Validation failed, or a required prerequisite flag is not enabled */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_get_certification: {
+        parameters: {
+            query: {
+                asset_kind: string;
+                asset_ref: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Certification"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller holds no role in the asset's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not certified */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_certify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CertifyBody"];
+            };
+        };
+        responses: {
+            /** @description Certified */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Certification"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not certify the asset */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such asset */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An asset kind that is not certified yet */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -60400,6 +63601,59 @@ export interface operations {
             };
         };
     };
+    governance_put_governed_change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernedChange"];
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernedChange"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the domain's owner or steward */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_report: {
         parameters: {
             query?: never;
@@ -60440,6 +63694,538 @@ export interface operations {
             };
             /** @description Domain not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_list_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_GovernanceRole"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller holds no role in the domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_put_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernanceRole"];
+            };
+        };
+        responses: {
+            /** @description The role is held */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceRole"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the domain's owner or steward */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown role, or not an active user */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_delete_role: {
+        parameters: {
+            query: {
+                user_id: string;
+                role: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The role is no longer held */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the domain's owner or steward */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Domain not found, or the role is not held */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown role */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_list_policies: {
+        parameters: {
+            query?: {
+                domain?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_GovernancePolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller holds no role in the domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_create_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePolicyBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernancePolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the domain's owner or steward */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_get_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernancePolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such policy the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_delete_policy: {
+        parameters: {
+            query: {
+                row_version: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the domain's owner or steward */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such policy the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version conflict, or the policy has exceptions */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_update_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePolicyBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernancePolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller is not the domain's owner or steward */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such policy the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_list_exceptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PolicyException"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such policy the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    governance_request_exception: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExceptionBody"];
+            };
+        };
+        responses: {
+            /** @description Requested; waits for approval */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyException"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such policy the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation, or nobody may approve it */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -60652,6 +64438,233 @@ export interface operations {
             };
             /** @description No such override */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_inbound_hooks: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every inbound hook, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_InboundHookView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_inbound_hook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboundHookBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboundHookView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A hook of this name exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_inbound_hook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such hook */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_inbound_hook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboundHookUpdate"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboundHookView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such hook */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Changed since read, or the name is taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -61681,6 +65694,61 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_impact: {
+        parameters: {
+            query: {
+                entity: string;
+                /** @description The attribute; without it, the change is to the entity. */
+                attribute?: string;
+                /** @description `delete`, `retype`, `rename` or `other` (the default). */
+                change?: string;
+                /** @description Edges walked downstream, 1 to 10 (default 5). */
+                depth?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The impact report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown change, or depth out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -64565,6 +68633,59 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    model_flow_template_instantiate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstantiateRequest"];
+            };
+        };
+        responses: {
+            /** @description The filled graph, or why the arguments do not fit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstantiateResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published flow template with this id */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -67995,6 +72116,282 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_schedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pause_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `flow` or `report` */
+                kind: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PauseState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule, or a platform scheduler */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `flow` or `report` */
+                kind: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PauseState"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such schedule, or a platform scheduler */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scim_list_tokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ScimTokenSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scim_issue_token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewScimToken"];
+            };
+        };
+        responses: {
+            /** @description Issued; the token is shown once */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedScimToken"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scim_revoke_token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active token */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -77876,6 +82273,241 @@ export interface operations {
             };
         };
     };
+    recall_approval_process_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecallBody"];
+            };
+        };
+        responses: {
+            /** @description Recalled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Submitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Only the requester recalls */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such approval-process request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or changed since read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submit_to_approval_process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitBody"];
+            };
+        };
+        responses: {
+            /** @description Submitted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Submitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not update the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active process, or no such record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record already has a pending request of this process */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record does not meet the entry condition */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_approval_email_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkBody"];
+            };
+        };
+        responses: {
+            /** @description The request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkView"];
+                };
+            };
+            /** @description Malformed, unknown, wrong or expired link */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The link was used, or the request was decided or moved on */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    decide_by_approval_email_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkDecideBody"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkDecided"];
+                };
+            };
+            /** @description Malformed, unknown, wrong or expired link */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description High-risk: decide on the request page after signing in */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The link was used, or the request was decided or moved on */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not approve or reject, or the comment is too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     put_out_of_office: {
         parameters: {
             query?: never;
@@ -77938,6 +82570,98 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_approvals_regarding_record: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                entity: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's approval requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ApprovalHistoryItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller may not read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_approval_request_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalDetail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request, or the caller may not see it */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -83585,6 +88309,399 @@ export interface operations {
             };
         };
     };
+    change_stream_list_subscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Subscription"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_stream_create_subscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subscription"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_stream_delete_subscription: {
+        parameters: {
+            query: {
+                row_version: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_stream_update_subscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPatch"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subscription"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_stream_confirm_erasures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscription: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ErasureConfirmationBody"];
+            };
+        };
+        responses: {
+            /** @description Confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErasureConfirmations"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription for the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An id that is not an erasure of the subscription's entities */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_stream_read_events: {
+        parameters: {
+            query?: {
+                /** @description The previous read's `next_cursor`; absent to start from now. */
+                cursor?: string;
+                /** @description 1 to 1000 (default 100). */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                subscription: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Events in commit order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StreamPage"];
+                };
+            };
+            /** @description A cursor this deployment did not issue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription for the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description resync_needed */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description limit out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    change_stream_stream_events: {
+        parameters: {
+            query?: {
+                /** @description Where to start; absent to start from now. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                subscription: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description text/event-stream of change events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A cursor this deployment did not issue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription for the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_channels: {
         parameters: {
             query?: {
@@ -86314,6 +91431,66 @@ export interface operations {
             };
         };
     };
+    data_profile_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileProfileBody"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileEnqueueResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks metadata.read, or may not read the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import is not staged */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     approve_decision: {
         parameters: {
             query?: never;
@@ -87740,6 +92917,78 @@ export interface operations {
             };
         };
     };
+    call_inbound_hook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description The provider's JSON event */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HookAccepted"];
+                };
+            };
+            /** @description Bad signature or secret, or a timestamp outside the window */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller's address or certificate is not allowed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active hook of this name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A replay of an event already accepted */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The body is not JSON or lacks a required field */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_hr_availability: {
         parameters: {
             query: {
@@ -88683,6 +93932,151 @@ export interface operations {
             };
         };
     };
+    ledger_balance_sheet: {
+        parameters: {
+            query: {
+                /** @description The day the balances are as of (YYYY-MM-DD). */
+                as_of: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assets, liabilities, equity and current earnings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BalanceSheet"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ledger_profit_and_loss: {
+        parameters: {
+            query: {
+                /** @description The first day (YYYY-MM-DD). */
+                from: string;
+                /** @description The last day (YYYY-MM-DD). */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Income, expenses and net income */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfitAndLoss"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description from after to */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ledger_trial_balance: {
+        parameters: {
+            query: {
+                /** @description The first day (YYYY-MM-DD). */
+                from: string;
+                /** @description The last day (YYYY-MM-DD). */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each account's debits, credits and balance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialBalance"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks gl_entry.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description from after to */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     my_limits: {
         parameters: {
             query?: never;
@@ -88703,6 +94097,199 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_cleanup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dangling edges, cycles and unused attributes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cleanup"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_compare: {
+        parameters: {
+            query: {
+                from: number;
+                to: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Edges added and removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comparison"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_export_openlineage: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The OpenLineage namespace the jobs and datasets are named in
+                 *     (default `attome`).
+                 */
+                namespace?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One OpenLineage RunEvent per definition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenLineageExport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The export is off (lineage.export_enabled) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The namespace is not a short name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_walk: {
+        parameters: {
+            query?: {
+                /** @description `down` (what depends on it, the default) or `up` (what it uses). */
+                direction?: string;
+                /** @description 1 to 10 (default 3). */
+                depth?: number;
+                /** @description Definition kinds to keep, comma separated. */
+                kinds?: string;
+                /** @description The graph version to read as of; the current graph when absent. */
+                version?: number;
+            };
+            header?: never;
+            path: {
+                /** @description `entity`, or a definition kind */
+                kind: string;
+                /** @description `<entity>[.<attribute>]`, or the definition's id */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The nodes and edges reached */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Graph"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown node, direction or depth */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -97942,6 +103529,81 @@ export interface operations {
             };
         };
     };
+    post_sales_quote_submit: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The quote's row_version */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The quote */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitQuoteBody"];
+            };
+        };
+        responses: {
+            /** @description Sent, or waiting for approval */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteSubmitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update quotes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such quote the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a draft, already waiting for approval, or changed since read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The policy names no active approval process, or If-Match is missing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_sales_quote_version: {
         parameters: {
             query?: never;
@@ -101059,6 +106721,96 @@ export interface operations {
             };
         };
     };
+    get_entity_stage_process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The process */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageProcessView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or it has no published stage process */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_stage_process_metrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The measures */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageMetrics"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published stage process with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_status_page: {
         parameters: {
             query?: never;
@@ -103873,6 +109625,69 @@ export interface operations {
             };
             /** @description Not a draft, another publish in progress, no open changeset to record into, or the workflow is owned by another layer */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    workflow_replay_draft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -109837,6 +115652,449 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+        };
+    };
+    scim_list_groups: {
+        parameters: {
+            query?: {
+                filter?: string;
+                startIndex?: number;
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A SCIM ListResponse of groups */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_create_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A SCIM Group */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Created (or the team a repeated create already made) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description invalidValue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_get_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A SCIM Group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_delete_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_patch_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM PatchOp */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Patched */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalidValue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_list_users: {
+        parameters: {
+            query?: {
+                filter?: string;
+                startIndex?: number;
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A SCIM ListResponse of users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The address may not use the token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_create_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A SCIM User */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Created (or the account a repeated create already made) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description invalidValue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description uniqueness: another account has this userName */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_get_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A SCIM User */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_replace_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM User */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description invalidValue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description uniqueness */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_delete_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deactivated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scim_patch_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM PatchOp */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Patched */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description invalidValue */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad or revoked token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
