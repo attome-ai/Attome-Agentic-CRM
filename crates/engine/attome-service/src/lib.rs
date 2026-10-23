@@ -17,6 +17,7 @@ pub mod handoff_routes;
 pub mod inbox;
 mod intake;
 pub mod inventory;
+pub mod iot;
 pub mod maintenance;
 pub mod major_incident;
 pub mod model;
@@ -70,5 +71,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(major_incident::openapi_fragment());
     doc.merge(survey_send::openapi_fragment());
     doc.merge(schedule_optimise::openapi_fragment());
+    doc.merge(iot::openapi_fragment());
     doc
 }

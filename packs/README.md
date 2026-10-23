@@ -101,7 +101,8 @@ stages, interviews with scorecards, and offers (salary masked).
 
 Inventory (I6): stock balances per product and location as a roll-up of append-only movements,
 reservations, serial numbers and lots; returns (I11) with lines, reasons, the return-window check,
-inspection and disposition.
+inspection and disposition. Its `0010` adds device rules (I7) and a `device_id` on the
+asset-management pack's asset and meter reading, so it needs that pack installed first.
 
 The human-resources pack's `0002` adds positions, leave types and balances and labelled HR documents
 (a health document is special-category data); the customer-service pack's `0002` adds entitlements

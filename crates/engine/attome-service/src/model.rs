@@ -72,5 +72,7 @@ impl EngineModel for ServiceModel {
             .merge(crate::major_incident::routes())
             .merge(crate::survey_send::routes())
             .merge(crate::schedule_optimise::routes())
+            // I7-T1: readings posted by device id.
+            .merge(crate::iot::routes())
     }
 }

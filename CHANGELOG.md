@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Device readings and device rules (I7-T1): `POST /api/v1/service/device-readings` takes up to 500
+  readings from devices that know only their own id and records each on the asset holding that
+  `device_id` (field-service pack `0010`); a device that knows its asset can use an inbound hook
+  instead. A `device_readings` job, every minute, counts each new reading once into the asset's
+  latest value of the meter and its hourly summary (migration 0237), and fires the `device_rule`s it
+  meets: a condition over `reading`, `previous`, `meter` and `unit` opens a work order or a case as
+  the rule's owner, at most once per asset within the rule's quiet period (default an hour).
 - Revenue contracts from sources (F11-T3): with `revrec.contracts` on, a confirmed order or an active
   subscription gets a revenue contract and, per line, obligations from the product's revenue rule
   (one per split template kind by weight), built once in a background job;

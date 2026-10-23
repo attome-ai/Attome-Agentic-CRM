@@ -2951,6 +2951,8 @@ const DEDUP_KEY_RFQ_OPEN: &str = "rfq-open";
 const DEDUP_KEY_COMPLIANCE_EXPIRY: &str = "compliance-expiry";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
 const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
+/// I7-T1: device readings and device rules (a registered job type).
+const DEDUP_KEY_DEVICE_READINGS: &str = "device-readings";
 /// I10-T2: warranty expiry reminders (a registered job type).
 const DEDUP_KEY_WARRANTY_REMINDER: &str = "warranty-expiry-reminder";
 /// H8-T1: status page notices from the change feed (a registered job type).
@@ -3205,6 +3207,11 @@ pub const COMPLIANCE_EXPIRY: attome_jobs::JobType =
 /// meter plans whose reading passed the threshold.
 pub const MAINTENANCE_GENERATION: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::maintenance::JOB, 1);
+
+/// I7-T1: new device readings counted into latest values and hourly
+/// summaries, and the device rules they meet fired.
+pub const DEVICE_READINGS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::iot::JOB, 1);
 
 /// I10-T2: warranty owners told 30 days before a warranty ends, once per
 /// end date.
@@ -4031,6 +4038,29 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DEVICE_READINGS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let run = attome_service::iot::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if run.fired > 0 || run.failed > 0 {
+                    tracing::info!(
+                        readings = run.readings,
+                        counted = run.counted,
+                        fired = run.fired,
+                        failed = run.failed,
+                        "device readings processed"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             WARRANTY_REMINDER,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
@@ -4477,6 +4507,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == MAINTENANCE_GENERATION.name => {
             DEDUP_KEY_MAINTENANCE
         }
+        EngineJob::Registered(job) if job.name == DEVICE_READINGS.name => DEDUP_KEY_DEVICE_READINGS,
         EngineJob::Registered(job) if job.name == COMPLIANCE_EXPIRY.name => {
             DEDUP_KEY_COMPLIANCE_EXPIRY
         }
@@ -5406,6 +5437,21 @@ pub fn spawn_maintenance_scheduler(db: DbPool, interval: std::time::Duration) {
             "maintenance generation",
         ),
         Err(error) => tracing::error!(%error, "maintenance generation: not scheduled"),
+    }
+}
+
+/// I7-T1: every minute, new device readings and device rules.
+pub fn spawn_device_readings_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(DEVICE_READINGS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_DEVICE_READINGS,
+            "device readings",
+        ),
+        Err(error) => tracing::error!(%error, "device readings: not scheduled"),
     }
 }
 

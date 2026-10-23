@@ -200,6 +200,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // I5-T2: maintenance plan timers and meter checks, daily.
     crate::jobs::spawn_maintenance_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
+    // I7-T1: device readings and device rules, every minute.
+    crate::jobs::spawn_device_readings_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // I10-T2: warranty expiry reminders, nightly.
     crate::jobs::spawn_warranty_reminder_scheduler(
         db.clone(),
