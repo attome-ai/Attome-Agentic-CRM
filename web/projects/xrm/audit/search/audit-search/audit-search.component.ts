@@ -22,7 +22,7 @@ export interface SavedAuditSearch {
 }
 
 /** `attome_audit::model::AuditOperation` discriminants and their label keys. */
-export const OPERATIONS: ReadonlyArray<{ value: number; key: string }> = [
+export const OPERATIONS: readonly { value: number; key: string }[] = [
   { value: 0, key: 'create' },
   { value: 1, key: 'update' },
   { value: 2, key: 'softDelete' },

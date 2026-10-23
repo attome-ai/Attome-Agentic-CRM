@@ -87,7 +87,7 @@ describe('AuditSearchComponent', () => {
     const createUrl = vi.fn().mockReturnValue('blob:pack');
     const revoke = vi.fn();
     Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revoke });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
     const c = create();
     expect(c.canBuildPack()).toBe(false);
