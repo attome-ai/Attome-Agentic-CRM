@@ -305,6 +305,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "relationship",
                 "reply_template",
                 "rule",
+                "stage_process",
                 "state_model",
                 "survey",
                 "tour"

@@ -1417,14 +1417,18 @@ pub(super) async fn update_record(
                 skip_duplicates,
                 attome_core::match_rule::with_duplicate_reason(
                     duplicate_reason_header(&headers),
-                    update_record_for(
-                        &state,
-                        &ctx,
-                        claims.sub,
-                        &entity_input,
-                        record_id,
-                        version,
-                        body,
+                    // M7-T1: why a stage move is made.
+                    crate::stage_move::with_reason(
+                        crate::stage_move::reason_header(&headers),
+                        update_record_for(
+                            &state,
+                            &ctx,
+                            claims.sub,
+                            &entity_input,
+                            record_id,
+                            version,
+                            body,
+                        ),
                     ),
                 ),
             ),

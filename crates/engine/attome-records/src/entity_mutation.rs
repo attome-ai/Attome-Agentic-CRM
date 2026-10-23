@@ -1857,6 +1857,17 @@ pub async fn create_one_as(
     validate_principal_field_writes(principal, entity_name, attrs, obj)?;
     validate_self_addressed(principal, entity_name, obj, true)?;
     validate_model_record_validators(state, entity_name, obj)?;
+    // M7-T1: a record of an entity with a stage process starts in a stage
+    // whose required attributes it fills (the first one when it names none).
+    let staged;
+    let obj =
+        match crate::stage_move::guard_create(tx, state, entity_name, attrs, obj, mode).await? {
+            Some(map) => {
+                staged = map;
+                &staged
+            }
+            None => obj,
+        };
 
     // M07 Phase 1 (D-406): if this entity is governed by an attome-state model,
     // the created record must land in the model's initial_state -- either
@@ -2877,6 +2888,19 @@ pub async fn update_one_as(
     if matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {
         crate::approval_lock::refuse_locked(tx, entity_name, record_id, obj).await?;
     }
+    // M7-T1: a stage move goes only where the stage process allows, with
+    // the target stage's required attributes filled, and is recorded.
+    crate::stage_move::guard_update(
+        tx,
+        entity_id,
+        entity_name,
+        record_id,
+        attrs,
+        obj,
+        modified_by,
+        mode,
+    )
+    .await?;
     // M9-T2: a change to an attribute a `change` approval process watches
     // keeps the stored value and waits in an approval request.
     let held_body;

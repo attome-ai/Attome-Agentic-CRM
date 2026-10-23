@@ -22,6 +22,7 @@ attome-field.workspace    = true
 attome-html.workspace     = true
 attome-jobs.workspace     = true
 attome-metadata.workspace = true
+attome-model.workspace    = true
 attome-modules.workspace  = true
 attome-profiler.workspace = true
 attome-rules.workspace    = true

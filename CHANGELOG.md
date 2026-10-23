@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Stage processes (M7-T1): a new `stage_process` metadata kind holds an entity's ordered stages,
+  each with required attributes, a checklist and allowed next stages. Publishing the first one
+  gives the entity `stage` and `stage_entered_at` (stamped on every change). A new record starts
+  in the first stage. A write that moves to a stage the current one does not allow is refused
+  (`transition_not_allowed`), and so is a move into a stage with empty required attributes (422,
+  one `required_for_stage` failure per attribute). Every move is recorded in `stage_move`
+  (migration 0215), with the reason from the optional `Attome-Stage-Reason` header.
 - One schedules screen (M12-T3). `GET /api/v1/admin/schedules` lists flow schedule triggers, report
   deliveries and the platform's own schedulers (read-only) with next and last run, owner and
   paused state. `POST /api/v1/admin/schedules/{kind}/{id}/pause|resume` pauses a flow or report

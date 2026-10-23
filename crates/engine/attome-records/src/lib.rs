@@ -33,6 +33,7 @@
 pub mod access_plan;
 /// M9-T1: the write lock of a pending approval process.
 pub mod approval_lock;
+pub mod stage_move;
 pub mod bulk;
 /// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
 /// many records, applied by the bulk engine.

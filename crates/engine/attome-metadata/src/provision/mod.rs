@@ -42,6 +42,7 @@ pub mod pacing;
 mod reconcile;
 /// A27-T1 — the `record_type` attribute an entity gets with its first type.
 pub mod record_type;
+pub mod stage_process;
 /// M01 Core P3 gap (D-455) — physical join-table provisioning for the
 /// generic many-to-many relationship metadata object.
 mod relationship;

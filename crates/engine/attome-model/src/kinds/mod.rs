@@ -14,6 +14,7 @@ pub mod prompt_override;
 pub mod record_template;
 pub mod record_type;
 pub mod reply_template;
+pub mod stage_process;
 pub mod survey;
 pub mod tour;
 
@@ -30,5 +31,6 @@ pub use prompt_override::{PROMPT_OVERRIDE, PromptOverrideKind};
 pub use record_template::{RECORD_TEMPLATE, RecordTemplateKind};
 pub use record_type::{RECORD_TYPE, RecordTypeKind};
 pub use reply_template::{REPLY_TEMPLATE, ReplyTemplateKind};
+pub use stage_process::{STAGE_PROCESS, StageProcessKind};
 pub use survey::{SURVEY, SurveyKind};
 pub use tour::{TOUR, TourKind};

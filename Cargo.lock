@@ -1794,6 +1794,7 @@ dependencies = [
  "attome-html",
  "attome-jobs",
  "attome-metadata",
+ "attome-model",
  "attome-modules",
  "attome-profiler",
  "attome-rules",

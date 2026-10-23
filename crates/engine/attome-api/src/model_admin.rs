@@ -748,6 +748,15 @@ async fn publish(
             attome_metadata::provision::record_type::ensure_column(&state.base.db, entity).await?;
         }
     }
+    // M7-T1: an entity's first stage process gives its table the `stage`
+    // and `stage_entered_at` columns, before the process goes live.
+    if kind.name() == attome_model::kinds::STAGE_PROCESS {
+        let draft = attome_model::store::read(&state.base.db, id, None).await?;
+        if let Some(entity) = attome_model::kinds::stage_process::entity_of(&draft.doc) {
+            attome_metadata::provision::stage_process::ensure_columns(&state.base.db, entity)
+                .await?;
+        }
+    }
     // G14-T1: a survey's response entity is provisioned through the
     // changeset ledger before the survey goes live.
     if kind.name() == attome_model::kinds::SURVEY {
