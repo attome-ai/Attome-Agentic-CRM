@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Agent lineage tools (L5-T8): `lineage.downstream`, `lineage.upstream` and `lineage.impact` read
+  the lineage graph and the impact engine as the person the agent acts for; an agent proposing a
+  schema change is told to call `lineage.impact` first.
 - Lineage graph routes (L5-T4): `GET /api/v1/lineage/{kind}/{ref}` walks up or down from an
   entity, attribute or definition, by depth and definition kind, as of a graph version, and flags
   definitions that use personal attributes; nodes the caller may not see are counted, not listed.

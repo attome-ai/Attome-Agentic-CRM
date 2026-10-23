@@ -14,6 +14,8 @@
 
 /// M6-T2: `flow_template.adapt`, a template's parameters mapped to local entities.
 pub mod adapt_flow_template;
+/// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
+pub mod lineage;
 pub mod agent_playground;
 pub mod agent_stats;
 pub mod agent_supervise;
@@ -102,6 +104,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(translate::descriptor());
     all.push(sentiment::descriptor());
     all.push(adapt_flow_template::descriptor());
+    all.extend(lineage::descriptors());
     all.push(extract_document::descriptor());
     all.push(ai_field::descriptor());
     all.extend(crate::mcp_client::descriptors());
@@ -176,6 +179,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(translate::TextTranslate));
     all.push(Box::new(sentiment::TextSentiment));
     all.push(Box::new(adapt_flow_template::FlowTemplateAdapt));
+    all.extend(lineage::executors());
     all.push(Box::new(extract_document::DocumentExtract));
     all.push(Box::new(ai_field::RecordAiField));
     all.extend(crate::mcp_client::executors());
