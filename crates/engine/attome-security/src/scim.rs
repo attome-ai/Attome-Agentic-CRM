@@ -537,6 +537,7 @@ async fn event(
         .comment(format!("SCIM token {}", token.name)),
     )
     .await
+    .map(|_| ())
 }
 
 // ── Users ────────────────────────────────────────────────────────────────
@@ -1305,7 +1306,7 @@ async fn patch_group(
     tag = "integration",
     operation_id = "scim_delete_group",
     params(("id" = Uuid, Path)),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Deleted"),
         (status = 401, description = "Bad or revoked token"),
@@ -1344,7 +1345,7 @@ async fn delete_group(
             &state,
             &token,
             MandatoryCategory::Access,
-            AuditOperation::Delete,
+            AuditOperation::SoftDelete,
             ("team", id),
             "scim.group_deleted",
         )
@@ -1493,7 +1494,7 @@ async fn list_tokens(
     tag = "admin",
     operation_id = "scim_revoke_token",
     params(("id" = Uuid, Path)),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Revoked"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1521,7 +1522,7 @@ async fn revoke_token(
         &attome_audit::audit_service(&state),
         SecurityEvent::new(
             MandatoryCategory::Credential,
-            AuditOperation::Delete,
+            AuditOperation::SoftDelete,
             ctx.user_id,
             "scim_token",
             Some(id),

@@ -227,6 +227,7 @@ async fn audit(
         .named(name),
     )
     .await
+    .map(|_| ())
 }
 
 /// Lists change-stream subscriptions.
@@ -411,7 +412,7 @@ async fn update_subscription(
     operation_id = "change_stream_delete_subscription",
     tag = "integration",
     params(("id" = Uuid, Path), RowVersionQuery),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Ended"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -447,7 +448,7 @@ async fn delete_subscription(
         &mut tx,
         &state,
         ctx.user_id,
-        AuditOperation::Delete,
+        AuditOperation::SoftDelete,
         id,
         "change_stream.unsubscribe",
     )

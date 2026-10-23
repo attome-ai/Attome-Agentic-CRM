@@ -140,6 +140,7 @@ async fn event(
         .comment(comment),
     )
     .await
+    .map(|_| ())
 }
 
 // ── Roles ────────────────────────────────────────────────────────────────
@@ -272,7 +273,7 @@ async fn put_role(
     operation_id = "governance_delete_role",
     tag = "admin",
     params(("id" = Uuid, Path), RoleQuery),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "The role is no longer held"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -307,7 +308,7 @@ async fn delete_role(
         &mut tx,
         &state,
         ctx.user_id,
-        AuditOperation::Delete,
+        AuditOperation::HardDelete,
         ("data_domain", domain),
         "governance_role.delete",
         format!(
@@ -775,7 +776,7 @@ async fn update_policy(
     operation_id = "governance_delete_policy",
     tag = "admin",
     params(("id" = Uuid, Path), RowVersionQuery),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "Removed"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -819,7 +820,7 @@ async fn delete_policy(
         &mut tx,
         &state,
         ctx.user_id,
-        AuditOperation::Delete,
+        AuditOperation::HardDelete,
         ("governance_policy", id),
         "governance_policy.delete",
         format!("policy {:?}", current.name_en),

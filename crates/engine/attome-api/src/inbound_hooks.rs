@@ -544,7 +544,7 @@ async fn update_hook(
     operation_id = "delete_inbound_hook",
     description = "Removes an inbound hook (M14-T1); its endpoint answers 404 from then on.",
     params(("id" = Uuid, Path)),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Removed"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -575,7 +575,7 @@ async fn delete_hook(
         &mut tx,
         &state,
         ctx.user_id,
-        AuditOperation::Delete,
+        AuditOperation::SoftDelete,
         "inbound_hook.delete",
         id,
         format!("inbound hook {name} removed"),
