@@ -499,3 +499,41 @@ async fn a_rewound_consumer_rereads_and_applies_each_event_once() {
         Err(attome_types::AppError::NotFound)
     ));
 }
+
+/// L7-T2: a write made inside a flow run's provenance scope names the run and
+/// the `flow` channel on its event; one made outside leaves both NULL.
+#[tokio::test]
+async fn a_flow_write_names_its_run_on_the_change_event() {
+    use attome_core::provenance_scope::{self, FLOW_CHANNEL, Provenance};
+    let db = skip_if_no_db!(test_db().await);
+    let _guard = serialize().await;
+    let entity = entity_name();
+    let run = Uuid::now_v7();
+    let (flow_record, plain_record) = (Uuid::now_v7(), Uuid::now_v7());
+
+    provenance_scope::scope(
+        Provenance {
+            channel: FLOW_CHANNEL,
+            run_id: Some(run),
+        },
+        emit_committed(&db, &entity, flow_record, ChangeOperation::Update),
+    )
+    .await;
+    emit_committed(&db, &entity, plain_record, ChangeOperation::Update).await;
+
+    let rows: Vec<(Uuid, Option<String>, Option<Uuid>)> = sqlx::query_as(
+        "SELECT record_id, channel, flow_run_id FROM entity_change_event \
+         WHERE entity_logicalname = $1 ORDER BY id",
+    )
+    .bind(&entity)
+    .fetch_all(&db)
+    .await
+    .expect("read events");
+    assert_eq!(
+        rows,
+        vec![
+            (flow_record, Some(FLOW_CHANNEL.to_string()), Some(run)),
+            (plain_record, None, None),
+        ]
+    );
+}

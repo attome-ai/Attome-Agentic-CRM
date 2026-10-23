@@ -142,11 +142,12 @@ pub async fn emit_with(
 ) -> Result<(), AppError> {
     let (initiator, agent_session) = crate::agent_scope::columns();
     let quiet = crate::quiet_scope::is_quiet();
+    let (channel, flow_run) = crate::provenance_scope::columns();
     sqlx::query(
         "INSERT INTO entity_change_event \
              (entity_logicalname, record_id, operation, event_name, changed_attributes, before, after, \
-              row_version, initiator, agent_session_id, quiet) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+              row_version, initiator, agent_session_id, quiet, channel, flow_run_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -159,6 +160,8 @@ pub async fn emit_with(
     .bind(initiator)
     .bind(agent_session)
     .bind(quiet)
+    .bind(channel)
+    .bind(flow_run)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -195,10 +198,12 @@ pub async fn emit(
 ) -> Result<(), AppError> {
     let (initiator, agent_session) = crate::agent_scope::columns();
     let quiet = crate::quiet_scope::is_quiet();
+    let (channel, flow_run) = crate::provenance_scope::columns();
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, initiator, agent_session_id, quiet) \
-         VALUES ($1, $2, $3, $4, $5, $6)",
+             (entity_logicalname, record_id, operation, initiator, agent_session_id, quiet, \
+              channel, flow_run_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -206,6 +211,8 @@ pub async fn emit(
     .bind(initiator)
     .bind(agent_session)
     .bind(quiet)
+    .bind(channel)
+    .bind(flow_run)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -238,11 +245,12 @@ pub async fn emit_named(
 ) -> Result<(), AppError> {
     let (initiator, agent_session) = crate::agent_scope::columns();
     let quiet = crate::quiet_scope::is_quiet();
+    let (channel, flow_run) = crate::provenance_scope::columns();
     sqlx::query(
         "INSERT INTO entity_change_event \
              (entity_logicalname, record_id, operation, event_name, initiator, agent_session_id, \
-              quiet) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+              quiet, channel, flow_run_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
     .bind(entity_logicalname)
     .bind(record_id)
@@ -251,6 +259,8 @@ pub async fn emit_named(
     .bind(initiator)
     .bind(agent_session)
     .bind(quiet)
+    .bind(channel)
+    .bind(flow_run)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;
@@ -276,10 +286,12 @@ pub async fn emit_many(
     }
     let (initiator, agent_session) = crate::agent_scope::columns();
     let quiet = crate::quiet_scope::is_quiet();
+    let (channel, flow_run) = crate::provenance_scope::columns();
     sqlx::query(
         "INSERT INTO entity_change_event \
-             (entity_logicalname, record_id, operation, initiator, agent_session_id, quiet) \
-         SELECT $1, r, $3, $4, $5, $6 FROM UNNEST($2::uuid[]) AS r",
+             (entity_logicalname, record_id, operation, initiator, agent_session_id, quiet, \
+              channel, flow_run_id) \
+         SELECT $1, r, $3, $4, $5, $6, $7, $8 FROM UNNEST($2::uuid[]) AS r",
     )
     .bind(entity_logicalname)
     .bind(record_ids)
@@ -287,6 +299,8 @@ pub async fn emit_many(
     .bind(initiator)
     .bind(agent_session)
     .bind(quiet)
+    .bind(channel)
+    .bind(flow_run)
     .execute(conn)
     .await
     .map_err(AppError::internal)?;

@@ -221,7 +221,14 @@ pub async fn execute_instance(state: &EngineState, instance_id: Uuid) -> Result<
         );
         return Ok(());
     };
-    let result = execute_claimed(state, instance_id).await;
+    // L7-T2: every change event this pass writes names the run, so a
+    // subscriber can tell the flow's own update from a person's.
+    let provenance = attome_core::provenance_scope::Provenance {
+        channel: attome_core::provenance_scope::FLOW_CHANNEL,
+        run_id: Some(instance_id),
+    };
+    let result =
+        attome_core::provenance_scope::scope(provenance, execute_claimed(state, instance_id)).await;
     claim.release().await;
     if matches!(result, Ok(PassOutcome::CheckpointDiscarded)) {
         // Only after the claim is released: a delivery enqueued while we still

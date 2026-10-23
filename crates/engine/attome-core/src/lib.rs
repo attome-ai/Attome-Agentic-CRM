@@ -60,6 +60,9 @@ pub async fn try_xact_lock(
 pub mod agent_scope;
 /// B5-T3: writes whose change events start no automation.
 pub mod quiet_scope;
+/// L7-T2: the channel and flow run an engine write came from, read by the
+/// change-feed writers.
+pub mod provenance_scope;
 /// C11 B5 (P-5) — the runtime AI switch's read side: `config AND runtime`,
 /// failing closed, consulted by every AI surface.
 pub mod ai_runtime_switch;
