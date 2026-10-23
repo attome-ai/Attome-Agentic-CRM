@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Master data contributions (L1-T4): `attome_records::entity_crud::master::ingest` stores a source
+  system's version of a record, holds it when it fails field validation, attaches a valid one to its
+  golden record (by its A29 external-id link, or a new record) and queues `MasterRebuild`, which
+  recomputes the golden record per attribute (source-system rank, else newest; pins kept), writes
+  changes through the generic update path and records provenance.
 - Data quality agent tools (L2-T9): `quality.explain_drop` (each dimension's change since the day
   before, the biggest fall, and the open issues' sources and attributes), `quality.record_score`
   (a record's score and failed checks against its target) and `quality.propose_rules` (measure-only

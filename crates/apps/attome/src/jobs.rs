@@ -1802,6 +1802,20 @@ async fn dispatch_platform_job(
                 tracing::info!(?stats, "data quality incremental: tick complete");
             }
         }
+        EngineJob::MasterRebuild {
+            entity,
+            golden_id,
+            actor,
+        } => {
+            let rebuilt = attome_records::entity_crud::master::rebuild(
+                &attome_state,
+                &entity,
+                golden_id,
+                actor,
+            )
+            .await?;
+            tracing::info!(%entity, %golden_id, ?rebuilt, "master data: golden record rebuilt");
+        }
         EngineJob::QualityRescan { entity, after } => {
             let next = attome_api::quality::incremental::rescan_step(&attome_state, &entity, after)
                 .await?;

@@ -50,11 +50,8 @@ impl Strategy {
 pub(crate) struct SurvivorshipRule {
     pub strategy: Strategy,
     pub priority_owner_ids: Vec<Uuid>,
-    /// L1-T3: a `source_system_rank` rule's trust order.
-    #[allow(
-        dead_code,
-        reason = "read by the contribution path, not by a two-record merge"
-    )]
+    /// L1-T3: a `source_system_rank` rule's trust order (read by the
+    /// golden-record rebuild, `master::rebuild`).
     pub source_system_rank: Option<SourceSystemRank>,
 }
 

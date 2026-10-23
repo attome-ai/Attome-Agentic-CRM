@@ -24,6 +24,8 @@ mod list;
 /// M01-core C-05: the shared, RLS-aware lookup/polymorphic-reference
 /// display-name batch — see its module doc comment.
 mod lookup_names;
+/// L1-T4: master data contributions and golden-record rebuilds.
+pub mod master;
 mod merge;
 mod mutations;
 pub mod new_record;

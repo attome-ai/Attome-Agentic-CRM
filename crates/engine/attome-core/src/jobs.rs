@@ -504,6 +504,13 @@ pub enum EngineJob {
     /// batch); the next batch is a new job carrying the last id reached, so
     /// a restart resumes there.
     QualityRescan { entity: String, after: Option<Uuid> },
+    /// L1-T4: recomputes one golden record of a master entity from its
+    /// attached contributions, as `actor` (who sent the contribution).
+    MasterRebuild {
+        entity: String,
+        golden_id: Uuid,
+        actor: Uuid,
+    },
     /// F10-T3: writes commission credits for won deals, off the change
     /// feed. Bare unit variant.
     CommissionCreditSweep,
@@ -1019,6 +1026,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
+            | Self::MasterRebuild { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1197,6 +1205,7 @@ impl EngineJob {
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::QualityRescan { .. } => "QualityRescan",
+            EngineJob::MasterRebuild { .. } => "MasterRebuild",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
             EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
             EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
@@ -1452,6 +1461,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
+            | Self::MasterRebuild { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1631,6 +1641,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
+            | Self::MasterRebuild { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
             | Self::AiFollowupRuleRun { .. }
@@ -1996,6 +2007,11 @@ mod tests {
         assert_round_trips(EngineJob::QualityRescan {
             entity: "account".into(),
             after: Some(Uuid::now_v7()),
+        });
+        assert_round_trips(EngineJob::MasterRebuild {
+            entity: "account".into(),
+            golden_id: Uuid::now_v7(),
+            actor: Uuid::now_v7(),
         });
         assert_round_trips(EngineJob::CommissionCreditSweep);
         assert_round_trips(EngineJob::BillingRequestSweep);
