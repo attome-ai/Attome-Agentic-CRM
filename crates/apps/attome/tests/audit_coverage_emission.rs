@@ -66,6 +66,34 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /scim/v2/Users",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
+        "PUT /scim/v2/Users/{id}",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
+        "PATCH /scim/v2/Users/{id}",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
+        "DELETE /scim/v2/Users/{id}",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
+        "POST /scim/v2/Groups",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
+        "PATCH /scim/v2/Groups/{id}",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
+        "DELETE /scim/v2/Groups/{id}",
+        "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
+    ),
+    (
         "POST /api/v1/approvals/email-link/decide",
         "needs an emailed one-time link, whose secret exists only in the mail; attome-api's approval_email_decision test issues one and checks the Approved event the decision writes (the self-service decide route's path, which this test drives)",
     ),
@@ -2685,6 +2713,28 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                     "/api/v1/change-stream/subscriptions/{}?row_version=0",
                     id_of(&sub)
                 ),
+                t,
+                None,
+            )
+        }
+        // Q3-T1: SCIM tokens.
+        "POST /api/v1/admin/scim/tokens" => request(
+            "POST",
+            "/api/v1/admin/scim/tokens",
+            t,
+            Some(json!({"name": uniq("idp")})),
+        ),
+        "DELETE /api/v1/admin/scim/tokens/{id}" => {
+            let issued = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/scim/tokens",
+                Some(json!({"name": uniq("idp")})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/scim/tokens/{}", id_of(&issued)),
                 t,
                 None,
             )

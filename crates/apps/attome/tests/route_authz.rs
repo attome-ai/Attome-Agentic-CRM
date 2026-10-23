@@ -162,6 +162,61 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "M14-T1: a provider's call to a builder-defined hook; the hook's own address allow-list, mTLS, signature or bearer secret (constant-time), timestamp window and once-only event id are the credential, and its handler runs as the hook's service user through the ordinary write paths. Bypass-listed by its one-segment shape.",
     ),
     (
+        "GET",
+        "/scim/v2/Users",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "POST",
+        "/scim/v2/Users",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "GET",
+        "/scim/v2/Users/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "PUT",
+        "/scim/v2/Users/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "PATCH",
+        "/scim/v2/Users/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "DELETE",
+        "/scim/v2/Users/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "GET",
+        "/scim/v2/Groups",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "POST",
+        "/scim/v2/Groups",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "GET",
+        "/scim/v2/Groups/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "PATCH",
+        "/scim/v2/Groups/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
+        "DELETE",
+        "/scim/v2/Groups/{id}",
+        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
+    ),
+    (
         "POST",
         "/api/v1/approvals/email-link",
         "M9-T3: the single-use emailed link token (peppered HMAC, one approver, one request step, 72 h) is the credential; it reads only the request that link names and uses nothing. Bypass-listed.",

@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- SCIM 2.0 provisioning (Q3-T1): `/scim/v2/Users` and `/scim/v2/Groups` (list with `eq` filters,
+  create, read, replace, PATCH add/replace/remove in Entra ID's and Okta's shapes, delete) map to
+  user accounts and teams, under a bearer token per identity provider issued at
+  `POST /api/v1/admin/scim/tokens` (shown once, peppered, with an address allow-list).
+  Deactivating ends the account's sessions and revokes its API keys; repeated creates with the
+  same `externalId` are idempotent; every change is audited.
 - Financial statements (W5-T3): `GET /api/v1/ledger/statements/trial-balance`, `/profit-and-loss`
   (date range) and `/balance-sheet` (as of a date) sum the posted entry lines per account in exact
   decimals; the trial balance ties debits to credits and the balance sheet ties assets to

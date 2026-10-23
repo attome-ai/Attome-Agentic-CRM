@@ -343,6 +343,11 @@ pub const BYPASS_SUBTREE_PREFIXES: &[&str] = &[
     // K1-T1: a file share link is opened by someone outside the deployment;
     // the secret token in the path is the credential.
     "/api/v1/shared-files/",
+    // Q3-T1: an identity provider's SCIM calls carry no session; the SCIM
+    // bearer token (`attome_security::scim`) is the credential, checked with
+    // its address allow-list before anything is read. Only SCIM routes live
+    // under this prefix.
+    "/scim/v2/",
 ];
 
 pub fn is_bypass(path: &str) -> bool {

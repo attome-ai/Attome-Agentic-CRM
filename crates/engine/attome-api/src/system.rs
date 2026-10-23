@@ -586,6 +586,14 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // Q3-T1: SCIM provisioning; the `/scim/v2/` routes are
+                // bypass-listed and check their own bearer token.
+                attome_security::scim::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // L5-T4: the lineage graph.
                 crate::lineage_admin::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),

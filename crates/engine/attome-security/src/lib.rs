@@ -5,6 +5,8 @@ pub mod cache;
 pub mod conditions;
 pub mod context;
 pub mod db;
+/// Q3-T1: SCIM 2.0 provisioning of users and teams.
+pub mod scim;
 pub mod entity_privileges;
 pub mod field_gate;
 pub mod grant_expiry;
