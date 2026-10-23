@@ -173,6 +173,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Webhook subscriptions choose their body (M13-T1): `payload_shape` on
+  `/api/v1/admin/events/subscriptions` is `id` (entity, record, operation, event name), `changes`
+  (plus `changes`: each changed attribute the owner may read with its `old` and `new` value, copied
+  from the outbox row when the event is matched) or `full` (the default and the old behaviour: plus
+  the record as the owner may read it now). Every body now also carries `event_name` and
+  `changed_attributes`, so a subscription to a business event (`filter_event_names`) sees which one
+  fired. Migration 0204.
 - Change events say where a change came from (L7-T2): `entity_change_event` gains `channel`
   (`flow` for a workflow pass, `job` for a bulk job, NULL for an ordinary request) and `flow_run_id` (migration 0203). Every write a
   workflow pass makes carries `channel = 'flow'` and the instance id, so a subscriber can skip a

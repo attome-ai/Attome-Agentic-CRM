@@ -134,6 +134,10 @@ struct DeliveryRow {
     event_operation: String,
     status: String,
     created_at: chrono::DateTime<Utc>,
+    event_name: Option<String>,
+    changed_attributes: Option<Vec<String>>,
+    changes_before: Option<Value>,
+    changes_after: Option<Value>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -145,6 +149,7 @@ struct SubscriptionRow {
     webhook_secret_encrypted: Option<String>,
     max_attempts: i32,
     owner_ref: Uuid,
+    payload_shape: String,
 }
 
 /// Delivers (or terminally fails) one `event_delivery` row.
@@ -275,7 +280,8 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
         // permission bypass.
         let owner_ctx = state.base.security.resolve(sub.owner_ref).await?;
         let read_pool = state.base.read_pool(sub.owner_ref).await;
-        let body = build_body(read_pool, &owner_ctx, &delivery).await?;
+        let shape = crate::payload::PayloadShape::from_stored(&sub.payload_shape);
+        let body = build_body(read_pool, &owner_ctx, &delivery, shape).await?;
         serde_json::to_vec(&body).map_err(AppError::internal)?
     };
 
@@ -386,8 +392,20 @@ pub struct WebhookPayload {
     pub operation: String,
     /// When the change was matched to the subscription.
     pub occurred_at: chrono::DateTime<Utc>,
+    /// M13-T1: the named business event (`sla.breached`, `record.merged`),
+    /// or `null` for an ordinary entity change.
+    pub event_name: Option<String>,
+    /// M13-T1: the attributes the write changed that the owner may read, on
+    /// `changes` and `full` shapes; `null` on `id`, when the owner cannot
+    /// read the record, or when the source did not record them.
+    pub changed_attributes: Option<Vec<String>>,
+    /// M13-T1, `changes` shape only: `{attribute: {old, new}}` for each
+    /// changed attribute the owner may read; a sensitive value is
+    /// `{"ref": true}`.
+    #[schema(value_type = Option<Object>)]
+    pub changes: Option<Value>,
     /// The record as the subscription's owner may read it now, or `null`
-    /// when they cannot read it or it is gone.
+    /// when they cannot read it or it is gone. `full` shape only.
     #[schema(value_type = Option<Object>)]
     pub data: Option<Value>,
 }
@@ -402,14 +420,52 @@ async fn build_body(
     db: &DbPool,
     owner_ctx: &SecurityContext,
     delivery: &DeliveryRow,
+    shape: crate::payload::PayloadShape,
 ) -> Result<Value, AppError> {
-    let data = crate::payload::owner_scoped_record_data(
-        db,
-        owner_ctx,
-        &delivery.event_entity_logicalname,
-        delivery.event_record_id,
-    )
-    .await?;
+    use crate::payload::PayloadShape;
+    let data = if shape == PayloadShape::Full {
+        crate::payload::owner_scoped_record_data(
+            db,
+            owner_ctx,
+            &delivery.event_entity_logicalname,
+            delivery.event_record_id,
+        )
+        .await?
+    } else {
+        None
+    };
+    // The owner may not see which attributes changed on an entity it cannot
+    // read, so the names are dropped with the values in that case.
+    let (changed_attributes, changes) = match (shape, &delivery.changed_attributes) {
+        (PayloadShape::Id, _) | (_, None) => (None, None),
+        // Only the names of attributes the owner sees in `data`.
+        (PayloadShape::Full, Some(names)) => (
+            data.as_ref().and_then(Value::as_object).map(|row| {
+                names
+                    .iter()
+                    .filter(|n| row.contains_key(n.as_str()))
+                    .cloned()
+                    .collect()
+            }),
+            None,
+        ),
+        (PayloadShape::Changes, Some(names)) => {
+            let changes = crate::payload::owner_scoped_changes(
+                db,
+                owner_ctx,
+                &delivery.event_entity_logicalname,
+                names,
+                delivery.changes_before.as_ref(),
+                delivery.changes_after.as_ref(),
+            )
+            .await?;
+            let visible = changes
+                .as_ref()
+                .and_then(Value::as_object)
+                .map(|m| m.keys().cloned().collect());
+            (visible, changes)
+        }
+    };
     WebhookPayload {
         event_id: delivery.event_id,
         entity: delivery.event_entity_logicalname.clone(),
@@ -420,6 +476,9 @@ async fn build_body(
         // created_at (when the dispatcher recorded the match) is the closest
         // durable timestamp available.
         occurred_at: delivery.created_at,
+        event_name: delivery.event_name.clone(),
+        changed_attributes,
+        changes,
         data,
     }
     .into_value()
@@ -428,7 +487,8 @@ async fn build_body(
 async fn load_delivery(db: &DbPool, delivery_id: Uuid) -> Result<Option<DeliveryRow>, AppError> {
     sqlx::query_as(
         "SELECT id, subscription_ref, event_id, event_entity_logicalname, event_record_id, \
-                event_operation, status, created_at \
+                event_operation, status, created_at, event_name, changed_attributes, \
+                changes_before, changes_after \
          FROM event_delivery WHERE id = $1",
     )
     .bind(delivery_id)
@@ -443,7 +503,7 @@ async fn load_subscription(
 ) -> Result<Option<SubscriptionRow>, AppError> {
     sqlx::query_as(
         "SELECT kind, is_active, is_deleted, target_url, webhook_secret_encrypted, \
-                max_attempts, owner_ref \
+                max_attempts, owner_ref, payload_shape \
          FROM event_subscription WHERE id = $1",
     )
     .bind(subscription_id)
@@ -523,6 +583,9 @@ async fn build_audit_body(db: &DbPool, delivery: &DeliveryRow) -> Result<Value, 
         record_id: delivery.event_record_id,
         operation: delivery.event_operation.clone(),
         occurred_at: delivery.created_at,
+        event_name: None,
+        changed_attributes: None,
+        changes: None,
         data,
     }
     .into_value()

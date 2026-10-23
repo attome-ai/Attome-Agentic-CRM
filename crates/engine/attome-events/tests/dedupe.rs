@@ -165,3 +165,86 @@ async fn enqueue_dedup_only_creates_one_eligible_job_per_delivery_id() {
          eligible must be a no-op, not a duplicate job"
     );
 }
+
+/// M13-T1: a `changes`-shaped delivery copies the outbox row's old and new
+/// values onto its own row (the outbox row may be pruned before delivery);
+/// any other shape copies the names only.
+#[tokio::test]
+async fn payload_shapes_changes_delivery_keeps_old_and_new_values() {
+    use attome_core::change_feed::{self, ChangePayload};
+    let db = skip_if_no_db!(pool().await);
+    let owner = seed_owner(&db).await;
+    let sub_id = seed_subscription(&db, owner).await;
+    let entity = format!("events_shape_probe_{}", Uuid::now_v7().simple());
+    let record = Uuid::now_v7();
+    let payload = ChangePayload {
+        changed_attributes: vec!["stage".into()],
+        before: Some(serde_json::json!({"stage": "open"})),
+        after: Some(serde_json::json!({"stage": "won"})),
+        row_version: None,
+    };
+    let mut conn = db.acquire().await.expect("acquire");
+    change_feed::emit_with(
+        &mut *conn,
+        &entity,
+        record,
+        ChangeOperation::Update,
+        None,
+        &payload,
+    )
+    .await
+    .expect("emit");
+    drop(conn);
+    let event_id: Uuid =
+        sqlx::query_scalar("SELECT id FROM entity_change_event WHERE entity_logicalname = $1")
+            .bind(&entity)
+            .fetch_one(&db)
+            .await
+            .expect("event id");
+    let mut event = fake_event(&entity, ChangeOperation::Update);
+    event.id = event_id;
+    event.record_id = record;
+    event.changed_attributes = vec!["stage".into()];
+
+    let with = attome_events::dispatch::create_delivery_row_shaped(&db, sub_id, &event, true)
+        .await
+        .expect("insert changes")
+        .expect("new row");
+    let other_sub = seed_subscription(&db, owner).await;
+    let without =
+        attome_events::dispatch::create_delivery_row_shaped(&db, other_sub, &event, false)
+            .await
+            .expect("insert id")
+            .expect("new row");
+
+    type Row = (
+        Option<Vec<String>>,
+        Option<serde_json::Value>,
+        Option<serde_json::Value>,
+    );
+    let read = |id: Uuid| {
+        let db = db.clone();
+        async move {
+            sqlx::query_as::<_, Row>(
+                "SELECT changed_attributes, changes_before, changes_after \
+                 FROM event_delivery WHERE id = $1",
+            )
+            .bind(id)
+            .fetch_one(&db)
+            .await
+            .expect("read delivery")
+        }
+    };
+    assert_eq!(
+        read(with).await,
+        (
+            Some(vec!["stage".to_string()]),
+            Some(serde_json::json!({"stage": "open"})),
+            Some(serde_json::json!({"stage": "won"})),
+        )
+    );
+    assert_eq!(
+        read(without).await,
+        (Some(vec!["stage".to_string()]), None, None)
+    );
+}

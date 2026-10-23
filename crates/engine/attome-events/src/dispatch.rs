@@ -26,6 +26,7 @@ struct ActiveSubscription {
     filter_operations: Option<Vec<String>>,
     filter_event_names: Option<Vec<String>>,
     filter_expression: Option<String>,
+    payload_shape: String,
 }
 
 /// The `change_consumer_cursor.consumer` key one subscription's
@@ -47,7 +48,7 @@ pub async fn dispatch_pending(state: &EngineState) -> Result<u64, AppError> {
 
     let subs: Vec<ActiveSubscription> = sqlx::query_as(
         "SELECT id, filter_entity_logicalnames, filter_operations, filter_event_names, \
-                filter_expression \
+                filter_expression, payload_shape \
          FROM event_subscription \
          WHERE is_deleted = FALSE AND is_active = TRUE AND kind = 'webhook'",
     )
@@ -108,7 +109,11 @@ async fn dispatch_one(
         // actually inserted, so a re-read of an already-processed event
         // (crash between enqueue and cursor advance, or an overlapping run)
         // creates neither a duplicate row nor a duplicate job.
-        if let Some(delivery_id) = create_delivery_row(&state.base.db, sub.id, event).await? {
+        let with_changes = crate::payload::PayloadShape::from_stored(&sub.payload_shape)
+            == crate::payload::PayloadShape::Changes;
+        if let Some(delivery_id) =
+            create_delivery_row_shaped(&state.base.db, sub.id, event, with_changes).await?
+        {
             // Belt-and-suspenders dedup: the row above already guarantees at
             // most one delivery row per (subscription, event), and
             // `enqueue_dedup` additionally guarantees at most one eligible
@@ -149,10 +154,26 @@ pub async fn create_delivery_row(
     subscription_id: Uuid,
     event: &change_feed::ChangeEvent,
 ) -> Result<Option<Uuid>, AppError> {
+    create_delivery_row_shaped(db, subscription_id, event, false).await
+}
+
+/// M13-T1: [`create_delivery_row`] that also keeps the event name and the
+/// changed attribute names, and, for a `changes`-shaped subscription
+/// (`with_changes`), the outbox row's old and new values, so the body can be
+/// built after the outbox row is pruned. Other shapes copy no values.
+pub async fn create_delivery_row_shaped(
+    db: &attome_db::DbPool,
+    subscription_id: Uuid,
+    event: &change_feed::ChangeEvent,
+    with_changes: bool,
+) -> Result<Option<Uuid>, AppError> {
     let id: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO event_delivery \
-            (subscription_ref, event_id, event_entity_logicalname, event_record_id, event_operation) \
-         VALUES ($1, $2, $3, $4, $5) \
+            (subscription_ref, event_id, event_entity_logicalname, event_record_id, event_operation, \
+             event_name, changed_attributes, changes_before, changes_after) \
+         SELECT $1, $2, $3, $4, $5, $6, $7, e.before, e.after \
+           FROM (SELECT 1) AS one \
+           LEFT JOIN entity_change_event e ON $8 AND e.id = $2 \
          ON CONFLICT (subscription_ref, event_id) DO NOTHING \
          RETURNING id",
     )
@@ -161,6 +182,9 @@ pub async fn create_delivery_row(
     .bind(&event.entity_logicalname)
     .bind(event.record_id)
     .bind(&event.operation)
+    .bind(&event.event_name)
+    .bind(&event.changed_attributes)
+    .bind(with_changes)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;

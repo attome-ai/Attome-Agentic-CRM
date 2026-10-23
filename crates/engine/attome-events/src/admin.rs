@@ -63,6 +63,14 @@ fn valid_retry_class(s: &str) -> bool {
     matches!(s, "standard" | "extended")
 }
 
+fn checked_payload_shape(s: &str) -> Result<&'static str, AppError> {
+    crate::payload::PayloadShape::parse(s)
+        .map(crate::payload::PayloadShape::as_str)
+        .ok_or_else(|| {
+            AppError::Validation("payload_shape must be 'id', 'changes' or 'full'".into())
+        })
+}
+
 // ── Request/response types ──────────────────────────────────────────────────
 
 #[derive(Deserialize, ToSchema)]
@@ -89,6 +97,10 @@ struct CreateSubscriptionBody {
     #[serde(default)]
     max_attempts: Option<i32>,
     owner_ref: Uuid,
+    /// M13-T1: `id`, `changes` or `full` (the default): what each webhook
+    /// body carries besides the entity, record id and operation.
+    #[serde(default)]
+    payload_shape: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -115,6 +127,9 @@ struct UpdateSubscriptionBody {
     target_url: Option<String>,
     retry_class: Option<String>,
     max_attempts: Option<i32>,
+    /// M13-T1: `id`, `changes` or `full`; omitting it keeps the current one.
+    #[serde(default)]
+    payload_shape: Option<String>,
     row_version: i64,
 }
 
@@ -134,6 +149,8 @@ struct SubscriptionDetail {
     retry_class: String,
     max_attempts: i32,
     owner_ref: Uuid,
+    /// M13-T1: `id`, `changes` or `full`.
+    payload_shape: String,
     row_version: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -324,6 +341,7 @@ async fn create_subscription(
         .max_attempts
         .unwrap_or_else(|| delivery::default_max_attempts(&retry_class))
         .clamp(1, MAX_ATTEMPTS_CEILING);
+    let payload_shape = checked_payload_shape(body.payload_shape.as_deref().unwrap_or("full"))?;
 
     let url = reqwest::Url::parse(&body.target_url)
         .map_err(|_| AppError::Validation("target_url is not a valid URL".into()))?;
@@ -367,8 +385,8 @@ async fn create_subscription(
         "INSERT INTO event_subscription \
             (id, name, kind, filter_entity_logicalnames, filter_operations, filter_event_names, \
              filter_expression, target_url, webhook_secret_encrypted, retry_class, \
-             max_attempts, owner_ref, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+             max_attempts, owner_ref, created_by, payload_shape) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
          RETURNING id, name, kind, created_at",
     )
     .bind(new_id)
@@ -384,6 +402,7 @@ async fn create_subscription(
     .bind(max_attempts)
     .bind(body.owner_ref)
     .bind(created_by)
+    .bind(payload_shape)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -458,9 +477,11 @@ async fn update_subscription(
         Option<String>,
         String,
         i32,
+        String,
     ) = sqlx::query_as(
         "SELECT name, is_active, filter_entity_logicalnames, filter_operations, \
-                filter_event_names, filter_expression, target_url, retry_class, max_attempts \
+                filter_event_names, filter_expression, target_url, retry_class, max_attempts, \
+                payload_shape \
          FROM event_subscription WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(id)
@@ -493,6 +514,7 @@ async fn update_subscription(
         .max_attempts
         .unwrap_or(cur.8)
         .clamp(1, MAX_ATTEMPTS_CEILING);
+    let new_payload_shape = checked_payload_shape(body.payload_shape.as_deref().unwrap_or(&cur.9))?;
 
     let new_target_url = match body.target_url {
         Some(raw) => {
@@ -522,7 +544,7 @@ async fn update_subscription(
         "UPDATE event_subscription \
             SET name = $2, is_active = $3, filter_entity_logicalnames = $4, \
                 filter_operations = $5, filter_event_names = $6, filter_expression = $7, \
-                target_url = $8, retry_class = $9, max_attempts = $10, \
+                target_url = $8, retry_class = $9, max_attempts = $10, payload_shape = $12, \
                 updated_at = NOW(), row_version = row_version + 1 \
           WHERE id = $1 AND row_version = $11 AND is_deleted = FALSE",
     )
@@ -537,6 +559,7 @@ async fn update_subscription(
     .bind(&new_retry_class)
     .bind(new_max_attempts)
     .bind(body.row_version)
+    .bind(new_payload_shape)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -789,10 +812,11 @@ async fn fetch_detail(
         i64,
         DateTime<Utc>,
         DateTime<Utc>,
+        String,
     )> = sqlx::query_as(
         "SELECT id, name, kind, is_active, filter_entity_logicalnames, filter_operations, \
                 filter_event_names, filter_expression, target_url, retry_class, max_attempts, \
-                owner_ref, row_version, created_at, updated_at \
+                owner_ref, row_version, created_at, updated_at, payload_shape \
          FROM event_subscription WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(id)
@@ -813,6 +837,7 @@ async fn fetch_detail(
         retry_class: r.9,
         max_attempts: r.10,
         owner_ref: r.11,
+        payload_shape: r.15,
         row_version: r.12,
         created_at: r.13,
         updated_at: r.14,
