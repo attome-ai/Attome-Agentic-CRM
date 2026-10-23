@@ -21,6 +21,36 @@ pub enum Ingested {
     Held { contribution: Uuid, reason: String },
 }
 
+/// Whether `entity` is master data: its contribution table exists.
+pub async fn is_master(state: &EngineState, entity: &str) -> Result<bool, AppError> {
+    sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+        .bind(quote_ident(&contribution_table(entity)))
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)
+}
+
+/// `payload` against `entity`'s own field validation (A3): the reason it
+/// fails, if it does.
+pub fn validation_failure(
+    state: &EngineState,
+    entity: &str,
+    payload: &Map<String, Value>,
+) -> Result<Option<String>, AppError> {
+    let attrs = state
+        .entities
+        .load()
+        .get(entity)
+        .map(|m| m.attrs.clone())
+        .ok_or(AppError::NotFound)?;
+    Ok(
+        match crate::entity_mutation::validate_body(&attrs, payload, false) {
+            Ok(()) => None,
+            Err(e) => Some(e.to_string()),
+        },
+    )
+}
+
 /// Stores `payload` as `source_system`'s version of the record it calls
 /// `external_id`, and attaches it to its golden record.
 pub async fn ingest(
@@ -38,28 +68,16 @@ pub async fn ingest(
             "a contribution names its source system and external id".into(),
         ));
     }
-    let attrs = state
-        .entities
-        .load()
-        .get(entity)
-        .map(|m| m.attrs.clone())
-        .ok_or(AppError::NotFound)?;
-    let table = contribution_table(entity);
-    let is_master: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
-        .bind(quote_ident(&table))
-        .fetch_one(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
-    if !is_master {
+    if !is_master(state, entity).await? {
+        if state.entities.load().get(entity).is_none() {
+            return Err(AppError::NotFound);
+        }
         return Err(AppError::Validation(format!("{entity} is not master data")));
     }
-    let t = quote_ident(&table);
+    let t = quote_ident(&contribution_table(entity));
 
     // A3: the entity's own field validation; a failing version is held.
-    let held_reason = match crate::entity_mutation::validate_body(&attrs, payload, false) {
-        Ok(()) => None,
-        Err(e) => Some(e.to_string()),
-    };
+    let held_reason = validation_failure(state, entity, payload)?;
     let (contribution, golden): (Uuid, Option<Uuid>) = sqlx::query_as(&format!(
         "INSERT INTO {t} (source_system, external_id, payload, status, held_reason, received_at) \
          VALUES ($1, $2, $3, $4, $5, now()) \
@@ -86,10 +104,48 @@ pub async fn ingest(
             reason,
         });
     }
+    let (golden, queued) = attach(
+        state,
+        ctx,
+        entity,
+        Pending {
+            contribution,
+            golden,
+            source_system,
+            external_id,
+            payload,
+        },
+    )
+    .await?;
+    Ok(Ingested::Attached {
+        contribution,
+        golden,
+        queued,
+    })
+}
 
-    // The golden record: the one already attached, else the record the
-    // A29 external-id links name, else a new one from this contribution.
-    let golden = match golden {
+/// A valid contribution about to be attached.
+pub struct Pending<'a> {
+    pub contribution: Uuid,
+    /// The golden record it was attached to before, if any.
+    pub golden: Option<Uuid>,
+    pub source_system: &'a str,
+    pub external_id: &'a str,
+    pub payload: &'a Map<String, Value>,
+}
+
+/// Attaches a valid contribution to its golden record and queues a rebuild
+/// of it; the golden record and whether a rebuild was queued. The golden
+/// record is the one it was attached to before, else the record the A29
+/// external-id links name, else a new one made from the contribution.
+pub async fn attach(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+    pending: Pending<'_>,
+) -> Result<(Uuid, bool), AppError> {
+    let t = quote_ident(&contribution_table(entity));
+    let golden = match pending.golden {
         Some(g) => g,
         None => {
             let linked: Option<Uuid> = sqlx::query_scalar(
@@ -97,8 +153,8 @@ pub async fn ingest(
                   WHERE entity = $1 AND system = $2 AND external_id = $3",
             )
             .bind(entity)
-            .bind(source_system)
-            .bind(external_id)
+            .bind(pending.source_system)
+            .bind(pending.external_id)
             .fetch_optional(&state.base.db)
             .await
             .map_err(AppError::internal)?;
@@ -110,7 +166,7 @@ pub async fn ingest(
                         ctx,
                         ctx.user_id,
                         entity,
-                        Value::Object(payload.clone()),
+                        Value::Object(pending.payload.clone()),
                     )
                     .await?;
                     sqlx::query(
@@ -119,8 +175,8 @@ pub async fn ingest(
                     )
                     .bind(entity)
                     .bind(created)
-                    .bind(source_system)
-                    .bind(external_id)
+                    .bind(pending.source_system)
+                    .bind(pending.external_id)
                     .execute(&state.base.db)
                     .await
                     .map_err(AppError::internal)?;
@@ -132,25 +188,31 @@ pub async fn ingest(
     sqlx::query(&format!(
         "UPDATE {t} SET golden_id = $2, status = 'attached', held_reason = NULL WHERE id = $1"
     ))
-    .bind(contribution)
+    .bind(pending.contribution)
     .bind(golden)
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let queued = attome_jobs::enqueue_dedup(
+    let queued = queue_rebuild(state, entity, golden, ctx.user_id).await?;
+    Ok((golden, queued))
+}
+
+/// Queues a rebuild of `golden` unless an identical one is waiting.
+pub async fn queue_rebuild(
+    state: &EngineState,
+    entity: &str,
+    golden: Uuid,
+    actor: Uuid,
+) -> Result<bool, AppError> {
+    attome_jobs::enqueue_dedup(
         &state.base.db,
         attome_core::jobs::EngineJob::MasterRebuild {
             entity: entity.to_owned(),
             golden_id: golden,
-            actor: ctx.user_id,
+            actor,
         },
         &format!("master-rebuild:{entity}:{golden}"),
     )
     .await
-    .map_err(AppError::internal)?;
-    Ok(Ingested::Attached {
-        contribution,
-        golden,
-        queued,
-    })
+    .map_err(AppError::internal)
 }

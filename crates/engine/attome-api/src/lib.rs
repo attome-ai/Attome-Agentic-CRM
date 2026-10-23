@@ -233,6 +233,8 @@ pub mod inbound_hooks;
 pub mod change_stream;
 /// L5-T4: lineage graph routes.
 pub mod lineage_admin;
+/// L1-T5: data steward routes over master entities' golden records.
+pub mod master_admin;
 /// L2-T2: the data-quality dimensions.
 pub mod quality;
 pub mod schedules_admin;

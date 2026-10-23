@@ -601,6 +601,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // L1-T5: data steward routes over golden records.
+                crate::master_admin::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // L7-T3: change-stream subscriptions and their reads.
                 crate::change_stream::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),

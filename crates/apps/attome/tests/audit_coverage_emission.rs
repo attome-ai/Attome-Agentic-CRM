@@ -885,6 +885,15 @@ async fn provision_entity_and_record(fx: &Fx) -> (Uuid, Uuid) {
     (entity_id, id_of(&record))
 }
 
+/// L1-T5: the throwaway entity as master data (its side tables) and a fresh
+/// golden record of it.
+async fn master_golden(fx: &Fx) -> Uuid {
+    attome_metadata::provision::master::ensure_master_tables(&fx.base.db, &fx.entity)
+        .await
+        .expect("master-data side tables");
+    entity_record(fx, "golden record").await
+}
+
 /// A fresh record on the throwaway entity with `title`.
 async fn entity_record(fx: &Fx, title: &str) -> Uuid {
     id_of(
@@ -5700,6 +5709,41 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 &format!("/api/v1/admin/data/quality/targets/{}", fx.entity),
                 t,
                 None,
+            )
+        }
+        // L1-T5: a steward's pins and certification of a golden record.
+        "POST /api/v1/master/{entity}/{id}/pins" => {
+            let golden = master_golden(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/master/{}/{golden}/pins", fx.entity),
+                t,
+                Some(json!({"attribute": "title"})),
+            )
+        }
+        "DELETE /api/v1/master/{entity}/{id}/pins/{attribute}" => {
+            let golden = master_golden(fx).await;
+            admin(
+                fx,
+                "POST",
+                &format!("/api/v1/master/{}/{golden}/pins", fx.entity),
+                Some(json!({"attribute": "title"})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!("/api/v1/master/{}/{golden}/pins/title", fx.entity),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/master/{entity}/{id}/certify" => {
+            let golden = master_golden(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/master/{}/{golden}/certify", fx.entity),
+                t,
+                Some(json!({"status": "certified"})),
             )
         }
         // L5-T5: hand-documented lineage links.

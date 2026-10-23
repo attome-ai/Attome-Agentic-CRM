@@ -188,6 +188,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data steward routes over master data (L1-T5): `POST /api/v1/master/{entity}/{id}/pins` pins an
+  attribute of a golden record (optionally setting its value first), so survivorship rebuilds leave it
+  alone, and `DELETE .../pins/{attribute}` unpins it and queues a rebuild;
+  `POST /api/v1/master/{entity}/contributions/{cid}/release` validates a held contribution again
+  (with a corrected `payload`, if sent) and attaches it, `/reject` detaches it with a reason and
+  `/detach` takes an attached one out of its golden record; `POST /api/v1/master/{entity}/{id}/certify`
+  sets `draft`, `certified` or `retired` (migration 0238); `GET /api/v1/master/held` lists held
+  contributions. An administrator or an owner or steward of the entity's data domain may act; pins
+  and certification write a Configuration security event.
 - Device readings and device rules (I7-T1): `POST /api/v1/service/device-readings` takes up to 500
   readings from devices that know only their own id and records each on the asset holding that
   `device_id` (field-service pack `0010`); a device that knows its asset can use an inbound hook

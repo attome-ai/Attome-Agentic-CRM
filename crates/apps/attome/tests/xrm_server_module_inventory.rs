@@ -95,12 +95,12 @@ const BASELINE: &[&str] = &[
     "api_usage_admin",
     "app_admin",
     "approval_admin",
-    "approval_metrics",
-    "approval_policy_admin",
     // M9-T1: approval processes sit on attome-approval like the policies
     // beside them, with the record engine's lock; no one engine owns both.
     // M9-T3: emailed approval links over attome-approval's requests.
     "approval_email",
+    "approval_metrics",
+    "approval_policy_admin",
     "approval_process",
     "audit_read",
     // A4-T5: the gap report reads the autonumber sequence tables directly;
@@ -114,6 +114,8 @@ const BASELINE: &[&str] = &[
     "calendar_admin",
     "capability_probe",
     "catalog_admin",
+    // L7-T3: change-stream subscriptions read by S2S identities.
+    "change_stream",
     "changes_admin",
     "changeset",
     "communication",
@@ -139,10 +141,19 @@ const BASELINE: &[&str] = &[
     "features_admin",
     "field_changes",
     "field_hooks",
+    // M14-T1: builder-defined inbound endpoints.
+    "inbound_hooks",
     "jobs_admin",
+    // A20-T2: agent-drafted label translations, beside metadata_label_admin.
+    "label_drafts",
     "license_admin",
     "limits_admin",
+    // L5-T4: the lineage graph read over every engine's definitions.
+    "lineage_admin",
     "live",
+    // L1-T5: data steward routes beside duplicates_admin and quality_admin,
+    // whose master-data work they finish; they move out together.
+    "master_admin",
     // C4-T1: belongs in attome-notification; kept here until that crate
     // takes a record-access (attome-security) dependency.
     "mentions",
@@ -160,6 +171,8 @@ const BASELINE: &[&str] = &[
     "omnichannel_metrics",
     "openapi",
     "profiler_admin",
+    // L2-T2/L2-T3: quality dimensions and the incremental sweep, beside quality_score.
+    "quality",
     "quality_admin",
     // L2-T5/L2-T6: Arabic checks and fix transforms beside quality_admin and
     // quality_score, which they extend; the three move out together.
@@ -176,18 +189,10 @@ const BASELINE: &[&str] = &[
     // AC7-T11: the bill of materials embedded by this crate's build.rs and
     // the packs in this crate's changeset ledger.
     "sbom_admin",
-    "schema",
     // M12-T3: one list over flow, report and platform schedules.
     "schedules_admin",
-    // M14-T1: builder-defined inbound endpoints.
-    "inbound_hooks",
-    // L7-T3: change-stream subscriptions read by S2S identities.
-    "change_stream",
-    // L5-T4: the lineage graph read over every engine's definitions.
-    "lineage_admin",
+    "schema",
     "seed_support",
-    // M7-T2/T3: stage processes read for forms and measured from stage_move.
-    "stage_process_api",
     "service_public",
     "settings_admin",
     // AA9-T6: the limits registry spans every engine (rate classes, bulk,
@@ -198,12 +203,20 @@ const BASELINE: &[&str] = &[
     // AA13-T8: the SLO store is attome-server's; an ops surface beside
     // `metrics` and `system_health`, which no engine owns.
     "slo_admin",
+    // M7-T2/T3: stage processes read for forms and measured from stage_move.
+    "stage_process_api",
+    // Z6-T1: the signed local-disk storage route, which no engine owns.
+    "storage_local",
     "system",
     "system_health",
     // Y2-T8: reads the statistics views for every entity table, which needs
     // the registry this crate composes; no engine crate owns table storage.
     "table_health",
     "tag_seed",
+    // A3: rule simulation beside business_rule_admin.
+    "validation_simulation",
+    // A3: rule outcome counts beside business_rule_admin.
+    "validation_stats",
     "view_admin",
     "webcrawl_admin",
 ];

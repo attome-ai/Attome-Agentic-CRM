@@ -1036,6 +1036,8 @@ const AUTHZ_CALLS: &[&str] = &[
     "require_lineage_steward",
     // L2-T4: an administrator, or the issue's owner.
     "require_issue_editor",
+    // L1-T5: an administrator, or a steward of the master entity's domain.
+    "require_master_steward",
 ];
 
 fn body_has_direct_check(body: &str) -> bool {
