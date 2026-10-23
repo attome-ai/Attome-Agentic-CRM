@@ -682,6 +682,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "أكبر تأخر لأي اشتراك بعدد الأحداث.",
     },
     MetricInfo {
+        name: "events_subscriptions_auto_paused_total",
+        kind: "counter",
+        unit: "subscriptions",
+        en: "Webhook subscriptions turned off because fewer than half of their last 100 deliveries succeeded.",
+        ar: "اشتراكات الويب هوك التي أُوقفت لأن أقل من نصف آخر 100 تسليم لها نجح.",
+    },
+    MetricInfo {
         name: "file_integrity_failures_total",
         kind: "counter",
         unit: "files",

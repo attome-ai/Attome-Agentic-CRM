@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Ordered webhooks and auto-pause (M13-T3): a subscription with `ordered: true` sends one record's
+  events one at a time, in the order they happened (a delivery waits while an earlier one of the
+  same record is still pending or retrying). When fewer than half of a subscription's last 100
+  attempted deliveries succeeded, it is turned off (`paused_at`, `paused_reason`), the change is
+  audited and its owner is notified in-app and by email; turning it back on clears the pause.
+  Metric `events_subscriptions_auto_paused_total`. Migration 0209.
 - Standard Webhooks signatures and target auth headers (M13-T2): every webhook delivery also carries
   `webhook-id` (the event id), `webhook-timestamp` and `webhook-signature` (`v1,` + base64
   HMAC-SHA256 of `id.timestamp.body`), so a receiver can verify with any Standard Webhooks library;

@@ -42,6 +42,7 @@
 
 pub mod admin;
 pub mod audit_dispatch;
+pub mod auto_pause;
 pub mod crypto;
 pub mod dead_letter_source;
 pub mod delivery;

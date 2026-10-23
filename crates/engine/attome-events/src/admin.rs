@@ -145,6 +145,9 @@ struct CreateSubscriptionBody {
     target_auth_header: Option<String>,
     #[serde(default)]
     target_auth_value: Option<String>,
+    /// M13-T3: send one record's events one at a time, in order.
+    #[serde(default)]
+    ordered: bool,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -180,6 +183,9 @@ struct UpdateSubscriptionBody {
     target_auth_header: Option<String>,
     #[serde(default)]
     target_auth_value: Option<String>,
+    /// M13-T3: omitting it keeps the current one.
+    #[serde(default)]
+    ordered: Option<bool>,
     row_version: i64,
 }
 
@@ -203,6 +209,11 @@ struct SubscriptionDetail {
     payload_shape: String,
     /// M13-T2: the target auth header's name; its value is never returned.
     target_auth_header: Option<String>,
+    /// M13-T3: one record's events are sent one at a time, in order.
+    ordered: bool,
+    /// M13-T3: when and why the endpoint's failures turned it off.
+    paused_at: Option<DateTime<Utc>>,
+    paused_reason: Option<String>,
     row_version: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -455,8 +466,8 @@ async fn create_subscription(
             (id, name, kind, filter_entity_logicalnames, filter_operations, filter_event_names, \
              filter_expression, target_url, webhook_secret_encrypted, retry_class, \
              max_attempts, owner_ref, created_by, payload_shape, target_auth_header, \
-             target_auth_value_encrypted) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) \
+             target_auth_value_encrypted, ordered) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) \
          RETURNING id, name, kind, created_at",
     )
     .bind(new_id)
@@ -475,6 +486,7 @@ async fn create_subscription(
     .bind(payload_shape)
     .bind(&auth_header)
     .bind(&auth_encrypted)
+    .bind(body.ordered)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -640,6 +652,9 @@ async fn update_subscription(
                 target_auth_header = CASE WHEN $13 THEN $14 ELSE target_auth_header END, \
                 target_auth_value_encrypted = \
                     CASE WHEN $13 THEN $15 ELSE target_auth_value_encrypted END, \
+                ordered = COALESCE($16, ordered), \
+                paused_at = CASE WHEN $3 THEN NULL ELSE paused_at END, \
+                paused_reason = CASE WHEN $3 THEN NULL ELSE paused_reason END, \
                 updated_at = NOW(), row_version = row_version + 1 \
           WHERE id = $1 AND row_version = $11 AND is_deleted = FALSE",
     )
@@ -658,6 +673,7 @@ async fn update_subscription(
     .bind(auth_change.is_some())
     .bind(&auth_header)
     .bind(&auth_encrypted)
+    .bind(body.ordered)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -897,7 +913,8 @@ async fn fetch_detail(
     sqlx::query_as(
         "SELECT id, name, kind, is_active, filter_entity_logicalnames, filter_operations, \
                 filter_event_names, filter_expression, target_url, retry_class, max_attempts, \
-                owner_ref, payload_shape, target_auth_header, row_version, created_at, updated_at \
+                owner_ref, payload_shape, target_auth_header, ordered, paused_at, paused_reason, \
+                row_version, created_at, updated_at \
          FROM event_subscription WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(id)

@@ -97,6 +97,11 @@ pub fn delivery_outcome(kind: &'static str, outcome: &'static str) {
     metrics::counter!("events_deliveries_total", "kind" => kind, "outcome" => outcome).increment(1);
 }
 
+/// M13-T3: a subscription turned off because its endpoint kept failing.
+pub fn auto_paused() {
+    metrics::counter!("events_subscriptions_auto_paused_total").increment(1);
+}
+
 pub fn dead_lettered(kind: &'static str, reason: DeadLetterReason) {
     delivery_outcome(kind, OUTCOME_DEAD_LETTER);
     metrics::counter!(

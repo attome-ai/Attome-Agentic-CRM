@@ -105,6 +105,40 @@ pub async fn defer_if_open(
     Ok(true)
 }
 
+/// M13-T3: how long an ordered delivery waits before it looks again.
+const ORDERED_RECHECK_SECS: i64 = 10;
+
+/// M13-T3: whether an earlier delivery of the same record to the same
+/// subscription is still open (pending, being sent, or failed and retrying).
+/// Delivery ids are UUIDv7, so `id <` is "matched earlier".
+async fn earlier_open(db: &DbPool, delivery: &DeliveryRow) -> Result<bool, AppError> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM event_delivery \
+                         WHERE subscription_ref = $1 AND event_record_id = $2 AND id < $3 \
+                           AND status IN ('pending', 'delivering', 'failed'))",
+    )
+    .bind(delivery.subscription_ref)
+    .bind(delivery.event_record_id)
+    .bind(delivery.id)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// M13-T3: after a failed attempt, pauses the subscription when its
+/// endpoint keeps failing. Observational for this delivery: an error here is
+/// logged, never the delivery's outcome.
+async fn pause_if_failing(state: &EngineState, delivery: &DeliveryRow, owner_ref: Uuid) {
+    if let Err(error) = crate::auto_pause::check(state, delivery.subscription_ref, owner_ref).await
+    {
+        tracing::warn!(
+            subscription_id = %delivery.subscription_ref,
+            %error,
+            "events delivery: the auto-pause check failed"
+        );
+    }
+}
+
 /// Whether an HTTP answer says the target is unwell (rather than refusing
 /// this one request).
 fn unwell(status: reqwest::StatusCode) -> bool {
@@ -152,6 +186,7 @@ struct SubscriptionRow {
     payload_shape: String,
     target_auth_header: Option<String>,
     target_auth_value_encrypted: Option<String>,
+    ordered: bool,
 }
 
 /// Delivers (or terminally fails) one `event_delivery` row.
@@ -225,6 +260,20 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
     // AB6-T5: an open breaker defers the delivery before it is counted.
     let breaker = endpoint(delivery.subscription_ref, &url);
     if defer_if_open(&state.base.db, delivery.id, &breaker).await? {
+        return Ok(());
+    }
+    // M13-T3: an ordered subscription sends one record's events one at a
+    // time: this waits while an earlier one of the same record is open.
+    if sub.ordered && earlier_open(&state.base.db, &delivery).await? {
+        attome_jobs::enqueue_at_on_pool(
+            &state.base.db,
+            attome_core::jobs::EngineJob::EventsDeliverWebhook {
+                delivery_id: delivery.id,
+            },
+            Utc::now() + chrono::Duration::seconds(ORDERED_RECHECK_SECS),
+        )
+        .await
+        .map_err(AppError::internal)?;
         return Ok(());
     }
 
@@ -348,6 +397,7 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
             let status_code = resp.status().as_u16() as i32;
             let masked = format!("webhook target returned HTTP {status_code}");
             mark_failed(&state.base.db, delivery.id, Some(status_code), &masked).await?;
+            pause_if_failing(state, &delivery, sub.owner_ref).await;
             if attempts < sub.max_attempts {
                 telemetry::delivery_outcome(kind, telemetry::OUTCOME_FAILED);
             }
@@ -377,6 +427,7 @@ pub async fn deliver(state: &EngineState, delivery_id: Uuid) -> Result<(), AppEr
                 "webhook delivery failed".to_string()
             };
             mark_failed(&state.base.db, delivery.id, None, &masked).await?;
+            pause_if_failing(state, &delivery, sub.owner_ref).await;
             if attempts < sub.max_attempts {
                 telemetry::delivery_outcome(kind, telemetry::OUTCOME_FAILED);
             }
@@ -525,7 +576,7 @@ async fn load_subscription(
     sqlx::query_as(
         "SELECT kind, is_active, is_deleted, target_url, webhook_secret_encrypted, \
                 max_attempts, owner_ref, payload_shape, target_auth_header, \
-                target_auth_value_encrypted \
+                target_auth_value_encrypted, ordered \
          FROM event_subscription WHERE id = $1",
     )
     .bind(subscription_id)
