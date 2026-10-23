@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- One lineage impact engine (L5-T3): `attome_core::lineage::impact` walks the lineage graph
+  downstream of a draft change (up to 10 edges, through metrics to the dashboards that show
+  them). Deleting or retyping a field that a dashboard, metric or model definition reads is now
+  refused with those definitions listed (`field_in_use`); stored queries and workflows keep their
+  field hooks. `GET /api/v1/admin/lineage/impact` previews it.
 - Personal data detection in data profiles (L6-T4). A profile checks the sampled values of every
   unlabelled text attribute for Saudi national IDs and Iqamas (with the ID checksum), IBANs
   (mod 97), phones and email addresses. Above 5% it proposes the `personal` label, listed at

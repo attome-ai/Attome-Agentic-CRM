@@ -50,6 +50,7 @@ use attome_core::changeset::field_hooks::{
     Blocker, CacheTouch, FieldRef, HookOutcome, ReportItemDraft,
 };
 use attome_core::changeset::{Layer, Op, RecordedOp, Recording};
+use attome_core::lineage::impact::{ChangeKind, DEFAULT_DEPTH, MetadataChange};
 use attome_core::recovery_archive::{self, ArchiveReason};
 use attome_db::Tx;
 use attome_metadata::provision::{self, field_change as fc};
@@ -610,6 +611,9 @@ async fn delete_blockers(
         field_hooks::customer_grant_conditions(tx, &row.entity, &row.field, layer).await?;
     let mut blockers = scan.blockers;
     blockers.extend(grant_blockers);
+    // L5-T3: a dashboard, metric or model definition that reads the field
+    // (lineage) and no hook adjusts would break.
+    blockers.extend(lineage_blockers(tx, row, ChangeKind::DeleteAttribute).await?);
     if !blockers.is_empty() {
         let in_use = blockers
             .iter()
@@ -622,6 +626,23 @@ async fn delete_blockers(
         }));
     }
     Ok((code, revocable))
+}
+
+/// L5-T3: the definitions the lineage impact engine finds `kind` would
+/// break, as blockers.
+async fn lineage_blockers(
+    tx: &mut Tx<'_>,
+    row: &fc::FieldRow,
+    kind: ChangeKind,
+) -> Result<Vec<Blocker>, AppError> {
+    let change = MetadataChange {
+        entity: row.entity.clone(),
+        attribute: Some(row.field.clone()),
+        kind,
+    };
+    let report =
+        attome_core::lineage::impact::impact(tx, &[change], DEFAULT_DEPTH, |_, _| true).await?;
+    Ok(attome_core::lineage::impact::blockers(&report))
 }
 
 /// The consequence writes of a delete, in its transaction just before the
@@ -832,6 +853,12 @@ pub async fn change_field_type(
     if !rule_scan.blockers.is_empty() {
         result.blockers.extend(rule_scan.blockers.iter().cloned());
         return Ok(result.blocked("field_referenced"));
+    }
+    // L5-T3: a definition that reads the field and no hook adjusts.
+    let impacted = lineage_blockers(&mut tx, &row, ChangeKind::ChangeAttributeType).await?;
+    if !impacted.is_empty() {
+        result.blockers.extend(impacted);
+        return Ok(result.blocked("field_in_use"));
     }
     // M5: the size gate first; a large table's non-convertible values are
     // counted by the run, never by a scan on the request thread.

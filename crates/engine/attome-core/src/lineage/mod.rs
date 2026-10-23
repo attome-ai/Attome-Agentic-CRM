@@ -14,6 +14,8 @@
 //! as it stood after every publish can be told apart.
 
 pub mod capture;
+/// L5-T3: the impact engine.
+pub mod impact;
 
 use attome_types::AppError;
 use serde_json::Value;

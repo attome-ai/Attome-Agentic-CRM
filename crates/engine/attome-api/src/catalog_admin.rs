@@ -366,17 +366,84 @@ async fn get_entity(
     }))
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct ImpactQuery {
+    entity: String,
+    /// The attribute; without it, the change is to the entity.
+    attribute: Option<String>,
+    /// `delete`, `retype`, `rename` or `other` (the default).
+    change: Option<String>,
+    /// Edges walked downstream, 1 to 10 (default 5).
+    depth: Option<u8>,
+}
+
+/// The impact of a draft change, for the publish preview.
+///
+/// L5-T3: every definition downstream of the change in the lineage graph
+/// (direct uses at depth 1, then what uses those), and the ones it would
+/// break: a deleted or retyped attribute read, derived from or written by a
+/// definition no field hook adjusts (dashboards, metrics, model
+/// definitions). Deleting or retyping the field is refused with the same
+/// list. Items the caller may not see are counted in `hidden`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/lineage/impact",
+    tag = "admin",
+    params(ImpactQuery),
+    responses(
+        (status = 200, description = "The impact report", body = attome_core::lineage::impact::ImpactReport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Unknown change, or depth out of range", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn lineage_impact(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<ImpactQuery>,
+) -> Result<Json<attome_core::lineage::impact::ImpactReport>, AppError> {
+    use attome_core::lineage::impact::{ChangeKind, DEFAULT_DEPTH, MAX_DEPTH, MetadataChange};
+    let kind = match q.change.as_deref().unwrap_or("other") {
+        "delete" => ChangeKind::DeleteAttribute,
+        "retype" => ChangeKind::ChangeAttributeType,
+        "rename" => ChangeKind::RenameAttribute,
+        "other" => ChangeKind::Other,
+        _ => {
+            return Err(AppError::Validation(
+                "change is delete, retype, rename or other".into(),
+            ));
+        }
+    };
+    let depth = q.depth.unwrap_or(DEFAULT_DEPTH);
+    if !(1..=MAX_DEPTH).contains(&depth) {
+        return Err(AppError::Validation(format!("depth is 1 to {MAX_DEPTH}")));
+    }
+    let change = MetadataChange {
+        entity: q.entity,
+        attribute: q.attribute.filter(|a| !a.is_empty()),
+        kind,
+    };
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    // Administrators see every definition.
+    let report =
+        attome_core::lineage::impact::impact(&mut conn, &[change], depth, |_, _| true).await?;
+    Ok(Json(report))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/catalog/entities", get(list_entities))
         .route("/api/v1/catalog/entities/{logicalname}", get(get_entity))
+        .route("/api/v1/admin/lineage/impact", get(lineage_impact))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document (see `schema.rs`'s identical fragment for why this is split per
 /// file).
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_entities, get_entity))]
+#[openapi(paths(list_entities, get_entity, lineage_impact))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
