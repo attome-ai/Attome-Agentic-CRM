@@ -184,6 +184,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Connector SDK (S12-T1): `attome_integration::connector::sdk` reads a declarative connector
+  (`config.sdk`: base URL, auth none/bearer/basic/header/OAuth client credentials, endpoints with
+  path templates, records pointer and cursor/page/offset/`Link` paging, rate limit, retries) and
+  runs it: filled paths, credentials as redacted secrets, rate-limited calls retried on 429/5xx
+  with backoff and `Retry-After`, every page up to 1,000, through the SSRF-guarded client.
 - SCIM 2.0 provisioning (Q3-T1): `/scim/v2/Users` and `/scim/v2/Groups` (list with `eq` filters,
   create, read, replace, PATCH add/replace/remove in Entra ID's and Okta's shapes, delete) map to
   user accounts and teams, under a bearer token per identity provider issued at

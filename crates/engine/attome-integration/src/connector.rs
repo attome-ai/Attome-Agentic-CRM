@@ -20,6 +20,8 @@ use serde_json::Value;
 use crate::system::IntegrationSystem;
 
 pub mod adapters;
+/// S12-T1: declarative connector definitions and their runtime.
+pub mod sdk;
 
 /// `integration_system.kind` as a closed Rust enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
