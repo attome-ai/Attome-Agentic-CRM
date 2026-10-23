@@ -553,6 +553,12 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                crate::approval_process::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // D-421 / M10 (Approval & Governance)
                 crate::approval_policy_admin::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),

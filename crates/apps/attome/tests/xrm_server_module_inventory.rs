@@ -97,6 +97,9 @@ const BASELINE: &[&str] = &[
     "approval_admin",
     "approval_metrics",
     "approval_policy_admin",
+    // M9-T1: approval processes sit on attome-approval like the policies
+    // beside them, with the record engine's lock; no one engine owns both.
+    "approval_process",
     "audit_read",
     // A4-T5: the gap report reads the autonumber sequence tables directly;
     // attome-metadata has no route or admin-guard dependency to host it.

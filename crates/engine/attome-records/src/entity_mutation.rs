@@ -2854,6 +2854,11 @@ pub async fn update_one_as(
     validate_self_addressed(principal, entity_name, obj, false)?;
     validate_engine_managed_fields(state, entity_name, obj, mode)?;
     validate_model_record_validators(state, entity_name, obj)?;
+    // M9-T1: a record held by a pending approval process takes only the
+    // process's editable attributes, from people and their agents.
+    if matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {
+        crate::approval_lock::refuse_locked(tx, entity_name, record_id, obj).await?;
+    }
     // D-786 follow-up M2: a service principal's email (its marker) is
     // immutable here, in every mode and whoever the caller is.
     if entity_name == "user_account" {

@@ -124,6 +124,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::approval_admin::openapi_fragment(), "core"),
         (crate::approval_metrics::openapi_fragment(), "core"),
         (crate::approval_policy_admin::openapi_fragment(), "core"),
+        (crate::approval_process::openapi_fragment(), "core"),
         (crate::signoff::openapi_fragment(), "core"),
         (crate::profiler_admin::openapi_fragment(), "core"),
         (crate::system_health::openapi_fragment(), "core"),

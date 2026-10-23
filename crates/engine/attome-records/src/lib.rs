@@ -31,6 +31,8 @@
 //! - [`rw_pin`] — read-your-writes LSN pinning for a just-completed write.
 
 pub mod access_plan;
+/// M9-T1: the write lock of a pending approval process.
+pub mod approval_lock;
 pub mod bulk;
 /// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
 /// many records, applied by the bulk engine.

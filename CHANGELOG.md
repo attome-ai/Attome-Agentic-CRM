@@ -184,6 +184,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Approval processes (M9-T1): administrators define processes
+  (`/api/v1/admin/approval-processes`: entity, optional entry condition in rule text, the approval
+  plan, `lock_record`, `editable_attributes`). A person who may update a record submits it
+  (`POST /api/v1/approval-processes/{id}/submit {record_id}`): the record must meet the entry
+  condition and have no other pending request of the process; the request is an ordinary approval
+  request decided through the usual routes. While it is pending, a locking process refuses every
+  update of the record except its editable attributes (403 `attribute_not_writable`). The requester
+  recalls it while undecided (`POST /api/v1/approval-processes/requests/{request_id}/recall`).
+  Migration 0210.
 - Flow template gallery (M6-T4) at `/xrm/workflow/templates`: search the published `flow_template`
   objects, fill in a template's parameters and create a draft flow from it (opened in the editor),
   or save an existing flow's newest version as a template. New

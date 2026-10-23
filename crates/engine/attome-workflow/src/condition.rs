@@ -38,7 +38,7 @@ pub fn check_expression(src: &str) -> Result<(), String> {
 }
 
 /// Evaluates `src` against `input`; anything but `true` is `false`.
-pub(crate) fn expression_holds(src: &str, input: &Value) -> bool {
+pub fn expression_holds(src: &str, input: &Value) -> bool {
     let (schema, ctx) = bind_input(input);
     let compiled = match attome_rules::compile_versioned(
         src,

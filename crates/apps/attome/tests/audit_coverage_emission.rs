@@ -1043,6 +1043,33 @@ async fn approval_policy(fx: &Fx) -> Uuid {
     )
 }
 
+/// M9-T1: an approval process on the throwaway entity, decided by the admin.
+fn approval_process_body(fx: &Fx) -> Value {
+    json!({
+        "name": uniq("process"),
+        "entity_logicalname": fx.entity,
+        "plan": {"steps": [{
+            "mode": "any",
+            "approvers": [format!("user:{}", fx.admin_id)],
+            "sla_minutes": 60,
+            "on_timeout": "escalate",
+        }]},
+        "lock_record": true,
+    })
+}
+
+async fn approval_process(fx: &Fx) -> Uuid {
+    id_of(
+        &admin(
+            fx,
+            "POST",
+            "/api/v1/admin/approval-processes",
+            Some(approval_process_body(fx)),
+        )
+        .await,
+    )
+}
+
 fn approval_policy_body(fx: &Fx) -> Value {
     json!({
         "name": uniq("policy"),
@@ -3490,6 +3517,64 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
         // ── approvals ───────────────────────────────────────────────────────
+        // M9-T1: approval processes and their submit and recall.
+        "POST /api/v1/admin/approval-processes" => request(
+            "POST",
+            "/api/v1/admin/approval-processes",
+            t,
+            Some(approval_process_body(fx)),
+        ),
+        "PATCH /api/v1/admin/approval-processes/{id}" => {
+            let id = approval_process(fx).await;
+            let mut body = approval_process_body(fx);
+            body["row_version"] = json!(0);
+            request(
+                "PATCH",
+                &format!("/api/v1/admin/approval-processes/{id}"),
+                t,
+                Some(body),
+            )
+        }
+        "DELETE /api/v1/admin/approval-processes/{id}" => {
+            let id = approval_process(fx).await;
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/approval-processes/{id}"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/approval-processes/{id}/submit" => {
+            let id = approval_process(fx).await;
+            let record = entity_record(fx, "approval process submit").await;
+            request(
+                "POST",
+                &format!("/api/v1/approval-processes/{id}/submit"),
+                t,
+                Some(json!({"record_id": record})),
+            )
+        }
+        "POST /api/v1/approval-processes/requests/{request_id}/recall" => {
+            let id = approval_process(fx).await;
+            let record = entity_record(fx, "approval process recall").await;
+            let submitted = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/approval-processes/{id}/submit"),
+                Some(json!({"record_id": record})),
+            )
+            .await;
+            let request_id = submitted["request_id"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned();
+            request(
+                "POST",
+                &format!("/api/v1/approval-processes/requests/{request_id}/recall"),
+                t,
+                Some(json!({"row_version": submitted["row_version"]})),
+            )
+        }
         "POST /api/v1/admin/approval-policies" => request(
             "POST",
             "/api/v1/admin/approval-policies",

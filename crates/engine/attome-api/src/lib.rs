@@ -16,6 +16,8 @@ mod approval_admin;
 /// N30-T8/T9 — `/api/v1/admin/approvals/metrics`.
 mod approval_metrics;
 mod approval_policy_admin;
+/// M9-T1: approval processes, submit and recall.
+pub mod approval_process;
 /// audit-10-10 Phase 6 items 6.1-6.3 — self-service record history and my-
 /// activity read APIs over the audit ledger. `mod`, not `pub`: nothing else
 /// in this crate reaches into it, same posture as `communication`/
