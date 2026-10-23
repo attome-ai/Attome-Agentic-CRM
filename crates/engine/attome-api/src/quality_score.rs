@@ -58,6 +58,8 @@ const SCORE_ALERT_THRESHOLD: f64 = 70.0;
 
 const COMPLETENESS: &str = "completeness";
 const UNIQUENESS: &str = "uniqueness";
+/// L2-T2: the weighted overall score's dimension row.
+const OVERALL: &str = "overall";
 
 pub struct QualitySweepStats {
     pub entities_scored: usize,
@@ -212,7 +214,181 @@ async fn score_entity(
         .await?;
     }
 
+    // L2-T2: validity, consistency and timeliness over a sample of recent
+    // records, then the weighted overall score against the threshold.
+    score_rules_and_overall(
+        db,
+        &table,
+        &meta.logicalname,
+        period,
+        row_count,
+        &mut outcome,
+    )
+    .await?;
+
     Ok(outcome)
+}
+
+/// Records sampled for the rule and timeliness dimensions, newest first.
+const RULE_SAMPLE: i64 = 1_000;
+
+/// L2-T2: the dimensions measured from rules and record age, and the
+/// overall score (`crate::quality::dimensions`).
+async fn score_rules_and_overall(
+    db: &DbPool,
+    table: &str,
+    entity_name: &str,
+    period: &str,
+    row_count: i64,
+    outcome: &mut EntityOutcome,
+) -> Result<(), AppError> {
+    use crate::quality::dimensions::{self, Dimension, Measure};
+
+    let target: Option<(serde_json::Value, f64, Option<i32>)> = sqlx::query_as(
+        "SELECT dimension_weights, threshold::float8, timeliness_days FROM quality_target \
+          WHERE entity = $1",
+    )
+    .bind(entity_name)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let rules: Vec<(String, String)> = sqlx::query_as(
+        "SELECT dimension, expression FROM quality_rule \
+          WHERE entity = $1 AND enabled AND dimension IN ('validity', 'consistency') \
+          ORDER BY id",
+    )
+    .bind(entity_name)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let of = |dimension: &str| -> Vec<String> {
+        rules
+            .iter()
+            .filter(|(d, _)| d == dimension)
+            .map(|(_, e)| e.clone())
+            .collect()
+    };
+    let (validity_rules, consistency_rules) = (of("validity"), of("consistency"));
+    let max_age = target.as_ref().and_then(|t| t.2).map(f64::from);
+
+    let mut measured: Vec<(Dimension, Measure)> = Vec::new();
+    if row_count > 0 && (!rules.is_empty() || max_age.is_some()) {
+        let records: Vec<serde_json::Value> = sqlx::query_scalar(&format!(
+            "SELECT row_to_json(t)::jsonb FROM {table} t ORDER BY t.id DESC LIMIT {RULE_SAMPLE}"
+        ))
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        // A soft-deleted record is not measured.
+        let records: Vec<serde_json::Value> = records
+            .into_iter()
+            .filter(|r| r.get("is_active").and_then(serde_json::Value::as_bool) != Some(false))
+            .collect();
+        let now = Utc::now();
+        let ages: Vec<f64> = records
+            .iter()
+            .filter_map(|r| {
+                r.get("modified_at")
+                    .or_else(|| r.get("created_at"))
+                    .and_then(serde_json::Value::as_str)
+                    .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                    .map(|at| (now - at.with_timezone(&Utc)).num_seconds() as f64 / 86_400.0)
+            })
+            .collect();
+        measured.push((
+            Dimension::Validity,
+            dimensions::rule_pass_rate(&validity_rules, &records),
+        ));
+        measured.push((
+            Dimension::Consistency,
+            dimensions::rule_pass_rate(&consistency_rules, &records),
+        ));
+        measured.push((
+            Dimension::Timeliness,
+            dimensions::timeliness(&ages, max_age),
+        ));
+    }
+    for (dimension, measure) in &measured {
+        if let Measure::Measured {
+            pass,
+            fail,
+            sample,
+            score,
+        } = *measure
+        {
+            upsert_score(
+                db,
+                entity_name,
+                period,
+                dimension.as_str(),
+                pass,
+                fail,
+                sample,
+                score,
+            )
+            .await?;
+            outcome.scores_written += 1;
+        }
+    }
+    // Accuracy has no verification source yet: not measured.
+
+    // The overall score from every dimension measured today.
+    let today: Vec<(String, f64)> = sqlx::query_as(
+        "SELECT dimension, score::float8 FROM quality_score \
+          WHERE entity_logicalname = $1 AND period = $2 AND dimension <> 'overall'",
+    )
+    .bind(entity_name)
+    .bind(period)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let scores: Vec<(Dimension, Measure)> = today
+        .into_iter()
+        .filter_map(|(d, score)| {
+            Dimension::parse(&d).map(|dim| {
+                (
+                    dim,
+                    Measure::Measured {
+                        pass: 0,
+                        fail: 0,
+                        sample: 0,
+                        score,
+                    },
+                )
+            })
+        })
+        .collect();
+    let weights = target
+        .as_ref()
+        .map(|t| dimensions::weights_from(&t.0))
+        .unwrap_or_default();
+    let threshold = target
+        .as_ref()
+        .map_or(dimensions::DEFAULT_THRESHOLD, |t| t.1);
+    if let Some(overall) = dimensions::combine(&scores, &weights) {
+        let counted = i64::try_from(scores.len()).unwrap_or(0);
+        upsert_score(
+            db,
+            entity_name,
+            period,
+            OVERALL,
+            counted,
+            0,
+            counted,
+            overall,
+        )
+        .await?;
+        outcome.scores_written += 1;
+        if overall < threshold {
+            outcome.alerts.push(DimensionAlert {
+                dimension: OVERALL,
+                score: overall,
+                fail_count: 0,
+                sample_size: counted,
+            });
+        }
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]

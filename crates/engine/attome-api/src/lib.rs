@@ -233,6 +233,8 @@ pub mod inbound_hooks;
 pub mod change_stream;
 /// L5-T4: lineage graph routes.
 pub mod lineage_admin;
+/// L2-T2: the data-quality dimensions.
+pub mod quality;
 pub mod schedules_admin;
 pub mod stage_process_api;
 pub mod settings_admin;
