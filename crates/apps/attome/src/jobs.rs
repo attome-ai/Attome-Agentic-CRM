@@ -612,7 +612,11 @@ async fn dispatch_platform_job(
                 // A lookup column is always indexed (FK existence and
                 // cascade checks), like the admin route's own intent.
                 r#"SELECT (COALESCE(a.is_sortable, false) OR COALESCE(a.is_filterable, false)
-                           OR a.type = 11)
+                           OR a.type = 11
+                           -- AA3-T1: the index advisor chose it.
+                           OR EXISTS (SELECT 1 FROM index_advice x
+                                       WHERE x.entity_logicalname = e.logicalname
+                                         AND x.attribute = a.logicalname))
                    FROM attribute_info a
                    JOIN entity_info e ON e.id = a.entity_ref
                   WHERE e.logicalname = $1 AND a.logicalname = $2
@@ -816,6 +820,21 @@ async fn dispatch_platform_job(
                 }
             }
             tracing::info!(queued, "trigram index sweep: builds queued");
+            // AA3-T1: and the indexes the advisor chooses for what views and
+            // definitions filter and sort on.
+            let advised = attome_metadata::provision::index_advisor::advise(&db).await?;
+            let mut advised_queued = 0usize;
+            for (entity, field) in advised {
+                let key = format!("index-advice:{entity}:{field}");
+                let job = EngineJob::BuildAttributeIndex {
+                    entity_logicalname: entity,
+                    field_logicalname: field,
+                };
+                if attome_jobs::enqueue_dedup(&db, job, &key).await? {
+                    advised_queued += 1;
+                }
+            }
+            tracing::info!(advised_queued, "index advisor: builds queued");
         }
         EngineJob::RevalidateQueryPlans => {
             let summary =

@@ -184,6 +184,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Index advisor (AA3-T1): the daily index sweep counts the attributes views sort and filter on and
+  the attributes definitions read (lineage), and on tables over 10,000 rows queues online index
+  builds for the most used unindexed ones, at most 15 indexes per table (`index_advice`).
 - Identity agent assists (Q2-T5), administrators only and read-only: `identity.broker_steps` reads
   SAML metadata (at most 256 KB, no DTD or entities processed, no signature trusted) and returns
   Keycloak brokering steps with the entity id, sign-on URL and certificate SHA-256 filled in;

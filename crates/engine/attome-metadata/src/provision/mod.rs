@@ -45,6 +45,8 @@ pub mod record_type;
 pub mod stage_process;
 /// L1-T2: a master entity's contribution and provenance side tables.
 pub mod master;
+/// AA3-T1: indexes for the attributes views and definitions filter and sort on.
+pub mod index_advisor;
 /// M01 Core P3 gap (D-455) — physical join-table provisioning for the
 /// generic many-to-many relationship metadata object.
 mod relationship;
