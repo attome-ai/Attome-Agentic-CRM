@@ -42,6 +42,12 @@ impl EndpointServices {
 
     /// The service for `key`, made on first use.
     pub fn get(&self, key: &str) -> Arc<Service> {
+        self.get_with(key, self.policy)
+    }
+
+    /// [`EndpointServices::get`], with `policy` for a service made now (an
+    /// endpoint whose timeout is its own configuration).
+    pub fn get_with(&self, key: &str, policy: Policy) -> Arc<Service> {
         let mut entries = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
         entries.clock += 1;
         let now = entries.clock;
@@ -58,7 +64,7 @@ impl EndpointServices {
         {
             entries.by_key.remove(&oldest);
         }
-        let service = Arc::new(Service::new(self.name, self.policy));
+        let service = Arc::new(Service::new(self.name, policy));
         entries
             .by_key
             .insert(key.to_owned(), (service.clone(), now));

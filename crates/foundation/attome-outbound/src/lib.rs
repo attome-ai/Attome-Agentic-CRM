@@ -91,6 +91,13 @@ pub trait Retryable {
     fn retry_after(&self) -> Option<Duration> {
         None
     }
+    /// Whether this failure counts against the service's breaker. The same as
+    /// [`Retryable::retryable`] unless a service says otherwise: a model
+    /// server's plain 500 is not worth replaying, yet still says the server is
+    /// unwell (AB6-T3).
+    fn counts_as_failure(&self) -> bool {
+        self.retryable()
+    }
 }
 
 /// Why a call failed.
@@ -195,7 +202,7 @@ where
             Ok(Err(error)) => {
                 let retryable = error.retryable();
                 // A refused request says nothing about the service's health.
-                svc.breaker.record(!retryable);
+                svc.breaker.record(!error.counts_as_failure());
                 if !retryable {
                     return Err(OutboundError::Failed(error));
                 }

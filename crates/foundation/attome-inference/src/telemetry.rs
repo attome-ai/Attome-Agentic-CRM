@@ -32,6 +32,7 @@ pub const OUTCOMES: &[&str] = &[
     "upstream",
     "bad_response",
     "cancelled",
+    "breaker_open",
 ];
 /// The `class` label's values; `none` for every outcome but `upstream`.
 pub const CLASSES: &[&str] = &[
@@ -58,6 +59,7 @@ pub(crate) fn labels<T>(
         InferenceError::Upstream { class, .. } => ("upstream", class_label(*class)),
         InferenceError::BadResponse { .. } => ("bad_response", "none"),
         InferenceError::Cancelled(_) => ("cancelled", "none"),
+        InferenceError::Unavailable { .. } => ("breaker_open", "none"),
         InferenceError::NotConfigured(_)
         | InferenceError::Misconfigured { .. }
         | InferenceError::BudgetExhausted
@@ -116,6 +118,10 @@ mod tests {
                 reason: "x",
             }),
             Err(InferenceError::Cancelled("generation")),
+            Err(InferenceError::Unavailable {
+                endpoint: "generation",
+                retry_after_secs: 30,
+            }),
             Err(InferenceError::Upstream {
                 endpoint: "embedding",
                 class: UpstreamClass::Unauthorized,

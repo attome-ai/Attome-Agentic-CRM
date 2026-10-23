@@ -10,12 +10,10 @@
 //! Embedding is a pure function of its input, so a transient failure is worth
 //! replaying: a TEI or vLLM restart used to fail the drain's whole batch of 32
 //! and a query embedding outright. D-645 (BIN-D1) bounds that at two retries
-//! for connect/429/502/503/504, inside the request deadline, with full jitter —
+//! for connect/429/502/503/504, inside the request deadline — through the
+//! endpoint's outbound service since AB6-T3, which also gives it a breaker —
 //! and generation is deliberately excluded, because replaying it can mint new
 //! tool-call ids (D-553).
-
-use std::time::Duration;
-use std::time::SystemTime;
 
 use attome_config::InferenceSection;
 use serde::{Deserialize, Serialize};
@@ -25,16 +23,6 @@ use crate::{InferenceError, Transport, Usage};
 /// The embeddings path, relative to an endpoint's `base_url`. Public for the
 /// same reason as [`crate::generate::CHAT_COMPLETIONS_PATH`].
 pub const EMBEDDINGS_PATH: &str = "/embeddings";
-
-/// Total attempts for one embedding request: the original plus BIN-D1's two
-/// retries. Three requests is the whole budget.
-const MAX_ATTEMPTS: u32 = 3;
-
-/// The first backoff step. The next attempt doubles it, up to [`BACKOFF_CAP`].
-const BACKOFF_FIRST_STEP: Duration = Duration::from_millis(200);
-
-/// A cap on the backoff a jittered attempt may produce.
-const BACKOFF_CAP: Duration = Duration::from_secs(2);
 
 /// Whether the text being embedded is a query or a document.
 ///
@@ -174,7 +162,12 @@ impl EmbeddingClient {
             input,
         };
 
-        let response = self.post_with_retries(&request).await?;
+        // AB6-T3: replayed through the endpoint's outbound service (D-645:
+        // an embedding is a pure function of its input).
+        let response: EmbeddingResponse = self
+            .transport
+            .post_idempotent(EMBEDDINGS_PATH, &request)
+            .await?;
 
         if response.data.len() != texts.len() {
             return Err(InferenceError::BadResponse {
@@ -220,84 +213,6 @@ impl EmbeddingClient {
         };
         Ok((vectors, usage))
     }
-
-    /// POSTs with BIN-D1's bounded retry policy.
-    ///
-    /// Only outcomes a replay could fix are retried, never past the request
-    /// deadline, and never more than [`MAX_ATTEMPTS`] requests in total. Each
-    /// retry is logged at `warn` with the class and attempt — a restarting TEI
-    /// is visible in the log rather than inferred from a slow drain.
-    async fn post_with_retries(
-        &self,
-        request: &EmbeddingRequest<'_>,
-    ) -> Result<EmbeddingResponse, InferenceError> {
-        let deadline = tokio::time::Instant::now() + self.transport.request_timeout();
-        let mut attempt = 0;
-        let mut retried_after: Option<InferenceError> = None;
-        loop {
-            attempt += 1;
-            // reqwest gives every attempt the full request timeout; the shared
-            // deadline is what keeps all attempts together inside one. A retry
-            // cut off by it reports the failure that caused the retry, which is
-            // the operator's actual problem.
-            let outcome = match tokio::time::timeout_at(
-                deadline,
-                self.transport.post(EMBEDDINGS_PATH, request),
-            )
-            .await
-            {
-                Ok(outcome) => outcome,
-                Err(_elapsed) => {
-                    return Err(
-                        retried_after.unwrap_or(InferenceError::Timeout(self.transport.label()))
-                    );
-                }
-            };
-            match outcome {
-                Ok(response) => return Ok(response),
-                Err(error) if attempt < MAX_ATTEMPTS && error.is_retryable() => {
-                    let delay = backoff(attempt, error.retry_after());
-                    if tokio::time::Instant::now() + delay >= deadline {
-                        // The wait would cross the whole-request bound, so a
-                        // retry could not answer inside it.
-                        return Err(error);
-                    }
-                    tracing::warn!(
-                        endpoint = self.transport.label(),
-                        attempt,
-                        class = %error,
-                        delay_ms = delay.as_millis() as u64,
-                        "embedding request failed transiently; retrying inside the deadline"
-                    );
-                    retried_after = Some(error);
-                    tokio::time::sleep(delay).await;
-                }
-                Err(error) => return Err(error),
-            }
-        }
-    }
-}
-
-/// The wait before attempt `attempt + 1`.
-///
-/// Full jitter over an exponentially growing cap: a restarting server must not
-/// be hit by every node in lockstep. A server that named its own `Retry-After`
-/// is obeyed instead — it knows better than this crate does.
-fn backoff(attempt: u32, retry_after: Option<Duration>) -> Duration {
-    if let Some(hint) = retry_after {
-        return hint;
-    }
-    let cap = BACKOFF_FIRST_STEP
-        .saturating_mul(1u32 << (attempt.saturating_sub(1)).min(8))
-        .min(BACKOFF_CAP);
-    let cap_ms = cap.as_millis().max(1) as u64;
-    Duration::from_millis(
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map(|since| since.subsec_nanos() as u64)
-            .unwrap_or(0)
-            % cap_ms,
-    )
 }
 
 /// Refuses vectors a downstream consumer cannot use.
@@ -399,20 +314,6 @@ mod tests {
             "",
             "an explicit empty prefix disables the heuristic's prefix"
         );
-    }
-
-    /// The retry wait obeys a server's `Retry-After` and is otherwise bounded
-    /// by the jitter cap — never an unbounded exponential.
-    #[test]
-    fn backoff_honours_the_server_hint_and_stays_bounded() {
-        assert_eq!(
-            backoff(1, Some(Duration::from_secs(7))),
-            Duration::from_secs(7)
-        );
-        for attempt in 1..=6 {
-            let delay = backoff(attempt, None);
-            assert!(delay <= BACKOFF_CAP, "attempt {attempt} waited {delay:?}");
-        }
     }
 
     /// BIN-C2: a model answer a consumer cannot use is refused here rather than

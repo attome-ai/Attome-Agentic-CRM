@@ -2333,6 +2333,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- Model calls go through the outbound layer (AB6-T3): each configured model endpoint is an
+  `ai_model` service with its own breaker, so a model server that keeps failing (any 5xx, a rate
+  limit, a timeout) is refused at once for a while (`InferenceError::Unavailable`, outcome
+  `breaker_open` in `attome_inference_requests_total`) instead of every turn waiting on it.
+  Embeddings still retry twice on a transient failure, now through the outbound service, honouring
+  `Retry-After` up to 60 s inside the request timeout; generation is still never replayed.
 - A breaker per outside endpoint (AB6-T5): each REST connector endpoint (system and host) and each
   webhook target (subscription and host) has its own, so one failing endpoint does not slow the
   others. A REST GET is retried; a POST only when it carries an `Idempotency-Key`. A webhook whose

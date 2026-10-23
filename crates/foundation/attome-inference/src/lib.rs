@@ -341,7 +341,7 @@ impl std::fmt::Display for UpstreamClass {
 /// for a caller that maps what it understands and refuses the rest. The one
 /// caller that matches a variant (`xrm-ai`'s turn loop, on `Cancelled`) already
 /// carries a wildcard arm.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 #[non_exhaustive]
 pub enum InferenceError {
     /// No endpoint configured. Distinct from a network failure: it means the
@@ -404,6 +404,15 @@ pub enum InferenceError {
     )]
     ExternalProviderForbidden(&'static str),
 
+    /// AB6-T3: the endpoint's breaker is open, or its slots are full: it
+    /// failed too often just now, so the call is refused at once rather than
+    /// waiting on a server that is down.
+    #[error("inference endpoint '{endpoint}' is unavailable; retry in {retry_after_secs}s")]
+    Unavailable {
+        endpoint: &'static str,
+        retry_after_secs: u64,
+    },
+
     /// The caller stopped a streamed generation before it finished (C11 B4).
     /// Not a failure of the model or the transport: the caller asked for it,
     /// and what it does next is its own decision.
@@ -450,10 +459,57 @@ pub struct Usage {
     pub cached_prompt_tokens: Option<u32>,
 }
 
+/// AB6-T3: what a failed model call tells the outbound layer.
+impl attome_outbound::Retryable for InferenceError {
+    fn retryable(&self) -> bool {
+        self.is_retryable()
+    }
+    fn retry_after(&self) -> Option<Duration> {
+        InferenceError::retry_after(self).map(|hint| hint.min(MAX_RETRY_AFTER))
+    }
+    /// A server that cannot answer (any 5xx, a rate limit, a transport
+    /// failure or a timeout) counts against the endpoint's breaker even when
+    /// it is not replayed; a refused request (a 4xx) or an unusable body
+    /// does not.
+    fn counts_as_failure(&self) -> bool {
+        match self {
+            Self::Transport { .. } | Self::Timeout(_) => true,
+            Self::Upstream { class, .. } => matches!(
+                class,
+                UpstreamClass::ServerError { .. } | UpstreamClass::RateLimited { .. }
+            ),
+            _ => false,
+        }
+    }
+}
+
+/// AB6-T3: one `ai_model` outbound service per configured model endpoint
+/// (label and base URL), made when its first client is built.
+static AI_MODELS: std::sync::LazyLock<attome_outbound::EndpointServices> =
+    std::sync::LazyLock::new(|| {
+        attome_outbound::EndpointServices::new("ai_model", attome_outbound::Policy::default(), 256)
+    });
+
+fn model_service(
+    label: &'static str,
+    base_url: &reqwest::Url,
+    timeout: Duration,
+) -> std::sync::Arc<attome_outbound::Service> {
+    AI_MODELS.get_with(
+        &format!("{label}:{base_url}"),
+        attome_outbound::Policy {
+            timeout,
+            ..attome_outbound::Policy::default()
+        },
+    )
+}
+
 /// Shared HTTP plumbing for both clients.
 #[derive(Clone)]
 pub(crate) struct Transport {
     http: attome_outbound::http::Outbound,
+    /// AB6-T3: this endpoint's breaker, bulkheads and retry budget.
+    service: std::sync::Arc<attome_outbound::Service>,
     /// The base URL, parsed **once** here so the host that was classified is
     /// the host that is dialled (BIN-A3). Rebuilding it with
     /// `format!("{base}{path}")` was a retargeting hole: `http://h/v1?x`
@@ -628,6 +684,7 @@ impl Transport {
         })?;
         Ok(Self {
             http,
+            service: model_service(label, &base_url, timeout),
             base_url,
             endpoint,
             label,
@@ -650,8 +707,10 @@ impl Transport {
         // Checked once: every request joins a path onto this parsed base, and
         // redirects are off, so no later request can dial another host.
         let http = http.admit(&base_url, label)?.clone();
+        let timeout = Duration::from_secs(endpoint.request_timeout_secs.max(1));
         Ok(Self {
             http,
+            service: model_service(label, &base_url, timeout),
             base_url,
             endpoint,
             label,
@@ -711,21 +770,54 @@ impl Transport {
         path: &str,
         body: &Req,
     ) -> Result<reqwest::Response, InferenceError> {
-        let response = self.send(self.request(path, body)).await?;
-        self.refuse_redirect(&response)?;
-        if !response.status().is_success() {
-            let class = classify_status(response.status(), response.headers());
-            tracing::warn!(
-                endpoint = self.label,
-                status = response.status().as_u16(),
-                "inference stream request returned a non-success status"
-            );
-            return Err(InferenceError::Upstream {
+        // AB6-T3: never replayed: a streamed generation is not idempotent.
+        self.through(false, || async {
+            let response = self.send(self.request(path, body)).await?;
+            self.refuse_redirect(&response)?;
+            if !response.status().is_success() {
+                let class = classify_status(response.status(), response.headers());
+                tracing::warn!(
+                    endpoint = self.label,
+                    status = response.status().as_u16(),
+                    "inference stream request returned a non-success status"
+                );
+                return Err(InferenceError::Upstream {
+                    endpoint: self.label,
+                    class,
+                });
+            }
+            Ok(response)
+        })
+        .await
+    }
+
+    /// AB6-T3: one call through this endpoint's outbound service: refused at
+    /// once while its breaker is open, bounded by the request's deadline, and
+    /// retried only when `idempotent`.
+    async fn through<T, F, Fut>(&self, idempotent: bool, attempt: F) -> Result<T, InferenceError>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, InferenceError>>,
+    {
+        attome_outbound::call(
+            &self.service,
+            attome_outbound::CallClass::Interactive,
+            idempotent,
+            attempt,
+        )
+        .await
+        .map_err(|error| match error {
+            attome_outbound::OutboundError::Failed(error) => error,
+            attome_outbound::OutboundError::Timeout => InferenceError::Timeout(self.label),
+            attome_outbound::OutboundError::Open { retry_after } => InferenceError::Unavailable {
                 endpoint: self.label,
-                class,
-            });
-        }
-        Ok(response)
+                retry_after_secs: retry_after.as_secs().max(1),
+            },
+            attome_outbound::OutboundError::Busy => InferenceError::Unavailable {
+                endpoint: self.label,
+                retry_after_secs: 1,
+            },
+        })
     }
 
     /// **BIN-C1.** A model server has no legitimate reason to redirect, and
@@ -767,8 +859,54 @@ impl Transport {
         path: &str,
         body: &Req,
     ) -> Result<Res, InferenceError> {
-        let response = self.send(self.request(path, body)).await?;
-        self.read_json(response).await
+        // AB6-T3: not replayed (generation, D-645).
+        self.through(false, || async {
+            let response = self.send(self.request(path, body)).await?;
+            self.read_json(response).await
+        })
+        .await
+    }
+
+    /// [`Transport::post`] for a call with no side effects (embeddings): a
+    /// transient failure is replayed through the endpoint's outbound service,
+    /// at most three attempts, honouring the server's `Retry-After` up to
+    /// [`MAX_RETRY_AFTER`], all inside this endpoint's whole-request timeout.
+    /// A wait that would cross that bound is not attempted.
+    pub(crate) async fn post_idempotent<Req: Serialize, Res: for<'de> Deserialize<'de>>(
+        &self,
+        path: &str,
+        body: &Req,
+    ) -> Result<Res, InferenceError> {
+        let deadline = tokio::time::Instant::now() + self.request_timeout();
+        // A retry cut off by the deadline reports the failure that caused it,
+        // which is the operator's actual problem (D-645).
+        let last_retryable: std::sync::Mutex<Option<InferenceError>> = std::sync::Mutex::new(None);
+        let outcome = attome_outbound::deadline::with_deadline(
+            deadline,
+            self.through(true, || async {
+                let result = async {
+                    let response = self.send(self.request(path, body)).await?;
+                    self.read_json(response).await
+                }
+                .await;
+                if let Err(error) = &result
+                    && error.is_retryable()
+                {
+                    *last_retryable
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(error.clone());
+                }
+                result
+            }),
+        )
+        .await;
+        match outcome {
+            Err(InferenceError::Timeout(label)) => Err(last_retryable
+                .into_inner()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .unwrap_or(InferenceError::Timeout(label))),
+            other => other,
+        }
     }
 
     /// POSTs a raw body of `content_type` (a multipart upload) and
@@ -794,8 +932,19 @@ impl Transport {
         {
             request = request.bearer_auth(key);
         }
-        let response = self.send(request).await?;
-        self.read_json(response).await
+        // AB6-T3: an upload is sent once.
+        self.through(false, || {
+            let attempt = request.try_clone();
+            async move {
+                let attempt = attempt.ok_or(InferenceError::Transport {
+                    endpoint: self.label,
+                    kind: "request could not be prepared",
+                })?;
+                let response = self.send(attempt).await?;
+                self.read_json(response).await
+            }
+        })
+        .await
     }
 
     /// Refuses a redirect or a failure status, then reads and parses the body
