@@ -20,6 +20,8 @@ mod crypto;
 pub mod guard;
 /// M14-T1: checks a builder-defined inbound hook's call passes.
 pub mod inbound;
+/// M14-T4: inbound hook handlers: event-type routes and upsert by key.
+pub mod inbound_handlers;
 /// J2-T2: routing rules for shared mailboxes.
 pub mod inbound_mail;
 /// D15-T2: which personal emails are captured, onto which addresses.

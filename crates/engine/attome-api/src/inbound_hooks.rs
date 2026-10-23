@@ -27,6 +27,15 @@
 //! creates a record from the body; `{"type": "flow", "definition_id": "..."}`
 //! starts the flow's published version with the body as context.
 //!
+//! M14-T4 (`attome_integration::inbound_handlers`): a record handler with a
+//! `key` attribute (an external id) upserts: the live record holding the
+//! event's key value is updated through the generic update path, with its
+//! current row version, and a record is created only when none holds it.
+//! Set the hook's `ordering_key` to the same field so two events of one key
+//! never race to create it. An `events` handler routes by the event type at
+//! its `event_type` pointer to a record or flow handler (or its `default`);
+//! an event of an unrouted type is done and ignored.
+//!
 //! With an `ordering_key` (a JSON pointer into the body), events of one key
 //! are processed strictly in the order they arrived: a job claims the
 //! key's oldest waiting event, under a short advisory lock held only while it
@@ -216,61 +225,10 @@ async fn check_body(
             "schema is {\"required\": [field names]}".into(),
         ));
     }
-    match body.handler["type"].as_str() {
-        Some("record") => {
-            let entity = body.handler["entity"].as_str().unwrap_or_default();
-            let registry = state.entities.load();
-            let Some(meta) = registry.get(entity) else {
-                return Err(AppError::Validation(format!(
-                    "handler entity {entity:?} is not an entity"
-                )));
-            };
-            let fields = body.handler["fields"]
-                .as_object()
-                .cloned()
-                .unwrap_or_default();
-            if fields.is_empty() {
-                return Err(AppError::Validation(
-                    "a record handler maps at least one attribute to a body field".into(),
-                ));
-            }
-            for (attribute, pointer) in &fields {
-                if !meta.attrs.iter().any(|a| &a.logicalname == attribute) {
-                    return Err(AppError::Validation(format!(
-                        "{attribute:?} is not an attribute of {entity}"
-                    )));
-                }
-                if !pointer
-                    .as_str()
-                    .is_some_and(|p| p.is_empty() || p.starts_with('/'))
-                {
-                    return Err(AppError::Validation(format!(
-                        "the body field for {attribute} is a JSON pointer such as /data/id"
-                    )));
-                }
-            }
-        }
-        Some("flow") => {
-            let id = body.handler["definition_id"]
-                .as_str()
-                .and_then(|s| Uuid::parse_str(s).ok())
-                .ok_or_else(|| AppError::Validation("a flow handler names definition_id".into()))?;
-            let exists: bool = sqlx::query_scalar(
-                "SELECT EXISTS (SELECT 1 FROM workflow_definition WHERE id = $1 AND NOT is_deleted)",
-            )
-            .bind(id)
-            .fetch_one(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-            if !exists {
-                return Err(AppError::Validation("no such flow".into()));
-            }
-        }
-        _ => {
-            return Err(AppError::Validation(
-                "handler.type is record or flow".into(),
-            ));
-        }
+    attome_integration::inbound_handlers::check_shape(&body.handler)
+        .map_err(AppError::Validation)?;
+    for leaf in attome_integration::inbound_handlers::leaves(&body.handler) {
+        check_leaf_targets(state, leaf).await?;
     }
     let active: Option<bool> =
         sqlx::query_scalar("SELECT is_active FROM user_account WHERE id = $1")
@@ -280,6 +238,48 @@ async fn check_body(
             .map_err(AppError::internal)?;
     if active != Some(true) {
         return Err(AppError::Validation("run_as is an active user".into()));
+    }
+    Ok(())
+}
+
+/// A record handler's entity and attributes exist, and a flow handler's
+/// flow does (the shape is checked already).
+async fn check_leaf_targets(state: &EngineState, leaf: &Value) -> Result<(), AppError> {
+    if leaf["type"].as_str() == Some("flow") {
+        let id = leaf["definition_id"]
+            .as_str()
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .ok_or_else(|| AppError::Validation("a flow handler names definition_id".into()))?;
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM workflow_definition WHERE id = $1 AND NOT is_deleted)",
+        )
+        .bind(id)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        return if exists {
+            Ok(())
+        } else {
+            Err(AppError::Validation("no such flow".into()))
+        };
+    }
+    let entity = leaf["entity"].as_str().unwrap_or_default();
+    let registry = state.entities.load();
+    let Some(meta) = registry.get(entity) else {
+        return Err(AppError::Validation(format!(
+            "handler entity {entity:?} is not an entity"
+        )));
+    };
+    for attribute in leaf["fields"]
+        .as_object()
+        .into_iter()
+        .flat_map(|m| m.keys())
+    {
+        if !meta.attrs.iter().any(|a| &a.logicalname == attribute) {
+            return Err(AppError::Validation(format!(
+                "{attribute:?} is not an attribute of {entity}"
+            )));
+        }
     }
     Ok(())
 }
@@ -362,7 +362,7 @@ async fn list_hooks(
     path = "/api/v1/admin/inbound-hooks",
     tag = "admin",
     operation_id = "create_inbound_hook",
-    description = "Defines an inbound endpoint at /api/v1/hooks/{name} (M14-T1): its authentication (hmac with a preset or custom header and encoding, or bearer), address allow-list, mTLS, required body fields, and handler (create a record or start a flow as run_as). The secret is sealed and never returned.",
+    description = "Defines an inbound endpoint at /api/v1/hooks/{name} (M14-T1): its authentication (hmac with a preset or custom header and encoding, or bearer), address allow-list, mTLS, required body fields, and handler (create or, by a key attribute, upsert a record, or start a flow, as run_as; an events handler routes by event type). The secret is sealed and never returned.",
     request_body = InboundHookBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create)])))),
     responses(
@@ -618,6 +618,12 @@ pub struct HookAccepted {
 struct HandlerOutcome {
     record_id: Option<Uuid>,
     instance_id: Option<Uuid>,
+    /// M14-T4: a keyed record handler updated the record holding the key.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    updated: bool,
+    /// M14-T4: no route took the event's type.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    ignored: bool,
 }
 
 /// The ordering value of `payload` at `pointer`, as text.
@@ -634,20 +640,41 @@ pub fn ordering_value(pointer: Option<&str>, payload: &Value) -> Option<String> 
 
 /// The record a record handler creates from `payload`.
 pub fn record_body(handler: &Value, payload: &Value) -> Map<String, Value> {
-    handler["fields"]
-        .as_object()
-        .into_iter()
-        .flatten()
-        .filter_map(|(attribute, pointer)| {
-            let pointer = pointer.as_str()?;
-            let value = if pointer.is_empty() {
-                Some(payload)
-            } else {
-                payload.pointer(pointer)
-            }?;
-            (!value.is_null()).then(|| (attribute.clone(), value.clone()))
-        })
-        .collect()
+    attome_integration::inbound_handlers::record_fields(handler, payload)
+}
+
+/// M14-T4: the live record of `entity` holding `value` in `key`.
+async fn record_by_key(
+    state: &EngineState,
+    entity: &str,
+    key: &str,
+    value: &Value,
+) -> Result<Option<Uuid>, AppError> {
+    let (_, entity_name, attrs, is_append_only) =
+        attome_records::entity_crud::resolve_entity(state, entity).await?;
+    let attr = attrs
+        .iter()
+        .find(|a| a.logicalname == key)
+        .ok_or_else(|| AppError::Validation(format!("{key:?} is not an attribute of {entity}")))?;
+    let Some(text) = attome_records::entity_mutation::json_to_str(value, attr) else {
+        return Err(AppError::Validation(format!(
+            "the event's {key} is not a value for that attribute"
+        )));
+    };
+    let live = attome_core::sql_ident::live_row_predicate("t", is_append_only)
+        .map(|p| format!(" AND {p}"))
+        .unwrap_or_default();
+    let sql = format!(
+        "SELECT t.id FROM {} t WHERE t.{} = $1{}{live} ORDER BY t.id LIMIT 1",
+        attome_core::quote_ident(&entity_name),
+        attome_core::quote_ident(&attr.logicalname),
+        attome_records::entity_mutation::sql_cast(attr),
+    );
+    sqlx::query_scalar(&attome_db::tag_dynamic("inbound_hook.upsert", &sql))
+        .bind(text)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)
 }
 
 async fn run_handler(
@@ -657,10 +684,47 @@ async fn run_handler(
     payload: Value,
 ) -> Result<HandlerOutcome, AppError> {
     let ctx = state.base.security.resolve(hook.run_as).await?;
-    match hook.handler["type"].as_str() {
+    let Some(handler) = attome_integration::inbound_handlers::select(&hook.handler, &payload)
+    else {
+        return Ok(HandlerOutcome {
+            record_id: None,
+            instance_id: None,
+            updated: false,
+            ignored: true,
+        });
+    };
+    match handler["type"].as_str() {
         Some("record") => {
-            let entity = hook.handler["entity"].as_str().unwrap_or_default();
-            let body = record_body(&hook.handler, &payload);
+            let entity = handler["entity"].as_str().unwrap_or_default();
+            let body = record_body(handler, &payload);
+            let existing = match attome_integration::inbound_handlers::upsert_key(handler, &body)
+                .map_err(AppError::Validation)?
+            {
+                Some((key, value)) => record_by_key(state, entity, key, value).await?,
+                None => None,
+            };
+            if let Some(id) = existing {
+                // Read as the service user: a record it may not see is a 404,
+                // never a silent second record.
+                let current =
+                    attome_records::entity_crud::read_record(state, &ctx, entity, id).await?;
+                attome_records::entity_crud::update_record_for(
+                    state,
+                    &ctx,
+                    hook.run_as,
+                    entity,
+                    id,
+                    current.row_version(),
+                    Value::Object(body),
+                )
+                .await?;
+                return Ok(HandlerOutcome {
+                    record_id: Some(id),
+                    instance_id: None,
+                    updated: true,
+                    ignored: false,
+                });
+            }
             let (record_id, _) = attome_records::entity_crud::create_record_for(
                 state,
                 &ctx,
@@ -672,10 +736,12 @@ async fn run_handler(
             Ok(HandlerOutcome {
                 record_id: Some(record_id),
                 instance_id: None,
+                updated: false,
+                ignored: false,
             })
         }
         Some("flow") => {
-            let definition = hook.handler["definition_id"]
+            let definition = handler["definition_id"]
                 .as_str()
                 .and_then(|s| Uuid::parse_str(s).ok())
                 .ok_or(AppError::NotFound)?;
@@ -703,6 +769,8 @@ async fn run_handler(
             Ok(HandlerOutcome {
                 record_id: None,
                 instance_id: Some(instance),
+                updated: false,
+                ignored: false,
             })
         }
         _ => Err(AppError::internal("inbound hook has no handler")),

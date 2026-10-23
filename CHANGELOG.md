@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Inbound hook handlers route and upsert (M14-T4). A record handler with a `key` attribute updates
+  the record holding the event's value for it (an external id) and creates one only when none
+  does. An `events` handler picks a record or flow handler by the event type at a JSON pointer,
+  with an optional default; an event of an unrouted type is acknowledged and ignored.
 - Quote submission under a discount policy (F2-T1): `POST /api/v1/sales/quotes/{id}/submit`. The
   setting `sales.discount_policy` holds thresholds by product family, role and deal size. A quote
   within all of them is sent; one over a threshold goes to the approval process the strictest
