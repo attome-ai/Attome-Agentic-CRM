@@ -26,7 +26,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -36,11 +36,19 @@ use attome_audit::{
 use attome_records::entity_crud;
 use attome_records::entity_mutation::sql_cast;
 
-const SAMPLE_LIMIT: i64 = 5;
+/// L6-T2: the one sampled scan.
+mod scan;
+
+/// How long the profile scan may run.
+const SCAN_TIMEOUT: &str = "120s";
 
 #[derive(Deserialize, ToSchema)]
 struct ProfileRequestBody {
     entity: String,
+    /// L6-T2: read every row; by default a table of more than 100,000 rows
+    /// is sampled.
+    #[serde(default)]
+    full_scan: bool,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -117,6 +125,7 @@ async fn enqueue_profile(
             profile_id,
             entity_logicalname: entity_name,
             user_id: claims.sub,
+            full_scan: body.full_scan,
         }),
     )
     .await
@@ -140,6 +149,9 @@ struct DataProfileRow {
     status: String,
     row_count: Option<i64>,
     fields: Value,
+    /// L6-T2: rows the statistics were computed from.
+    sample_size: Option<i64>,
+    full_scan: bool,
     error: Option<String>,
     created_by: Uuid,
     created_at: DateTime<Utc>,
@@ -183,7 +195,7 @@ async fn list_profiles(
     );
 
     let items: Vec<DataProfileRow> = sqlx::query_as(
-        "SELECT id, entity_logicalname, status, row_count, fields, error, created_by, created_at, completed_at \
+        "SELECT id, entity_logicalname, status, row_count, fields, sample_size, full_scan, error, created_by, created_at, completed_at \
            FROM data_profile \
           WHERE is_deleted = false AND ($1::text IS NULL OR entity_logicalname = $1) \
           ORDER BY created_at DESC LIMIT $2 OFFSET $3",
@@ -226,7 +238,7 @@ async fn get_profile(
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataProfileRow>, AppError> {
     let row: Option<DataProfileRow> = sqlx::query_as(
-        "SELECT id, entity_logicalname, status, row_count, fields, error, created_by, created_at, completed_at \
+        "SELECT id, entity_logicalname, status, row_count, fields, sample_size, full_scan, error, created_by, created_at, completed_at \
            FROM data_profile WHERE id = $1 AND is_deleted = false",
     )
     .bind(id)
@@ -292,31 +304,34 @@ pub async fn process(
             }
         };
 
-    let mut fields = Vec::with_capacity(attrs.len());
-    for attr in &attrs {
-        match profile_field(&state.base.db, &table, attr, row_count).await {
-            Ok(stats) => fields.push(stats),
-            Err(e) => {
-                // A single field's stats query failing (e.g. a type that
-                // doesn't support MIN/MAX) must not fail the whole profile —
-                // record it as that field's own outcome and keep going.
-                fields.push(json!({
-                    "field": attr.logicalname,
-                    "error": e.to_string(),
-                }));
-            }
+    // L6-T2: one scan reads every attribute's text form; a big table is
+    // sampled, and the scan is bounded by a statement timeout.
+    let percent = scan::sample_percent(row_count, payload.full_scan);
+    let scanned = match one_scan(state, &table, &attrs, percent).await {
+        Ok(v) => v,
+        Err(e) => {
+            mark_failed(state, profile_id, &format!("profile scan failed: {e}")).await?;
+            return Ok(());
         }
-    }
+    };
+    let (sample_size, stats) = scanned;
+    let fields: Vec<Value> = stats
+        .into_iter()
+        .zip(&attrs)
+        .map(|(s, attr)| s.finish(&attr.logicalname, shape_of, is_labelled(attr)))
+        .collect();
 
     sqlx::query(
         "UPDATE data_profile \
-            SET status = 'completed', row_count = $2, fields = $3, completed_at = NOW(), \
-                row_version = row_version + 1 \
+            SET status = 'completed', row_count = $2, fields = $3, sample_size = $4, \
+                full_scan = $5, completed_at = NOW(), row_version = row_version + 1 \
           WHERE id = $1",
     )
     .bind(profile_id)
     .bind(row_count)
     .bind(Value::Array(fields))
+    .bind(sample_size)
+    .bind(percent.is_none())
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -324,70 +339,54 @@ pub async fn process(
     Ok(())
 }
 
-async fn profile_field(
-    db: &attome_db::DbPool,
+/// L6-T2: the rows read and one [`scan::FieldStats`] per attribute, from a
+/// single `SELECT` of every attribute as text (`TABLESAMPLE SYSTEM` when
+/// `percent` is set), streamed under [`SCAN_TIMEOUT`].
+async fn one_scan(
+    state: &EngineState,
     table: &str,
-    attr: &attome_core::AttrInfo,
-    total_rows: i64,
-) -> Result<Value, AppError> {
-    let col = attome_core::quote_ident(&attr.logicalname);
-    let is_array_or_jsonb = matches!(sql_cast(attr), "::text[]" | "::jsonb");
+    attrs: &[attome_core::AttrInfo],
+    percent: Option<f64>,
+) -> Result<(i64, Vec<scan::FieldStats>), AppError> {
+    use futures_util::TryStreamExt;
+    use sqlx::Row;
 
-    let (nulls, distinct_count): (i64, i64) = sqlx::query_as(&format!(
-        "SELECT COUNT(*) FILTER (WHERE {col} IS NULL), COUNT(DISTINCT {col}) FROM {table}"
-    ))
-    .fetch_one(db)
-    .await
-    .map_err(AppError::internal)?;
-    let null_pct = if total_rows > 0 {
-        (nulls as f64 / total_rows as f64) * 100.0
-    } else {
-        0.0
-    };
+    let mut stats: Vec<scan::FieldStats> = attrs
+        .iter()
+        .map(|a| scan::FieldStats::new(scan::FieldKind::of_cast(sql_cast(a))))
+        .collect();
+    if attrs.is_empty() {
+        return Ok((0, stats));
+    }
+    let columns = attrs
+        .iter()
+        .map(|a| format!("{}::text", attome_core::quote_ident(&a.logicalname)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    // The percentage is computed here, never caller text.
+    let sample = percent
+        .map(|p| format!(" TABLESAMPLE SYSTEM ({p:.4})"))
+        .unwrap_or_default();
+    let sql = format!("SELECT {columns} FROM {table}{sample}");
 
-    let (min_val, max_val): (Option<String>, Option<String>) = if is_array_or_jsonb {
-        (None, None)
-    } else {
-        sqlx::query_as(&format!(
-            "SELECT MIN({col})::text, MAX({col})::text FROM {table} WHERE {col} IS NOT NULL"
-        ))
-        .fetch_one(db)
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(&format!("SET LOCAL statement_timeout = '{SCAN_TIMEOUT}'"))
+        .execute(&mut *tx)
         .await
-        .map_err(AppError::internal)?
-    };
-
-    let samples: Vec<String> = sqlx::query_scalar(&format!(
-        "SELECT DISTINCT {col}::text FROM {table} WHERE {col} IS NOT NULL LIMIT {SAMPLE_LIMIT}"
-    ))
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
-
-    // L6-T1: a personal, special-category or masked attribute keeps only
-    // the shapes of its values, never the values.
-    let labelled = is_labelled(attr);
-    let (min_val, max_val, samples) = if labelled {
-        let mut shapes: Vec<String> = samples.iter().map(|v| shape_of(v)).collect();
-        shapes.sort();
-        shapes.dedup();
-        (
-            min_val.map(|v| shape_of(&v)),
-            max_val.map(|v| shape_of(&v)),
-            shapes,
-        )
-    } else {
-        (min_val, max_val, samples)
-    };
-
-    Ok(json!({
-        "field": attr.logicalname,
-        "null_pct": null_pct,
-        "distinct_count": distinct_count,
-        "min": min_val,
-        "max": max_val,
-        "samples": samples,
-        "masked": labelled,
-    }))
+        .map_err(AppError::internal)?;
+    let mut rows_read: i64 = 0;
+    {
+        let mut rows = sqlx::query(&sql).fetch(&mut *tx);
+        while let Some(row) = rows.try_next().await.map_err(AppError::internal)? {
+            rows_read += 1;
+            for (i, s) in stats.iter_mut().enumerate() {
+                let value: Option<String> = row.try_get(i).map_err(AppError::internal)?;
+                s.push(value.as_deref());
+            }
+        }
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok((rows_read, stats))
 }
 
 /// L6-T1: an attribute whose values a profile must not keep.

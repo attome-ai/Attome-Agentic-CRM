@@ -184,6 +184,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Data profiles in one sampled scan (L6-T2): `POST /api/v1/admin/data/profile` reads every attribute
+  in one query, sampling a table of more than 100,000 rows (`TABLESAMPLE SYSTEM`, about 100,000
+  rows) unless `full_scan` is set, under a 120 s statement timeout. Each field now reports nulls,
+  blanks, distinct count (exact up to 100,000), top values, and by type: number min, max, mean,
+  median, percentiles, a ten-bucket histogram and outliers; date range; text length spread. The
+  profile states `sample_size` and `full_scan` (migration 0211). Personal and masked fields keep
+  only value shapes, as before.
 - Approval processes (M9-T1): administrators define processes
   (`/api/v1/admin/approval-processes`: entity, optional entry condition in rule text, the approval
   plan, `lock_record`, `editable_attributes`). A person who may update a record submits it

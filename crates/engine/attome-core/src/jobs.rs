@@ -1702,6 +1702,9 @@ pub struct DataProfilePayload {
     pub profile_id: Uuid,
     pub entity_logicalname: String,
     pub user_id: Uuid,
+    /// L6-T2: read every row instead of a sample of about 100,000.
+    #[serde(default)]
+    pub full_scan: bool,
 }
 
 /// M12 — applies one fixed built-in transform (`trim`/`upper`/`lower`/
@@ -2200,6 +2203,7 @@ mod tests {
                 profile_id: Uuid::now_v7(),
                 entity_logicalname: "contact".to_string(),
                 user_id: Uuid::now_v7(),
+                full_scan: false,
             })
             .is_batch()
         );
@@ -2459,6 +2463,7 @@ mod tests {
             profile_id: Uuid::now_v7(),
             entity_logicalname: "contact".to_string(),
             user_id: Uuid::now_v7(),
+            full_scan: true,
         }));
     }
 
