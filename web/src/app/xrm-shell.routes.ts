@@ -601,6 +601,11 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.FailedJobsListComponent),
           },
           {
+            path: 'webhooks',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/integration').then(m => m.WebhookSubscriptionsComponent),
+          },
+          {
             path: 'jobs/dead-letters',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.DeadLetterInboxComponent),

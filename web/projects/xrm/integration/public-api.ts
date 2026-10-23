@@ -4,3 +4,5 @@
 // integration_system declares). The unused mapping picker was removed
 // (CLEANUP-REVIEW 4.9); a sync-configuration screen builds its own.
 export { registerIntegrationEntityForms } from './registration/provide-integration-entity-forms';
+// M13-T4: webhook subscriptions screen.
+export { WebhookSubscriptionsComponent } from './webhooks/webhook-subscriptions.component';

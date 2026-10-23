@@ -925,6 +925,175 @@ async fn fetch_detail(
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
+/// M13-T4: the entity a test delivery names.
+pub const TEST_ENTITY: &str = "attome_test";
+
+/// Deliveries one replay re-queues at most.
+const MAX_REPLAY: i64 = 10_000;
+
+/// M13-T4: what a test send or a replay queued.
+#[derive(Serialize, ToSchema)]
+struct QueuedDeliveries {
+    /// The test delivery's id (test send only).
+    delivery_id: Option<Uuid>,
+    queued: i64,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/events/subscriptions/{id}/test",
+    tag = "admin-events",
+    operation_id = "event_subscription_send_test",
+    description = "Queues one test delivery to the subscription's target (M13-T4): entity `attome_test`, operation `test`, signed like every delivery. Its outcome shows in the delivery log.",
+    params(("id" = Uuid, Path)),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Execute)])))),
+    responses(
+        (status = 202, description = "The test delivery is queued", body = QueuedDeliveries),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn send_test(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<(StatusCode, Json<QueuedDeliveries>), AppError> {
+    let mut tx = SecurityTx::begin(
+        &state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Execute,
+            ctx.user_id,
+            "event_subscription",
+            Some(id),
+        )
+        .named("event_subscription.test"),
+    )
+    .await?;
+    let delivery_id: Option<Uuid> = sqlx::query_scalar(
+        "INSERT INTO event_delivery \
+             (subscription_ref, event_id, event_entity_logicalname, event_record_id, event_operation) \
+         SELECT id, $2, $3, $4, 'test' FROM event_subscription \
+          WHERE id = $1 AND is_deleted = FALSE AND kind = 'webhook' \
+         RETURNING id",
+    )
+    .bind(id)
+    .bind(Uuid::now_v7())
+    .bind(TEST_ENTITY)
+    .bind(Uuid::nil())
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(delivery_id) = delivery_id else {
+        return Err(AppError::NotFound);
+    };
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::EventsDeliverWebhook { delivery_id },
+    )
+    .await
+    .map_err(AppError::internal)?;
+    tx.commit().await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(QueuedDeliveries {
+            delivery_id: Some(delivery_id),
+            queued: 1,
+        }),
+    ))
+}
+
+#[derive(Deserialize, ToSchema)]
+struct ReplayBody {
+    /// Every delivery matched at or after this time is sent again.
+    from: DateTime<Utc>,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/events/subscriptions/{id}/replay",
+    tag = "admin-events",
+    operation_id = "event_subscription_replay",
+    description = "Sends again every delivery the subscription matched since `from` (M13-T4): delivered, failed and dead-lettered ones go back to pending with their attempts reset, at most 10,000. Each keeps its event id, so a receiver that deduplicates on `webhook-id` sees a retry, not a new event.",
+    params(("id" = Uuid, Path)),
+    request_body = ReplayBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Execute)])))),
+    responses(
+        (status = 202, description = "The deliveries are queued again", body = QueuedDeliveries),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn replay_since(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ReplayBody>,
+) -> Result<(StatusCode, Json<QueuedDeliveries>), AppError> {
+    let mut tx = SecurityTx::begin(
+        &state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Execute,
+            ctx.user_id,
+            "event_subscription",
+            Some(id),
+        )
+        .named("event_subscription.replay")
+        .comment(format!("from {}", body.from.to_rfc3339())),
+    )
+    .await?;
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM event_subscription WHERE id = $1 AND is_deleted = FALSE)",
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "UPDATE event_delivery \
+            SET status = 'pending', attempts = 0, last_error = NULL, updated_at = NOW(), \
+                row_version = row_version + 1 \
+          WHERE id IN (SELECT id FROM event_delivery \
+                        WHERE subscription_ref = $1 AND created_at >= $2 \
+                          AND status IN ('delivered', 'failed', 'dead_letter') \
+                        ORDER BY created_at LIMIT $3) \
+         RETURNING id",
+    )
+    .bind(id)
+    .bind(body.from)
+    .bind(MAX_REPLAY)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    for delivery_id in &ids {
+        attome_jobs::enqueue_in_tx_dedup(
+            &mut tx,
+            attome_core::jobs::EngineJob::EventsDeliverWebhook {
+                delivery_id: *delivery_id,
+            },
+            &delivery_id.to_string(),
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
+    tx.commit().await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(QueuedDeliveries {
+            delivery_id: None,
+            queued: ids.len() as i64,
+        }),
+    ))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -945,6 +1114,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/events/subscriptions/{id}/deliveries",
             get(list_deliveries),
         )
+        .route(
+            "/api/v1/admin/events/subscriptions/{id}/test",
+            post(send_test),
+        )
+        .route(
+            "/api/v1/admin/events/subscriptions/{id}/replay",
+            post(replay_since),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -958,7 +1135,9 @@ pub fn routes() -> Router<EngineState> {
         update_subscription,
         rotate_secret,
         delete_subscription,
-        list_deliveries
+        list_deliveries,
+        send_test,
+        replay_since
     ),
     components(schemas(crate::delivery::WebhookPayload))
 )]

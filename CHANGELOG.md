@@ -184,6 +184,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Webhook subscriptions screen (M13-T4) at `/xrm/webhooks`: create (the signing secret shown once,
+  also in Standard Webhooks form) and edit subscriptions (target, payload shape, ordered, on/off),
+  see a paused subscription's reason, read the delivery log, send a test event
+  (`POST /api/v1/admin/events/subscriptions/{id}/test`) and send everything again from a time
+  (`POST /api/v1/admin/events/subscriptions/{id}/replay`, at most 10,000 deliveries, each keeping its
+  event id). English and Arabic.
 - Ordered webhooks and auto-pause (M13-T3): a subscription with `ordered: true` sends one record's
   events one at a time, in the order they happened (a delivery waits while an earlier one of the
   same record is still pending or retrying). When fewer than half of a subscription's last 100

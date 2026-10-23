@@ -5316,6 +5316,27 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // M13-T4: a test send and a replay of an existing subscription.
+        "POST /api/v1/admin/events/subscriptions/{id}/test" => {
+            let sub = event_subscription_fixture(fx).await;
+            let id = id_of(&sub);
+            request(
+                "POST",
+                &format!("/api/v1/admin/events/subscriptions/{id}/test"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/events/subscriptions/{id}/replay" => {
+            let sub = event_subscription_fixture(fx).await;
+            let id = id_of(&sub);
+            request(
+                "POST",
+                &format!("/api/v1/admin/events/subscriptions/{id}/replay"),
+                t,
+                Some(json!({"from": "2026-01-01T00:00:00Z"})),
+            )
+        }
         "POST /api/v1/admin/governance/domains" => request(
             "POST",
             "/api/v1/admin/governance/domains",
