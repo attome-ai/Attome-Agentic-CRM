@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Revenue recognition records (F11-T1): ledger pack changeset 0003 with revenue rules (and a rule on
+  product), revenue contracts, performance obligations, standalone selling prices, schedule lines,
+  contract changes, close runs and balance snapshots, with Arabic labels and Accountant/Ledger Viewer
+  access; install after crm and sales.
 - Failover retry window (AB2-T3): a GET, HEAD or `Idempotency-Key` request that failed only because
   the database connection was lost is run again inside the server for up to
   `app.failover_retry_max_secs` (default 10, 0 off, at most 30), with backoff and jitter;

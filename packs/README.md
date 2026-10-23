@@ -140,6 +140,12 @@ General ledger (W5): the chart of accounts, accounting periods that open and clo
 append-only journal entries with balanced debit and credit lines, and posting rules that map a
 source document kind to the accounts it debits and credits. The Accountant and Ledger Viewer
 roles ship with it; the `ledger` engine is gated on the `ledger` module.
+`0003` adds revenue recognition (F11): `revenue_rule` (point in time, ratable, milestone, usage,
+percent complete) and a revenue rule on the sales pack's `product`; `revenue_contract` (keyed by its
+source order, subscription or invoice) with its `performance_obligation`s, standalone selling prices
+and allocations; the `ssp_entry` price list; the `revenue_schedule_line`s per fiscal period;
+`contract_change` with its treatment; `revrec_close_run` and `revenue_balance_snapshot`. It builds on
+crm (`account`) and sales (`product`); install it after them.
 
 ## procurement
 
