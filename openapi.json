@@ -17188,7 +17188,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "`GET /api/v1/admin/data/quality/issues` — `system.admin` only. Defaults\nto no status filter left to the caller; a UI should request\n`status=open` for the steward queue view.",
+        "summary": "`GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an\nadministrator sees every issue; anyone else the issues of entities they\nmay read, without the records they may not read. A UI requests\n`status=open` for the steward queue view.",
         "operationId": "list_issues",
         "parameters": [
           {
@@ -17216,13 +17216,26 @@
           {
             "name": "status",
             "in": "path",
-            "description": "`\"open\"` (default view for the steward queue) or `\"resolved\"`. Omit\nfor every status.",
+            "description": "`open`, `in_progress`, `fixed`, `accepted` or `resolved`. Omit for\nevery status.",
             "required": true,
             "schema": {
               "type": [
                 "string",
                 "null"
               ]
+            }
+          },
+          {
+            "name": "owner_id",
+            "in": "path",
+            "description": "L2-T4: only the issues this person owns.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
             }
           },
           {
@@ -17309,6 +17322,104 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/data/quality/issues/{id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`PATCH /api/v1/admin/data/quality/issues/{id}`: the issue's owner (or an\nadministrator) moves it through its statuses; accepting needs a reason.",
+        "operationId": "quality_issue_update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIssueBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The issue's status changed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither the issue's owner nor an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Issue not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown status, or accepted without a reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/data/quality/issues/{id}/resolve": {
       "post": {
         "tags": [
@@ -17388,6 +17499,372 @@
             }
           ],
           "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/data/quality/rules": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`GET /api/v1/admin/data/quality/rules` — `system.admin` only.",
+        "operationId": "quality_rules_list",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "description": "One-based: page 1 is the first page.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_QualityRuleView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`POST /api/v1/admin/data/quality/rules` — `system.admin` only. The\nexpression is checked as the shared condition evaluator reads it.",
+        "operationId": "quality_rule_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRuleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityRuleView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown entity, attribute or dimension, or a bad expression",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/data/quality/rules/{id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`DELETE /api/v1/admin/data/quality/rules/{id}` — `system.admin` only.",
+        "operationId": "quality_rule_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rule not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`PATCH /api/v1/admin/data/quality/rules/{id}` — `system.admin` only;\n`row_version` must match.",
+        "operationId": "quality_rule_update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityRuleView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rule not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The rule changed since that version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad expression, severity or weight",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -17608,6 +18085,268 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/data/quality/targets": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`GET /api/v1/admin/data/quality/targets` — `system.admin` only.",
+        "operationId": "quality_targets_list",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "description": "One-based: page 1 is the first page.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_QualityTargetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/data/quality/targets/{entity}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`PUT /api/v1/admin/data/quality/targets/{entity}` — `system.admin` only.\nSets the entity's weights, threshold, timeliness, record scoring and\nissue due days; an absent field keeps its value (or default).",
+        "operationId": "quality_target_put",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutTargetBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityTargetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown entity or dimension, or a value out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`DELETE /api/v1/admin/data/quality/targets/{entity}` — `system.admin`\nonly; the entity reverts to the defaults.",
+        "operationId": "quality_target_delete",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No target for that entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/admin/data/survivorship-rules": {
@@ -25305,7 +26044,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreatePolicyBody"
+                "$ref": "#/components/schemas/GovernanceCreatePolicyBody"
               }
             }
           },
@@ -25571,7 +26310,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdatePolicyBody"
+                "$ref": "#/components/schemas/GovernanceUpdatePolicyBody"
               }
             }
           },
@@ -65123,7 +65862,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_Subscription"
+                  "$ref": "#/components/schemas/PaginatedResponse_ChangeStreamSubscription"
                 }
               }
             }
@@ -65187,7 +65926,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Subscription"
+                  "$ref": "#/components/schemas/ChangeStreamSubscription"
                 }
               }
             }
@@ -65377,7 +66116,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Subscription"
+                  "$ref": "#/components/schemas/ChangeStreamSubscription"
                 }
               }
             }
@@ -74156,6 +74895,110 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ledger/revrec/contracts/combine": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Merges contracts of one customer into the first.",
+        "operationId": "revrec_contracts_combine",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CombineContractsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The contracts are one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CombinedContract"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A contract does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A contract has a locked schedule line, or is being changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Fewer than two contracts, or of different customers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ledger/source-postings": {
       "post": {
         "tags": [
@@ -74762,6 +75605,179 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/lineage/manual-links": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Records a hand-documented lineage link.",
+        "operationId": "lineage_manual_link_add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualLinkBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The link is in the graph, marked hand-documented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualLinkRecorded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The definition itself already records this link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown entity, kind or direction, or no note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/lineage/manual-links/{id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Removes a hand-documented lineage link.",
+        "operationId": "lineage_manual_link_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The link",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed; kept in the graph's history"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator or a steward of the entity's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No hand-documented link with that id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/lineage/{kind}/{ref}": {
@@ -123110,12 +124126,18 @@
       },
       "ChangeKind": {
         "type": "string",
-        "description": "What a draft change does.",
+        "description": "One source this feed aggregates. The wire value (`kind` filter and each\nentry's own `kind` field) is this variant's snake_case name.",
         "enum": [
-          "delete_attribute",
-          "change_attribute_type",
-          "rename_attribute",
-          "other"
+          "metadata",
+          "bundle",
+          "query",
+          "workflow",
+          "dashboard",
+          "content",
+          "license",
+          "security",
+          "ai",
+          "settings"
         ]
       },
       "ChangePlan": {
@@ -123214,6 +124236,95 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "ChangeStreamSubscription": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "client_ref",
+          "service_user_ref",
+          "entities",
+          "payload",
+          "allow_personal",
+          "is_active",
+          "row_version",
+          "created_at"
+        ],
+        "properties": {
+          "allow_personal": {
+            "type": "boolean"
+          },
+          "changed_attributes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "client_ref": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The S2S client (`s2s_client.id`) that reads it."
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "operations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "payload": {
+            "type": "string",
+            "description": "`id`, `changes` or `record`."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "service_user_ref": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The client's service user, as whom every event is filtered."
           }
         }
       },
@@ -124073,7 +125184,7 @@
           "dangling": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GraphEdge"
+              "$ref": "#/components/schemas/LineageGraphEdge"
             },
             "description": "Edges to an entity or attribute that no longer exists."
           },
@@ -124709,6 +125820,47 @@
           }
         }
       },
+      "CombineContractsBody": {
+        "type": "object",
+        "description": "Contracts to merge.",
+        "required": [
+          "contract_ids"
+        ],
+        "properties": {
+          "contract_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Two or more contracts of one customer; the first is kept."
+          }
+        }
+      },
+      "CombinedContract": {
+        "type": "object",
+        "description": "The merged contract.",
+        "required": [
+          "contract_id",
+          "merged",
+          "obligations_moved"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "merged": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "obligations_moved": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "CommandsRequest": {
         "type": "object",
         "required": [
@@ -125239,7 +126391,7 @@
           "added": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GraphEdge"
+              "$ref": "#/components/schemas/LineageGraphEdge"
             }
           },
           "from": {
@@ -125249,7 +126401,7 @@
           "removed": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GraphEdge"
+              "$ref": "#/components/schemas/LineageGraphEdge"
             }
           },
           "to": {
@@ -127339,37 +128491,28 @@
       "CreatePolicyBody": {
         "type": "object",
         "required": [
-          "domain_ref",
-          "name_en"
+          "name",
+          "action_type",
+          "plan"
         ],
         "properties": {
-          "body_ar": {
+          "action_type": {
+            "type": "string"
+          },
+          "condition": {
             "type": [
               "string",
               "null"
             ]
           },
-          "body_en": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
             "type": "string"
           },
-          "domain_ref": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "enforcements": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Enforcement"
-            }
-          },
-          "name_ar": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name_en": {
-            "type": "string"
+          "plan": {
+            "$ref": "#/components/schemas/ApprovalPlan"
           }
         }
       },
@@ -127589,6 +128732,52 @@
           "role_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "CreateRuleBody": {
+        "type": "object",
+        "required": [
+          "entity",
+          "dimension",
+          "expression"
+        ],
+        "properties": {
+          "attribute": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dimension": {
+            "type": "string",
+            "description": "`validity` or `consistency`."
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "entity": {
+            "type": "string"
+          },
+          "expression": {
+            "type": "string",
+            "description": "A condition each record must hold, e.g. `amount >= 0`."
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "weight": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           }
         }
       },
@@ -127836,6 +129025,13 @@
           "strategy"
         ],
         "properties": {
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "L1-T3: for `source_system_rank`, `{\"ranks\": {\"<attribute>\" | \"*\":\n[\"<system>\", ...]}, \"tie_break\": \"recency\" | \"completeness\",\n\"validated_only\": bool}`; absent for the other strategies."
+          },
           "entity": {
             "type": "string"
           },
@@ -136875,6 +138071,43 @@
           }
         }
       },
+      "GovernanceCreatePolicyBody": {
+        "type": "object",
+        "required": [
+          "domain_ref",
+          "name_en"
+        ],
+        "properties": {
+          "body_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body_en": {
+            "type": "string"
+          },
+          "domain_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enforcements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Enforcement"
+            }
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_en": {
+            "type": "string"
+          }
+        }
+      },
       "GovernancePolicy": {
         "type": "object",
         "required": [
@@ -136944,6 +138177,52 @@
           "user_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "GovernanceUpdatePolicyBody": {
+        "type": "object",
+        "required": [
+          "row_version"
+        ],
+        "properties": {
+          "body_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enforcements": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Enforcement"
+            },
+            "description": "Replaces the links when given."
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -137170,7 +138449,7 @@
           "edges": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GraphEdge"
+              "$ref": "#/components/schemas/LineageGraphEdge"
             }
           },
           "hidden": {
@@ -137192,25 +138471,31 @@
       },
       "GraphEdge": {
         "type": "object",
-        "description": "An edge as a walk reports it: `from` uses `to`.",
         "required": [
-          "from",
-          "to",
-          "edge_kind",
-          "confidence"
+          "from_entity",
+          "from_id",
+          "to_entity",
+          "to_id",
+          "edge_type"
         ],
         "properties": {
-          "confidence": {
+          "edge_type": {
+            "type": "string",
+            "description": "`\"lookup:{field}\"`, `\"hierarchy:{field}\"`, or `\"relationship:{type}\"`\n— typed by source, per the plan's response contract."
+          },
+          "from_entity": {
             "type": "string"
           },
-          "edge_kind": {
+          "from_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to_entity": {
             "type": "string"
           },
-          "from": {
-            "type": "string"
-          },
-          "to": {
-            "type": "string"
+          "to_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -140335,6 +141620,40 @@
           }
         }
       },
+      "LineageChangeKind": {
+        "type": "string",
+        "description": "What a draft change does.",
+        "enum": [
+          "delete_attribute",
+          "change_attribute_type",
+          "rename_attribute",
+          "other"
+        ]
+      },
+      "LineageGraphEdge": {
+        "type": "object",
+        "description": "An edge as a walk reports it: `from` uses `to`.",
+        "required": [
+          "from",
+          "to",
+          "edge_kind",
+          "confidence"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "string"
+          },
+          "edge_kind": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
       "LineageRelation": {
         "type": "string",
         "enum": [
@@ -140794,6 +142113,91 @@
           },
           "version": {
             "type": "string"
+          }
+        }
+      },
+      "ManualLinkBody": {
+        "type": "object",
+        "description": "A link to document by hand.",
+        "required": [
+          "from_kind",
+          "to_entity",
+          "edge_kind",
+          "note"
+        ],
+        "properties": {
+          "direction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`inbound`, `outbound` or `both` (the default)."
+          },
+          "edge_kind": {
+            "type": "string",
+            "description": "`reads`, `writes`, `derives` or `triggers`."
+          },
+          "from_kind": {
+            "type": "string",
+            "description": "`system` for an outside system, or a definition kind (`workflow`,\n`query`, `metric`, ...)."
+          },
+          "from_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The definition's id (not for a system)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Why the link exists, as the steward documents it."
+          },
+          "system_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the system is: `connector`, `events`, `import`, `warehouse`,\n`source` (default `connector`)."
+          },
+          "system_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The system's name (for a system); a new name adds the system."
+          },
+          "to_attribute": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_entity": {
+            "type": "string"
+          }
+        }
+      },
+      "ManualLinkRecorded": {
+        "type": "object",
+        "description": "A recorded link.",
+        "required": [
+          "id",
+          "from",
+          "graph_version"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The node the link starts at (`system:<id>` or `<kind>:<id>`)."
+          },
+          "graph_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -141967,7 +143371,7 @@
             "type": "string"
           },
           "kind": {
-            "$ref": "#/components/schemas/ChangeKind"
+            "$ref": "#/components/schemas/LineageChangeKind"
           }
         }
       },
@@ -149413,6 +150817,129 @@
                 },
                 "requires_approval": {
                   "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ChangeStreamSubscription": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "client_ref",
+                "service_user_ref",
+                "entities",
+                "payload",
+                "allow_personal",
+                "is_active",
+                "row_version",
+                "created_at"
+              ],
+              "properties": {
+                "allow_personal": {
+                  "type": "boolean"
+                },
+                "changed_attributes": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "client_ref": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The S2S client (`s2s_client.id`) that reads it."
+                },
+                "condition": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "expires_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "operations": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "payload": {
+                  "type": "string",
+                  "description": "`id`, `changes` or `record`."
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "service_user_ref": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The client's service user, as whom every event is filtered."
                 }
               }
             }
@@ -158064,6 +159591,12 @@
                 "detected_at"
               ],
               "properties": {
+                "accepted_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "detail": {
                   "type": "string"
                 },
@@ -158074,6 +159607,13 @@
                 "dimension": {
                   "type": "string"
                 },
+                "due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
                 "entity_logicalname": {
                   "type": "string"
                 },
@@ -158083,6 +159623,14 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "L2-T4: who works the issue."
                 },
                 "period": {
                   "type": "string"
@@ -158107,6 +159655,88 @@
                 },
                 "status": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_QualityRuleView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "entity",
+                "dimension",
+                "expression",
+                "severity",
+                "weight",
+                "enabled",
+                "row_version"
+              ],
+              "properties": {
+                "attribute": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dimension": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "expression": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number",
+                  "format": "double"
                 }
               }
             }
@@ -158190,6 +159820,79 @@
                 "score": {
                   "type": "number",
                   "format": "double"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_QualityTargetView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "entity",
+                "dimension_weights",
+                "threshold",
+                "record_scoring"
+              ],
+              "properties": {
+                "dimension_weights": {
+                  "type": "object",
+                  "description": "Dimension name to weight in the overall score."
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "issue_sla_days": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
+                },
+                "record_scoring": {
+                  "type": "boolean"
+                },
+                "threshold": {
+                  "type": "number",
+                  "format": "double"
+                },
+                "timeliness_days": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
                 }
               }
             }
@@ -161098,129 +162801,6 @@
           }
         }
       },
-      "PaginatedResponse_Subscription": {
-        "type": "object",
-        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
-        "required": [
-          "items",
-          "total",
-          "page",
-          "page_size"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "id",
-                "name",
-                "client_ref",
-                "service_user_ref",
-                "entities",
-                "payload",
-                "allow_personal",
-                "is_active",
-                "row_version",
-                "created_at"
-              ],
-              "properties": {
-                "allow_personal": {
-                  "type": "boolean"
-                },
-                "changed_attributes": {
-                  "type": [
-                    "array",
-                    "null"
-                  ],
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "client_ref": {
-                  "type": "string",
-                  "format": "uuid",
-                  "description": "The S2S client (`s2s_client.id`) that reads it."
-                },
-                "condition": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "created_at": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "entities": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "expires_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time"
-                },
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "is_active": {
-                  "type": "boolean"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "operations": {
-                  "type": [
-                    "array",
-                    "null"
-                  ],
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "payload": {
-                  "type": "string",
-                  "description": "`id`, `changes` or `record`."
-                },
-                "row_version": {
-                  "type": "integer",
-                  "format": "int64"
-                },
-                "service_user_ref": {
-                  "type": "string",
-                  "format": "uuid",
-                  "description": "The client's service user, as whom every event is filtered."
-                }
-              }
-            }
-          },
-          "page": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "page_size": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "warnings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Warning"
-            },
-            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
-          }
-        }
-      },
       "PaginatedResponse_SubscriptionListItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -161467,6 +163047,13 @@
                 "created_by"
               ],
               "properties": {
+                "config": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "L1-T3: a `source_system_rank` rule's trust per system per attribute."
+                },
                 "created_at": {
                   "type": "string",
                   "format": "date-time"
@@ -167401,6 +168988,49 @@
           "value": {}
         }
       },
+      "PutTargetBody": {
+        "type": "object",
+        "properties": {
+          "dimension_weights": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Dimension name to weight (0 or more); unset dimensions weigh 1."
+          },
+          "issue_sla_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Days an issue is due in (default 7)."
+          },
+          "record_scoring": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Keep a score per record."
+          },
+          "threshold": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The overall score the entity should keep, 0 to 100 (default 70)."
+          },
+          "timeliness_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Records changed longer ago than this many days are not timely."
+          }
+        }
+      },
       "QualityIssueView": {
         "type": "object",
         "required": [
@@ -167415,6 +169045,12 @@
           "detected_at"
         ],
         "properties": {
+          "accepted_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "detail": {
             "type": "string"
           },
@@ -167425,6 +169061,13 @@
           "dimension": {
             "type": "string"
           },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "entity_logicalname": {
             "type": "string"
           },
@@ -167434,6 +169077,14 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "owner_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "L2-T4: who works the issue."
           },
           "period": {
             "type": "string"
@@ -167458,6 +169109,54 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "QualityRuleView": {
+        "type": "object",
+        "required": [
+          "id",
+          "entity",
+          "dimension",
+          "expression",
+          "severity",
+          "weight",
+          "enabled",
+          "row_version"
+        ],
+        "properties": {
+          "attribute": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "expression": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -167507,6 +169206,45 @@
           "score": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "QualityTargetView": {
+        "type": "object",
+        "required": [
+          "entity",
+          "dimension_weights",
+          "threshold",
+          "record_scoring"
+        ],
+        "properties": {
+          "dimension_weights": {
+            "type": "object",
+            "description": "Dimension name to weight in the overall score."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "issue_sla_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "record_scoring": {
+            "type": "boolean"
+          },
+          "threshold": {
+            "type": "number",
+            "format": "double"
+          },
+          "timeliness_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -179481,6 +181219,13 @@
           "created_by"
         ],
         "properties": {
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "L1-T3: a `source_system_rank` rule's trust per system per attribute."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -182568,6 +184313,26 @@
           }
         }
       },
+      "UpdateIssueBody": {
+        "type": "object",
+        "description": "A status change of one issue.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "accepted_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the issue is accepted as it is; required for `accepted`."
+          },
+          "status": {
+            "type": "string",
+            "description": "`open`, `in_progress`, `fixed`, `accepted` or `resolved`."
+          }
+        }
+      },
       "UpdateMappingBody": {
         "type": "object",
         "properties": {
@@ -182736,38 +184501,32 @@
           "row_version"
         ],
         "properties": {
-          "body_ar": {
+          "condition": {
             "type": [
               "string",
               "null"
             ]
           },
-          "body_en": {
+          "is_active": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "name": {
             "type": [
               "string",
               "null"
             ]
           },
-          "enforcements": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/Enforcement"
-            },
-            "description": "Replaces the links when given."
-          },
-          "name_ar": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name_en": {
-            "type": [
-              "string",
-              "null"
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ApprovalPlan"
+              }
             ]
           },
           "row_version": {
@@ -182937,6 +184696,44 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "UpdateRuleBody": {
+        "type": "object",
+        "required": [
+          "row_version"
+        ],
+        "properties": {
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "expression": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The version the change was made against."
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "weight": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           }
         }
       },

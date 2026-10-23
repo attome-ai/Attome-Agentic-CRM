@@ -2902,8 +2902,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/data/quality/issues` — `system.admin` only. Defaults
-         *     to no status filter left to the caller; a UI should request
+         * `GET /api/v1/admin/data/quality/issues` — `metadata.read` (L2-T4): an
+         *     administrator sees every issue; anyone else the issues of entities they
+         *     may read, without the records they may not read. A UI requests
          *     `status=open` for the steward queue view.
          */
         get: operations["list_issues"];
@@ -2913,6 +2914,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/quality/issues/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * `PATCH /api/v1/admin/data/quality/issues/{id}`: the issue's owner (or an
+         *     administrator) moves it through its statuses; accepting needs a reason.
+         */
+        patch: operations["quality_issue_update"];
         trace?: never;
     };
     "/api/v1/admin/data/quality/issues/{id}/resolve": {
@@ -2939,6 +2960,48 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/quality/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/data/quality/rules` — `system.admin` only. */
+        get: operations["quality_rules_list"];
+        put?: never;
+        /**
+         * `POST /api/v1/admin/data/quality/rules` — `system.admin` only. The
+         *     expression is checked as the shared condition evaluator reads it.
+         */
+        post: operations["quality_rule_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/quality/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** `DELETE /api/v1/admin/data/quality/rules/{id}` — `system.admin` only. */
+        delete: operations["quality_rule_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * `PATCH /api/v1/admin/data/quality/rules/{id}` — `system.admin` only;
+         *     `row_version` must match.
+         */
+        patch: operations["quality_rule_update"];
         trace?: never;
     };
     "/api/v1/admin/data/quality/scores": {
@@ -2980,6 +3043,48 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/quality/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/data/quality/targets` — `system.admin` only. */
+        get: operations["quality_targets_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/quality/targets/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * `PUT /api/v1/admin/data/quality/targets/{entity}` — `system.admin` only.
+         *     Sets the entity's weights, threshold, timeliness, record scoring and
+         *     issue due days; an absent field keeps its value (or default).
+         */
+        put: operations["quality_target_put"];
+        post?: never;
+        /**
+         * `DELETE /api/v1/admin/data/quality/targets/{entity}` — `system.admin`
+         *     only; the entity reverts to the defaults.
+         */
+        delete: operations["quality_target_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -13572,6 +13677,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/revrec/contracts/combine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Merges contracts of one customer into the first. */
+        post: operations["revrec_contracts_combine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger/source-postings": {
         parameters: {
             query?: never;
@@ -13711,6 +13833,40 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/manual-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Records a hand-documented lineage link. */
+        post: operations["lineage_manual_link_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/manual-links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes a hand-documented lineage link. */
+        delete: operations["lineage_manual_link_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -24633,10 +24789,11 @@ export interface components {
             reference: string;
         };
         /**
-         * @description What a draft change does.
+         * @description One source this feed aggregates. The wire value (`kind` filter and each
+         *     entry's own `kind` field) is this variant's snake_case name.
          * @enum {string}
          */
-        ChangeKind: "delete_attribute" | "change_attribute_type" | "rename_attribute" | "other";
+        ChangeKind: "metadata" | "bundle" | "query" | "workflow" | "dashboard" | "content" | "license" | "security" | "ai" | "settings";
         /** @description The plan. */
         ChangePlan: {
             changes: components["schemas"]["ChangePlanEntry"][];
@@ -24680,6 +24837,35 @@ export interface components {
             /** Format: int64 */
             row_version: number;
             status: string;
+        };
+        ChangeStreamSubscription: {
+            allow_personal: boolean;
+            changed_attributes?: string[] | null;
+            /**
+             * Format: uuid
+             * @description The S2S client (`s2s_client.id`) that reads it.
+             */
+            client_ref: string;
+            condition?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            entities: string[];
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            is_active: boolean;
+            name: string;
+            operations?: string[] | null;
+            /** @description `id`, `changes` or `record`. */
+            payload: string;
+            /** Format: int64 */
+            row_version: number;
+            /**
+             * Format: uuid
+             * @description The client's service user, as whom every event is filtered.
+             */
+            service_user_ref: string;
         };
         /** @description `POST .../fields/{field_id}/change-type`. */
         ChangeTypeBody: {
@@ -24986,7 +25172,7 @@ export interface components {
             /** @description Definitions that, through other definitions, depend on themselves. */
             cycles: string[][];
             /** @description Edges to an entity or attribute that no longer exists. */
-            dangling: components["schemas"]["GraphEdge"][];
+            dangling: components["schemas"]["LineageGraphEdge"][];
             /** @description Active attributes no definition uses, as `entity.attribute`. */
             unused_attributes: string[];
         };
@@ -25244,6 +25430,19 @@ export interface components {
             name: string;
             route_template: string;
         };
+        /** @description Contracts to merge. */
+        CombineContractsBody: {
+            /** @description Two or more contracts of one customer; the first is kept. */
+            contract_ids: string[];
+        };
+        /** @description The merged contract. */
+        CombinedContract: {
+            /** Format: uuid */
+            contract_id: string;
+            merged: number;
+            /** Format: int64 */
+            obligations_moved: number;
+        };
         CommandsRequest: {
             /**
              * @description The content hash of the document the commands were made against; empty
@@ -25431,10 +25630,10 @@ export interface components {
         };
         /** @description The edges added and removed between two versions. */
         Comparison: {
-            added: components["schemas"]["GraphEdge"][];
+            added: components["schemas"]["LineageGraphEdge"][];
             /** Format: int64 */
             from: number;
-            removed: components["schemas"]["GraphEdge"][];
+            removed: components["schemas"]["LineageGraphEdge"][];
             /** Format: int64 */
             to: number;
             truncated: boolean;
@@ -26272,13 +26471,11 @@ export interface components {
             view_metadata?: unknown;
         };
         CreatePolicyBody: {
-            body_ar?: string | null;
-            body_en?: string;
-            /** Format: uuid */
-            domain_ref: string;
-            enforcements?: components["schemas"]["Enforcement"][];
-            name_ar?: string | null;
-            name_en: string;
+            action_type: string;
+            condition?: string | null;
+            is_active?: boolean;
+            name: string;
+            plan: components["schemas"]["ApprovalPlan"];
         };
         CreatePositionBody: {
             description?: string | null;
@@ -26354,6 +26551,18 @@ export interface components {
             privilege_name?: string | null;
             /** Format: uuid */
             role_id: string;
+        };
+        CreateRuleBody: {
+            attribute?: string | null;
+            /** @description `validity` or `consistency`. */
+            dimension: string;
+            enabled?: boolean | null;
+            entity: string;
+            /** @description A condition each record must hold, e.g. `amount >= 0`. */
+            expression: string;
+            severity?: string | null;
+            /** Format: double */
+            weight?: number | null;
         };
         CreateRunBody: {
             /**
@@ -26461,6 +26670,12 @@ export interface components {
             target_url: string;
         };
         CreateSurvivorshipRuleBody: {
+            /**
+             * @description L1-T3: for `source_system_rank`, `{"ranks": {"<attribute>" | "*":
+             *     ["<system>", ...]}, "tie_break": "recency" | "completeness",
+             *     "validated_only": bool}`; absent for the other strategies.
+             */
+            config?: Record<string, never> | null;
             entity: string;
             field: string;
             priority_owner_ids?: string[];
@@ -30178,6 +30393,15 @@ export interface components {
              */
             client_id?: string | null;
         };
+        GovernanceCreatePolicyBody: {
+            body_ar?: string | null;
+            body_en?: string;
+            /** Format: uuid */
+            domain_ref: string;
+            enforcements?: components["schemas"]["Enforcement"][];
+            name_ar?: string | null;
+            name_en: string;
+        };
         GovernancePolicy: {
             body_ar?: string | null;
             body_en: string;
@@ -30201,6 +30425,16 @@ export interface components {
             role: string;
             /** Format: uuid */
             user_id: string;
+        };
+        GovernanceUpdatePolicyBody: {
+            body_ar?: string | null;
+            body_en?: string | null;
+            /** @description Replaces the links when given. */
+            enforcements?: components["schemas"]["Enforcement"][] | null;
+            name_ar?: string | null;
+            name_en?: string | null;
+            /** Format: int64 */
+            row_version: number;
         };
         /**
          * @description The governance in effect for a conversation's session — snapshotted when
@@ -30280,19 +30514,25 @@ export interface components {
         };
         /** @description A walk's result. */
         Graph: {
-            edges: components["schemas"]["GraphEdge"][];
+            edges: components["schemas"]["LineageGraphEdge"][];
             /** @description Nodes the caller may not see, counted only. */
             hidden: number;
             nodes: components["schemas"]["Node"][];
             /** @description The walk stopped at [`MAX_NODES`]. */
             truncated: boolean;
         };
-        /** @description An edge as a walk reports it: `from` uses `to`. */
         GraphEdge: {
-            confidence: string;
-            edge_kind: string;
-            from: string;
-            to: string;
+            /**
+             * @description `"lookup:{field}"`, `"hierarchy:{field}"`, or `"relationship:{type}"`
+             *     — typed by source, per the plan's response contract.
+             */
+            edge_type: string;
+            from_entity: string;
+            /** Format: uuid */
+            from_id: string;
+            to_entity: string;
+            /** Format: uuid */
+            to_id: string;
         };
         /**
          * @description Whether a turn's answer is grounded in retrieved knowledge. Decided from
@@ -31539,6 +31779,18 @@ export interface components {
             /** Format: double */
             unit_price?: number | null;
         };
+        /**
+         * @description What a draft change does.
+         * @enum {string}
+         */
+        LineageChangeKind: "delete_attribute" | "change_attribute_type" | "rename_attribute" | "other";
+        /** @description An edge as a walk reports it: `from` uses `to`. */
+        LineageGraphEdge: {
+            confidence: string;
+            edge_kind: string;
+            from: string;
+            to: string;
+        };
         /** @enum {string} */
         LineageRelation: "root" | "child" | "formula_input";
         LinkBody: {
@@ -31712,6 +31964,43 @@ export interface components {
             name: string;
             status: components["schemas"]["PlanStatus"];
             version: string;
+        };
+        /** @description A link to document by hand. */
+        ManualLinkBody: {
+            /** @description `inbound`, `outbound` or `both` (the default). */
+            direction?: string | null;
+            /** @description `reads`, `writes`, `derives` or `triggers`. */
+            edge_kind: string;
+            /**
+             * @description `system` for an outside system, or a definition kind (`workflow`,
+             *     `query`, `metric`, ...).
+             */
+            from_kind: string;
+            /**
+             * Format: uuid
+             * @description The definition's id (not for a system).
+             */
+            from_ref?: string | null;
+            /** @description Why the link exists, as the steward documents it. */
+            note: string;
+            /**
+             * @description What the system is: `connector`, `events`, `import`, `warehouse`,
+             *     `source` (default `connector`).
+             */
+            system_kind?: string | null;
+            /** @description The system's name (for a system); a new name adds the system. */
+            system_name?: string | null;
+            to_attribute?: string | null;
+            to_entity: string;
+        };
+        /** @description A recorded link. */
+        ManualLinkRecorded: {
+            /** @description The node the link starts at (`system:<id>` or `<kind>:<id>`). */
+            from: string;
+            /** Format: int64 */
+            graph_version: number;
+            /** Format: uuid */
+            id: string;
         };
         MarketingCancelled: {
             /**
@@ -32151,7 +32440,7 @@ export interface components {
             /** @description `None` for a change to the entity itself. */
             attribute?: string | null;
             entity: string;
-            kind: components["schemas"]["ChangeKind"];
+            kind: components["schemas"]["LineageChangeKind"];
         };
         MetadataManifest: {
             bundles: components["schemas"]["ManifestEntry"][];
@@ -34906,6 +35195,49 @@ export interface components {
                 id: string;
                 name: string;
                 requires_approval: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ChangeStreamSubscription: {
+            items: {
+                allow_personal: boolean;
+                changed_attributes?: string[] | null;
+                /**
+                 * Format: uuid
+                 * @description The S2S client (`s2s_client.id`) that reads it.
+                 */
+                client_ref: string;
+                condition?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                entities: string[];
+                /** Format: date-time */
+                expires_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                is_active: boolean;
+                name: string;
+                operations?: string[] | null;
+                /** @description `id`, `changes` or `record`. */
+                payload: string;
+                /** Format: int64 */
+                row_version: number;
+                /**
+                 * Format: uuid
+                 * @description The client's service user, as whom every event is filtered.
+                 */
+                service_user_ref: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -38213,14 +38545,22 @@ export interface components {
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_QualityIssueView: {
             items: {
+                accepted_reason?: string | null;
                 detail: string;
                 /** Format: date-time */
                 detected_at: string;
                 dimension: string;
+                /** Format: date-time */
+                due_at?: string | null;
                 entity_logicalname: string;
                 field_logicalname: string;
                 /** Format: uuid */
                 id: string;
+                /**
+                 * Format: uuid
+                 * @description L2-T4: who works the issue.
+                 */
+                owner_id?: string | null;
                 period: string;
                 /** Format: uuid */
                 record_id: string;
@@ -38229,6 +38569,34 @@ export interface components {
                 /** Format: date-time */
                 resolved_at?: string | null;
                 status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_QualityRuleView: {
+            items: {
+                attribute?: string | null;
+                dimension: string;
+                enabled: boolean;
+                entity: string;
+                expression: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                row_version: number;
+                severity: string;
+                /** Format: double */
+                weight: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -38260,6 +38628,32 @@ export interface components {
                 sample_size: number;
                 /** Format: double */
                 score: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_QualityTargetView: {
+            items: {
+                /** @description Dimension name to weight in the overall score. */
+                dimension_weights: Record<string, never>;
+                entity: string;
+                /** Format: int32 */
+                issue_sla_days?: number | null;
+                record_scoring: boolean;
+                /** Format: double */
+                threshold: number;
+                /** Format: int32 */
+                timeliness_days?: number | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -39371,49 +39765,6 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
-        PaginatedResponse_Subscription: {
-            items: {
-                allow_personal: boolean;
-                changed_attributes?: string[] | null;
-                /**
-                 * Format: uuid
-                 * @description The S2S client (`s2s_client.id`) that reads it.
-                 */
-                client_ref: string;
-                condition?: string | null;
-                /** Format: date-time */
-                created_at: string;
-                entities: string[];
-                /** Format: date-time */
-                expires_at?: string | null;
-                /** Format: uuid */
-                id: string;
-                is_active: boolean;
-                name: string;
-                operations?: string[] | null;
-                /** @description `id`, `changes` or `record`. */
-                payload: string;
-                /** Format: int64 */
-                row_version: number;
-                /**
-                 * Format: uuid
-                 * @description The client's service user, as whom every event is filtered.
-                 */
-                service_user_ref: string;
-            }[];
-            /** Format: int64 */
-            page: number;
-            /** Format: int64 */
-            page_size: number;
-            /** Format: int64 */
-            total: number;
-            /**
-             * @description Z14-T6: what the caller should know though the list succeeded;
-             *     omitted when empty.
-             */
-            warnings?: components["schemas"]["Warning"][];
-        };
-        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SubscriptionListItem: {
             items: {
                 /** Format: date-time */
@@ -39498,6 +39849,8 @@ export interface components {
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SurvivorshipRuleView: {
             items: {
+                /** @description L1-T3: a `source_system_rank` rule's trust per system per attribute. */
+                config?: Record<string, never> | null;
                 /** Format: date-time */
                 created_at: string;
                 /** Format: uuid */
@@ -41850,15 +42203,44 @@ export interface components {
             scope_ref?: string | null;
             value: unknown;
         };
+        PutTargetBody: {
+            /** @description Dimension name to weight (0 or more); unset dimensions weigh 1. */
+            dimension_weights?: Record<string, never> | null;
+            /**
+             * Format: int32
+             * @description Days an issue is due in (default 7).
+             */
+            issue_sla_days?: number | null;
+            /** @description Keep a score per record. */
+            record_scoring?: boolean | null;
+            /**
+             * Format: double
+             * @description The overall score the entity should keep, 0 to 100 (default 70).
+             */
+            threshold?: number | null;
+            /**
+             * Format: int32
+             * @description Records changed longer ago than this many days are not timely.
+             */
+            timeliness_days?: number | null;
+        };
         QualityIssueView: {
+            accepted_reason?: string | null;
             detail: string;
             /** Format: date-time */
             detected_at: string;
             dimension: string;
+            /** Format: date-time */
+            due_at?: string | null;
             entity_logicalname: string;
             field_logicalname: string;
             /** Format: uuid */
             id: string;
+            /**
+             * Format: uuid
+             * @description L2-T4: who works the issue.
+             */
+            owner_id?: string | null;
             period: string;
             /** Format: uuid */
             record_id: string;
@@ -41867,6 +42249,20 @@ export interface components {
             /** Format: date-time */
             resolved_at?: string | null;
             status: string;
+        };
+        QualityRuleView: {
+            attribute?: string | null;
+            dimension: string;
+            enabled: boolean;
+            entity: string;
+            expression: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            severity: string;
+            /** Format: double */
+            weight: number;
         };
         QualityScoreView: {
             /** Format: date-time */
@@ -41884,6 +42280,18 @@ export interface components {
             sample_size: number;
             /** Format: double */
             score: number;
+        };
+        QualityTargetView: {
+            /** @description Dimension name to weight in the overall score. */
+            dimension_weights: Record<string, never>;
+            entity: string;
+            /** Format: int32 */
+            issue_sla_days?: number | null;
+            record_scoring: boolean;
+            /** Format: double */
+            threshold: number;
+            /** Format: int32 */
+            timeliness_days?: number | null;
         };
         /**
          * @description `sql_query` — one stored query. The key is `(entity, name)`;
@@ -46476,6 +46884,8 @@ export interface components {
             token: string;
         };
         SurvivorshipRuleView: {
+            /** @description L1-T3: a `source_system_rank` rule's trust per system per attribute. */
+            config?: Record<string, never> | null;
             /** Format: date-time */
             created_at: string;
             /** Format: uuid */
@@ -47670,6 +48080,13 @@ export interface components {
             name?: string | null;
             primary_name_attribute?: string | null;
         };
+        /** @description A status change of one issue. */
+        UpdateIssueBody: {
+            /** @description Why the issue is accepted as it is; required for `accepted`. */
+            accepted_reason?: string | null;
+            /** @description `open`, `in_progress`, `fixed`, `accepted` or `resolved`. */
+            status: string;
+        };
         UpdateMappingBody: {
             fields?: components["schemas"]["DataMappingField"][] | null;
             name?: string | null;
@@ -47713,12 +48130,10 @@ export interface components {
             view_metadata?: unknown;
         };
         UpdatePolicyBody: {
-            body_ar?: string | null;
-            body_en?: string | null;
-            /** @description Replaces the links when given. */
-            enforcements?: components["schemas"]["Enforcement"][] | null;
-            name_ar?: string | null;
-            name_en?: string | null;
+            condition?: string | null;
+            is_active?: boolean | null;
+            name?: string | null;
+            plan?: null | components["schemas"]["ApprovalPlan"];
             /** Format: int64 */
             row_version: number;
         };
@@ -47773,6 +48188,18 @@ export interface components {
              */
             ip_allowlist?: string[] | null;
             name?: string | null;
+        };
+        UpdateRuleBody: {
+            enabled?: boolean | null;
+            expression?: string | null;
+            /**
+             * Format: int64
+             * @description The version the change was made against.
+             */
+            row_version: number;
+            severity?: string | null;
+            /** Format: double */
+            weight?: number | null;
         };
         UpdateScheduleBody: {
             delivery?: string | null;
@@ -59088,10 +59515,12 @@ export interface operations {
                 entity: string | null;
                 dimension: string | null;
                 /**
-                 * @description `"open"` (default view for the steward queue) or `"resolved"`. Omit
-                 *     for every status.
+                 * @description `open`, `in_progress`, `fixed`, `accepted` or `resolved`. Omit for
+                 *     every status.
                  */
                 status: string | null;
+                /** @description L2-T4: only the issues this person owns. */
+                owner_id: string | null;
                 /** @description One-based: page 1 is the first page. */
                 page: number | null;
                 page_size: number | null;
@@ -59128,6 +59557,66 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_issue_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIssueBody"];
+            };
+        };
+        responses: {
+            /** @description The issue's status changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Neither the issue's owner nor an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Issue not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown status, or accepted without a reason */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -59185,6 +59674,218 @@ export interface operations {
             };
             /** @description Issue already resolved */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_rules_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string | null;
+                /** @description One-based: page 1 is the first page. */
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_QualityRuleView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_rule_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRuleBody"];
+            };
+        };
+        responses: {
+            /** @description The rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityRuleView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown entity, attribute or dimension, or a bad expression */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_rule_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_rule_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRuleBody"];
+            };
+        };
+        responses: {
+            /** @description The rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityRuleView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule changed since that version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad expression, severity or weight */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -59296,6 +59997,149 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_targets_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string | null;
+                /** @description One-based: page 1 is the first page. */
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_QualityTargetView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_target_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutTargetBody"];
+            };
+        };
+        responses: {
+            /** @description The target */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityTargetView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown entity or dimension, or a value out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_target_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No target for that entity */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -63922,7 +64766,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreatePolicyBody"];
+                "application/json": components["schemas"]["GovernanceCreatePolicyBody"];
             };
         };
         responses: {
@@ -64082,7 +64926,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdatePolicyBody"];
+                "application/json": components["schemas"]["GovernanceUpdatePolicyBody"];
             };
         };
         responses: {
@@ -88324,7 +89168,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_Subscription"];
+                    "application/json": components["schemas"]["PaginatedResponse_ChangeStreamSubscription"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -88366,7 +89210,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Subscription"];
+                    "application/json": components["schemas"]["ChangeStreamSubscription"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -88477,7 +89321,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Subscription"];
+                    "application/json": components["schemas"]["ChangeStreamSubscription"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -93863,6 +94707,75 @@ export interface operations {
             };
         };
     };
+    revrec_contracts_combine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CombineContractsBody"];
+            };
+        };
+        responses: {
+            /** @description The contracts are one */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CombinedContract"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks revenue_contract.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A contract does not exist */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A contract has a locked schedule line, or is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Fewer than two contracts, or of different customers */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_ledger_source: {
         parameters: {
             query?: never;
@@ -94238,6 +95151,114 @@ export interface operations {
             };
             /** @description The namespace is not a short name */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_manual_link_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualLinkBody"];
+            };
+        };
+        responses: {
+            /** @description The link is in the graph, marked hand-documented */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualLinkRecorded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The definition itself already records this link */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown entity, kind or direction, or no note */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lineage_manual_link_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed; kept in the graph's history */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator or a steward of the entity's domain */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No hand-documented link with that id */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
