@@ -451,7 +451,7 @@ pub async fn run_due_at(
     let local_now = now.naive_local();
     let mut started = 0u64;
     for entry in entries {
-        let Ok(graph) = serde_json::from_value::<Graph>(entry.graph) else {
+        let Ok(graph) = serde_json::from_value::<Graph>(entry.graph.clone()) else {
             continue;
         };
         let Some(node) = graph.nodes.iter().find(|n| n.id == entry.node_id) else {
