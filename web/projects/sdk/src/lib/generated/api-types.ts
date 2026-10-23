@@ -2894,6 +2894,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/data/quality/fixes/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/admin/data/quality/fixes/apply`: runs a fix as one bulk
+         *     update.
+         *     Applies a data-quality fix to many records as one bulk update.
+         * @description Each record goes through the normal update path (validation, rules,
+         *     access, audit) with its row version, so one changed since the preview is
+         *     reported, not overwritten. The answer's `undo` list, sent to
+         *     `POST /api/v1/{entity}/bulk-edit/undo`, puts the batch back. The fixed
+         *     records leave the A3 clean-up queues; a record still failing a rule
+         *     returns at that rule's next scan.
+         */
+        post: operations["quality_fix_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/quality/fixes/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/admin/data/quality/fixes/preview`: what a fix would change.
+         *     Previews a data-quality fix over many records.
+         * @description Counts the picked records the caller can read, those the fix would
+         *     change and those already clean, and shows the first 20 before and
+         *     after. Nothing is written.
+         */
+        post: operations["quality_fix_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/data/quality/issues": {
         parameters: {
             query?: never;
@@ -6565,6 +6615,97 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["lift_rate_limit_ban"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/records/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the records categories.
+         * @description Every category in one page, by name.
+         */
+        get: operations["records_category_list"];
+        put?: never;
+        /**
+         * Creates a records category.
+         * @description A category names a kind of record and how long it is kept; records are
+         *     declared under one.
+         */
+        post: operations["records_category_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/records/declarations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declares a record under a records category.
+         * @description From then on the generic write path refuses the record's updates,
+         *     deletes and restores; it leaves only by erasure or an approved
+         *     disposition.
+         */
+        post: operations["records_declare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/records/dispositions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asks for a declared record's disposition.
+         * @description The request waits for a second administrator; nothing is destroyed until
+         *     it is approved.
+         */
+        post: operations["records_disposition_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/records/dispositions/{id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approves or rejects a disposition request.
+         * @description The requester cannot decide their own request. Approval refuses a record
+         *     under a legal hold; otherwise it purges the record (key destroyed, values
+         *     scrubbed, audited) and stores the disposition certificate with its
+         *     SHA-256.
+         */
+        post: operations["records_disposition_decide"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -21695,6 +21836,8 @@ export interface components {
             /** Format: uuid */
             decided_by?: string | null;
             decision?: string | null;
+            /** @description Q11-T1: why the reviewer kept or revoked it. */
+            decision_reason?: string | null;
             /** Format: uuid */
             grant_id: string;
             /** Format: uuid */
@@ -27887,6 +28030,11 @@ export interface components {
         DecideAccessReviewItemBody: {
             /** @description `"keep"` or `"revoke"`. */
             decision: string;
+            /**
+             * @description Q11-T1: why, up to 1000 characters; kept on the item and in the
+             *     decision's audit event.
+             */
+            reason?: string | null;
         };
         DecideBody: {
             /**
@@ -28928,7 +29076,10 @@ export interface components {
             /**
              * @description `set` (to `value`), `clear`, `add` or `remove` (values of a
              *     multi-select choice), `increment` (a number by `value`, may be
-             *     negative).
+             *     negative), or `fix` (L2-T5: a text value transformed, `value` naming
+             *     the fix: `trim_spaces`, `title_case`, `digits_to_western`,
+             *     `phone_e164`, or `{"fix": "phone_e164", "country": "AE"}`; a phone is
+             *     read in the deployment's `core.country`, else Saudi Arabia).
              */
             op: string;
             value?: unknown;
@@ -34389,6 +34540,8 @@ export interface components {
                 /** Format: uuid */
                 decided_by?: string | null;
                 decision?: string | null;
+                /** @description Q11-T1: why the reviewer kept or revoked it. */
+                decision_reason?: string | null;
                 /** Format: uuid */
                 grant_id: string;
                 /** Format: uuid */
@@ -39140,6 +39293,33 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RecordsCategory: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                description?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /**
+                 * Format: int32
+                 * @description How long a record of this category is kept, in days.
+                 */
+                retention_days?: number | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ReferenceView: {
             items: {
                 /** Format: date-time */
@@ -42576,6 +42756,21 @@ export interface components {
              */
             timeliness_days?: number | null;
         };
+        /** @description A data-quality fix over many records. */
+        QualityFixBody: {
+            /** @description The text attribute to fix. */
+            attribute: string;
+            entity: string;
+            /** @description The records by a list's filters; at most 500 may match. */
+            filters?: components["schemas"]["Filter"][];
+            /**
+             * @description `trim_spaces`, `title_case`, `digits_to_western`, `phone_e164`, or
+             *     `{"fix": "phone_e164", "country": "AE"}`.
+             */
+            fix: Record<string, never>;
+            /** @description The records, at most 500; give `ids` or `filters`. */
+            ids?: string[];
+        };
         QualityIssueView: {
             accepted_reason?: string | null;
             detail: string;
@@ -42996,6 +43191,60 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description A record to declare. */
+        RecordDeclarationBody: {
+            /** Format: uuid */
+            category_id: string;
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description A declared record. */
+        RecordDeclared: {
+            /** Format: uuid */
+            category_id: string;
+            /** Format: date-time */
+            declared_at: string;
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description A disposition request. */
+        RecordDisposition: {
+            /** Format: uuid */
+            category_ref: string;
+            /** @description What was disposed, under which category, by whom and when. */
+            certificate?: Record<string, never> | null;
+            certificate_sha256?: string | null;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            reason?: string | null;
+            /** Format: uuid */
+            record_id: string;
+            /** Format: date-time */
+            requested_at: string;
+            /** Format: uuid */
+            requested_by: string;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            /** Format: uuid */
+            reviewed_by?: string | null;
+            /** @description `pending`, `approved` or `rejected`. */
+            status: string;
+        };
+        /** @description A record whose disposition is asked for. */
+        RecordDispositionBody: {
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description A disposition decision. */
+        RecordDispositionDecision: {
+            /** @description `approve` or `reject`. */
+            decision: string;
+            reason?: string | null;
+        };
         RecordGroup: {
             display_name: string;
             /** Format: int64 */
@@ -43178,6 +43427,27 @@ export interface components {
         Recording: {
             kind?: string | null;
             url: string;
+        };
+        /** @description A records category. */
+        RecordsCategory: {
+            /** Format: date-time */
+            created_at: string;
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * Format: int32
+             * @description How long a record of this category is kept, in days.
+             */
+            retention_days?: number | null;
+        };
+        /** @description A new records category. */
+        RecordsCategoryBody: {
+            description?: string | null;
+            name: string;
+            /** Format: int32 */
+            retention_days?: number | null;
         };
         /**
          * @description A single deployment-wide snapshot, not a list — same "aggregate summary,
@@ -59912,6 +60182,126 @@ export interface operations {
             };
         };
     };
+    quality_fix_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QualityFixBody"];
+            };
+        };
+        responses: {
+            /** @description No record needed the fix */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkEditSubmitted"];
+                };
+            };
+            /** @description The fix runs as one bulk update; `undo` puts it back */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkEditSubmitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown fix, not a text attribute, or too many records */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No batch worker can run the fix */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    quality_fix_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QualityFixBody"];
+            };
+        };
+        responses: {
+            /** @description Counts and the first 20 records before and after */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkEditPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown fix, not a text attribute, or too many records */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_issues: {
         parameters: {
             query?: never;
@@ -72057,6 +72447,296 @@ export interface operations {
             };
             /** @description No ban for that caller */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    records_category_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every category, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RecordsCategory"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    records_category_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordsCategoryBody"];
+            };
+        };
+        responses: {
+            /** @description The category */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordsCategory"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A category of that name exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No name, or a retention that is not positive */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    records_declare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordDeclarationBody"];
+            };
+        };
+        responses: {
+            /** @description The record is declared and immutable */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordDeclared"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, record or category */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record is already declared */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    records_disposition_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordDispositionBody"];
+            };
+        };
+        responses: {
+            /** @description The pending request; another administrator decides it */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordDisposition"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record is not declared */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A disposition of the record is already pending */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    records_disposition_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The disposition request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordDispositionDecision"];
+            };
+        };
+        responses: {
+            /** @description Decided; an approval carries the certificate */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordDisposition"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an administrator, or the request's own requester */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or the record is under a legal hold */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The decision is neither approve nor reject */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
