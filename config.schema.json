@@ -115,6 +115,13 @@
           "description": "P-production-safety-profile — one of `\"development\"`/`\"production\"`\n(see `VALID_DEPLOYMENT_PROFILES` in `validate()`). Default\n`\"development\"` — today's behavior, unchanged: every other field in\nthis file keeps whatever value an operator gave it, validated only by\nthe per-field checks that already existed. Setting `\"production\"` is\nan explicit, additional opt-in (never derived from `APP_ENV`, which\nalready means \"tolerate unresolved `${VAR}` placeholders for local\ndev\" — a different concern) that runs `validate_production_profile`:\na fixed set of individually-valid-but-unsafe-in-combination defaults\n(`database.ssl_mode = \"prefer\"`, `cache.tls_enabled = false`,\n`storage.s3_verify_ssl = false`,\nno `auth.apikey_default_expiry_days`,\n`audit.signing_enabled = false`, `database.migrate_on_boot = true`,\n`jobs.run_worker_inline = true`) become hard boot errors instead of\nsilent template carry-overs. No per-check escape hatch by design — a\nhatch on any one of these would reopen exactly the gap this profile\ncloses.\n\nNot the *only* thing gated on this field: `validate_production_profile`\nbelow is `attome-config`'s own complete list, but `server::boot::init`\n(the composition root, which has visibility this crate doesn't) reads\nthis same value too — D-327's `idempotency.mandatory_operations`\ncompleteness floor is production-only for exactly the same reason,\njust enforced one layer up. Don't assume this field's production\nrequirements begin and end with what's checked in this file.",
           "type": "string"
         },
+        "failover_retry_max_secs": {
+          "default": 10,
+          "description": "AB2-T3: seconds a GET, HEAD or `Idempotency-Key` request that lost its\ndatabase connection is run again inside the server, across a failover.\n0 turns it off; at most 30.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "frontend_host": {
           "type": "string"
         },

@@ -6,6 +6,14 @@ use axum::{
 use serde_json::json;
 use thiserror::Error;
 
+/// AB2-T3: set in a response's extensions when the request failed only
+/// because the database connection was lost (`AppError::Overloaded(
+/// "db_unavailable")`), so the server's failover retry layer may run a
+/// retry-safe request again. Never on the wire: the body and the `overloaded`
+/// code are unchanged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RetryableDbUnavailable;
+
 /// AB5-T3: the `Retry-After` a `capability_unavailable` 503 carries, about
 /// two capability probe rounds.
 pub const CAPABILITY_RETRY_AFTER_SECS: u64 = 30;
@@ -553,6 +561,10 @@ impl IntoResponse for AppError {
             axum::http::header::CONTENT_TYPE,
             axum::http::HeaderValue::from_static(PROBLEM_JSON),
         );
+        // AB2-T3: a lost database connection marks the response retryable.
+        if matches!(self, AppError::Overloaded("db_unavailable")) {
+            resp.extensions_mut().insert(RetryableDbUnavailable);
+        }
         if let Some(value) =
             retry_after.and_then(|secs| axum::http::HeaderValue::from_str(&secs.to_string()).ok())
         {

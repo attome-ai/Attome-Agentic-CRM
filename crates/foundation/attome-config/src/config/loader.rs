@@ -760,6 +760,8 @@ impl AppConfig {
         validate_shutdown_drain_delay_secs(self.app.shutdown_drain_delay_secs)?;
         // B1 (BSV-F05) — see `validate_request_timeout_secs`.
         validate_request_timeout_secs(self.app.request_timeout_secs)?;
+        // AB2-T3 — see `validate_failover_retry_max_secs`.
+        validate_failover_retry_max_secs(self.app.failover_retry_max_secs)?;
         // Z5-T5 — see `validate_flood_caps`.
         validate_flood_caps(
             self.app.max_concurrent_requests,
@@ -2674,6 +2676,18 @@ pub(crate) fn validate_flood_caps(global: usize, per_ip: usize) -> Result<(), Co
             reason: format!(
                 "must be between 1 and app.max_concurrent_requests ({global}), got {per_ip}"
             ),
+        });
+    }
+    Ok(())
+}
+
+/// AB2-T3 — the failover retry window. Past 30 s a request would wait on a
+/// failover longer than any client is likely to, inside a request deadline.
+pub(crate) fn validate_failover_retry_max_secs(value: u64) -> Result<(), ConfigError> {
+    if value > 30 {
+        return Err(ConfigError::Invalid {
+            field: "app.failover_retry_max_secs".into(),
+            reason: format!("must be between 0 and 30 seconds, got {value}"),
         });
     }
     Ok(())

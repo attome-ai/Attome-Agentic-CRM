@@ -516,7 +516,7 @@ async fn timeout_response(err: BoxError) -> Response {
 
 /// Applies the inner, identity-aware stack (outermost first): CachePolicy
 /// (AA7-T1) → authn → CSRF → authz → RateLimit → Shed (AB5-T7) →
-/// Idempotency → MetadataPin (Y8-T6) → ApiVersion (S8-T1). CSRF (`csrf::csrf_protect`,
+/// FailoverRetry (AB2-T3) → Idempotency → MetadataPin (Y8-T6) → ApiVersion (S8-T1). CSRF (`csrf::csrf_protect`,
 /// P-cookie-csrf-hardening) sits right after authn because it needs to know
 /// whether the request carries a session cookie at all — the same signal
 /// `authn` already resolved into `SessionClaims`/a rejection — and must run
@@ -563,6 +563,12 @@ pub fn apply_inner_layers(router: Router, state: AppState) -> Router {
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 crate::middleware::shed::shed,
+            ))
+            // AB2-T3: directly outside idempotency (so a retried write with
+            // a key is answered by its stored result), inside authn (so each
+            // attempt carries the resolved caller).
+            .layer(crate::middleware::failover_retry::FailoverRetryLayer::new(
+                std::time::Duration::from_secs(config.app.failover_retry_max_secs),
             ))
             .layer(mark(&config, "idempotency"))
             .layer(middleware::from_fn_with_state(

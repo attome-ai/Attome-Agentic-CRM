@@ -340,6 +340,10 @@ pub(crate) fn default_max_concurrent_per_ip() -> usize {
 pub(crate) fn default_request_timeout() -> u64 {
     30
 }
+/// AB2-T3: `app.failover_retry_max_secs` when unset.
+pub(crate) fn default_failover_retry_max_secs() -> u64 {
+    10
+}
 pub(crate) fn default_true() -> bool {
     true
 }

@@ -30,6 +30,11 @@ pub struct AppSection {
     pub max_body_size_bytes: usize,
     #[serde(default = "default_request_timeout")]
     pub request_timeout_secs: u64,
+    /// AB2-T3: seconds a GET, HEAD or `Idempotency-Key` request that lost its
+    /// database connection is run again inside the server, across a failover.
+    /// 0 turns it off; at most 30.
+    #[serde(default = "crate::config::helpers::default_failover_retry_max_secs")]
+    pub failover_retry_max_secs: u64,
     /// Z5-T5: requests this node runs at once before answering 503 with
     /// `Retry-After: 1`, ahead of authentication. 1 to 1,000,000.
     #[serde(default = "crate::config::helpers::default_max_concurrent_requests")]

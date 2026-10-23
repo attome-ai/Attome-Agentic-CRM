@@ -48,5 +48,5 @@ pub mod w3c_trace;
 
 pub use batch::{BatchResult, ItemResult, Problem, Warning};
 pub use clock::{Clock, FakeClock, SystemClock};
-pub use error::AppError;
+pub use error::{AppError, RetryableDbUnavailable};
 pub use types::*;

@@ -11,6 +11,8 @@ pub mod csrf;
 /// AB6-T2 — a request's deadline for the outside calls it makes.
 pub mod deadline;
 pub mod deprecation;
+/// AB2-T3: retry-safe requests run again across a database failover.
+pub mod failover_retry;
 pub mod flood;
 pub mod host_gate;
 pub mod idempotency;

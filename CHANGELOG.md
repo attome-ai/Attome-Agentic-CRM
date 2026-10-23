@@ -184,6 +184,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Failover retry window (AB2-T3): a GET, HEAD or `Idempotency-Key` request that failed only because
+  the database connection was lost is run again inside the server for up to
+  `app.failover_retry_max_secs` (default 10, 0 off, at most 30), with backoff and jitter;
+  `http_failover_retries_total{outcome}` counts recovered and given-up requests.
 - Grant ceiling (Q12-T3): assigning a role to a user or team, or a privilege to a role or user, is
   refused when the granter does not hold every privilege granted; full administrators are never
   refused, and role grants keep their optional second-approver gate (D-195).

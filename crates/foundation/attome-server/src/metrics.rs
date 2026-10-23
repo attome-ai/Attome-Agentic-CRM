@@ -919,3 +919,10 @@ mod tests {
         }
     }
 }
+
+/// AB2-T3 — `http_failover_retries_total{outcome}`: requests the failover
+/// retry layer ran again, by whether they then succeeded (`recovered`) or the
+/// window ran out (`gave_up`).
+pub(crate) fn record_failover_retry(outcome: &'static str) {
+    metrics::counter!("http_failover_retries_total", "outcome" => outcome).increment(1);
+}
