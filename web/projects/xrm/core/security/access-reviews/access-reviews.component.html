@@ -1,0 +1,107 @@
+<div class="access-reviews">
+  <div class="heading">
+    <h2>{{ 'accessReviews.title' | translate }}</h2>
+    <button type="button" class="btn-ghost" (click)="load()">{{ 'accessReviews.refresh' | translate }}</button>
+  </div>
+
+  @if (error()) {
+    <p class="error-msg" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="state-msg">{{ 'accessReviews.loading' | translate }}</p>
+  } @else if (campaigns().length === 0) {
+    <p class="state-msg">{{ 'accessReviews.none' | translate }}</p>
+  } @else {
+    <table class="reviews">
+      <thead>
+        <tr>
+          <th>{{ 'accessReviews.campaign' | translate }}</th>
+          <th>{{ 'accessReviews.scope' | translate }}</th>
+          <th>{{ 'accessReviews.due' | translate }}</th>
+          <th>{{ 'accessReviews.status' | translate }}</th>
+          <th>{{ 'accessReviews.progress' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of campaigns(); track c.id) {
+          <tr [class.current]="selected()?.id === c.id">
+            <td>{{ c.name }}</td>
+            <td>{{ 'accessReviews.scopes.' + c.scope | translate }}</td>
+            <td>{{ c.due_date | localDate }}</td>
+            <td>{{ c.status }}</td>
+            <td>{{ c.decided_count }} / {{ c.item_count }}</td>
+            <td><button type="button" class="btn-sm" (click)="open(c)">{{ 'accessReviews.open' | translate }}</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (selected(); as campaign) {
+    <section class="items">
+      <div class="heading">
+        <h3>{{ campaign.name }}</h3>
+        <label class="mine">
+          <input type="checkbox" name="mineOnly" [ngModel]="mineOnly()" (ngModelChange)="mineOnly.set($event)" />
+          {{ 'accessReviews.mineOnly' | translate }}
+        </label>
+        <span class="count">{{ 'accessReviews.undecided' | translate }}: {{ undecided() }}</span>
+        <button type="button" class="btn-sm" (click)="exportCsv()">{{ 'accessReviews.exportCsv' | translate }}</button>
+        <button type="button" class="btn-ghost" (click)="close()">{{ 'accessReviews.close' | translate }}</button>
+      </div>
+      @if (shown().length === 0) {
+        <p class="state-msg">{{ 'accessReviews.noItems' | translate }}</p>
+      } @else {
+        <table class="reviews">
+          <thead>
+            <tr>
+              <th>{{ 'accessReviews.subject' | translate }}</th>
+              <th>{{ 'accessReviews.grant' | translate }}</th>
+              <th>{{ 'accessReviews.reviewer' | translate }}</th>
+              <th>{{ 'accessReviews.decision' | translate }}</th>
+              <th>{{ 'accessReviews.reason' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of shown(); track item.id) {
+              <tr>
+                <td class="cell-mono" dir="ltr">{{ item.subject_user_id }}</td>
+                <td class="cell-mono" dir="ltr">{{ item.grant_id }}</td>
+                <td class="cell-mono" dir="ltr">{{ item.reviewer_user_id ?? '—' }}</td>
+                <td>
+                  @if (item.decision) {
+                    {{ 'accessReviews.decisions.' + item.decision | translate }}
+                    @if (item.decided_at) { <small>{{ item.decided_at | localDate }}</small> }
+                  } @else {
+                    {{ 'accessReviews.pending' | translate }}
+                  }
+                </td>
+                <td>
+                  @if (item.decision) {
+                    {{ item.decision_reason ?? '' }}
+                  } @else {
+                    <input type="text" [name]="'reason-' + item.id" [attr.aria-label]="'accessReviews.reason' | translate"
+                      [ngModel]="reasons()[item.id] ?? ''" (ngModelChange)="setReason(item.id, $event)" maxlength="1000" />
+                  }
+                </td>
+                <td class="actions">
+                  @if (!item.decision) {
+                    <button type="button" class="btn-sm" [disabled]="busy() === item.id" (click)="decide(item, 'keep')">
+                      {{ 'accessReviews.keep' | translate }}
+                    </button>
+                    <button type="button" class="btn-sm danger" [disabled]="busy() === item.id" (click)="decide(item, 'revoke')">
+                      {{ 'accessReviews.revoke' | translate }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</div>

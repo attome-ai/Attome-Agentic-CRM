@@ -293,6 +293,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/security').then(m => m.OrganizationsListComponent),
           },
           {
+            // Q11-T1: access review campaigns and decisions.
+            path: 'security/access-reviews',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/security').then(m => m.AccessReviewsComponent),
+          },
+          {
             path: 'security/record-shares',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/security').then(m => m.RecordSharesComponent),

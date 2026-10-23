@@ -84,6 +84,8 @@ pub struct AccessReviewItem {
     decided_by: Option<Uuid>,
     decided_at: Option<DateTime<Utc>>,
     revoked_at: Option<DateTime<Utc>>,
+    /// Q11-T1: why the reviewer kept or revoked it.
+    decision_reason: Option<String>,
 }
 
 impl std::fmt::Debug for AccessReviewItem {
@@ -538,9 +540,10 @@ pub(super) async fn list_access_review_items(
         Option<Uuid>,
         Option<DateTime<Utc>>,
         Option<DateTime<Utc>>,
+        Option<String>,
     )> = sqlx::query_as(
         "SELECT id, subject_user_ref, grant_ref, reviewer_user_ref, approval_request_ref, \
-                decision, decided_by, decided_at, revoked_at \
+                decision, decided_by, decided_at, revoked_at, decision_reason \
          FROM access_review_item WHERE review_ref = $1 \
          ORDER BY created_at LIMIT $2 OFFSET $3",
     )
@@ -570,6 +573,7 @@ pub(super) async fn list_access_review_items(
                 decided_by,
                 decided_at,
                 revoked_at,
+                decision_reason,
             )| AccessReviewItem {
                 id,
                 subject_user_id,
@@ -580,6 +584,7 @@ pub(super) async fn list_access_review_items(
                 decided_by,
                 decided_at,
                 revoked_at,
+                decision_reason,
             },
         )
         .collect();
@@ -595,6 +600,21 @@ pub(super) async fn list_access_review_items(
 pub(super) struct DecideAccessReviewItemBody {
     /// `"keep"` or `"revoke"`.
     decision: String,
+    /// Q11-T1: why, up to 1000 characters; kept on the item and in the
+    /// decision's audit event.
+    #[serde(default)]
+    reason: Option<String>,
+}
+
+/// Q11-T1: a decision's reason, trimmed; empty is none. Pure.
+fn checked_reason(reason: Option<&str>) -> Result<Option<String>, AppError> {
+    match reason.map(str::trim).filter(|r| !r.is_empty()) {
+        None => Ok(None),
+        Some(r) if r.chars().count() <= 1_000 => Ok(Some(r.to_owned())),
+        Some(_) => Err(AppError::Validation(
+            "reason is at most 1000 characters".into(),
+        )),
+    }
 }
 
 /// One already-reviewed item's row, minus decision fields — what
@@ -698,6 +718,7 @@ pub(super) async fn decide_access_review_item(
             )));
         }
     };
+    let reason = checked_reason(body.reason.as_deref())?;
 
     let item: Option<ItemForDecide> = sqlx::query_as(
         "SELECT review_ref, subject_user_ref, grant_ref, reviewer_user_ref, \
@@ -761,14 +782,19 @@ pub(super) async fn decide_access_review_item(
     .await?;
     tx.event_mut()
         .set_event_name(format!("access_review_decision:{decision_str}"));
+    if let Some(reason) = &reason {
+        tx.event_mut().set_comment(reason.clone());
+    }
     sqlx::query(
         "UPDATE access_review_item \
-         SET decision = $1, decided_by = $2, decided_at = NOW(), row_version = row_version + 1 \
+         SET decision = $1, decided_by = $2, decided_at = NOW(), decision_reason = $4, \
+             row_version = row_version + 1 \
          WHERE id = $3 AND decision IS NULL",
     )
     .bind(decision_str)
     .bind(ctx.user_id)
     .bind(item_id)
+    .bind(&reason)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -824,6 +850,7 @@ pub(super) async fn decide_access_review_item(
         decided_by: Some(ctx.user_id),
         decided_at: Some(Utc::now()),
         revoked_at,
+        decision_reason: reason,
     }))
 }
 
@@ -886,4 +913,20 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn access_review_reason_is_trimmed_and_bounded() {
+        assert_eq!(checked_reason(None).unwrap(), None);
+        assert_eq!(checked_reason(Some("  ")).unwrap(), None);
+        assert_eq!(
+            checked_reason(Some(" left the team ")).unwrap().as_deref(),
+            Some("left the team")
+        );
+        assert!(checked_reason(Some(&"x".repeat(1001))).is_err());
+    }
 }

@@ -188,6 +188,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   tracking script and the email open pixel), which carry `cross-origin`.
 
 ### Added
+- Access review screen (Q11-T1): **Security → Access reviews** (`/xrm/admin/security/access-reviews`)
+  lists the campaigns with their progress, opens a campaign's accesses (all, or only those the
+  signed-in reviewer reviews), keeps or revokes each with a reason, and exports the campaign's
+  evidence as CSV. The decide route takes an optional `reason`, kept on the item
+  (`decision_reason`, migration 0241) and in the decision's audit event.
 - Bulk data-quality fixes (L2-T5): bulk edit gains a `fix` operation (`trim_spaces`, `title_case`,
   `digits_to_western`, `phone_e164`, read in the deployment's `core.country` or a named one) that
   transforms each picked record's own value; `POST /api/v1/admin/data/quality/fixes/preview` shows the

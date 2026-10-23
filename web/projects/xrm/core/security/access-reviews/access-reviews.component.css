@@ -1,0 +1,45 @@
+.access-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.reviews {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reviews th,
+.reviews td {
+  border-bottom: 1px solid var(--attome-border-color, #ddd);
+  padding: 0.4rem 0.6rem;
+  text-align: start;
+  font-size: 0.85rem;
+}
+
+.reviews tr.current {
+  background: var(--attome-surface-selected, transparent);
+}
+
+.cell-mono {
+  font-family: var(--attome-font-mono, monospace);
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mine {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}

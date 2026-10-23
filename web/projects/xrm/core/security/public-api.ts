@@ -64,3 +64,10 @@ export { ACCESS_LEVELS } from './security-admin.service';
 // lighter entry point so registering the override doesn't force this
 // entry's heavier admin pages into the same eager chunk. See that entry's
 // public-api.ts doc comment.
+
+// Q11-T1: access review campaigns, decisions with reasons, and CSV evidence.
+export { AccessReviewsComponent } from './access-reviews/access-reviews.component';
+export { AccessReviewsService, evidenceCsv } from './access-reviews/access-reviews.service';
+export type {
+  AccessReviewCampaign, AccessReviewItem, AccessReviewDecision,
+} from './access-reviews/access-reviews.service';
